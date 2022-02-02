@@ -1,0 +1,40 @@
+{
+  "name": "staking-contracts-v2",
+  "version": "1.0.0",
+  "description": "LinkPool V2 Staking Contracts",
+  "license": "MIT",
+  "scripts": {
+    "test": "npx hardhat test --network hardhat",
+    "start": "npx hardhat node --network hardhat",
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat deploy",
+    "tsc": "tsc",
+    "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
+    "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
+    "solhint": "solhint contracts/**/*.sol"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
+    "@nomiclabs/hardhat-waffle": "^2.0.2",
+    "@typechain/ethers-v5": "^9.0.0",
+    "@typechain/hardhat": "^4.0.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^17.0.14",
+    "chai": "^4.3.6",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.5.4",
+    "hardhat": "^2.8.3",
+    "hardhat-deploy": "^0.10.4",
+    "prettier": "^2.5.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "solhint": "^3.3.6",
+    "solhint-plugin-prettier": "^0.0.5",
+    "ts-node": "^10.4.0",
+    "typechain": "^7.0.0",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.4.2"
+  }
+}
