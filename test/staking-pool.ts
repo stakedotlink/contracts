@@ -1,14 +1,15 @@
 import { ethers } from 'hardhat'
-import { Signer, Contract } from 'ethers'
-import { toEther, assertThrowsAsync, deploy } from './utils/helpers'
+import { Signer } from 'ethers'
 import { assert } from 'chai'
+import { toEther, assertThrowsAsync, deploy } from './utils/helpers'
+import { ERC677, ExampleStrategy, StakingPool } from '../typechain-types'
 
 describe('StakingPool', () => {
-  let token: Contract
-  let stakingPool: Contract
-  let strategy1: Contract
-  let strategy2: Contract
-  let strategy3: Contract
+  let token: ERC677
+  let stakingPool: StakingPool
+  let strategy1: ExampleStrategy
+  let strategy2: ExampleStrategy
+  let strategy3: ExampleStrategy
   let ownersRewards: string
   let signers: Signer[]
   let accounts: string[]
@@ -24,7 +25,7 @@ describe('StakingPool', () => {
   }
 
   before(async () => {
-    token = await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])
+    token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
 
     signers = await ethers.getSigners()
     accounts = await Promise.all(
@@ -36,35 +37,35 @@ describe('StakingPool', () => {
     )
     ownersRewards = accounts[4]
 
-    stakingPool = await deploy('StakingPool', [
+    stakingPool = (await deploy('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',
       ownersRewards,
       '2500',
-    ])
+    ])) as StakingPool
 
-    strategy1 = await deploy('ExampleStrategy', [
+    strategy1 = (await deploy('ExampleStrategy', [
       token.address,
       stakingPool.address,
       accounts[0],
       toEther('5000'),
       toEther('10'),
-    ])
-    strategy2 = await deploy('ExampleStrategy', [
+    ])) as ExampleStrategy
+    strategy2 = (await deploy('ExampleStrategy', [
       token.address,
       stakingPool.address,
       accounts[0],
       toEther('2000'),
       toEther('20'),
-    ])
-    strategy3 = await deploy('ExampleStrategy', [
+    ])) as ExampleStrategy
+    strategy3 = (await deploy('ExampleStrategy', [
       token.address,
       stakingPool.address,
       accounts[0],
       toEther('10000'),
       toEther('10'),
-    ])
+    ])) as ExampleStrategy
 
     await stakingPool.addStrategy(strategy1.address)
     await stakingPool.addStrategy(strategy2.address)
@@ -73,7 +74,7 @@ describe('StakingPool', () => {
   it('derivative name, symbol, decimals should be correct', async () => {
     assert.equal(await stakingPool.name(), 'LinkPool LINK', 'Name should be correct')
     assert.equal(await stakingPool.symbol(), 'lpLINK', 'Symbol should be correct')
-    assert.equal(await stakingPool.decimals(), 18, 'Decimals should be correct')
+    assert.equal((await stakingPool.decimals()).toNumber(), 18, 'Decimals should be correct')
   })
 
   it('should be able to add new strategies', async () => {
@@ -331,7 +332,7 @@ describe('StakingPool', () => {
 
     assert.equal(
       (await stakingPool.ownersTakePercent()).toNumber(),
-      '3000',
+      3000,
       'ownersTakePercent should be changed'
     )
     assert.equal(await stakingPool.governance(), accounts[1], 'governance should be changed')
