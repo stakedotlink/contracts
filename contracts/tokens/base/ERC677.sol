@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "./VirtualERC20.sol";
-import "../interfaces/IERC677.sol";
-import "../interfaces/IERC677Receiver.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract VirtualERC677 is IERC677, VirtualERC20 {
-    constructor(string memory tokenName, string memory tokenSymbol) VirtualERC20(tokenName, tokenSymbol) {}
+import "../../interfaces/IERC677Receiver.sol";
+import "../../interfaces/IERC677.sol";
+
+contract ERC677 is IERC677, ERC20 {
+    constructor(
+        string memory _tokenName,
+        string memory _tokenSymbol,
+        uint _totalSupply
+    ) ERC20(_tokenName, _tokenSymbol) {
+        _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
+    }
 
     function transferAndCall(
         address _to,
