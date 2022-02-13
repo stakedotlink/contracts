@@ -18,7 +18,7 @@ contract PoolRouter is Ownable {
     IERC677 public allowanceToken;
     mapping(address => uint) public allowanceStakes;
 
-    struct StakingConfig {
+    struct TokenConfig {
         IERC677 token;
         IStakingPool stakingPool;
         uint stakePerAllowance;
@@ -26,7 +26,7 @@ contract PoolRouter is Ownable {
     }
 
     address[] private tokens;
-    mapping(address => StakingConfig) public stakingConfigs;
+    mapping(address => TokenConfig) public tokenConfigs;
 
     constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
@@ -41,6 +41,16 @@ contract PoolRouter is Ownable {
     }
 
     /**
+     * @dev Returns the token stake balance for an account
+     * @param _token token to return balance for
+     * @param _account account to return balance for
+     * @return account token stake balance
+     **/
+    function tokenStakes(address _token, address _account) external view returns (uint) {
+        return tokenConfigs[_token].tokenStakes[_account];
+    }
+
+    /**
      * @dev Calculates the amount of unused allowance for an account
      * @param _account account to calculate for
      * @return amount of unused allowance
@@ -50,9 +60,9 @@ contract PoolRouter is Ownable {
 
         for (uint i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            StakingConfig storage config = stakingConfigs[token];
+            TokenConfig storage config = tokenConfigs[token];
 
-            uint allowanceInUse = config.tokenStakes[_account] / config.stakePerAllowance;
+            uint allowanceInUse = (1e18 * config.tokenStakes[_account]) / config.stakePerAllowance;
             maxAllowanceInUse = Math.max(allowanceInUse, maxAllowanceInUse);
         }
 
@@ -71,7 +81,7 @@ contract PoolRouter is Ownable {
         bytes calldata
     ) external {
         require(
-            msg.sender == address(allowanceToken) || address(stakingConfigs[msg.sender].token) == msg.sender,
+            msg.sender == address(allowanceToken) || address(tokenConfigs[msg.sender].token) == msg.sender,
             "Only callable by supported tokens"
         );
 
@@ -103,7 +113,7 @@ contract PoolRouter is Ownable {
     function withdraw(address _token, uint _amount) external {
         require(_tokenSupported(_token), "Token not supported");
 
-        StakingConfig storage config = stakingConfigs[_token];
+        TokenConfig storage config = tokenConfigs[_token];
 
         if (_amount >= config.tokenStakes[msg.sender]) {
             config.tokenStakes[msg.sender] = 0;
@@ -112,7 +122,6 @@ contract PoolRouter is Ownable {
         }
 
         config.stakingPool.withdraw(msg.sender, _amount);
-        IERC677(_token).safeTransfer(msg.sender, _amount);
     }
 
     /**
@@ -126,9 +135,9 @@ contract PoolRouter is Ownable {
 
         for (uint i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            StakingConfig storage config = stakingConfigs[token];
+            TokenConfig storage config = tokenConfigs[token];
 
-            uint allowanceInUse = config.tokenStakes[msg.sender] / config.stakePerAllowance;
+            uint allowanceInUse = (1e18 * config.tokenStakes[msg.sender]) / config.stakePerAllowance;
             require(allowanceInUse <= allowanceToRemain, "Cannot withdraw allowance that is in use");
         }
 
@@ -139,8 +148,8 @@ contract PoolRouter is Ownable {
     /**
      * @dev adds a new token and staking config
      * @param _token staking token to add
-     * @param _stakingPool staking pool for token
-     * @param _stakePerAllowance stake amount per allowance
+     * @param _stakingPool token staking pool
+     * @param _stakePerAllowance stake amount per allowance (wei per eth)
      **/
     function addToken(
         address _token,
@@ -149,7 +158,7 @@ contract PoolRouter is Ownable {
     ) external onlyOwner {
         require(!_tokenSupported(_token), "Cannot add token that is already supported");
 
-        StakingConfig storage config = stakingConfigs[_token];
+        TokenConfig storage config = tokenConfigs[_token];
         config.token = IERC677(_token);
         config.stakingPool = IStakingPool(_stakingPool);
         config.stakePerAllowance = _stakePerAllowance;
@@ -164,7 +173,7 @@ contract PoolRouter is Ownable {
     function removeToken(address _token) external onlyOwner {
         require(_tokenSupported(_token), "Cannot remove token that is not supported");
 
-        delete stakingConfigs[_token].token;
+        delete tokenConfigs[_token].token;
 
         for (uint i = 0; i < tokens.length; i++) {
             if (tokens[i] == _token) {
@@ -173,6 +182,16 @@ contract PoolRouter is Ownable {
                 return;
             }
         }
+    }
+
+    /**
+     * @dev sets the stake amount per allowance for a supported token
+     * @param _token token to set stake per allowance for
+     * @param _stakePerAllowance stake per allowance to set
+     **/
+    function setStakePerAllowance(address _token, uint _stakePerAllowance) external onlyOwner {
+        require(_tokenSupported(_token), "Token is not supported");
+        tokenConfigs[_token].stakePerAllowance = _stakePerAllowance;
     }
 
     /**
@@ -186,10 +205,10 @@ contract PoolRouter is Ownable {
         address _account,
         uint _amount
     ) private {
-        StakingConfig storage config = stakingConfigs[_token];
+        TokenConfig storage config = tokenConfigs[_token];
 
-        uint allowanceRequired = _amount / config.stakePerAllowance;
-        uint allowanceInUse = config.tokenStakes[_account] / config.stakePerAllowance;
+        uint allowanceRequired = (1e18 * _amount) / config.stakePerAllowance;
+        uint allowanceInUse = (1e18 * config.tokenStakes[_account]) / config.stakePerAllowance;
         require((allowanceInUse + allowanceRequired) <= allowanceStakes[_account], "Not enough allowance staked");
 
         config.tokenStakes[_account] += _amount;
@@ -201,7 +220,7 @@ contract PoolRouter is Ownable {
      * @param _token token to check
      * @return whether or not token is supported
      **/
-    function _tokenSupported(address _token) private returns (bool) {
-        return address(stakingConfigs[_token].token) != address(0);
+    function _tokenSupported(address _token) private view returns (bool) {
+        return address(tokenConfigs[_token].token) != address(0);
     }
 }

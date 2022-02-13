@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { assert } from 'chai'
-import { toEther, assertThrowsAsync, deploy, setupAccounts } from './utils/helpers'
+import { toEther, assertThrowsAsync, deploy, getAccounts, setupToken } from './utils/helpers'
 import { ERC677, ExampleStrategy, StakingPool } from '../typechain-types'
 
 describe('StakingPool', () => {
@@ -25,7 +25,8 @@ describe('StakingPool', () => {
 
   before(async () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
-    ;({ signers, accounts } = await setupAccounts(token))
+    ;({ signers, accounts } = await getAccounts())
+    await setupToken(token, accounts)
     ownersRewards = accounts[4]
 
     stakingPool = (await deploy('StakingPool', [
