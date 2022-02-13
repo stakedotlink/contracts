@@ -28,6 +28,13 @@ contract PoolRouter is Ownable {
     address[] private tokens;
     mapping(address => TokenConfig) public tokenConfigs;
 
+    event StakeAllowance(address indexed account, uint amount);
+    event WithdrawAllowance(address indexed account, uint amount);
+    event StakeToken(address indexed token, address indexed account, uint amount);
+    event WithdrawToken(address indexed token, address indexed account, uint amount);
+    event AddToken(address indexed token);
+    event RemoveToken(address indexed token);
+
     constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
     }
@@ -87,6 +94,7 @@ contract PoolRouter is Ownable {
 
         if (msg.sender == address(allowanceToken)) {
             allowanceStakes[_sender] += _value;
+            emit StakeAllowance(_sender, _value);
             return;
         }
 
@@ -122,6 +130,8 @@ contract PoolRouter is Ownable {
         }
 
         config.stakingPool.withdraw(msg.sender, _amount);
+
+        emit WithdrawToken(_token, msg.sender, _amount);
     }
 
     /**
@@ -143,6 +153,8 @@ contract PoolRouter is Ownable {
 
         allowanceStakes[msg.sender] = allowanceToRemain;
         allowanceToken.safeTransfer(msg.sender, _amount);
+
+        emit WithdrawAllowance(msg.sender, _amount);
     }
 
     /**
@@ -164,6 +176,7 @@ contract PoolRouter is Ownable {
         config.stakePerAllowance = _stakePerAllowance;
         tokens.push(_token);
         IERC677(_token).safeApprove(_stakingPool, type(uint).max);
+        emit AddToken(_token);
     }
 
     /**
@@ -182,6 +195,8 @@ contract PoolRouter is Ownable {
                 return;
             }
         }
+
+        emit RemoveToken(_token);
     }
 
     /**
@@ -213,6 +228,8 @@ contract PoolRouter is Ownable {
 
         config.tokenStakes[_account] += _amount;
         config.stakingPool.stake(_account, _amount);
+
+        emit StakeToken(_token, _account, _amount);
     }
 
     /**
