@@ -2,79 +2,51 @@
 pragma solidity 0.8.11;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./tokens/base/VirtualERC677.sol";
 
 /**
  * @title RewardsPool
- * @dev Handles rewards distribution of an asset based on a staking derivative token
+ * @dev Base rewards pool to be inherited from - handles rewards distribution of an asset based on a staking derivative token
  * that represents a user's staked balance
  */
-contract RewardsPool is VirtualERC677, ReentrancyGuard {
+contract RewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
 
-    IERC677 public stakingDerivative;
-    IERC677 public rewardsToken;
+    IERC677 public token;
+    IERC677 public derivativeToken;
     uint256 public rewardPerToken;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
 
-    event Withdrawn(address indexed user, uint256 amount);
+    event Withdraw(address indexed account, uint256 amount);
 
     constructor(
-        address _stakingDerivative,
-        address _rewardsToken,
-        string memory _tokenName,
-        string memory _tokenSymbol
-    ) VirtualERC677(_tokenName, _tokenSymbol) {
-        rewardsToken = IERC677(_rewardsToken);
-        stakingDerivative = IERC677(_stakingDerivative);
+        address _token,
+        string memory _dTokenName,
+        string memory _dTokenSymbol
+    ) VirtualERC677(_dTokenName, _dTokenSymbol) {
+        token = IERC677(_token);
+        derivativeToken = IERC677(address(this));
     }
 
     /**
-     * @dev calculates a user's total unclaimed rewards (principal balance + newly earned rewards)
-     * @param _account user to calculate rewards for
-     * @return user's total unclaimed rewards
+     * @dev calculates an account's total unclaimed rewards (principal balance + newly earned rewards)
+     * @param _account account to calculate rewards for
+     * @return account's total unclaimed rewards
      **/
     function balanceOf(address _account) public view virtual override returns (uint256) {
         return
-            (stakingDerivative.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            (derivativeToken.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
     }
 
     /**
-     * @dev updates a user's principal reward balance
-     * @param _account user to update for
+     * @dev updates an account's principal reward balance
+     * @param _account account to update for
      **/
-    function updateReward(address _account) external nonReentrant {
-        _updateReward(_account);
-    }
-
-    /**
-     * @dev withdraws a user's earned rewards
-     * @param _amount amount to withdraw
-     **/
-    function withdraw(uint256 _amount) public virtual nonReentrant {
-        _withdraw(msg.sender, _amount);
-        rewardsToken.safeTransfer(msg.sender, _amount);
-    }
-
-    /**
-     * @dev updates rewardPerToken
-     * @param _reward deposited reward amount
-     **/
-    function _updateRewardPerToken(uint256 _reward) internal {
-        require(stakingDerivative.totalSupply() > 0, "Staked amount must be > 0");
-        rewardPerToken = rewardPerToken + ((_reward * 1e18) / stakingDerivative.totalSupply());
-    }
-
-    /**
-     * @dev updates a user's principal reward balance
-     * @param _account user to update for
-     **/
-    function _updateReward(address _account) internal virtual {
+    function updateReward(address _account) public {
         uint256 toMint = balanceOf(_account) - super.balanceOf(_account);
         if (toMint > 0) {
             _mint(_account, toMint);
@@ -83,20 +55,30 @@ contract RewardsPool is VirtualERC677, ReentrancyGuard {
     }
 
     /**
-     * @dev performs accounting updates for a user withdrawal
-     * @param _sender user to withdraw for
-     * @param _amount amount to withdraw
+     * @dev updates rewardPerToken
+     * @param _reward deposited reward amount
      **/
-    function _withdraw(address _sender, uint256 _amount) internal {
-        _updateReward(_sender);
-        _burn(_sender, _amount);
-        emit Withdrawn(_sender, _amount);
+    function _updateRewardPerToken(uint256 _reward) internal {
+        require(derivativeToken.totalSupply() > 0, "Staked amount must be > 0");
+        rewardPerToken = rewardPerToken + ((_reward * 1e18) / derivativeToken.totalSupply());
     }
 
     /**
-     * @dev transfers unclaimed rewards from one user to another
-     * @param _from user to transfer from
-     * @param _to user to transfer to
+     * @dev withdraws rewards for an account
+     * @param _account account to withdraw for
+     * @param _amount amount to withdraw
+     **/
+    function _withdraw(address _account, uint256 _amount) internal {
+        updateReward(_account);
+        _burn(_account, _amount);
+        token.safeTransfer(_account, _amount);
+        emit Withdraw(_account, _amount);
+    }
+
+    /**
+     * @dev transfers unclaimed rewards from one account to another
+     * @param _from account to transfer from
+     * @param _to account to transfer to
      * @param _amount amount to transfer
      **/
     function _transfer(
@@ -104,7 +86,7 @@ contract RewardsPool is VirtualERC677, ReentrancyGuard {
         address _to,
         uint256 _amount
     ) internal virtual override {
-        _updateReward(_from);
+        updateReward(_from);
         super._transfer(_from, _to, _amount);
     }
 }

@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { assert } from 'chai'
-import { toEther, assertThrowsAsync, deploy } from './utils/helpers'
+import { toEther, assertThrowsAsync, deploy, getAccounts, setupToken } from './utils/helpers'
 import { ERC677, ExampleStrategy, StakingPool } from '../typechain-types'
 
 describe('StakingPool', () => {
@@ -14,27 +14,19 @@ describe('StakingPool', () => {
   let signers: Signer[]
   let accounts: string[]
 
-  async function stake(signer: number, amount: string) {
-    await token
-      .connect(signers[signer])
-      .transferAndCall(stakingPool.address, toEther(amount), '0x00')
+  async function stake(account: number, amount: string) {
+    await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
+    await stakingPool.stake(accounts[account], toEther(amount))
   }
 
-  async function withdraw(signer: number, amount: string) {
-    await stakingPool.connect(signers[signer]).withdraw(toEther(amount))
+  async function withdraw(account: number, amount: string) {
+    await stakingPool.withdraw(accounts[account], toEther(amount))
   }
 
   before(async () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
-
-    signers = await ethers.getSigners()
-    accounts = await Promise.all(
-      signers.map(async (signer, index) => {
-        let account = await signer.getAddress()
-        await token.transfer(account, toEther(index < 4 ? '10000' : '0'))
-        return account
-      })
-    )
+    ;({ signers, accounts } = await getAccounts())
+    await setupToken(token, accounts)
     ownersRewards = accounts[4]
 
     stakingPool = (await deploy('StakingPool', [
@@ -43,6 +35,7 @@ describe('StakingPool', () => {
       'lpLINK',
       ownersRewards,
       '2500',
+      accounts[0],
     ])) as StakingPool
 
     strategy1 = (await deploy('ExampleStrategy', [
@@ -69,6 +62,8 @@ describe('StakingPool', () => {
 
     await stakingPool.addStrategy(strategy1.address)
     await stakingPool.addStrategy(strategy2.address)
+
+    await token.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
 
   it('derivative name, symbol, decimals should be correct', async () => {
@@ -90,6 +85,7 @@ describe('StakingPool', () => {
 
   it('should be able to stake asset and receive derivative tokens 1:1', async () => {
     await stake(1, '5000')
+    await stake(2, '5000')
 
     assert.equal(
       ethers.utils.formatEther(await token.balanceOf(accounts[1])),
@@ -103,32 +99,9 @@ describe('StakingPool', () => {
     )
   })
 
-  it('only asset token should be able to call ERC677 stake function', async () => {
-    await assertThrowsAsync(async () => {
-      await stakingPool.onTokenTransfer(accounts[2], toEther('1'), '0x00')
-    }, 'revert')
-  })
-
-  it('should be able to stake using ERC20 stake function', async () => {
-    await token.connect(signers[2]).approve(stakingPool.address, toEther('5000'))
-    await stakingPool.connect(signers[2]).stake(toEther('5000'))
-
-    assert.equal(
-      ethers.utils.formatEther(await token.balanceOf(accounts[2])),
-      '5000.0',
-      'Account-2 asset balance should be 5000'
-    )
-    assert.equal(
-      ethers.utils.formatEther(await stakingPool.balanceOf(accounts[2])),
-      '5000.0',
-      'Account-2 derivative balance should be 5000'
-    )
-  })
-
   it('should not be able to stake more than asset balance', async () => {
-    await token.connect(signers[2]).approve(stakingPool.address, toEther('6000'))
     await assertThrowsAsync(async () => {
-      await stakingPool.connect(signers[2]).stake(toEther('6000'))
+      await stake(2, '6000')
     }, 'revert')
   })
 
@@ -450,6 +423,15 @@ describe('StakingPool', () => {
       '0.0',
       'Strategy-2 should be emptied of assets'
     )
+  })
+
+  it('only router should be able to stake/withdraw', async () => {
+    await assertThrowsAsync(async () => {
+      await stakingPool.connect(signers[1]).stake(accounts[1], '1000')
+    }, 'revert')
+    await assertThrowsAsync(async () => {
+      await stakingPool.connect(signers[1]).withdraw(accounts[1], '1000')
+    }, 'revert')
   })
 
   it('only governance should be able to call governance functions', async () => {

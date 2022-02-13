@@ -4,6 +4,7 @@ pragma solidity 0.8.11;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./RewardsPool.sol";
 import "./interfaces/IStrategy.sol";
@@ -13,7 +14,7 @@ import "./interfaces/IStrategy.sol";
  * @dev Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
  * asset into strategy contracts to earn returns
  */
-contract StakingPool is RewardsPool {
+contract StakingPool is RewardsPool, ReentrancyGuard {
     using SafeERC20 for IERC677;
 
     uint8 public totalStrategies;
@@ -24,21 +25,24 @@ contract StakingPool is RewardsPool {
     uint256 public ownersTakePercent;
     uint256 public ownersRewards;
 
+    address public poolRouter;
     address public governance;
 
-    event Staked(address indexed user, uint256 amount);
+    event Stake(address indexed account, uint256 amount);
     event OwnersRewardsClaimed(uint256 amount);
-    event StrategyRewardsClaimed(address indexed sender, uint256 amountStaked, uint256 amount, uint256 ownersTakePercent);
+    event StrategyRewardsClaimed(address indexed account, uint256 amountStaked, uint256 amount, uint256 ownersTakePercent);
 
     constructor(
-        address _rewardsToken,
+        address _token,
         string memory _dTokenName,
         string memory _dTokenSymbol,
         address _ownersRewardsPool,
-        uint256 _ownersTakePercent
-    ) RewardsPool(address(this), _rewardsToken, _dTokenName, _dTokenSymbol) {
+        uint256 _ownersTakePercent,
+        address _poolRouter
+    ) RewardsPool(_token, _dTokenName, _dTokenSymbol) {
         ownersRewardsPool = _ownersRewardsPool;
         ownersTakePercent = _ownersTakePercent;
+        poolRouter = _poolRouter;
         governance = msg.sender;
     }
 
@@ -47,10 +51,15 @@ contract StakingPool is RewardsPool {
         _;
     }
 
+    modifier onlyRouter() {
+        require(poolRouter == msg.sender, "PoolRouter only");
+        _;
+    }
+
     /**
-     * @dev calculates a user's total withdrawable balance (initial stake + earned rewards)
-     * @param _account user to calculate rewards for
-     * @return user's total withdrawable balance
+     * @dev calculates an account's total withdrawable balance (initial stake + earned rewards)
+     * @param _account account to calculate rewards for
+     * @return account's total withdrawable balance
      **/
     function balanceOf(address _account) public view override returns (uint256) {
         return
@@ -60,45 +69,39 @@ contract StakingPool is RewardsPool {
     }
 
     /**
-     * @dev ERC677 implementation to receive a stake
-     * @param _sender of the token transfer
-     * @param _value of the token transfer
-     **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata
-    ) external nonReentrant {
-        require(msg.sender == address(rewardsToken), "Sender must be rewards token");
-        _stake(_sender, _value);
-    }
-
-    /**
      * @dev stakes asset tokens and mints derivative tokens 1:1
+     * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function stake(uint256 _amount) public nonReentrant {
-        rewardsToken.safeTransferFrom(msg.sender, address(this), _amount);
-        _stake(msg.sender, _amount);
+    function stake(address _account, uint256 _amount) external onlyRouter {
+        require(totalStrategies > 0, "Must be > 0 strategies to stake");
+
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        updateReward(_account);
+        _mint(_account, _amount);
+        _depositLiquidity(_amount);
+        emit Stake(_account, _amount);
     }
 
     /**
      * @dev withdraws asset tokens and burns derivative tokens 1:1 (withdraws from
      * strategies if not enough liquidity)
+     * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
-    function withdraw(uint256 _amount) public override {
+    function withdraw(address _account, uint256 _amount) external onlyRouter {
         uint256 toWithdraw = _amount;
         if (_amount == type(uint256).max) {
-            toWithdraw = balanceOf(msg.sender);
+            toWithdraw = balanceOf(_account);
         }
 
-        uint256 balance = rewardsToken.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
         if (toWithdraw > balance) {
             _withdrawLiquidity(toWithdraw - balance);
         }
-        require(rewardsToken.balanceOf(address(this)) >= toWithdraw, "Not enough liquidity available to withdraw");
-        super.withdraw(toWithdraw);
+        require(token.balanceOf(address(this)) >= toWithdraw, "Not enough liquidity available to withdraw");
+
+        _withdraw(_account, toWithdraw);
     }
 
     /**
@@ -106,11 +109,11 @@ contract StakingPool is RewardsPool {
      **/
     function claimOwnersRewards() external nonReentrant {
         require(ownersRewards > 0, "No rewards to claim");
-        uint256 balance = rewardsToken.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
         if (ownersRewards > balance) {
             _withdrawLiquidity(ownersRewards - balance);
         }
-        rewardsToken.safeTransfer(ownersRewardsPool, ownersRewards);
+        token.safeTransfer(ownersRewardsPool, ownersRewards);
         emit OwnersRewardsClaimed(ownersRewards);
         ownersRewards = 0;
     }
@@ -136,7 +139,7 @@ contract StakingPool is RewardsPool {
             _updateRewardPerToken(totalRewards - ownersTake);
             emit StrategyRewardsClaimed(
                 msg.sender,
-                totalInStrategies + rewardsToken.balanceOf(address(this)),
+                totalInStrategies + token.balanceOf(address(this)),
                 totalRewards,
                 ownersTakePercent
             );
@@ -160,7 +163,7 @@ contract StakingPool is RewardsPool {
 
             emit StrategyRewardsClaimed(
                 msg.sender,
-                totalInStrategies + rewardsToken.balanceOf(address(this)),
+                totalInStrategies + token.balanceOf(address(this)),
                 rewards,
                 ownersTakePercent
             );
@@ -195,7 +198,7 @@ contract StakingPool is RewardsPool {
      **/
     function addStrategy(address _strategy) external onlyGovernance {
         require(!_strategyExists(_strategy), "Strategy already exists");
-        rewardsToken.safeApprove(_strategy, type(uint256).max);
+        token.safeApprove(_strategy, type(uint256).max);
         strategies[totalStrategies] = _strategy;
         totalStrategies += 1;
     }
@@ -220,7 +223,7 @@ contract StakingPool is RewardsPool {
         }
         delete strategies[totalStrategies - 1];
         totalStrategies--;
-        rewardsToken.safeApprove(address(strategy), 0);
+        token.safeApprove(address(strategy), 0);
     }
 
     /**
@@ -256,19 +259,6 @@ contract StakingPool is RewardsPool {
      **/
     function setOwnersTakePercent(uint256 _ownersTakePercent) external onlyGovernance {
         ownersTakePercent = _ownersTakePercent;
-    }
-
-    /**
-     * @dev stakes asset tokens and mints derivative tokens 1:1
-     * @param _sender of the stake
-     * @param _amount amount to stake
-     **/
-    function _stake(address _sender, uint256 _amount) internal {
-        require(totalStrategies > 0, "Must be > 0 strategies to stake");
-        _updateReward(_sender);
-        _mint(_sender, _amount);
-        _depositLiquidity(_amount);
-        emit Staked(_sender, _amount);
     }
 
     /**
