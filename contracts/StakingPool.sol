@@ -4,7 +4,6 @@ pragma solidity 0.8.11;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./RewardsPool.sol";
 import "./interfaces/IStrategy.sol";
@@ -14,7 +13,7 @@ import "./interfaces/IStrategy.sol";
  * @dev Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
  * asset into strategy contracts to earn returns
  */
-contract StakingPool is RewardsPool, ReentrancyGuard {
+contract StakingPool is RewardsPool {
     using SafeERC20 for IERC677;
 
     uint8 public totalStrategies;
@@ -39,7 +38,7 @@ contract StakingPool is RewardsPool, ReentrancyGuard {
         address _ownersRewardsPool,
         uint256 _ownersTakePercent,
         address _poolRouter
-    ) RewardsPool(_token, _dTokenName, _dTokenSymbol) {
+    ) RewardsPool(address(this), _token, _dTokenName, _dTokenSymbol) {
         ownersRewardsPool = _ownersRewardsPool;
         ownersTakePercent = _ownersTakePercent;
         poolRouter = _poolRouter;
@@ -107,7 +106,7 @@ contract StakingPool is RewardsPool, ReentrancyGuard {
     /**
      * @dev claims owners share of rewards
      **/
-    function claimOwnersRewards() external nonReentrant {
+    function claimOwnersRewards() external {
         require(ownersRewards > 0, "No rewards to claim");
         uint256 balance = token.balanceOf(address(this));
         if (ownersRewards > balance) {
@@ -121,7 +120,7 @@ contract StakingPool is RewardsPool, ReentrancyGuard {
     /**
      * @dev claims earned rewards from all strategies
      **/
-    function claimStrategyRewards() external nonReentrant {
+    function claimStrategyRewards() external {
         uint256 totalRewards;
         for (uint8 i = 0; i < totalStrategies; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
@@ -150,7 +149,7 @@ contract StakingPool is RewardsPool, ReentrancyGuard {
      * @dev claims earned rewards from a strategy
      * @param _index index of strategy to claim from
      **/
-    function claimSingleStrategyRewards(uint8 _index) public nonReentrant {
+    function claimSingleStrategyRewards(uint8 _index) public {
         require(_index < totalStrategies, "Strategy does not exist");
         IStrategy strategy = IStrategy(strategies[_index]);
         uint256 rewards = strategy.rewards();

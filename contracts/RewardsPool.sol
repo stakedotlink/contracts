@@ -13,8 +13,8 @@ import "./tokens/base/VirtualERC677.sol";
 contract RewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
 
+    IERC677 public sdToken;
     IERC677 public token;
-    IERC677 public derivativeToken;
     uint256 public rewardPerToken;
 
     mapping(address => uint256) public userRewardPerTokenPaid;
@@ -22,12 +22,13 @@ contract RewardsPool is VirtualERC677 {
     event Withdraw(address indexed account, uint256 amount);
 
     constructor(
+        address _sdToken,
         address _token,
         string memory _dTokenName,
         string memory _dTokenSymbol
     ) VirtualERC677(_dTokenName, _dTokenSymbol) {
+        sdToken = IERC677(_sdToken);
         token = IERC677(_token);
-        derivativeToken = IERC677(address(this));
     }
 
     /**
@@ -37,7 +38,7 @@ contract RewardsPool is VirtualERC677 {
      **/
     function balanceOf(address _account) public view virtual override returns (uint256) {
         return
-            (derivativeToken.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            (sdToken.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
     }
@@ -59,8 +60,8 @@ contract RewardsPool is VirtualERC677 {
      * @param _reward deposited reward amount
      **/
     function _updateRewardPerToken(uint256 _reward) internal {
-        require(derivativeToken.totalSupply() > 0, "Staked amount must be > 0");
-        rewardPerToken = rewardPerToken + ((_reward * 1e18) / derivativeToken.totalSupply());
+        require(sdToken.totalSupply() > 0, "Staked amount must be > 0");
+        rewardPerToken = rewardPerToken + ((_reward * 1e18) / sdToken.totalSupply());
     }
 
     /**
