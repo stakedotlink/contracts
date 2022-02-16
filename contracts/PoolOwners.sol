@@ -18,7 +18,7 @@ contract PoolOwners is Ownable {
 
     IAllowance public allowanceToken;
     IERC677 public ownersToken;
-    mapping(address => uint) public ownersTokenStakes;
+    mapping(address => uint) private ownersTokenStakes;
 
     address[] private tokens;
     mapping(address => address) public rewardPools;
@@ -47,6 +47,14 @@ contract PoolOwners is Ownable {
      **/
     function supportedTokens() external view returns (address[] memory) {
         return tokens;
+    }
+
+    /**
+     * @dev Returns an account's staked owner's token balance
+     * @return staked balance
+     **/
+    function balanceOf(address _account) external view returns (uint) {
+        return ownersTokenStakes[_account];
     }
 
     /**
@@ -84,7 +92,7 @@ contract PoolOwners is Ownable {
     }
 
     /**
-     * @dev withdraws user's earned rewards for a all assets
+     * @dev withdraws an account's earned rewards for a all assets
      **/
     function withdrawAllRewards() public {
         for (uint i = 0; i < tokens.length; i++) {
@@ -94,7 +102,7 @@ contract PoolOwners is Ownable {
     }
 
     /**
-     * @dev withdraws user's earned rewards for all assets and withdraws their owners tokens
+     * @dev withdraws an account's earned rewards for all assets and withdraws their owners tokens
      **/
     function exit() external {
         withdraw(ownersTokenStakes[msg.sender]);
