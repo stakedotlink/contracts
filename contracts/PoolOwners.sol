@@ -18,14 +18,16 @@ contract PoolOwners is Ownable {
 
     IAllowance public allowanceToken;
     IERC677 public ownersToken;
+
     mapping(address => uint) private ownersTokenStakes;
+    uint private totalOwnersTokenStakes;
 
     address[] private tokens;
     mapping(address => address) public rewardPools;
 
-    event StakeOwnersToken(address indexed user, uint amount);
-    event WithdrawOwnersToken(address indexed user, uint amount);
-    event WithdrawRewards(address indexed user);
+    event StakeOwnersToken(address indexed account, uint amount);
+    event WithdrawOwnersToken(address indexed account, uint amount);
+    event WithdrawRewards(address indexed account);
     event AddToken(address indexed token, address rewardsPool);
     event RemoveToken(address indexed token);
 
@@ -58,6 +60,29 @@ contract PoolOwners is Ownable {
     }
 
     /**
+     * @dev returns the total amount of owners tokens staked
+     * @return total amount staked
+     **/
+    function totalSupply() external view returns (uint256) {
+        return totalOwnersTokenStakes;
+    }
+
+    /**
+     * @dev returns a list of withdrawable rewards for an account
+     * @param _account account to return reward amounts for
+     * @return list of withdrawable reward amounts
+     **/
+    function withdrawableRewards(address _account) external view returns (uint[] memory) {
+        uint[] memory withdrawable = new uint[](tokens.length);
+
+        for (uint i = 0; i < tokens.length; i++) {
+            withdrawable[i] = IOwnersRewardsPool(rewardPools[tokens[i]]).balanceOf(_account);
+        }
+
+        return withdrawable;
+    }
+
+    /**
      * @dev ERC677 implementation that proxies staking
      * @param _sender of the token transfer
      * @param _value of the token transfer
@@ -85,14 +110,26 @@ contract PoolOwners is Ownable {
      * @param _amount amount to withdraw
      **/
     function withdraw(uint _amount) public updateRewards(msg.sender) {
-        ownersTokenStakes[msg.sender] -= _amount;
         allowanceToken.burn(msg.sender, _amount);
+        ownersTokenStakes[msg.sender] -= _amount;
+        totalOwnersTokenStakes -= _amount;
         ownersToken.safeTransfer(msg.sender, _amount);
         emit WithdrawOwnersToken(msg.sender, _amount);
     }
 
     /**
-     * @dev withdraws an account's earned rewards for a all assets
+     * @dev withdraws an account's earned rewards for a specific token
+     * @param _token token to withdraw
+     **/
+    function withdrawRewards(address _token) public {
+        require(rewardPools[_token] != address(0), "Token is not supported");
+
+        _withdrawReward(_token, msg.sender);
+        emit WithdrawRewards(msg.sender);
+    }
+
+    /**
+     * @dev withdraws an account's earned rewards for a all tokens
      **/
     function withdrawAllRewards() public {
         for (uint i = 0; i < tokens.length; i++) {
@@ -102,7 +139,7 @@ contract PoolOwners is Ownable {
     }
 
     /**
-     * @dev withdraws an account's earned rewards for all assets and withdraws their owners tokens
+     * @dev withdraws an account's earned rewards for all tokens and withdraws their owners tokens
      **/
     function exit() external {
         withdraw(ownersTokenStakes[msg.sender]);
@@ -124,16 +161,22 @@ contract PoolOwners is Ownable {
 
     /**
      * @dev removes an existing token
-     * @param _index index of token to remove
+     * @param _token token to remove
      **/
-    function removeToken(uint _index) external onlyOwner {
-        require(_index < tokens.length, "Cannot remove token that is not supported");
+    function removeToken(address _token) external onlyOwner {
+        require(rewardPools[_token] != address(0), "Cannot remove token that is not supported");
 
-        address token = tokens[_index];
-        tokens[_index] = tokens[tokens.length - 1];
-        tokens.pop();
-        delete rewardPools[token];
-        emit RemoveToken(token);
+        delete rewardPools[_token];
+
+        for (uint i = 0; i < tokens.length; i++) {
+            if (tokens[i] == _token) {
+                tokens[i] = tokens[tokens.length - 1];
+                tokens.pop();
+                break;
+            }
+        }
+
+        emit RemoveToken(_token);
     }
 
     /**
@@ -143,6 +186,7 @@ contract PoolOwners is Ownable {
      **/
     function _stake(address _account, uint _amount) private updateRewards(_account) {
         ownersTokenStakes[_account] += _amount;
+        totalOwnersTokenStakes += _amount;
         allowanceToken.mint(_account, _amount);
         emit StakeOwnersToken(_account, _amount);
     }

@@ -42,7 +42,7 @@ contract Allowance is ERC677, Ownable {
      * @param _poolOwners address to set
      **/
     function setPoolOwners(address _poolOwners) external onlyOwner {
-        require(_poolOwners == address(0), "PoolOwners is already set");
+        require(poolOwners == address(0), "PoolOwners is already set");
         poolOwners = _poolOwners;
     }
 }

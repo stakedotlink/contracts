@@ -13,7 +13,7 @@ contract OwnersRewardsPool is RewardsPool {
     using SafeERC20 for IERC677;
 
     address public poolOwners;
-    uint256 public distributedRewards;
+    uint256 public withdrawableRewards;
 
     event DistributeRewards(address indexed sender, uint256 amountStaked, uint256 amount);
 
@@ -27,23 +27,19 @@ contract OwnersRewardsPool is RewardsPool {
     }
 
     /**
-     * @dev withdraws a user's earned rewards
-     * @param _amount amount to withdraw
+     * @dev withdraws an account's earned rewards
      **/
-    function withdraw(uint256 _amount) external {
-        uint256 toWithdraw = _amount;
+    function withdraw() external {
+        uint256 toWithdraw = balanceOf(msg.sender);
+        require(toWithdraw > 0, "No rewards to withdraw");
 
-        if (_amount == type(uint256).max) {
-            toWithdraw = balanceOf(msg.sender);
-        }
-
-        distributedRewards -= toWithdraw;
+        withdrawableRewards -= toWithdraw;
         _withdraw(msg.sender, toWithdraw);
     }
 
     /**
-     * @dev withdraws all of a user's earned rewards
-     * @param _account user to withdraw for
+     * @dev withdraws an account's earned rewards
+     * @param _account account to withdraw for
      **/
     function withdraw(address _account) external {
         require(msg.sender == poolOwners, "PoolOwners only");
@@ -51,7 +47,7 @@ contract OwnersRewardsPool is RewardsPool {
         uint256 toWithdraw = balanceOf(_account);
 
         if (toWithdraw > 0) {
-            distributedRewards -= toWithdraw;
+            withdrawableRewards -= toWithdraw;
             _withdraw(_account, toWithdraw);
         }
     }
@@ -75,8 +71,8 @@ contract OwnersRewardsPool is RewardsPool {
      **/
     function distributeRewards() public {
         require(sdToken.totalSupply() > 0, "Cannot distribute when nothing is staked");
-        uint256 toDistribute = token.balanceOf(address(this)) - distributedRewards;
-        distributedRewards += toDistribute;
+        uint256 toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
+        withdrawableRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
         emit DistributeRewards(msg.sender, sdToken.totalSupply(), toDistribute);
     }

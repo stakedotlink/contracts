@@ -192,7 +192,7 @@ contract PoolRouter is Ownable {
             if (tokens[i] == _token) {
                 tokens[i] = tokens[tokens.length - 1];
                 tokens.pop();
-                return;
+                break;
             }
         }
 
