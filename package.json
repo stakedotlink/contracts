@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "test": "npx hardhat test --network hardhat",
+    "estimate-gas": "npx hardhat run --network hardhat scripts/estimate-gas.ts",
     "start": "npx hardhat node --network hardhat",
     "compile": "npx hardhat compile",
     "deploy": "npx hardhat deploy",
