@@ -63,7 +63,7 @@ contract PoolOwners is Ownable {
      * @dev returns the total amount of owners tokens staked
      * @return total amount staked
      **/
-    function totalSupply() external view returns (uint256) {
+    function totalSupply() external view returns (uint) {
         return totalOwnersTokenStakes;
     }
 

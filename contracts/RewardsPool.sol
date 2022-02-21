@@ -15,11 +15,11 @@ contract RewardsPool is VirtualERC677 {
 
     IERC677 public sdToken;
     IERC677 public token;
-    uint256 public rewardPerToken;
+    uint internal rewardPerTokenStored;
 
-    mapping(address => uint256) public userRewardPerTokenPaid;
+    mapping(address => uint) public userRewardPerTokenPaid;
 
-    event Withdraw(address indexed account, uint256 amount);
+    event Withdraw(address indexed account, uint amount);
 
     constructor(
         address _sdToken,
@@ -36,11 +36,19 @@ contract RewardsPool is VirtualERC677 {
      * @param _account account to calculate rewards for
      * @return account's total unclaimed rewards
      **/
-    function balanceOf(address _account) public view virtual override returns (uint256) {
+    function balanceOf(address _account) public view virtual override returns (uint) {
         return
-            (sdToken.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            (sdToken.balanceOf(_account) * (rewardPerTokenStored - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
+    }
+
+    /**
+     * @dev Returns the current value of rewardPerToken
+     * @return rewardPerToken
+     **/
+    function rewardPerToken() public view virtual returns (uint) {
+        return rewardPerTokenStored;
     }
 
     /**
@@ -48,20 +56,20 @@ contract RewardsPool is VirtualERC677 {
      * @param _account account to update for
      **/
     function updateReward(address _account) public {
-        uint256 toMint = balanceOf(_account) - super.balanceOf(_account);
+        uint toMint = balanceOf(_account) - super.balanceOf(_account);
         if (toMint > 0) {
             _mint(_account, toMint);
         }
-        userRewardPerTokenPaid[_account] = rewardPerToken;
+        userRewardPerTokenPaid[_account] = rewardPerTokenStored;
     }
 
     /**
-     * @dev updates rewardPerToken
+     * @dev updates rewardPerTokenStored
      * @param _reward deposited reward amount
      **/
-    function _updateRewardPerToken(uint256 _reward) internal {
+    function _updateRewardPerToken(uint _reward) internal {
         require(sdToken.totalSupply() > 0, "Staked amount must be > 0");
-        rewardPerToken = rewardPerToken + ((_reward * 1e18) / sdToken.totalSupply());
+        rewardPerTokenStored += ((_reward * 1e18) / sdToken.totalSupply());
     }
 
     /**
@@ -69,7 +77,7 @@ contract RewardsPool is VirtualERC677 {
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
-    function _withdraw(address _account, uint256 _amount) internal {
+    function _withdraw(address _account, uint _amount) internal {
         updateReward(_account);
         _burn(_account, _amount);
         token.safeTransfer(_account, _amount);
@@ -85,7 +93,7 @@ contract RewardsPool is VirtualERC677 {
     function _transfer(
         address _from,
         address _to,
-        uint256 _amount
+        uint _amount
     ) internal virtual override {
         updateReward(_from);
         super._transfer(_from, _to, _amount);
