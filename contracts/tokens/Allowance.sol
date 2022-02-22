@@ -24,7 +24,7 @@ contract Allowance is ERC677, Ownable {
      * @param _account address to mint tokens for
      * @param _amount amount to mint
      **/
-    function mint(address _account, uint256 _amount) external onlyPoolOwners {
+    function mint(address _account, uint _amount) external onlyPoolOwners {
         _mint(_account, _amount);
     }
 
@@ -33,7 +33,7 @@ contract Allowance is ERC677, Ownable {
      * @param _account address to burn tokens from
      * @param _amount amount to burn
      **/
-    function burn(address _account, uint256 _amount) external onlyPoolOwners {
+    function burn(address _account, uint _amount) external onlyPoolOwners {
         _burn(_account, _amount);
     }
 

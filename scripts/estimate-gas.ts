@@ -4,16 +4,20 @@ import {
   Allowance,
   ERC677,
   OwnersRewardsPool,
+  OwnersTimeRewardsPool,
   PoolOwners,
   PoolRouter,
   StakingPool,
 } from '../typechain-types'
+import { ethers } from 'hardhat'
 
 let token: ERC677
+let token2: ERC677
 let ownersToken: ERC677
 let allowanceToken: Allowance
 let poolOwners: PoolOwners
 let ownersRewards: OwnersRewardsPool
+let ownersTimeRewards: OwnersTimeRewardsPool
 let poolRouter: PoolRouter
 let stakingPool: StakingPool
 let strategies: Array<string>
@@ -22,6 +26,7 @@ let signers: Signer[]
 
 async function setup() {
   token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
+  token2 = (await deploy('ERC677', ['Token 2', 'T2', 1000000000])) as ERC677
   ;({ signers, accounts } = await getAccounts())
 
   ownersToken = (await deploy('ERC677', ['LinkPool', 'LPL', '100000000'])) as ERC677
@@ -38,6 +43,13 @@ async function setup() {
     'LinkPool Owners LINK',
     'lpoLINK',
   ])) as OwnersRewardsPool
+
+  ownersTimeRewards = (await deploy('OwnersTimeRewardsPool', [
+    poolOwners.address,
+    token.address,
+    'LinkPool Owners T2',
+    'lpoT2',
+  ])) as OwnersTimeRewardsPool
 
   poolRouter = (await deploy('PoolRouter', [allowanceToken.address])) as PoolRouter
 
@@ -65,6 +77,7 @@ async function setup() {
 
   await allowanceToken.setPoolOwners(poolOwners.address)
   await poolOwners.addToken(token.address, ownersRewards.address)
+  await poolOwners.addToken(token2.address, ownersTimeRewards.address)
   await poolRouter.addToken(token.address, stakingPool.address, toEther(10))
 
   await setupToken(token, accounts)
@@ -76,7 +89,9 @@ async function main() {
   console.log('**** MAX GAS ESTIMATES (5 strategies) ****\n')
 
   // PoolOwners
-  console.log('\nPoolOwners\n****************************')
+  console.log(
+    '\nPoolOwners (OwnersRewardsPool + OwnersTimeRewardsPool)\n****************************'
+  )
   console.log(
     'stake (onTokenTransfer) -> ',
     (await ownersToken.estimateGas.transferAndCall(poolOwners.address, toEther(1000), '0x00'))
@@ -86,6 +101,11 @@ async function main() {
   await ownersToken.transferAndCall(poolOwners.address, toEther(1000), '0x00')
   await ownersToken.connect(signers[1]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
   await token.transferAndCall(ownersRewards.address, toEther(100), '0x00')
+  await token.transferAndCall(
+    ownersTimeRewards.address,
+    toEther(100),
+    ethers.utils.defaultAbiCoder.encode(['uint'], [100])
+  )
   console.log(
     'withdrawAllRewards -> ',
     (await poolOwners.estimateGas.withdrawAllRewards()).toNumber().toLocaleString()
@@ -100,7 +120,7 @@ async function main() {
   )
 
   // PoolRouter
-  console.log('PoolRouter\n****************************')
+  console.log('\nPoolRouter\n****************************')
   console.log(
     'stake - allowance (onTokenTransfer) -> ',
     (await allowanceToken.estimateGas.transferAndCall(poolRouter.address, toEther(1000), '0x00'))
@@ -127,7 +147,7 @@ async function main() {
   )
 
   // StakingPool
-  console.log('StakingPool\n****************************')
+  console.log('\nStakingPool\n****************************')
   for (let i = 0; i < strategies.length; i++) {
     await token.transfer(strategies[i], toEther(100))
   }

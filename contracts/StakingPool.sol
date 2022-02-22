@@ -21,22 +21,22 @@ contract StakingPool is RewardsPool {
     mapping(uint8 => address) public strategies;
 
     address public ownersRewardsPool;
-    uint256 public ownersTakePercent;
-    uint256 public ownersRewards;
+    uint public ownersTakePercent;
+    uint public ownersRewards;
 
     address public poolRouter;
     address public governance;
 
-    event Stake(address indexed account, uint256 amount);
-    event OwnersRewardsClaimed(uint256 amount);
-    event StrategyRewardsClaimed(address indexed account, uint256 amountStaked, uint256 amount, uint256 ownersTakePercent);
+    event Stake(address indexed account, uint amount);
+    event OwnersRewardsClaimed(uint amount);
+    event StrategyRewardsClaimed(address indexed account, uint amountStaked, uint amount, uint ownersTakePercent);
 
     constructor(
         address _token,
         string memory _dTokenName,
         string memory _dTokenSymbol,
         address _ownersRewardsPool,
-        uint256 _ownersTakePercent,
+        uint _ownersTakePercent,
         address _poolRouter
     ) RewardsPool(address(this), _token, _dTokenName, _dTokenSymbol) {
         ownersRewardsPool = _ownersRewardsPool;
@@ -60,9 +60,9 @@ contract StakingPool is RewardsPool {
      * @param _account account to calculate rewards for
      * @return account's total withdrawable balance
      **/
-    function balanceOf(address _account) public view override returns (uint256) {
+    function balanceOf(address _account) public view override returns (uint) {
         return
-            (VirtualERC20.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            (VirtualERC20.balanceOf(_account) * (rewardPerTokenStored - userRewardPerTokenPaid[_account])) /
             1e18 +
             VirtualERC20.balanceOf(_account);
     }
@@ -72,7 +72,7 @@ contract StakingPool is RewardsPool {
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function stake(address _account, uint256 _amount) external onlyRouter {
+    function stake(address _account, uint _amount) external onlyRouter {
         require(totalStrategies > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -88,13 +88,13 @@ contract StakingPool is RewardsPool {
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
-    function withdraw(address _account, uint256 _amount) external onlyRouter {
-        uint256 toWithdraw = _amount;
-        if (_amount == type(uint256).max) {
+    function withdraw(address _account, uint _amount) external onlyRouter {
+        uint toWithdraw = _amount;
+        if (_amount == type(uint).max) {
             toWithdraw = balanceOf(_account);
         }
 
-        uint256 balance = token.balanceOf(address(this));
+        uint balance = token.balanceOf(address(this));
         if (toWithdraw > balance) {
             _withdrawLiquidity(toWithdraw - balance);
         }
@@ -108,7 +108,7 @@ contract StakingPool is RewardsPool {
      **/
     function claimOwnersRewards() external {
         require(ownersRewards > 0, "No rewards to claim");
-        uint256 balance = token.balanceOf(address(this));
+        uint balance = token.balanceOf(address(this));
         if (ownersRewards > balance) {
             _withdrawLiquidity(ownersRewards - balance);
         }
@@ -121,10 +121,10 @@ contract StakingPool is RewardsPool {
      * @dev claims earned rewards from all strategies
      **/
     function claimStrategyRewards() external {
-        uint256 totalRewards;
+        uint totalRewards;
         for (uint8 i = 0; i < totalStrategies; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            uint256 rewards = strategy.rewards();
+            uint rewards = strategy.rewards();
             if (rewards > 0) {
                 strategy.claimRewards();
                 totalRewards += rewards;
@@ -133,7 +133,7 @@ contract StakingPool is RewardsPool {
 
         if (totalRewards > 0) {
             totalInStrategies += totalRewards;
-            uint256 ownersTake = (totalRewards * ownersTakePercent) / 10000;
+            uint ownersTake = (totalRewards * ownersTakePercent) / 10000;
             ownersRewards = ownersRewards + ownersTake;
             _updateRewardPerToken(totalRewards - ownersTake);
             emit StrategyRewardsClaimed(
@@ -152,11 +152,11 @@ contract StakingPool is RewardsPool {
     function claimSingleStrategyRewards(uint8 _index) public {
         require(_index < totalStrategies, "Strategy does not exist");
         IStrategy strategy = IStrategy(strategies[_index]);
-        uint256 rewards = strategy.rewards();
+        uint rewards = strategy.rewards();
         if (rewards > 0) {
             strategy.claimRewards();
             totalInStrategies += rewards;
-            uint256 ownersTake = (rewards * ownersTakePercent) / 10000;
+            uint ownersTake = (rewards * ownersTakePercent) / 10000;
             ownersRewards += ownersTake;
             _updateRewardPerToken(rewards - ownersTake);
 
@@ -174,7 +174,7 @@ contract StakingPool is RewardsPool {
      * @param _index index of strategy to deposit in
      * @param _amount amount to deposit
      **/
-    function strategyDeposit(uint8 _index, uint256 _amount) public onlyGovernance {
+    function strategyDeposit(uint8 _index, uint _amount) public onlyGovernance {
         require(_index < totalStrategies, "Strategy does not exist");
         IStrategy(strategies[_index]).deposit(_amount);
         totalInStrategies += _amount;
@@ -185,7 +185,7 @@ contract StakingPool is RewardsPool {
      * @param _index index of strategy to withdraw from
      * @param _amount amount to withdraw
      **/
-    function strategyWithdraw(uint8 _index, uint256 _amount) public onlyGovernance {
+    function strategyWithdraw(uint8 _index, uint _amount) public onlyGovernance {
         require(_index < totalStrategies, "Strategy does not exist");
         IStrategy(strategies[_index]).withdraw(_amount);
         totalInStrategies -= _amount;
@@ -197,7 +197,7 @@ contract StakingPool is RewardsPool {
      **/
     function addStrategy(address _strategy) external onlyGovernance {
         require(!_strategyExists(_strategy), "Strategy already exists");
-        token.safeApprove(_strategy, type(uint256).max);
+        token.safeApprove(_strategy, type(uint).max);
         strategies[totalStrategies] = _strategy;
         totalStrategies += 1;
     }
@@ -256,7 +256,7 @@ contract StakingPool is RewardsPool {
      * @dev sets percentage of rewards that pool owners receive (units are % * 100)
      * @param _ownersTakePercent percentage to set
      **/
-    function setOwnersTakePercent(uint256 _ownersTakePercent) external onlyGovernance {
+    function setOwnersTakePercent(uint _ownersTakePercent) external onlyGovernance {
         ownersTakePercent = _ownersTakePercent;
     }
 
@@ -264,13 +264,13 @@ contract StakingPool is RewardsPool {
      * @dev deposits available liquidity into strategies by order of priority
      * (deposits into strategies[0] until its limit is reached, then strategies[1], etc.)
      **/
-    function _depositLiquidity(uint256 _amount) private {
-        uint256 toDeposit = _amount;
+    function _depositLiquidity(uint _amount) private {
+        uint toDeposit = _amount;
         if (toDeposit > 0) {
             IStrategy strategy;
             for (uint8 i = 0; i < totalStrategies; i++) {
                 strategy = IStrategy(strategies[i]);
-                uint256 canDeposit = strategy.canDeposit();
+                uint canDeposit = strategy.canDeposit();
                 if (canDeposit > 0) {
                     if (canDeposit >= toDeposit) {
                         strategy.deposit(toDeposit);
@@ -292,13 +292,13 @@ contract StakingPool is RewardsPool {
      * until withdraw amount is reached)
      * @param _amount amount to withdraw
      **/
-    function _withdrawLiquidity(uint256 _amount) internal {
+    function _withdrawLiquidity(uint _amount) internal {
         require(_amount <= totalInStrategies, "Amount must be <= totalInStrategies");
-        uint256 amountToWithdraw = _amount;
+        uint amountToWithdraw = _amount;
 
         for (uint8 i = totalStrategies; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
-            uint256 canWithdraw = strategy.canWithdraw();
+            uint canWithdraw = strategy.canWithdraw();
 
             if (canWithdraw >= amountToWithdraw) {
                 strategy.withdraw(amountToWithdraw);
