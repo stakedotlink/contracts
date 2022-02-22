@@ -15,9 +15,9 @@ contract OwnersTimeRewardsPool is RewardsPool, Ownable {
 
     address public poolOwners;
 
-    uint256 public periodFinish = 0;
-    uint256 public rewardRate = 0;
-    uint256 public lastUpdateTime;
+    uint public periodFinish;
+    uint public rewardRate;
+    uint public lastUpdateTime;
 
     event StartRewardsDistribution(address indexed sender, uint amount, uint rewardRate, uint duration);
 
@@ -30,7 +30,7 @@ contract OwnersTimeRewardsPool is RewardsPool, Ownable {
         poolOwners = _poolOwners;
     }
 
-    function lastTimeRewardApplicable() public view returns (uint256) {
+    function lastTimeRewardApplicable() public view returns (uint) {
         return block.timestamp < periodFinish ? block.timestamp : periodFinish;
     }
 
@@ -53,7 +53,7 @@ contract OwnersTimeRewardsPool is RewardsPool, Ownable {
      * @dev withdraws an account's earned rewards
      **/
     function withdraw() external {
-        uint256 toWithdraw = balanceOf(msg.sender);
+        uint toWithdraw = balanceOf(msg.sender);
         require(toWithdraw > 0, "No rewards to withdraw");
 
         _withdraw(msg.sender, toWithdraw);
@@ -66,7 +66,7 @@ contract OwnersTimeRewardsPool is RewardsPool, Ownable {
     function withdraw(address _account) external {
         require(msg.sender == poolOwners, "PoolOwners only");
 
-        uint256 toWithdraw = balanceOf(_account);
+        uint toWithdraw = balanceOf(_account);
 
         if (toWithdraw > 0) {
             _withdraw(_account, toWithdraw);
@@ -93,7 +93,7 @@ contract OwnersTimeRewardsPool is RewardsPool, Ownable {
      **/
     function onTokenTransfer(
         address _sender,
-        uint256 _value,
+        uint _value,
         bytes calldata _data
     ) external {
         require(msg.sender == address(token), "Only callable by token");
@@ -123,8 +123,8 @@ contract OwnersTimeRewardsPool is RewardsPool, Ownable {
         if (block.timestamp >= periodFinish) {
             rewardRate = _amount / _duration;
         } else {
-            uint256 remaining = periodFinish - block.timestamp;
-            uint256 leftover = remaining * rewardRate;
+            uint remaining = periodFinish - block.timestamp;
+            uint leftover = remaining * rewardRate;
             rewardRate = (_amount + leftover) / _duration;
         }
 
