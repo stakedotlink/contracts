@@ -15,8 +15,8 @@ contract RewardsPool is VirtualERC677 {
 
     IERC677 public sdToken;
     IERC677 public token;
-    uint internal rewardPerTokenStored;
 
+    uint public rewardPerTokenStored;
     mapping(address => uint) public userRewardPerTokenPaid;
 
     event Withdraw(address indexed account, uint amount);
@@ -38,7 +38,7 @@ contract RewardsPool is VirtualERC677 {
      **/
     function balanceOf(address _account) public view virtual override returns (uint) {
         return
-            (sdToken.balanceOf(_account) * (rewardPerTokenStored - userRewardPerTokenPaid[_account])) /
+            (sdToken.balanceOf(_account) * (rewardPerToken() - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
     }
@@ -55,7 +55,7 @@ contract RewardsPool is VirtualERC677 {
      * @dev updates an account's principal reward balance
      * @param _account account to update for
      **/
-    function updateReward(address _account) public {
+    function updateReward(address _account) public virtual {
         uint toMint = balanceOf(_account) - super.balanceOf(_account);
         if (toMint > 0) {
             _mint(_account, toMint);
@@ -94,7 +94,7 @@ contract RewardsPool is VirtualERC677 {
         address _from,
         address _to,
         uint _amount
-    ) internal virtual override {
+    ) internal override {
         updateReward(_from);
         super._transfer(_from, _to, _amount);
     }
