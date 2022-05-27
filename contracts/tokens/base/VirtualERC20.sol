@@ -36,7 +36,7 @@ contract VirtualERC20 is IERC20, Context {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view virtual override returns (uint256) {
         return _totalSupply;
     }
 

@@ -1,46 +1,46 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./RewardsPool.sol";
+import "./RewardsPool2.sol";
 import "./interfaces/IStrategy.sol";
 
 /**
  * @title Staking Pool
  * @dev Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
- * asset into strategy contracts to earn returns
+ * assets into strategy contracts to earn returns
  */
-contract StakingPool is RewardsPool {
+contract StakingPool is RewardsPool2 {
     using SafeERC20 for IERC677;
 
-    uint8 public totalStrategies;
-    uint public totalInStrategies;
-    mapping(uint8 => address) public strategies;
+    address[] private strategies;
+    uint public totalStaked;
 
     address public ownersRewardsPool;
-    uint public ownersTakePercent;
+    uint public ownersFeeBasisPoints;
     uint public ownersRewards;
 
     address public poolRouter;
     address public governance;
 
     event Stake(address indexed account, uint amount);
-    event OwnersRewardsClaimed(uint amount);
-    event StrategyRewardsClaimed(address indexed account, uint amountStaked, uint amount, uint ownersTakePercent);
+    event Withdraw(address indexed account, uint amount);
+    event WithdrawOwnersRewards(uint amount);
+    event UpdateRewards(address indexed account, uint totalStaked, int rewardsAmount, uint ownersFee);
 
     constructor(
         address _token,
         string memory _dTokenName,
         string memory _dTokenSymbol,
         address _ownersRewardsPool,
-        uint _ownersTakePercent,
+        uint _ownersFeeBasisPoints,
         address _poolRouter
-    ) RewardsPool(address(this), _token, _dTokenName, _dTokenSymbol) {
+    ) RewardsPool2(_token, _dTokenName, _dTokenSymbol) {
         ownersRewardsPool = _ownersRewardsPool;
-        ownersTakePercent = _ownersTakePercent;
+        ownersFeeBasisPoints = _ownersFeeBasisPoints;
         poolRouter = _poolRouter;
         governance = msg.sender;
     }
@@ -55,36 +55,30 @@ contract StakingPool is RewardsPool {
         _;
     }
 
-    /**
-     * @dev calculates an account's total withdrawable balance (initial stake + earned rewards)
-     * @param _account account to calculate rewards for
-     * @return account's total withdrawable balance
-     **/
-    function balanceOf(address _account) public view override returns (uint) {
-        return
-            (VirtualERC20.balanceOf(_account) * (rewardPerTokenStored - userRewardPerTokenPaid[_account])) /
-            1e18 +
-            VirtualERC20.balanceOf(_account);
+    function getStrategies() external view returns (address[] memory) {
+        return strategies;
     }
 
     /**
-     * @dev stakes asset tokens and mints derivative tokens 1:1
+     * @notice stakes asset tokens and mints derivative tokens 1:1
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
     function stake(address _account, uint _amount) external onlyRouter {
-        require(totalStrategies > 0, "Must be > 0 strategies to stake");
+        require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        updateReward(_account);
-        _mint(_account, _amount);
         _depositLiquidity(_amount);
+
+        totalStaked += _amount;
+        _mint(_account, _amount);
+
         emit Stake(_account, _amount);
     }
 
     /**
-     * @dev withdraws asset tokens and burns derivative tokens 1:1 (withdraws from
-     * strategies if not enough liquidity)
+     * @notice withdraws asset tokens and burns derivative tokens 1:1
+     * @dev will withdraw from strategies if not enough liquidity
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
@@ -100,144 +94,119 @@ contract StakingPool is RewardsPool {
         }
         require(token.balanceOf(address(this)) >= toWithdraw, "Not enough liquidity available to withdraw");
 
-        _withdraw(_account, toWithdraw);
+        _burn(_account, toWithdraw);
+        totalStaked -= _amount;
+
+        emit Withdraw(_account, _amount);
     }
 
     /**
-     * @dev claims owners share of rewards
+     * @notice withdraws accumulated owners rewards
      **/
-    function claimOwnersRewards() external {
+    function withdrawOwnersRewards() external {
         require(ownersRewards > 0, "No rewards to claim");
         uint balance = token.balanceOf(address(this));
         if (ownersRewards > balance) {
             _withdrawLiquidity(ownersRewards - balance);
         }
         token.safeTransfer(ownersRewardsPool, ownersRewards);
-        emit OwnersRewardsClaimed(ownersRewards);
+        emit WithdrawOwnersRewards(ownersRewards);
         ownersRewards = 0;
     }
 
     /**
-     * @dev claims earned rewards from all strategies
+     * @notice updates rewards based on balance changes in strategies
      **/
-    function claimStrategyRewards() external {
-        uint totalRewards;
-        for (uint8 i = 0; i < totalStrategies; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            uint rewards = strategy.rewards();
-            if (rewards > 0) {
+    function updateRewards(uint[] memory _strategyIdxs) public {
+        int totalRewards;
+        for (uint i = 0; i < _strategyIdxs.length; i++) {
+            IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
+            int rewards = strategy.rewards();
+            if (rewards != 0) {
                 strategy.claimRewards();
                 totalRewards += rewards;
             }
         }
 
+        uint ownersFee;
         if (totalRewards > 0) {
-            totalInStrategies += totalRewards;
-            uint ownersTake = (totalRewards * ownersTakePercent) / 10000;
-            ownersRewards = ownersRewards + ownersTake;
-            _updateRewardPerToken(totalRewards - ownersTake);
-            emit StrategyRewardsClaimed(
-                msg.sender,
-                totalInStrategies + token.balanceOf(address(this)),
-                totalRewards,
-                ownersTakePercent
-            );
+            ownersFee = (uint(totalRewards) * ownersFeeBasisPoints) / 10000;
+            ownersRewards += ownersFee;
+        }
+
+        if (totalRewards != 0) {
+            totalStaked = uint(int(totalStaked) + totalRewards);
+            emit UpdateRewards(msg.sender, totalStaked, totalRewards, ownersFee);
         }
     }
 
     /**
-     * @dev claims earned rewards from a strategy
-     * @param _index index of strategy to claim from
-     **/
-    function claimSingleStrategyRewards(uint8 _index) public {
-        require(_index < totalStrategies, "Strategy does not exist");
-        IStrategy strategy = IStrategy(strategies[_index]);
-        uint rewards = strategy.rewards();
-        if (rewards > 0) {
-            strategy.claimRewards();
-            totalInStrategies += rewards;
-            uint ownersTake = (rewards * ownersTakePercent) / 10000;
-            ownersRewards += ownersTake;
-            _updateRewardPerToken(rewards - ownersTake);
-
-            emit StrategyRewardsClaimed(
-                msg.sender,
-                totalInStrategies + token.balanceOf(address(this)),
-                rewards,
-                ownersTakePercent
-            );
-        }
-    }
-
-    /**
-     * @dev deposits asset in a specific strategy
+     * @notice deposits assets in a strategy
      * @param _index index of strategy to deposit in
      * @param _amount amount to deposit
      **/
-    function strategyDeposit(uint8 _index, uint _amount) public onlyGovernance {
-        require(_index < totalStrategies, "Strategy does not exist");
+    function strategyDeposit(uint _index, uint _amount) public onlyGovernance {
+        require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).deposit(_amount);
-        totalInStrategies += _amount;
     }
 
     /**
-     * @dev withdraws asset from specific strategy
+     * @notice withdraws assets from a strategy
      * @param _index index of strategy to withdraw from
      * @param _amount amount to withdraw
      **/
-    function strategyWithdraw(uint8 _index, uint _amount) public onlyGovernance {
-        require(_index < totalStrategies, "Strategy does not exist");
+    function strategyWithdraw(uint _index, uint _amount) public onlyGovernance {
+        require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).withdraw(_amount);
-        totalInStrategies -= _amount;
     }
 
     /**
-     * @dev Adds a new strategy
+     * @notice adds a new strategy
      * @param _strategy address of strategy to add
      **/
     function addStrategy(address _strategy) external onlyGovernance {
         require(!_strategyExists(_strategy), "Strategy already exists");
         token.safeApprove(_strategy, type(uint).max);
-        strategies[totalStrategies] = _strategy;
-        totalStrategies += 1;
+        strategies.push(_strategy);
     }
 
     /**
-     * @dev removes strategy at index
+     * @notice removes a strategy
      * @param _index index of strategy to remove
      **/
-    function removeStrategy(uint8 _index) external onlyGovernance {
-        require(_index < totalStrategies, "Strategy does not exist");
+    function removeStrategy(uint _index) external onlyGovernance {
+        require(_index < strategies.length, "Strategy does not exist");
+
+        uint[] memory idxs;
+        idxs[0] = _index;
+        updateRewards(idxs);
 
         IStrategy strategy = IStrategy(strategies[_index]);
-        claimSingleStrategyRewards(_index);
         uint totalStrategyDeposits = strategy.totalDeposits();
         if (totalStrategyDeposits > 0) {
             strategy.withdraw(totalStrategyDeposits);
-            totalInStrategies -= totalStrategyDeposits;
         }
 
-        for (uint8 i = _index; i < totalStrategies - 1; i++) {
+        for (uint i = _index; i < strategies.length - 1; i++) {
             strategies[i] = strategies[i + 1];
         }
-        delete strategies[totalStrategies - 1];
-        totalStrategies--;
+        strategies.pop();
         token.safeApprove(address(strategy), 0);
     }
 
     /**
-     * @dev reorders strategies
-     * @param _newOrder array containing new ordering of strategies
+     * @notice reorders strategies
+     * @param _newOrder array containing strategy indexes in a new order
      **/
-    function reorderStrategies(uint8[] calldata _newOrder) external onlyGovernance {
-        require(_newOrder.length == totalStrategies, "newOrder.length must = totalStrategies");
+    function reorderStrategies(uint[] calldata _newOrder) external onlyGovernance {
+        require(_newOrder.length == strategies.length, "newOrder.length must = strategies.length");
 
-        address[] memory strategyAddresses = new address[](totalStrategies);
-        for (uint8 i = 0; i < totalStrategies; i++) {
+        address[] memory strategyAddresses = new address[](strategies.length);
+        for (uint i = 0; i < strategies.length; i++) {
             strategyAddresses[i] = strategies[i];
         }
 
-        for (uint8 i = 0; i < totalStrategies; i++) {
+        for (uint i = 0; i < strategies.length; i++) {
             require(strategyAddresses[_newOrder[i]] != address(0), "all indices must be valid");
             strategies[i] = strategyAddresses[_newOrder[i]];
             strategyAddresses[_newOrder[i]] = address(0);
@@ -245,7 +214,7 @@ contract StakingPool is RewardsPool {
     }
 
     /**
-     * @dev sets governance address
+     * @notice sets governance address
      * @param _governance address to set
      **/
     function setGovernance(address _governance) external onlyGovernance {
@@ -253,73 +222,74 @@ contract StakingPool is RewardsPool {
     }
 
     /**
-     * @dev sets percentage of rewards that pool owners receive (units are % * 100)
-     * @param _ownersTakePercent percentage to set
+     * @notice sets basis points of rewards that pool owners receive
+     * @param _ownersFeeBasisPoints basis points to set
      **/
-    function setOwnersTakePercent(uint _ownersTakePercent) external onlyGovernance {
-        ownersTakePercent = _ownersTakePercent;
+    function setOwnersFeeBasisPoints(uint _ownersFeeBasisPoints) external onlyGovernance {
+        ownersFeeBasisPoints = _ownersFeeBasisPoints;
     }
 
     /**
-     * @dev deposits available liquidity into strategies by order of priority
-     * (deposits into strategies[0] until its limit is reached, then strategies[1], etc.)
+     * @notice returns the total amount of assets staked in the pool
+     * @return the total staked amount
+     */
+    function _totalStaked() internal view override returns (uint) {
+        return totalStaked;
+    }
+
+    /**
+     * @notice deposits available liquidity into strategies by order of priority
+     * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
+     * @param _amount amount to deposit
      **/
     function _depositLiquidity(uint _amount) private {
         uint toDeposit = _amount;
         if (toDeposit > 0) {
             IStrategy strategy;
-            for (uint8 i = 0; i < totalStrategies; i++) {
+            for (uint i = 0; i < strategies.length; i++) {
                 strategy = IStrategy(strategies[i]);
                 uint canDeposit = strategy.canDeposit();
-                if (canDeposit > 0) {
-                    if (canDeposit >= toDeposit) {
-                        strategy.deposit(toDeposit);
-                        toDeposit = 0;
-                        break;
-                    } else {
-                        strategy.deposit(canDeposit);
-                        toDeposit -= canDeposit;
-                    }
+                if (canDeposit >= toDeposit) {
+                    strategy.deposit(toDeposit);
+                    break;
+                } else if (canDeposit > 0) {
+                    strategy.deposit(canDeposit);
+                    toDeposit -= canDeposit;
                 }
             }
-            totalInStrategies += _amount - toDeposit;
         }
     }
 
     /**
-     * @dev withdraws liquidity from strategies in opposite order of priority
-     * (withdraws from strategies[totalStrategies - 1], then strategies[totalStrategies - 2], etc.
-     * until withdraw amount is reached)
+     * @notice withdraws liquidity from strategies in opposite order of priority
+     * @dev withdraws from strategies[strategies.length - 1], then strategies[strategies.length - 2], and so on
+     * until withdraw amount is reached
      * @param _amount amount to withdraw
      **/
-    function _withdrawLiquidity(uint _amount) internal {
-        require(_amount <= totalInStrategies, "Amount must be <= totalInStrategies");
+    function _withdrawLiquidity(uint _amount) private {
         uint amountToWithdraw = _amount;
 
-        for (uint8 i = totalStrategies; i > 0; i--) {
-            IStrategy strategy = IStrategy(strategies[i - 1]);
+        for (uint i = strategies.length - 1; i >= 0; i--) {
+            IStrategy strategy = IStrategy(strategies[i]);
             uint canWithdraw = strategy.canWithdraw();
 
             if (canWithdraw >= amountToWithdraw) {
                 strategy.withdraw(amountToWithdraw);
-                amountToWithdraw = 0;
                 break;
-            }
-            if (canWithdraw > 0) {
+            } else if (canWithdraw > 0) {
                 strategy.withdraw(canWithdraw);
-                amountToWithdraw = amountToWithdraw - canWithdraw;
+                amountToWithdraw -= canWithdraw;
             }
         }
-        totalInStrategies -= _amount - amountToWithdraw;
     }
 
     /**
-     * @dev checks whether or not a strategy exists
+     * @notice checks whether or not a strategy exists
      * @param _strategy address of strategy
      * @return true if strategy exists, false otherwise
      **/
     function _strategyExists(address _strategy) private view returns (bool) {
-        for (uint8 i = 0; i < totalStrategies; i++) {
+        for (uint i = 0; i < strategies.length; i++) {
             if (strategies[i] == _strategy) {
                 return true;
             }

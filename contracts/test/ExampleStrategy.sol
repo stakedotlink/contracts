@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -61,8 +61,8 @@ contract ExampleStrategy {
         return depositMin - totalDeposits;
     }
 
-    function rewards() public view returns (uint256) {
-        return token.balanceOf(address(this)) - totalDeposits;
+    function rewards() public view returns (int256) {
+        return int(token.balanceOf(address(this)) - totalDeposits);
     }
 
     function deposit(uint256 _amount) external onlyStakingPool {
@@ -79,9 +79,11 @@ contract ExampleStrategy {
     }
 
     function claimRewards() external onlyStakingPool {
-        uint256 claimable = rewards();
+        int256 claimable = rewards();
         if (claimable > 0) {
-            totalDeposits = totalDeposits + claimable;
+            totalDeposits += uint(claimable);
+        } else if (claimable < 0) {
+            totalDeposits -= uint(claimable);
         }
     }
 
