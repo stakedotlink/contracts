@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -19,8 +19,6 @@ contract RewardsPool is VirtualERC677 {
     uint public rewardPerTokenStored;
     mapping(address => uint) public userRewardPerTokenPaid;
 
-    event Withdraw(address indexed account, uint amount);
-
     constructor(
         address _sdToken,
         address _token,
@@ -36,7 +34,7 @@ contract RewardsPool is VirtualERC677 {
      * @param _account account to calculate rewards for
      * @return account's total unclaimed rewards
      **/
-    function balanceOf(address _account) public view virtual override returns (uint) {
+    function balanceOf(address _account) public view virtual override(IERC20, VirtualERC20) returns (uint) {
         return
             (sdToken.balanceOf(_account) * (rewardPerToken() - userRewardPerTokenPaid[_account])) /
             1e18 +
@@ -70,18 +68,6 @@ contract RewardsPool is VirtualERC677 {
     function _updateRewardPerToken(uint _reward) internal {
         require(sdToken.totalSupply() > 0, "Staked amount must be > 0");
         rewardPerTokenStored += ((_reward * 1e18) / sdToken.totalSupply());
-    }
-
-    /**
-     * @dev withdraws rewards for an account
-     * @param _account account to withdraw for
-     * @param _amount amount to withdraw
-     **/
-    function _withdraw(address _account, uint _amount) internal {
-        updateReward(_account);
-        _burn(_account, _amount);
-        token.safeTransfer(_account, _amount);
-        emit Withdraw(_account, _amount);
     }
 
     /**
