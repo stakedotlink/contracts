@@ -3,16 +3,17 @@ pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./RewardsPool.sol";
+import "./base/RewardsPool.sol";
+import "./interfaces/IPoolOwners.sol";
 
 /**
  * @title OwnersRewardsPool
- * @dev Handles distribution of owners rewards
+ * @notice Handles distribution of owners rewards for a single asset
  */
 contract OwnersRewardsPool is RewardsPool {
     using SafeERC20 for IERC677;
 
-    address public poolOwners;
+    IPoolOwners public poolOwners;
     uint256 public withdrawableRewards;
 
     event Withdraw(address indexed account, uint amount);
@@ -21,14 +22,14 @@ contract OwnersRewardsPool is RewardsPool {
     constructor(
         address _poolOwners,
         address _token,
-        string memory _dTokenName,
-        string memory _dTokenSymbol
-    ) RewardsPool(_poolOwners, _token, _dTokenName, _dTokenSymbol) {
-        poolOwners = _poolOwners;
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) RewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
+        poolOwners = IPoolOwners(_poolOwners);
     }
 
     /**
-     * @dev withdraws an account's earned rewards
+     * @notice withdraws an account's earned rewards
      **/
     function withdraw() external {
         uint256 toWithdraw = balanceOf(msg.sender);
@@ -39,11 +40,12 @@ contract OwnersRewardsPool is RewardsPool {
     }
 
     /**
-     * @dev withdraws an account's earned rewards
+     * @notice withdraws an account's earned rewards
+     * @dev used by PoolOwners
      * @param _account account to withdraw for
      **/
     function withdraw(address _account) external {
-        require(msg.sender == poolOwners, "PoolOwners only");
+        require(msg.sender == address(poolOwners), "PoolOwners only");
 
         uint256 toWithdraw = balanceOf(_account);
 
@@ -54,7 +56,7 @@ contract OwnersRewardsPool is RewardsPool {
     }
 
     /**
-     * @dev ERC677 implementation that automatically calls distributeRewards
+     * @notice ERC677 implementation that proxies reward distribution
      * @param _sender of the token transfer
      * @param _value of the token transfer
      **/
@@ -68,18 +70,35 @@ contract OwnersRewardsPool is RewardsPool {
     }
 
     /**
-     * @dev distributes new rewards that have been deposited
+     * @notice distributes new rewards that have been deposited
      **/
     function distributeRewards() public {
-        require(sdToken.totalSupply() > 0, "Cannot distribute when nothing is staked");
+        require(_totalStaked() > 0, "Cannot distribute when nothing is staked");
         uint256 toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
         withdrawableRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
-        emit DistributeRewards(msg.sender, sdToken.totalSupply(), toDistribute);
+        emit DistributeRewards(msg.sender, _totalStaked(), toDistribute);
     }
 
     /**
-     * @dev withdraws rewards for an account
+     * @notice returns an account's staked amount
+     * @param _account to return staked amount for
+     * @return account's staked amount
+     **/
+    function _staked(address _account) internal view override returns (uint) {
+        return poolOwners.staked(_account);
+    }
+
+    /**
+     * @notice returns the total staked amount
+     * @return total staked amount
+     **/
+    function _totalStaked() internal view override returns (uint) {
+        return poolOwners.totalSupply();
+    }
+
+    /**
+     * @notice withdraws rewards for an account
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/

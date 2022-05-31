@@ -5,19 +5,19 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./RewardsPool2.sol";
+import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
 
 /**
  * @title Staking Pool
- * @dev Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
+ * @notice Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
  * assets into strategy contracts to earn returns
  */
-contract StakingPool is RewardsPool2 {
+contract StakingPool is StakingRewardsPool {
     using SafeERC20 for IERC677;
 
     address[] private strategies;
-    uint public totalStaked;
+    uint private totalStaked;
 
     address public ownersRewardsPool;
     uint public ownersFeeBasisPoints;
@@ -33,12 +33,12 @@ contract StakingPool is RewardsPool2 {
 
     constructor(
         address _token,
-        string memory _dTokenName,
-        string memory _dTokenSymbol,
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol,
         address _ownersRewardsPool,
         uint _ownersFeeBasisPoints,
         address _poolRouter
-    ) RewardsPool2(_token, _dTokenName, _dTokenSymbol) {
+    ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
         ownersRewardsPool = _ownersRewardsPool;
         ownersFeeBasisPoints = _ownersFeeBasisPoints;
         poolRouter = _poolRouter;
@@ -55,6 +55,10 @@ contract StakingPool is RewardsPool2 {
         _;
     }
 
+    /**
+     * @notice returns a list of all active strategies
+     * @return list of strategies
+     */
     function getStrategies() external view returns (address[] memory) {
         return strategies;
     }

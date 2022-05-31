@@ -3,14 +3,14 @@ pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./tokens/base/VirtualERC677.sol";
+import "../tokens/base/VirtualERC677.sol";
 
 /**
- * @title RewardsPool
- * @dev Base rewards pool to be inherited from - handles rewards distribution of an asset based on a staking derivative token
- * that represents a user's staked balance
+ * @title StakingRewardsPool
+ * @notice Base staking rewards pool to be inherited from - handles staking and reward distribution for a single asset
+ * @dev rewards can be positive or negative (user balances can increase and decrease)
  */
-abstract contract RewardsPool2 is VirtualERC677 {
+abstract contract StakingRewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
 
     IERC677 public token;
@@ -20,12 +20,16 @@ abstract contract RewardsPool2 is VirtualERC677 {
 
     constructor(
         address _token,
-        string memory _dTokenName,
-        string memory _dTokenSymbol
-    ) VirtualERC677(_dTokenName, _dTokenSymbol) {
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) VirtualERC677(_derivativeTokenName, _derivativeTokenSymbol) {
         token = IERC677(_token);
     }
 
+    /**
+     * @notice returns the total supply of staking derivative tokens
+     * @return total supply
+     */
     function totalSupply() public view override(IERC20, VirtualERC20) returns (uint) {
         return _totalStaked();
     }
