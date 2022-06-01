@@ -7,8 +7,8 @@ import "../tokens/base/VirtualERC677.sol";
 
 /**
  * @title StakingRewardsPool
- * @notice Base staking rewards pool to be inherited from - handles staking and reward distribution for a single asset
- * @dev rewards can be positive or negative (user balances can increase and decrease)
+ * @notice Handles staking and reward distribution for a single asset
+ * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
 abstract contract StakingRewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
@@ -97,14 +97,13 @@ abstract contract StakingRewardsPool is VirtualERC677 {
         uint _amount
     ) internal override {
         uint sharesToTransfer = getSharesByStake(_amount);
-        uint senderShares = shares[_sender];
 
         require(_sender != address(0), "Transfer from the zero address");
         require(_recipient != address(0), "Transfer to the zero address");
-        require(senderShares >= sharesToTransfer, "Transfer amount exceeds balance");
+        require(shares[_sender] >= sharesToTransfer, "Transfer amount exceeds balance");
 
-        shares[_sender] = senderShares - sharesToTransfer;
-        shares[_recipient] = shares[_recipient] + sharesToTransfer;
+        shares[_sender] -= sharesToTransfer;
+        shares[_recipient] += sharesToTransfer;
 
         emit Transfer(_sender, _recipient, _amount);
     }

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./base/StakingRewardsPool.sol";
+import "./base/RewardsPoolController.sol";
 import "./interfaces/IStrategy.sol";
 
 /**
@@ -13,11 +14,11 @@ import "./interfaces/IStrategy.sol";
  * @notice Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
  * assets into strategy contracts to earn returns
  */
-contract StakingPool is StakingRewardsPool {
+contract StakingPool is StakingRewardsPool, RewardsPoolController {
     using SafeERC20 for IERC677;
 
     address[] private strategies;
-    uint private totalStaked;
+    uint public totalStaked;
 
     address public ownersRewardsPool;
     uint public ownersFeeBasisPoints;
@@ -29,7 +30,7 @@ contract StakingPool is StakingRewardsPool {
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
     event WithdrawOwnersRewards(uint amount);
-    event UpdateRewards(address indexed account, uint totalStaked, int rewardsAmount, uint ownersFee);
+    event UpdateStrategyRewards(address indexed account, uint totalStaked, int rewardsAmount, uint ownersFee);
 
     constructor(
         address _token,
@@ -56,6 +57,26 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
+     * @notice returns an account's stake balance for use by reward pools
+     * controlled by this contract
+     * @dev required by RewardsPoolController
+     * @return account's balance
+     */
+    function rpcStaked(address _account) external view returns (uint) {
+        return sharesOf(_account);
+    }
+
+    /**
+     * @notice returns the total staked amount for use by reward pools
+     * controlled by this contract
+     * @dev required by RewardsPoolController
+     * @return total staked amount
+     */
+    function rpcTotalStaked() external view returns (uint) {
+        return totalShares;
+    }
+
+    /**
      * @notice returns a list of all active strategies
      * @return list of strategies
      */
@@ -64,11 +85,11 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice stakes asset tokens and mints derivative tokens 1:1
+     * @notice stakes asset tokens and mints derivative tokens
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function stake(address _account, uint _amount) external onlyRouter {
+    function stake(address _account, uint _amount) external onlyRouter updateRewards(_account) {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -81,12 +102,12 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice withdraws asset tokens and burns derivative tokens 1:1
+     * @notice withdraws asset tokens and burns derivative tokens
      * @dev will withdraw from strategies if not enough liquidity
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
-    function withdraw(address _account, uint _amount) external onlyRouter {
+    function withdraw(address _account, uint _amount) external onlyRouter updateRewards(_account) {
         uint toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(_account);
@@ -99,9 +120,9 @@ contract StakingPool is StakingRewardsPool {
         require(token.balanceOf(address(this)) >= toWithdraw, "Not enough liquidity available to withdraw");
 
         _burn(_account, toWithdraw);
-        totalStaked -= _amount;
+        totalStaked -= toWithdraw;
 
-        emit Withdraw(_account, _amount);
+        emit Withdraw(_account, toWithdraw);
     }
 
     /**
@@ -120,8 +141,9 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice updates rewards based on balance changes in strategies
+     * @param _strategyIdxs indexes of strategies to update rewards for
      **/
-    function updateRewards(uint[] memory _strategyIdxs) public {
+    function updateStrategyRewards(uint[] memory _strategyIdxs) public {
         int totalRewards;
         for (uint i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
@@ -140,7 +162,7 @@ contract StakingPool is StakingRewardsPool {
 
         if (totalRewards != 0) {
             totalStaked = uint(int(totalStaked) + totalRewards);
-            emit UpdateRewards(msg.sender, totalStaked, totalRewards, ownersFee);
+            emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, ownersFee);
         }
     }
 
@@ -183,7 +205,7 @@ contract StakingPool is StakingRewardsPool {
 
         uint[] memory idxs;
         idxs[0] = _index;
-        updateRewards(idxs);
+        updateStrategyRewards(idxs);
 
         IStrategy strategy = IStrategy(strategies[_index]);
         uint totalStrategyDeposits = strategy.totalDeposits();
@@ -249,9 +271,8 @@ contract StakingPool is StakingRewardsPool {
     function _depositLiquidity(uint _amount) private {
         uint toDeposit = _amount;
         if (toDeposit > 0) {
-            IStrategy strategy;
             for (uint i = 0; i < strategies.length; i++) {
-                strategy = IStrategy(strategies[i]);
+                IStrategy strategy = IStrategy(strategies[i]);
                 uint canDeposit = strategy.canDeposit();
                 if (canDeposit >= toDeposit) {
                     strategy.deposit(toDeposit);
@@ -271,18 +292,18 @@ contract StakingPool is StakingRewardsPool {
      * @param _amount amount to withdraw
      **/
     function _withdrawLiquidity(uint _amount) private {
-        uint amountToWithdraw = _amount;
+        uint toWithdraw = _amount;
 
         for (uint i = strategies.length - 1; i >= 0; i--) {
             IStrategy strategy = IStrategy(strategies[i]);
             uint canWithdraw = strategy.canWithdraw();
 
-            if (canWithdraw >= amountToWithdraw) {
-                strategy.withdraw(amountToWithdraw);
+            if (canWithdraw >= toWithdraw) {
+                strategy.withdraw(toWithdraw);
                 break;
             } else if (canWithdraw > 0) {
                 strategy.withdraw(canWithdraw);
-                amountToWithdraw -= canWithdraw;
+                toWithdraw -= canWithdraw;
             }
         }
     }
