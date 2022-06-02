@@ -147,9 +147,9 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         int totalRewards;
         for (uint i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
-            int rewards = strategy.rewards();
+            int rewards = strategy.depositChange();
             if (rewards != 0) {
-                strategy.claimRewards();
+                strategy.updateDeposits();
                 totalRewards += rewards;
             }
         }

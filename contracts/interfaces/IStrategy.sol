@@ -6,7 +6,7 @@ interface IStrategy {
 
     function withdraw(uint256 _amount) external;
 
-    function claimRewards() external;
+    function updateDeposits() external;
 
     function setDepositMin(uint256 _depositMin) external;
 
@@ -22,5 +22,5 @@ interface IStrategy {
 
     function depositDeficit() external view returns (uint256);
 
-    function rewards() external view returns (int256);
+    function depositChange() external view returns (int256);
 }

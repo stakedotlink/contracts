@@ -48,42 +48,43 @@ contract ExampleStrategy {
     }
 
     function canWithdraw() public view returns (uint256) {
-        if (totalDeposits < depositMin) {
+        if (totalDeposits <= depositMin) {
             return 0;
         }
         return totalDeposits - depositMin;
     }
 
     function depositDeficit() public view returns (uint256) {
-        if (totalDeposits > depositMin) {
+        if (totalDeposits >= depositMin) {
             return 0;
         }
         return depositMin - totalDeposits;
     }
 
-    function rewards() public view returns (int256) {
+    // should return the change in deposits since updateRewards was last called (can be positive or negative)
+    function depositChange() public view returns (int256) {
         return int(token.balanceOf(address(this)) - totalDeposits);
     }
 
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        totalDeposits = totalDeposits + _amount;
+        totalDeposits += _amount;
         // Deposit into earning protocol/node
     }
 
     function withdraw(uint256 _amount) external onlyStakingPool {
         require(_amount <= canWithdraw(), "Total deposits must remain >= minimum");
-        totalDeposits = totalDeposits - _amount;
+        totalDeposits -= _amount;
         //Withdraw from earning protocol/node
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function claimRewards() external onlyStakingPool {
-        int256 claimable = rewards();
-        if (claimable > 0) {
-            totalDeposits += uint(claimable);
-        } else if (claimable < 0) {
-            totalDeposits -= uint(claimable);
+    function updateDeposits() external onlyStakingPool {
+        int256 balanceChange = depositChange();
+        if (balanceChange > 0) {
+            totalDeposits += uint(balanceChange);
+        } else if (balanceChange < 0) {
+            totalDeposits -= uint(balanceChange);
         }
     }
 
