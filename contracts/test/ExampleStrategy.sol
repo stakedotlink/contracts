@@ -63,7 +63,7 @@ contract ExampleStrategy {
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
     function depositChange() public view returns (int256) {
-        return int(token.balanceOf(address(this)) - totalDeposits);
+        return int(token.balanceOf(address(this))) - int(totalDeposits);
     }
 
     function deposit(uint256 _amount) external onlyStakingPool {
@@ -84,8 +84,12 @@ contract ExampleStrategy {
         if (balanceChange > 0) {
             totalDeposits += uint(balanceChange);
         } else if (balanceChange < 0) {
-            totalDeposits -= uint(balanceChange);
+            totalDeposits -= uint(balanceChange * -1);
         }
+    }
+
+    function simulateSlash(uint _amount) external {
+        token.safeTransfer(msg.sender, _amount);
     }
 
     function setDepositMax(uint256 _depositMax) external onlyGovernance {

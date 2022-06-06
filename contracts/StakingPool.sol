@@ -22,14 +22,12 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
 
     address public ownersRewardsPool;
     uint public ownersFeeBasisPoints;
-    uint public ownersRewards;
 
     address public poolRouter;
     address public governance;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
-    event WithdrawOwnersRewards(uint amount);
     event UpdateStrategyRewards(address indexed account, uint totalStaked, int rewardsAmount, uint ownersFee);
 
     constructor(
@@ -95,8 +93,8 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         _depositLiquidity(_amount);
 
-        totalStaked += _amount;
         _mint(_account, _amount);
+        totalStaked += _amount;
 
         emit Stake(_account, _amount);
     }
@@ -121,49 +119,9 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
 
         _burn(_account, toWithdraw);
         totalStaked -= toWithdraw;
+        token.safeTransfer(_account, toWithdraw);
 
         emit Withdraw(_account, toWithdraw);
-    }
-
-    /**
-     * @notice withdraws accumulated owners rewards
-     **/
-    function withdrawOwnersRewards() external {
-        require(ownersRewards > 0, "No rewards to claim");
-        uint balance = token.balanceOf(address(this));
-        if (ownersRewards > balance) {
-            _withdrawLiquidity(ownersRewards - balance);
-        }
-        token.safeTransfer(ownersRewardsPool, ownersRewards);
-        emit WithdrawOwnersRewards(ownersRewards);
-        ownersRewards = 0;
-    }
-
-    /**
-     * @notice updates rewards based on balance changes in strategies
-     * @param _strategyIdxs indexes of strategies to update rewards for
-     **/
-    function updateStrategyRewards(uint[] memory _strategyIdxs) public {
-        int totalRewards;
-        for (uint i = 0; i < _strategyIdxs.length; i++) {
-            IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
-            int rewards = strategy.depositChange();
-            if (rewards != 0) {
-                strategy.updateDeposits();
-                totalRewards += rewards;
-            }
-        }
-
-        uint ownersFee;
-        if (totalRewards > 0) {
-            ownersFee = (uint(totalRewards) * ownersFeeBasisPoints) / 10000;
-            ownersRewards += ownersFee;
-        }
-
-        if (totalRewards != 0) {
-            totalStaked = uint(int(totalStaked) + totalRewards);
-            emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, ownersFee);
-        }
     }
 
     /**
@@ -171,7 +129,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _index index of strategy to deposit in
      * @param _amount amount to deposit
      **/
-    function strategyDeposit(uint _index, uint _amount) public onlyGovernance {
+    function strategyDeposit(uint _index, uint _amount) external onlyGovernance {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).deposit(_amount);
     }
@@ -181,7 +139,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _index index of strategy to withdraw from
      * @param _amount amount to withdraw
      **/
-    function strategyWithdraw(uint _index, uint _amount) public onlyGovernance {
+    function strategyWithdraw(uint _index, uint _amount) external onlyGovernance {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).withdraw(_amount);
     }
@@ -203,7 +161,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     function removeStrategy(uint _index) external onlyGovernance {
         require(_index < strategies.length, "Strategy does not exist");
 
-        uint[] memory idxs;
+        uint[] memory idxs = new uint[](1);
         idxs[0] = _index;
         updateStrategyRewards(idxs);
 
@@ -253,6 +211,33 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      **/
     function setOwnersFeeBasisPoints(uint _ownersFeeBasisPoints) external onlyGovernance {
         ownersFeeBasisPoints = _ownersFeeBasisPoints;
+    }
+
+    /**
+     * @notice updates rewards based on balance changes in strategies
+     * @param _strategyIdxs indexes of strategies to update rewards for
+     **/
+    function updateStrategyRewards(uint[] memory _strategyIdxs) public {
+        int totalRewards;
+        for (uint i = 0; i < _strategyIdxs.length; i++) {
+            IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
+            int rewards = strategy.depositChange();
+            if (rewards != 0) {
+                strategy.updateDeposits();
+                totalRewards += rewards;
+            }
+        }
+
+        if (totalRewards != 0) {
+            totalStaked = uint(int(totalStaked) + totalRewards);
+            emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, ownersFeeBasisPoints);
+        }
+
+        if (totalRewards > 0) {
+            uint ownersSharesToMint = (uint(totalRewards) * ownersFeeBasisPoints * totalShares) /
+                (totalStaked * 10000 - ownersFeeBasisPoints * uint(totalRewards));
+            _mint(ownersRewardsPool, getStakeByShares(ownersSharesToMint));
+        }
     }
 
     /**

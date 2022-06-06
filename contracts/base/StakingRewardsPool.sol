@@ -118,6 +118,9 @@ abstract contract StakingRewardsPool is VirtualERC677 {
         require(_recipient != address(0), "Mint to the zero address");
 
         uint sharesToMint = getSharesByStake(_amount);
+        if (sharesToMint == 0) {
+            sharesToMint = _amount;
+        }
 
         totalShares += sharesToMint;
         shares[_recipient] += sharesToMint;
