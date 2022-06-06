@@ -64,7 +64,7 @@ async function setup() {
 
   strategies = []
   for (let i = 0; i < 5; i++) {
-    let strategy = await deploy('ExampleStrategy', [
+    let strategy = await deploy('StrategyMock', [
       token.address,
       stakingPool.address,
       accounts[0],
