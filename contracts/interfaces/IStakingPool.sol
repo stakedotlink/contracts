@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
-import "./IRewardsPool.sol";
+import "./IStakingRewardsPool.sol";
 
-interface IStakingPool is IRewardsPool {
+interface IStakingPool {
     function stake(address _account, uint256 _amount) external;
 
     function withdraw(address _account, uint256 _amount) external;

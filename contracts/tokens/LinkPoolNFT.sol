@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title LinkPoolNFT
- * @dev NFT for original crowdsale participants
+ * @notice NFT for original crowdsale participants
  */
 contract LinkPoolNFT is ERC721URIStorage, Ownable {
     address public lpMigration;
@@ -20,7 +20,7 @@ contract LinkPoolNFT is ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev mints new NFT
+     * @notice mints new NFT
      * @param _to address to mint NFT for
      **/
     function mint(address _to) external {
@@ -31,7 +31,7 @@ contract LinkPoolNFT is ERC721URIStorage, Ownable {
     }
 
     /**
-     * @dev sets baseURI for NFTs
+     * @notice sets baseURI for NFTs
      * @param _baseUri URI to set
      **/
     function setBaseURI(string memory _baseUri) external onlyOwner {

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 interface IStrategy {
     function deposit(uint256 _amount) external;
 
     function withdraw(uint256 _amount) external;
 
-    function claimRewards() external;
+    function updateDeposits() external;
 
     function setDepositMin(uint256 _depositMin) external;
 
@@ -22,5 +22,5 @@ interface IStrategy {
 
     function depositDeficit() external view returns (uint256);
 
-    function rewards() external view returns (uint256);
+    function depositChange() external view returns (int256);
 }

@@ -1,58 +1,103 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./tokens/base/VirtualERC677.sol";
+import "./interfaces/IRewardsPoolController.sol";
 
 /**
  * @title RewardsPool
- * @dev Base rewards pool to be inherited from - handles rewards distribution of an asset based on a staking derivative token
- * that represents a user's staked balance
+ * @notice Handles reward distribution for a single asset
+ * @dev rewards can only be postive (user balances can only increase)
  */
 contract RewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
 
-    IERC677 public sdToken;
     IERC677 public token;
+    IRewardsPoolController public controller;
 
-    uint public rewardPerTokenStored;
+    uint public withdrawableRewards;
+    uint public rewardPerToken;
     mapping(address => uint) public userRewardPerTokenPaid;
 
     event Withdraw(address indexed account, uint amount);
+    event DistributeRewards(address indexed sender, uint256 amountStaked, uint256 amount);
 
     constructor(
-        address _sdToken,
+        address _controller,
         address _token,
-        string memory _dTokenName,
-        string memory _dTokenSymbol
-    ) VirtualERC677(_dTokenName, _dTokenSymbol) {
-        sdToken = IERC677(_sdToken);
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) VirtualERC677(_derivativeTokenName, _derivativeTokenSymbol) {
+        controller = IRewardsPoolController(_controller);
         token = IERC677(_token);
     }
 
     /**
-     * @dev calculates an account's total unclaimed rewards (principal balance + newly earned rewards)
-     * @param _account account to calculate rewards for
+     * @notice returns an account's total unclaimed rewards (principal balance + newly earned rewards)
+     * @param _account account to return rewards for
      * @return account's total unclaimed rewards
      **/
-    function balanceOf(address _account) public view virtual override returns (uint) {
+    function balanceOf(address _account) public view virtual override(IERC20, VirtualERC20) returns (uint) {
         return
-            (sdToken.balanceOf(_account) * (rewardPerToken() - userRewardPerTokenPaid[_account])) /
+            (controller.rpcStaked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
     }
 
     /**
-     * @dev Returns the current value of rewardPerToken
-     * @return rewardPerToken
+     * @notice withdraws an account's earned rewards
      **/
-    function rewardPerToken() public view virtual returns (uint) {
-        return rewardPerTokenStored;
+    function withdraw() external {
+        uint256 toWithdraw = balanceOf(msg.sender);
+        require(toWithdraw > 0, "No rewards to withdraw");
+
+        _withdraw(msg.sender, toWithdraw);
     }
 
     /**
-     * @dev updates an account's principal reward balance
+     * @notice withdraws an account's earned rewards
+     * @dev used by PoolOwners
+     * @param _account account to withdraw for
+     **/
+    function withdraw(address _account) external {
+        require(msg.sender == address(controller), "Controller only");
+
+        uint256 toWithdraw = balanceOf(_account);
+
+        if (toWithdraw > 0) {
+            _withdraw(_account, toWithdraw);
+        }
+    }
+
+    /**
+     * @notice ERC677 implementation that proxies reward distribution
+     * @param _sender of the token transfer
+     * @param _value of the token transfer
+     **/
+    function onTokenTransfer(
+        address _sender,
+        uint256 _value,
+        bytes calldata
+    ) external {
+        require(msg.sender == address(token), "Only callable by token");
+        distributeRewards();
+    }
+
+    /**
+     * @notice distributes new rewards that have been deposited
+     **/
+    function distributeRewards() public {
+        require(controller.rpcTotalStaked() > 0, "Cannot distribute when nothing is staked");
+        uint256 toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
+        withdrawableRewards += toDistribute;
+        _updateRewardPerToken(toDistribute);
+        emit DistributeRewards(msg.sender, controller.rpcTotalStaked(), toDistribute);
+    }
+
+    /**
+     * @notice updates an account's principal reward balance
      * @param _account account to update for
      **/
     function updateReward(address _account) public virtual {
@@ -60,32 +105,34 @@ contract RewardsPool is VirtualERC677 {
         if (toMint > 0) {
             _mint(_account, toMint);
         }
-        userRewardPerTokenPaid[_account] = rewardPerTokenStored;
+        userRewardPerTokenPaid[_account] = rewardPerToken;
     }
 
     /**
-     * @dev updates rewardPerTokenStored
-     * @param _reward deposited reward amount
-     **/
-    function _updateRewardPerToken(uint _reward) internal {
-        require(sdToken.totalSupply() > 0, "Staked amount must be > 0");
-        rewardPerTokenStored += ((_reward * 1e18) / sdToken.totalSupply());
-    }
-
-    /**
-     * @dev withdraws rewards for an account
+     * @notice withdraws rewards for an account
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
     function _withdraw(address _account, uint _amount) internal {
         updateReward(_account);
         _burn(_account, _amount);
+        withdrawableRewards -= _amount;
         token.safeTransfer(_account, _amount);
         emit Withdraw(_account, _amount);
     }
 
     /**
-     * @dev transfers unclaimed rewards from one account to another
+     * @notice updates rewardPerToken
+     * @param _reward deposited reward amount
+     **/
+    function _updateRewardPerToken(uint _reward) internal {
+        uint totalStaked = controller.rpcTotalStaked();
+        require(totalStaked > 0, "Staked amount must be > 0");
+        rewardPerToken += ((_reward * 1e18) / totalStaked);
+    }
+
+    /**
+     * @notice transfers unclaimed rewards from one account to another
      * @param _from account to transfer from
      * @param _to account to transfer to
      * @param _amount amount to transfer

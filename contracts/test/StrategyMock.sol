@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.11;
+pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract ExampleStrategy {
+/**
+ * @title Strategy Mock
+ * @notice Mocks contract for testing
+ */
+contract StrategyMock {
     using SafeERC20 for IERC20;
 
     IERC20 public token;
@@ -48,41 +52,48 @@ contract ExampleStrategy {
     }
 
     function canWithdraw() public view returns (uint256) {
-        if (totalDeposits < depositMin) {
+        if (totalDeposits <= depositMin) {
             return 0;
         }
         return totalDeposits - depositMin;
     }
 
     function depositDeficit() public view returns (uint256) {
-        if (totalDeposits > depositMin) {
+        if (totalDeposits >= depositMin) {
             return 0;
         }
         return depositMin - totalDeposits;
     }
 
-    function rewards() public view returns (uint256) {
-        return token.balanceOf(address(this)) - totalDeposits;
+    // should return the change in deposits since updateRewards was last called (can be positive or negative)
+    function depositChange() public view returns (int256) {
+        return int(token.balanceOf(address(this))) - int(totalDeposits);
     }
 
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        totalDeposits = totalDeposits + _amount;
+        totalDeposits += _amount;
         // Deposit into earning protocol/node
     }
 
     function withdraw(uint256 _amount) external onlyStakingPool {
         require(_amount <= canWithdraw(), "Total deposits must remain >= minimum");
-        totalDeposits = totalDeposits - _amount;
+        totalDeposits -= _amount;
         //Withdraw from earning protocol/node
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function claimRewards() external onlyStakingPool {
-        uint256 claimable = rewards();
-        if (claimable > 0) {
-            totalDeposits = totalDeposits + claimable;
+    function updateDeposits() external onlyStakingPool {
+        int256 balanceChange = depositChange();
+        if (balanceChange > 0) {
+            totalDeposits += uint(balanceChange);
+        } else if (balanceChange < 0) {
+            totalDeposits -= uint(balanceChange * -1);
         }
+    }
+
+    function simulateSlash(uint _amount) external {
+        token.safeTransfer(msg.sender, _amount);
     }
 
     function setDepositMax(uint256 _depositMax) external onlyGovernance {
