@@ -3,29 +3,25 @@ pragma solidity 0.8.14;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./tokens/base/ERC677.sol";
 import "./interfaces/IERC677.sol";
 import "./base/RewardsPoolController.sol";
 
 /**
  * @title Pool Owners
- * @notice Handles owners token staking, staking allowance, & owners rewards distribution
+ * @notice Handles owners token staking & rewards distribution
  */
-contract PoolOwners is ERC677, RewardsPoolController {
+contract PoolOwners is RewardsPoolController {
     using SafeERC20 for IERC677;
 
-    IERC677 public ownersToken;
-    mapping(address => uint) private ownersTokenStakes;
+    IERC677 public token;
+    mapping(address => uint) private tokenStakes;
+    uint public totalStaked;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
 
-    constructor(
-        address _ownersToken,
-        string memory _allowanceTokenName,
-        string memory _allowanceTokenSymbol
-    ) ERC677(_allowanceTokenName, _allowanceTokenSymbol, 0) {
-        ownersToken = IERC677(_ownersToken);
+    constructor(address _token) {
+        token = IERC677(_token);
     }
 
     /**
@@ -45,7 +41,7 @@ contract PoolOwners is ERC677, RewardsPoolController {
      * @return total staked amount
      */
     function rpcTotalStaked() external view returns (uint) {
-        return totalSupply();
+        return totalStaked;
     }
 
     /**
@@ -53,7 +49,7 @@ contract PoolOwners is ERC677, RewardsPoolController {
      * @return account's staked amount
      */
     function staked(address _account) public view returns (uint) {
-        return ownersTokenStakes[_account];
+        return tokenStakes[_account];
     }
 
     /**
@@ -66,7 +62,7 @@ contract PoolOwners is ERC677, RewardsPoolController {
         uint _value,
         bytes calldata
     ) external {
-        require(msg.sender == address(ownersToken), "Sender must be staking token");
+        require(msg.sender == address(token), "Sender must be staking token");
         _stake(_sender, _value);
     }
 
@@ -75,7 +71,7 @@ contract PoolOwners is ERC677, RewardsPoolController {
      * @param _amount amount to stake
      **/
     function stake(uint _amount) external {
-        ownersToken.safeTransferFrom(msg.sender, address(this), _amount);
+        token.safeTransferFrom(msg.sender, address(this), _amount);
         _stake(msg.sender, _amount);
     }
 
@@ -84,9 +80,9 @@ contract PoolOwners is ERC677, RewardsPoolController {
      * @param _amount amount to withdraw
      **/
     function withdraw(uint _amount) public updateRewards(msg.sender) {
-        _burn(msg.sender, _amount);
-        ownersTokenStakes[msg.sender] -= _amount;
-        ownersToken.safeTransfer(msg.sender, _amount);
+        tokenStakes[msg.sender] -= _amount;
+        totalStaked -= _amount;
+        token.safeTransfer(msg.sender, _amount);
         emit Withdraw(msg.sender, _amount);
     }
 
@@ -96,9 +92,8 @@ contract PoolOwners is ERC677, RewardsPoolController {
      * @param _amount amount to stake
      **/
     function _stake(address _account, uint _amount) private updateRewards(_account) {
-        _mint(_account, _amount);
-        ownersTokenStakes[_account] += _amount;
-
+        tokenStakes[_account] += _amount;
+        totalStaked += _amount;
         emit Stake(_account, _amount);
     }
 }
