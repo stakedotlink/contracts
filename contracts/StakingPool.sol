@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./base/StakingRewardsPool.sol";
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IStrategy.sol";
-import "./interfaces/IWSDToken.sol";
+import "./interfaces/IWrappedSDToken.sol";
 
 /**
  * @title Staking Pool
@@ -23,7 +23,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
 
     address public ownersRewardsPool;
     uint public ownersFeeBasisPoints;
-    IWSDToken public wsdToken;
+    IWrappedSDToken public wsdToken;
 
     address public poolRouter;
     address public governance;
@@ -222,7 +222,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      **/
     function setWSDToken(address _wsdToken) external onlyOwner {
         require(address(wsdToken) == address(0), "wsdToken already set");
-        wsdToken = IWSDToken(_wsdToken);
+        wsdToken = IWrappedSDToken(_wsdToken);
         _approve(address(this), _wsdToken, type(uint).max);
     }
 

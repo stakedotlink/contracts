@@ -1,6 +1,3 @@
-//@ts-nocheck
-
-import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { assert } from 'chai'
 import {
@@ -171,22 +168,22 @@ describe('RewardsPoolController', () => {
     await token2.transferAndCall(rewardsPool2.address, toEther(300), '0x00')
 
     assert.equal(
-      await rewardsPool1.userRewardPerTokenPaid(accounts[1]),
+      fromEther(await rewardsPool1.userRewardPerTokenPaid(accounts[1])),
       0,
       'userRewardPerTokenPaid incorrect'
     )
     assert.equal(
-      await rewardsPool1.userRewardPerTokenPaid(accounts[2]),
+      fromEther(await rewardsPool1.userRewardPerTokenPaid(accounts[2])),
       0,
       'userRewardPerTokenPaid incorrect'
     )
     assert.equal(
-      await rewardsPool2.userRewardPerTokenPaid(accounts[1]),
+      fromEther(await rewardsPool2.userRewardPerTokenPaid(accounts[1])),
       0,
       'userRewardPerTokenPaid incorrect'
     )
     assert.equal(
-      await rewardsPool2.userRewardPerTokenPaid(accounts[2]),
+      fromEther(await rewardsPool2.userRewardPerTokenPaid(accounts[2])),
       0,
       'userRewardPerTokenPaid incorrect'
     )
