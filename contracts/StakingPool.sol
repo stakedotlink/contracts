@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./base/StakingRewardsPool.sol";
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IStrategy.sol";
+import "./interfaces/IWSDToken.sol";
 
 /**
  * @title Staking Pool
@@ -22,6 +23,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
 
     address public ownersRewardsPool;
     uint public ownersFeeBasisPoints;
+    IWSDToken public wsdToken;
 
     address public poolRouter;
     address public governance;
@@ -214,6 +216,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
+     * @notice sets the wrapped staking derivative token for this pool
+     * @param _wsdToken wsd token to set
+     * @dev must be set for contract to work, can only be set once
+     **/
+    function setWSDToken(address _wsdToken) external onlyOwner {
+        require(address(wsdToken) == address(0), "wsdToken already set");
+        wsdToken = IWSDToken(_wsdToken);
+        _approve(address(this), _wsdToken, type(uint).max);
+    }
+
+    /**
      * @notice updates rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
      **/
@@ -233,10 +246,12 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
             emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, ownersFeeBasisPoints);
         }
 
-        if (totalRewards > 0) {
+        if (totalRewards > 0 && ownersFeeBasisPoints > 0) {
             uint ownersSharesToMint = (uint(totalRewards) * ownersFeeBasisPoints * totalShares) /
                 (totalStaked * 10000 - ownersFeeBasisPoints * uint(totalRewards));
-            _mint(ownersRewardsPool, getStakeByShares(ownersSharesToMint));
+            _mint(address(this), getStakeByShares(ownersSharesToMint));
+            wsdToken.wrap(balanceOf(address(this)));
+            wsdToken.transferAndCall(ownersRewardsPool, wsdToken.balanceOf(address(this)), "0x00");
         }
     }
 

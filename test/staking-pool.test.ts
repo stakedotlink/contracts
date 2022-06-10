@@ -9,10 +9,11 @@ import {
   setupToken,
   fromEther,
 } from './utils/helpers'
-import { ERC677, StrategyMock, StakingPool } from '../typechain-types'
+import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../typechain-types'
 
 describe('StakingPool', () => {
   let token: ERC677
+  let wsdToken: WrappedSDToken
   let stakingPool: StakingPool
   let strategy1: StrategyMock
   let strategy2: StrategyMock
@@ -47,6 +48,13 @@ describe('StakingPool', () => {
       '1000',
       accounts[0],
     ])) as StakingPool
+
+    wsdToken = (await deploy('WrappedSDToken', [
+      stakingPool.address,
+      'Wrapped LinkPool LINK',
+      'wlplLINK',
+    ])) as WrappedSDToken
+    await stakingPool.setWSDToken(wsdToken.address)
 
     strategy1 = (await deploy('StrategyMock', [
       token.address,
@@ -346,8 +354,8 @@ describe('StakingPool', () => {
       'Account-3 balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(ownersRewards)),
-      120,
+      Number(fromEther(await wsdToken.balanceOf(ownersRewards)).toFixed(2)),
+      98.68,
       'Owners rewards balance incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6200, 'totalSupply incorrect')
@@ -455,7 +463,7 @@ describe('StakingPool', () => {
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[4])),
-      125,
+      25,
       'account-4 balance incorrect'
     )
   })

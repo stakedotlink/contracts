@@ -53,7 +53,6 @@ contract RewardsPool is VirtualERC677 {
         uint256 toWithdraw = balanceOf(msg.sender);
         require(toWithdraw > 0, "No rewards to withdraw");
 
-        withdrawableRewards -= toWithdraw;
         _withdraw(msg.sender, toWithdraw);
     }
 
@@ -68,7 +67,6 @@ contract RewardsPool is VirtualERC677 {
         uint256 toWithdraw = balanceOf(_account);
 
         if (toWithdraw > 0) {
-            withdrawableRewards -= toWithdraw;
             _withdraw(_account, toWithdraw);
         }
     }
@@ -118,6 +116,7 @@ contract RewardsPool is VirtualERC677 {
     function _withdraw(address _account, uint _amount) internal {
         updateReward(_account);
         _burn(_account, _amount);
+        withdrawableRewards -= _amount;
         token.safeTransfer(_account, _amount);
         emit Withdraw(_account, _amount);
     }
