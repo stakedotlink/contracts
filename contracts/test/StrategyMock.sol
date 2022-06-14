@@ -4,21 +4,16 @@ pragma solidity 0.8.14;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "../base/Strategy.sol";
+
 /**
  * @title Strategy Mock
  * @notice Mocks contract for testing
  */
-contract StrategyMock {
+contract StrategyMock is Strategy {
     using SafeERC20 for IERC20;
 
-    IERC20 public token;
-    address public stakingPool;
-
     uint256 public totalDeposits;
-    uint256 public depositMax;
-    uint256 public depositMin;
-
-    address public governance;
 
     constructor(
         address _token,
@@ -26,23 +21,7 @@ contract StrategyMock {
         address _governance,
         uint256 _depositMax,
         uint256 _depositMin
-    ) {
-        token = IERC20(_token);
-        stakingPool = _stakingPool;
-        depositMax = _depositMax;
-        depositMin = _depositMin;
-        governance = _governance;
-    }
-
-    modifier onlyStakingPool() {
-        require(stakingPool == msg.sender, "StakingPool only");
-        _;
-    }
-
-    modifier onlyGovernance() {
-        require(governance == msg.sender, "Governance only");
-        _;
-    }
+    ) Strategy(_token, _stakingPool, _governance, _depositMax, _depositMin) {}
 
     function canDeposit() public view returns (uint256) {
         if (totalDeposits < depositMax) {
@@ -94,17 +73,5 @@ contract StrategyMock {
 
     function simulateSlash(uint _amount) external {
         token.safeTransfer(msg.sender, _amount);
-    }
-
-    function setDepositMax(uint256 _depositMax) external onlyGovernance {
-        depositMax = _depositMax;
-    }
-
-    function setDepositMin(uint256 _depositMin) external onlyGovernance {
-        depositMin = _depositMin;
-    }
-
-    function setGovernance(address _governance) external onlyGovernance {
-        governance = _governance;
     }
 }
