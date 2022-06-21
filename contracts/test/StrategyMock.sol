@@ -13,39 +13,32 @@ import "../base/Strategy.sol";
 contract StrategyMock is Strategy {
     using SafeERC20 for IERC20;
 
-    uint256 public totalDeposits;
+    uint public totalDeposits;
 
     constructor(
         address _token,
         address _stakingPool,
         address _governance,
-        uint256 _depositMax,
-        uint256 _depositMin
-    ) Strategy(_token, _stakingPool, _governance, _depositMax, _depositMin) {}
+        uint256 _depositsMax,
+        uint256 _depositsMin
+    ) Strategy(_token, _stakingPool, _governance, _depositsMax, _depositsMin) {}
 
-    function canDeposit() public view returns (uint256) {
-        if (totalDeposits < depositMax) {
-            return depositMax - totalDeposits;
+    function canDeposit() public view returns (uint) {
+        if (totalDeposits < depositsMax) {
+            return depositsMax - totalDeposits;
         }
         return 0;
     }
 
-    function canWithdraw() public view returns (uint256) {
-        if (totalDeposits <= depositMin) {
+    function canWithdraw() public view returns (uint) {
+        if (totalDeposits <= depositsMin) {
             return 0;
         }
-        return totalDeposits - depositMin;
-    }
-
-    function depositDeficit() public view returns (uint256) {
-        if (totalDeposits >= depositMin) {
-            return 0;
-        }
-        return depositMin - totalDeposits;
+        return totalDeposits - depositsMin;
     }
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
-    function depositChange() public view returns (int256) {
+    function depositChange() public view returns (int) {
         return int(token.balanceOf(address(this))) - int(totalDeposits);
     }
 

@@ -115,15 +115,24 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _amount stake amount
      **/
     function _mint(address _recipient, uint _amount) internal override {
-        require(_recipient != address(0), "Mint to the zero address");
-
         uint sharesToMint = getSharesByStake(_amount);
         if (sharesToMint == 0) {
             sharesToMint = _amount;
         }
 
-        totalShares += sharesToMint;
-        shares[_recipient] += sharesToMint;
+        _mintShares(_recipient, _amount);
+    }
+
+    /**
+     * @notice mints new shares to an account
+     * @param _recipient account to mint shares for
+     * @param _amount shares amount
+     **/
+    function _mintShares(address _recipient, uint _amount) internal {
+        require(_recipient != address(0), "Mint to the zero address");
+
+        totalShares += _amount;
+        shares[_recipient] += _amount;
     }
 
     /**

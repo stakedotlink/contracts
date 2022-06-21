@@ -8,9 +8,9 @@ interface IStrategy {
 
     function updateDeposits() external;
 
-    function setDepositMin(uint256 _depositMin) external;
+    function setDepositsMin(uint256 _depositsMin) external;
 
-    function setDepositMax(uint256 _depositMax) external;
+    function setDepositsMax(uint256 _depositsMax) external;
 
     function setGovernance(address _governance) external;
 
@@ -19,8 +19,6 @@ interface IStrategy {
     function canDeposit() external view returns (uint256);
 
     function canWithdraw() external view returns (uint256);
-
-    function depositDeficit() external view returns (uint256);
 
     function depositChange() external view returns (int256);
 }

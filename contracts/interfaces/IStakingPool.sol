@@ -3,7 +3,7 @@ pragma solidity 0.8.14;
 
 import "./IStakingRewardsPool.sol";
 
-interface IStakingPool {
+interface IStakingPool is IStakingRewardsPool {
     function stake(address _account, uint256 _amount) external;
 
     function withdraw(address _account, uint256 _amount) external;
@@ -21,6 +21,8 @@ interface IStakingPool {
     function setOwnersTakePercent(uint256 _ownersTakePercent) external;
 
     function setGovernance(address _governance) external;
+
+    function mintShares(uint _amount) external;
 
     function strategies(uint8 _index) external view returns (address);
 

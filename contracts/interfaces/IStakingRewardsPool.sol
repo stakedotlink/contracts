@@ -16,12 +16,14 @@ interface IStakingRewardsPool is IERC677 {
      * @param _amount staked amount
      * @return amount of shares
      **/
-    function getSharesByStake(uint256 _amount) external view returns (uint256);
+    function getSharesByStake(uint256 _amount) external view returns (uint);
 
     /**
      * @notice returns the amount of stake that corresponds to an amount of shares
      * @param _amount shares amount
      * @return amount of stake
      **/
-    function getStakeByShares(uint256 _amount) external view returns (uint256);
+    function getStakeByShares(uint256 _amount) external view returns (uint);
+
+    function totalShares() external view returns (uint);
 }

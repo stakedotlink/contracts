@@ -4,6 +4,7 @@ pragma solidity 0.8.14;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IStrategy.sol";
+import "../interfaces/IStakingPool.sol";
 
 /**
  * @title Strategy
@@ -11,10 +12,10 @@ import "../interfaces/IStrategy.sol";
  */
 abstract contract Strategy is IStrategy {
     IERC20 public token;
-    address public stakingPool;
+    IStakingPool public stakingPool;
 
-    uint256 public depositMax;
-    uint256 public depositMin;
+    uint256 public depositsMin;
+    uint256 public depositsMax;
 
     address public governance;
 
@@ -22,18 +23,18 @@ abstract contract Strategy is IStrategy {
         address _token,
         address _stakingPool,
         address _governance,
-        uint256 _depositMax,
-        uint256 _depositMin
+        uint256 _depositsMax,
+        uint256 _depositsMin
     ) {
         token = IERC20(_token);
-        stakingPool = _stakingPool;
-        depositMax = _depositMax;
-        depositMin = _depositMin;
+        stakingPool = IStakingPool(_stakingPool);
+        depositsMax = _depositsMax;
+        depositsMin = _depositsMin;
         governance = _governance;
     }
 
     modifier onlyStakingPool() {
-        require(stakingPool == msg.sender, "StakingPool only");
+        require(address(stakingPool) == msg.sender, "StakingPool only");
         _;
     }
 
@@ -42,12 +43,12 @@ abstract contract Strategy is IStrategy {
         _;
     }
 
-    function setDepositMax(uint256 _depositMax) external onlyGovernance {
-        depositMax = _depositMax;
+    function setDepositsMax(uint256 _depositsMax) external onlyGovernance {
+        depositsMax = _depositsMax;
     }
 
-    function setDepositMin(uint256 _depositMin) external onlyGovernance {
-        depositMin = _depositMin;
+    function setDepositsMin(uint256 _depositsMin) external onlyGovernance {
+        depositsMin = _depositsMin;
     }
 
     function setGovernance(address _governance) external onlyGovernance {
