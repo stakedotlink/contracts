@@ -12,8 +12,6 @@ interface IStrategy {
 
     function setDepositsMax(uint256 _depositsMax) external;
 
-    function setGovernance(address _governance) external;
-
     function totalDeposits() external view returns (uint256);
 
     function canDeposit() external view returns (uint256);

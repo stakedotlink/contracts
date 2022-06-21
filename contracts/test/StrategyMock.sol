@@ -15,13 +15,14 @@ contract StrategyMock is Strategy {
 
     uint public totalDeposits;
 
-    constructor(
+    function initialize(
         address _token,
         address _stakingPool,
-        address _governance,
-        uint256 _depositsMax,
-        uint256 _depositsMin
-    ) Strategy(_token, _stakingPool, _governance, _depositsMax, _depositsMin) {}
+        uint _depositsMax,
+        uint _depositsMin
+    ) public override initializer {
+        Strategy.initialize(_token, _stakingPool, _depositsMax, _depositsMin);
+    }
 
     function canDeposit() public view returns (uint) {
         if (totalDeposits < depositsMax) {

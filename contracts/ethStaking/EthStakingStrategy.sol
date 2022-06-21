@@ -38,13 +38,26 @@ contract EthStakingStrategy is Strategy {
 
     int public depositChange;
 
-    constructor(
+    function initialize(
         address _token,
         address _stakingPool,
-        address _governance,
         uint _depositsMax,
-        uint _depositsMin
-    ) Strategy(_token, _stakingPool, _governance, _depositsMax, _depositsMin) {}
+        uint _depositsMin,
+        address _wETH,
+        address _depositContract,
+        address _operatorController,
+        address _oracle,
+        bytes32 _withdrawalCredentials,
+        uint _operatorFeeBasisPoints
+    ) public initializer {
+        Strategy.initialize(_token, _stakingPool, _depositsMax, _depositsMin);
+        wETH = IWrappedETH(_wETH);
+        depositContract = IDepositContract(_depositContract);
+        operatorController = IOperatorController(_operatorController);
+        oracle = _oracle;
+        withdrawalCredentials = _withdrawalCredentials;
+        operatorFeeBasisPoints = _operatorFeeBasisPoints;
+    }
 
     /**
      * @notice Updates the number of our validators in the beacon validator set and their total balance
