@@ -26,7 +26,6 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     IWrappedSDToken public wsdToken;
 
     address public poolRouter;
-    address public governance;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
@@ -43,12 +42,6 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         ownersRewardsPool = _ownersRewardsPool;
         ownersFeeBasisPoints = _ownersFeeBasisPoints;
         poolRouter = _poolRouter;
-        governance = msg.sender;
-    }
-
-    modifier onlyGovernance() {
-        require(governance == msg.sender, "Governance only");
-        _;
     }
 
     modifier onlyRouter() {
@@ -140,7 +133,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _index index of strategy to deposit in
      * @param _amount amount to deposit
      **/
-    function strategyDeposit(uint _index, uint _amount) external onlyGovernance {
+    function strategyDeposit(uint _index, uint _amount) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).deposit(_amount);
     }
@@ -150,7 +143,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _index index of strategy to withdraw from
      * @param _amount amount to withdraw
      **/
-    function strategyWithdraw(uint _index, uint _amount) external onlyGovernance {
+    function strategyWithdraw(uint _index, uint _amount) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).withdraw(_amount);
     }
@@ -159,7 +152,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @notice adds a new strategy
      * @param _strategy address of strategy to add
      **/
-    function addStrategy(address _strategy) external onlyGovernance {
+    function addStrategy(address _strategy) external onlyOwner {
         require(!_strategyExists(_strategy), "Strategy already exists");
         token.safeApprove(_strategy, type(uint).max);
         strategies.push(_strategy);
@@ -169,7 +162,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @notice removes a strategy
      * @param _index index of strategy to remove
      **/
-    function removeStrategy(uint _index) external onlyGovernance {
+    function removeStrategy(uint _index) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
 
         uint[] memory idxs = new uint[](1);
@@ -193,7 +186,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @notice reorders strategies
      * @param _newOrder array containing strategy indexes in a new order
      **/
-    function reorderStrategies(uint[] calldata _newOrder) external onlyGovernance {
+    function reorderStrategies(uint[] calldata _newOrder) external onlyOwner {
         require(_newOrder.length == strategies.length, "newOrder.length must = strategies.length");
 
         address[] memory strategyAddresses = new address[](strategies.length);
@@ -209,18 +202,10 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
-     * @notice sets governance address
-     * @param _governance address to set
-     **/
-    function setGovernance(address _governance) external onlyGovernance {
-        governance = _governance;
-    }
-
-    /**
      * @notice sets basis points of rewards that pool owners receive
      * @param _ownersFeeBasisPoints basis points to set
      **/
-    function setOwnersFeeBasisPoints(uint _ownersFeeBasisPoints) external onlyGovernance {
+    function setOwnersFeeBasisPoints(uint _ownersFeeBasisPoints) external onlyOwner {
         ownersFeeBasisPoints = _ownersFeeBasisPoints;
     }
 

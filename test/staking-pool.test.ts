@@ -5,6 +5,7 @@ import {
   toEther,
   assertThrowsAsync,
   deploy,
+  deployUpgradeable,
   getAccounts,
   setupToken,
   fromEther,
@@ -56,24 +57,21 @@ describe('StakingPool', () => {
     ])) as WrappedSDToken
     await stakingPool.setWSDToken(wsdToken.address)
 
-    strategy1 = (await deploy('StrategyMock', [
+    strategy1 = (await deployUpgradeable('StrategyMock', [
       token.address,
       stakingPool.address,
-      accounts[0],
       toEther(1000),
       toEther(10),
     ])) as StrategyMock
-    strategy2 = (await deploy('StrategyMock', [
+    strategy2 = (await deployUpgradeable('StrategyMock', [
       token.address,
       stakingPool.address,
-      accounts[0],
       toEther(2000),
       toEther(20),
     ])) as StrategyMock
-    strategy3 = (await deploy('StrategyMock', [
+    strategy3 = (await deployUpgradeable('StrategyMock', [
       token.address,
       stakingPool.address,
-      accounts[0],
       toEther(10000),
       toEther(10),
     ])) as StrategyMock
@@ -100,16 +98,10 @@ describe('StakingPool', () => {
     )
   })
 
-  it('should be able to set governance', async () => {
-    await stakingPool.setGovernance(accounts[1])
-    assert.equal(await stakingPool.governance(), accounts[1], 'Governance not set')
-  })
-
   it('should be able to add new strategies', async () => {
-    const strategy = (await deploy('StrategyMock', [
+    const strategy = (await deployUpgradeable('StrategyMock', [
       token.address,
       stakingPool.address,
-      accounts[0],
       toEther(10000),
       toEther(10),
     ])) as StrategyMock
@@ -262,7 +254,7 @@ describe('StakingPool', () => {
 
   it('should not be able to withdraw more tokens than balance', async () => {
     await stake(1, 1000)
-    await strategy1.setDepositMin(0)
+    await strategy1.setDepositsMin(0)
     await assertThrowsAsync(async () => {
       await withdraw(1, 1001)
     }, 'revert')

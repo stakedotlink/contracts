@@ -120,7 +120,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
             sharesToMint = _amount;
         }
 
-        _mintShares(_recipient, _amount);
+        _mintShares(_recipient, sharesToMint);
     }
 
     /**

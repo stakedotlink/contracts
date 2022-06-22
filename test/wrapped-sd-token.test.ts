@@ -1,7 +1,14 @@
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { assert } from 'chai'
-import { toEther, deploy, getAccounts, setupToken, fromEther } from './utils/helpers'
+import {
+  toEther,
+  deploy,
+  deployUpgradeable,
+  getAccounts,
+  setupToken,
+  fromEther,
+} from './utils/helpers'
 import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../typechain-types'
 
 describe('WrappedSDToken', () => {
@@ -43,10 +50,9 @@ describe('WrappedSDToken', () => {
     ])) as WrappedSDToken
     await stakingPool.setWSDToken(wsdToken.address)
 
-    strategy1 = (await deploy('StrategyMock', [
+    strategy1 = (await deployUpgradeable('StrategyMock', [
       token.address,
       stakingPool.address,
-      accounts[0],
       toEther(1000),
       toEther(10),
     ])) as StrategyMock

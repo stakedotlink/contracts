@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.14;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -14,7 +14,7 @@ import "../interfaces/IStakingPool.sol";
  * @notice Base strategy contract to inherit from
  */
 abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, OwnableUpgradeable {
-    IERC20 public token;
+    IERC20Upgradeable public token;
     IStakingPool public stakingPool;
 
     uint public depositsMin;
@@ -26,7 +26,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
         uint _depositsMax,
         uint _depositsMin
     ) public virtual initializer {
-        token = IERC20(_token);
+        token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
         depositsMax = _depositsMax;
         depositsMin = _depositsMin;
