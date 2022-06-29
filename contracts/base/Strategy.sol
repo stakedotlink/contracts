@@ -20,17 +20,18 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
     uint public depositsMin;
     uint public depositsMax;
 
-    function initialize(
+    function __Strategy_init(
         address _token,
         address _stakingPool,
         uint _depositsMax,
         uint _depositsMin
-    ) public virtual initializer {
+    ) public onlyInitializing {
         token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
         depositsMax = _depositsMax;
         depositsMin = _depositsMin;
         __Ownable_init();
+        __UUPSUpgradeable_init();
     }
 
     modifier onlyStakingPool() {
@@ -45,6 +46,38 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
     function setDepositsMin(uint256 _depositsMin) external onlyOwner {
         depositsMin = _depositsMin;
     }
+
+    /**
+     * @notice returns the available deposit room for this strategy
+     * @return available deposit room
+     */
+    function canDeposit() public view virtual returns (uint) {
+        uint deposits = totalDeposits();
+        if (deposits >= depositsMax) {
+            return 0;
+        } else {
+            return depositsMax - deposits;
+        }
+    }
+
+    /**
+     * @notice returns the available withdrawal room for this strategy
+     * @return available withdrawal room
+     */
+    function canWithdraw() public view virtual returns (uint) {
+        uint deposits = totalDeposits();
+        if (deposits <= depositsMin) {
+            return 0;
+        } else {
+            return deposits - depositsMin;
+        }
+    }
+
+    /**
+     * @notice returns the total amount of deposits in this strategy
+     * @return total deposits
+     */
+    function totalDeposits() public view virtual returns (uint);
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }

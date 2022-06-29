@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.14;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../base/Strategy.sol";
 import "../interfaces/IWrappedETH.sol";
 import "../interfaces/IOperatorController.sol";
+import "../interfaces/INWLOperatorController.sol";
 import "../interfaces/IDepositContract.sol";
 
 /**
@@ -16,7 +17,7 @@ import "../interfaces/IDepositContract.sol";
  * @notice Handles Ethereum staking deposits/withdrawals
  */
 contract EthStakingStrategy is Strategy {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint public constant PUBKEY_LENGTH = 48;
     uint public constant SIGNATURE_LENGTH = 96;
@@ -26,7 +27,7 @@ contract EthStakingStrategy is Strategy {
 
     IDepositContract public depositContract;
     IOperatorController public wlOperatorController;
-    IOperatorController public nwlOperatorController;
+    INWLOperatorController public nwlOperatorController;
     address public oracle;
 
     bytes32 public withdrawalCredentials;
@@ -41,6 +42,11 @@ contract EthStakingStrategy is Strategy {
 
     int public depositChange;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address _wETH,
         address _stakingPool,
@@ -53,14 +59,16 @@ contract EthStakingStrategy is Strategy {
         bytes32 _withdrawalCredentials,
         uint _operatorFeeBasisPoints
     ) public initializer {
-        Strategy.initialize(_wETH, _stakingPool, _depositsMax, _depositsMin);
+        __Strategy_init(_wETH, _stakingPool, _depositsMax, _depositsMin);
         depositContract = IDepositContract(_depositContract);
         wlOperatorController = IOperatorController(_wlOperatorController);
-        nwlOperatorController = IOperatorController(_nwlOperatorController);
+        nwlOperatorController = INWLOperatorController(_nwlOperatorController);
         oracle = _oracle;
         withdrawalCredentials = _withdrawalCredentials;
         operatorFeeBasisPoints = _operatorFeeBasisPoints;
     }
+
+    receive() external payable {}
 
     /**
      * @notice Updates the number of validators in the beacon validator set and their total balance
@@ -80,9 +88,9 @@ contract EthStakingStrategy is Strategy {
         require(_beaconWLValidators >= beaconWLValidators, "Reported less whitelisted validators than tracked");
         require(_beaconNWLValidators >= beaconNWLValidators, "Reported less non-whitelisted validators than tracked");
 
-        uint appearedWLValidators = _beaconWLValidators - beaconWLValidators;
-        uint appearedNWLValidators = _beaconNWLValidators - beaconNWLValidators;
-        int rewardBase = int((appearedWLValidators + appearedNWLValidators) * DEPOSIT_AMOUNT + beaconBalance);
+        uint newWLValidators = _beaconWLValidators - beaconWLValidators;
+        uint newNWLValidators = _beaconNWLValidators - beaconNWLValidators;
+        int rewardBase = int((newWLValidators + newNWLValidators) * DEPOSIT_AMOUNT + beaconBalance);
 
         beaconBalance = _beaconBalance;
         beaconWLValidators = _beaconWLValidators;
@@ -92,16 +100,16 @@ contract EthStakingStrategy is Strategy {
     }
 
     /**
-     * @notice unwraps buffered wETH and deposits ETH into the DepositContract
+     * @notice unwraps wETH and deposits ETH into the DepositContract
      * @dev always deposits for whitelisted validators first, followed by non-whitelisted only if there
      * are no whitelisted remaining in the queue
      * @param _maxDeposits maximum number of separate deposits to execute
      */
-    function depositBufferedEther(uint _maxDeposits) external {
+    function depositEther(uint _maxDeposits) external {
         uint balance = token.balanceOf(address(this));
         require(balance >= DEPOSIT_AMOUNT, "Insufficient balance for deposit");
 
-        uint wlDepositRoom = Math.min(balance / DEPOSIT_AMOUNT, _maxDeposits);
+        uint wlDepositRoom = MathUpgradeable.min(balance / DEPOSIT_AMOUNT, _maxDeposits);
         (bytes memory wlPubkeys, bytes memory wlSignatures) = wlOperatorController.assignNextValidators(wlDepositRoom);
 
         uint numWLDeposits = wlPubkeys.length / PUBKEY_LENGTH;
@@ -120,7 +128,7 @@ contract EthStakingStrategy is Strategy {
         depositedWLValidators += numWLDeposits;
 
         if (numWLDeposits < _maxDeposits) {
-            uint nwlDepositRoom = Math.min(
+            uint nwlDepositRoom = MathUpgradeable.min(
                 (balance - numWLDeposits * DEPOSIT_AMOUNT) / (DEPOSIT_AMOUNT / 2),
                 _maxDeposits - numWLDeposits
             );
@@ -132,6 +140,8 @@ contract EthStakingStrategy is Strategy {
             require(nwlSignatures.length / SIGNATURE_LENGTH == numNWLDeposits, "Inconsistent pubkeys/signatures length");
             require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
             require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
+
+            IWrappedETH(address(token)).unwrap(numNWLDeposits * (DEPOSIT_AMOUNT / 2));
 
             for (uint i = 0; i < numNWLDeposits; i++) {
                 bytes memory pubkey = BytesLib.slice(nwlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
@@ -167,8 +177,10 @@ contract EthStakingStrategy is Strategy {
     function updateDeposits() external onlyStakingPool {
         if (depositChange > 0) {
             uint rewards = uint(depositChange);
-            uint nwlOperatorRewardsBasisPoints = (10000 * _nwlOperatorDeposits()) /
-                (totalDeposits() + _nwlOperatorDeposits());
+
+            uint nwlOperatorDeposits = nwlOperatorController.activeStake();
+            uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) /
+                (totalDeposits() + nwlOperatorDeposits - rewards);
             uint totalFeeBasisPoints = nwlOperatorRewardsBasisPoints + operatorFeeBasisPoints;
 
             uint sharesToMint = (uint(rewards) * (totalFeeBasisPoints) * stakingPool.totalShares()) /
@@ -191,37 +203,13 @@ contract EthStakingStrategy is Strategy {
     }
 
     /**
-     * @notice returns the available deposit room for this strategy
-     * @return available deposit room
-     */
-    function canDeposit() public view returns (uint) {
-        uint deposits = totalDeposits();
-        if (deposits >= depositsMax) {
-            return 0;
-        } else {
-            return depositsMax - deposits;
-        }
-    }
-
-    /**
-     * @notice returns the available withdrawal room for this strategy
-     * @return available withdrawal room
-     */
-    function canWithdraw() public view returns (uint) {
-        uint deposits = totalDeposits();
-        if (deposits <= depositsMin) {
-            return 0;
-        } else {
-            return deposits - depositsMin;
-        }
-    }
-
-    /**
      * @notice returns the total amount of deposits in this strategy
      * @return total deposits
      */
-    function totalDeposits() public view returns (uint) {
-        return beaconBalance - _nwlOperatorDeposits() + token.balanceOf(address(this));
+    function totalDeposits() public view override returns (uint) {
+        uint depositsInProgress = ((depositedWLValidators + depositedNWLValidators) -
+            (beaconWLValidators + beaconNWLValidators)) * DEPOSIT_AMOUNT;
+        return beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.activeStake();
     }
 
     /**
@@ -230,7 +218,7 @@ contract EthStakingStrategy is Strategy {
      * @param _signature signature of the deposit call
      */
     function _deposit(bytes memory _pubkey, bytes memory _signature) internal {
-        require(withdrawalCredentials != 0, "EMPTY_WITHDRAWAL_CREDENTIALS");
+        require(withdrawalCredentials != 0, "Empty withdrawal credentials");
 
         uint depositValue = DEPOSIT_AMOUNT;
         uint depositAmount = depositValue / DEPOSIT_AMOUNT_UNIT;
@@ -245,7 +233,7 @@ contract EthStakingStrategy is Strategy {
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
                 sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-                sha256(abi.encodePacked(_toLittleEndian64(uint64(depositAmount)), signatureRoot))
+                sha256(abi.encodePacked(_toLittleEndian64(uint64(depositAmount)), bytes24(0), signatureRoot))
             )
         );
 
@@ -257,11 +245,8 @@ contract EthStakingStrategy is Strategy {
             _signature,
             depositDataRoot
         );
-        require(address(this).balance == targetBalance, "EXPECTING_DEPOSIT_TO_HAPPEN");
-    }
 
-    function _nwlOperatorDeposits() internal view returns (uint) {
-        return beaconNWLValidators * (DEPOSIT_AMOUNT / 2);
+        require(address(this).balance == targetBalance, "Deposit failed");
     }
 
     /**

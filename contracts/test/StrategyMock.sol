@@ -13,45 +13,36 @@ import "../base/Strategy.sol";
 contract StrategyMock is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint public totalDeposits;
+    uint private totalDeposited;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address _token,
         address _stakingPool,
         uint _depositsMax,
         uint _depositsMin
-    ) public override initializer {
-        Strategy.initialize(_token, _stakingPool, _depositsMax, _depositsMin);
-    }
-
-    function canDeposit() public view returns (uint) {
-        if (totalDeposits < depositsMax) {
-            return depositsMax - totalDeposits;
-        }
-        return 0;
-    }
-
-    function canWithdraw() public view returns (uint) {
-        if (totalDeposits <= depositsMin) {
-            return 0;
-        }
-        return totalDeposits - depositsMin;
+    ) public initializer {
+        __Strategy_init(_token, _stakingPool, _depositsMax, _depositsMin);
     }
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
     function depositChange() public view returns (int) {
-        return int(token.balanceOf(address(this))) - int(totalDeposits);
+        return int(token.balanceOf(address(this))) - int(totalDeposited);
     }
 
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        totalDeposits += _amount;
+        totalDeposited += _amount;
         // Deposit into earning protocol/node
     }
 
     function withdraw(uint256 _amount) external onlyStakingPool {
         require(_amount <= canWithdraw(), "Total deposits must remain >= minimum");
-        totalDeposits -= _amount;
+        totalDeposited -= _amount;
         //Withdraw from earning protocol/node
         token.safeTransfer(msg.sender, _amount);
     }
@@ -59,13 +50,17 @@ contract StrategyMock is Strategy {
     function updateDeposits() external onlyStakingPool {
         int256 balanceChange = depositChange();
         if (balanceChange > 0) {
-            totalDeposits += uint(balanceChange);
+            totalDeposited += uint(balanceChange);
         } else if (balanceChange < 0) {
-            totalDeposits -= uint(balanceChange * -1);
+            totalDeposited -= uint(balanceChange * -1);
         }
     }
 
     function simulateSlash(uint _amount) external {
         token.safeTransfer(msg.sender, _amount);
+    }
+
+    function totalDeposits() public view override returns (uint) {
+        return totalDeposited;
     }
 }

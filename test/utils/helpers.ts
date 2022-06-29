@@ -45,3 +45,15 @@ export const setupToken = async (token: ERC677, accounts: string[]) => {
     accounts.map((account, index) => token.transfer(account, toEther(index < 4 ? 10000 : 0)))
   )
 }
+
+export const padBytes = (value: string, bytesLength: number) => {
+  const toPad = bytesLength * 2 + 2 - value.length
+  if (toPad == 0) {
+    return value
+  }
+  return '0x' + '0'.repeat(toPad) + value.substring(2)
+}
+
+export const concatBytes = (values: string[]) => {
+  return values.reduce((res, curr) => (res += curr.substring(2)), '0x')
+}
