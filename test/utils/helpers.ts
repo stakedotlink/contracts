@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat'
+import { ethers, upgrades } from 'hardhat'
 import { assert } from 'chai'
 import { BigNumber } from 'ethers'
 import { ERC677 } from '../../typechain-types'
@@ -24,9 +24,14 @@ export const assertThrowsAsync = async (fn: Function, regExp: string) => {
   }
 }
 
-export const deploy = async (contractName: string, args: Array<any>) => {
+export const deploy = async (contractName: string, args: any[] = []) => {
   const Contract = await ethers.getContractFactory(contractName)
   return Contract.deploy(...args)
+}
+
+export const deployUpgradeable = async (contractName: string, args: any[] = []) => {
+  const Contract = await ethers.getContractFactory(contractName)
+  return upgrades.deployProxy(Contract, args, { kind: 'uups' })
 }
 
 export const getAccounts = async () => {
@@ -39,4 +44,16 @@ export const setupToken = async (token: ERC677, accounts: string[]) => {
   return Promise.all(
     accounts.map((account, index) => token.transfer(account, toEther(index < 4 ? 10000 : 0)))
   )
+}
+
+export const padBytes = (value: string, bytesLength: number) => {
+  const toPad = bytesLength * 2 + 2 - value.length
+  if (toPad == 0) {
+    return value
+  }
+  return '0x' + '0'.repeat(toPad) + value.substring(2)
+}
+
+export const concatBytes = (values: string[]) => {
+  return values.reduce((res, curr) => (res += curr.substring(2)), '0x')
 }
