@@ -14,6 +14,7 @@ contract StrategyMock is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint private totalDeposited;
+    uint public feeBasisPoints;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -27,6 +28,7 @@ contract StrategyMock is Strategy {
         uint _depositsMin
     ) public initializer {
         __Strategy_init(_token, _stakingPool, _depositsMax, _depositsMin);
+        feeBasisPoints = 0;
     }
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
@@ -47,13 +49,23 @@ contract StrategyMock is Strategy {
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function updateDeposits() external onlyStakingPool {
+    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
         int256 balanceChange = depositChange();
         if (balanceChange > 0) {
             totalDeposited += uint(balanceChange);
+            if (feeBasisPoints > 0) {
+                receivers = new address[](1);
+                amounts = new uint[](1);
+                receivers[0] = owner();
+                amounts[0] = (feeBasisPoints * uint(balanceChange)) / 10000;
+            }
         } else if (balanceChange < 0) {
             totalDeposited -= uint(balanceChange * -1);
         }
+    }
+
+    function setFeeBasisPoints(uint _feeBasisPoints) external {
+        feeBasisPoints = _feeBasisPoints;
     }
 
     function simulateSlash(uint _amount) external {

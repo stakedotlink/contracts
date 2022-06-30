@@ -18,29 +18,33 @@ import "./interfaces/IWrappedSDToken.sol";
 contract StakingPool is StakingRewardsPool, RewardsPoolController {
     using SafeERC20 for IERC677;
 
+    struct Fee {
+        address receiver;
+        uint basisPoints;
+    }
+
     address[] private strategies;
     uint public totalStaked;
 
-    address public ownersRewardsPool;
-    uint public ownersFeeBasisPoints;
+    Fee[] private fees;
     IWrappedSDToken public wsdToken;
 
     address public poolRouter;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
-    event UpdateStrategyRewards(address indexed account, uint totalStaked, int rewardsAmount, uint ownersFee);
+    event UpdateStrategyRewards(address indexed account, uint totalStaked, int rewardsAmount, uint totalFees);
 
     constructor(
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
-        address _ownersRewardsPool,
-        uint _ownersFeeBasisPoints,
+        Fee[] memory _fees,
         address _poolRouter
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
-        ownersRewardsPool = _ownersRewardsPool;
-        ownersFeeBasisPoints = _ownersFeeBasisPoints;
+        for (uint i = 0; i < _fees.length; i++) {
+            fees.push(_fees[i]);
+        }
         poolRouter = _poolRouter;
     }
 
@@ -75,6 +79,14 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      */
     function getStrategies() external view returns (address[] memory) {
         return strategies;
+    }
+
+    /**
+     * @notice returns a list of all fees
+     * @return list of fees
+     */
+    function getFees() external view returns (Fee[] memory) {
+        return fees;
     }
 
     /**
@@ -202,11 +214,34 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
-     * @notice sets basis points of rewards that pool owners receive
-     * @param _ownersFeeBasisPoints basis points to set
+     * @notice adds a new fee
+     * @param _receiver receiver of fee
+     * @param _feeBasisPoints fee in basis points
      **/
-    function setOwnersFeeBasisPoints(uint _ownersFeeBasisPoints) external onlyOwner {
-        ownersFeeBasisPoints = _ownersFeeBasisPoints;
+    function addFee(address _receiver, uint _feeBasisPoints) external onlyOwner {
+        fees.push(Fee(_receiver, _feeBasisPoints));
+    }
+
+    /**
+     * @notice updates an existing fee
+     * @param _index index of fee
+     * @param _receiver receiver of fee
+     * @param _feeBasisPoints fee in basis points
+     **/
+    function updateFee(
+        uint _index,
+        address _receiver,
+        uint _feeBasisPoints
+    ) external onlyOwner {
+        require(_index < fees.length, "Fee does not exist");
+
+        if (_feeBasisPoints == 0) {
+            fees[_index] = fees[fees.length - 1];
+            fees.pop();
+        } else {
+            fees[_index].receiver = _receiver;
+            fees[_index].basisPoints = _feeBasisPoints;
+        }
     }
 
     /**
@@ -226,27 +261,53 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      **/
     function updateStrategyRewards(uint[] memory _strategyIdxs) public {
         int totalRewards;
+        uint totalFeeAmounts;
+        uint feeCount;
+        address[] memory receivers = new address[](_strategyIdxs.length * 3 + fees.length);
+        uint[] memory feeAmounts = new uint[](_strategyIdxs.length * 3 + fees.length);
+
         for (uint i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
             int rewards = strategy.depositChange();
             if (rewards != 0) {
-                strategy.updateDeposits();
+                (address[] memory strategyReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
                 totalRewards += rewards;
+                if (rewards > 0) {
+                    for (uint i = 0; i < strategyReceivers.length; i++) {
+                        receivers[feeCount] = (strategyReceivers[i]);
+                        feeAmounts[feeCount] = (strategyFeeAmounts[i]);
+                        totalFeeAmounts += strategyFeeAmounts[i];
+                        feeCount++;
+                    }
+                }
             }
         }
 
         if (totalRewards != 0) {
             totalStaked = uint(int(totalStaked) + totalRewards);
-            emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, ownersFeeBasisPoints);
         }
 
-        if (totalRewards > 0 && ownersFeeBasisPoints > 0) {
-            uint ownersSharesToMint = (uint(totalRewards) * ownersFeeBasisPoints * totalShares) /
-                (totalStaked * 10000 - ownersFeeBasisPoints * uint(totalRewards));
-            _mintShares(address(this), ownersSharesToMint);
-            wsdToken.wrap(balanceOf(address(this)));
-            wsdToken.transferAndCall(ownersRewardsPool, wsdToken.balanceOf(address(this)), "0x00");
+        if (totalRewards > 0) {
+            for (uint i = 0; i < fees.length; i++) {
+                receivers[feeCount] = fees[i].receiver;
+                feeAmounts[feeCount] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
+                totalFeeAmounts += feeAmounts[feeCount];
+                feeCount++;
+            }
         }
+
+        if (totalFeeAmounts > 0) {
+            uint sharesToMint = (totalFeeAmounts * totalShares) / (totalStaked - totalFeeAmounts);
+            _mintShares(address(this), sharesToMint);
+            wsdToken.wrap(balanceOf(address(this)));
+
+            for (uint i = 0; i < feeCount - 1; i++) {
+                wsdToken.transferAndCall(receivers[i], getSharesByStake(feeAmounts[i]), "0x00");
+            }
+            wsdToken.transferAndCall(receivers[feeCount - 1], wsdToken.balanceOf(address(this)), "0x00");
+        }
+
+        emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, totalFeeAmounts);
     }
 
     /**

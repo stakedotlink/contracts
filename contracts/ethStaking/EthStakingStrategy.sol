@@ -34,10 +34,8 @@ contract EthStakingStrategy is Strategy {
 
     uint public operatorFeeBasisPoints;
 
-    uint public depositedWLValidators;
-    uint public depositedNWLValidators;
-    uint public beaconWLValidators;
-    uint public beaconNWLValidators;
+    uint public depositedValidators;
+    uint public beaconValidators;
     uint public beaconBalance;
 
     int public depositChange;
@@ -73,28 +71,19 @@ contract EthStakingStrategy is Strategy {
     /**
      * @notice Updates the number of validators in the beacon validator set and their total balance
      * @dev periodically called by the Oracle contract
-     * @param _beaconWLValidators number of whitelisted validators in the beacon state
-     * @param _beaconNWLValidators number of non-whitelisted validators in the beacon state
+     * @param _beaconValidators number of validators in the beacon state
      * @param _beaconBalance summed balance of all validators
      */
-    function reportBeaconState(
-        uint _beaconWLValidators,
-        uint _beaconNWLValidators,
-        uint _beaconBalance
-    ) external {
+    function reportBeaconState(uint _beaconValidators, uint _beaconBalance) external {
         require(msg.sender == oracle, "Sender is not oracle");
-        require(_beaconWLValidators <= depositedWLValidators, "Reported more whitelisted beacon validators than deposited");
-        require(_beaconNWLValidators <= depositedNWLValidators, "Reported more non-whitelisted validators than deposited");
-        require(_beaconWLValidators >= beaconWLValidators, "Reported less whitelisted validators than tracked");
-        require(_beaconNWLValidators >= beaconNWLValidators, "Reported less non-whitelisted validators than tracked");
+        require(_beaconValidators <= depositedValidators, "Reported more beacon validators than deposited");
+        require(_beaconValidators >= beaconValidators, "Reported less validators than tracked");
 
-        uint newWLValidators = _beaconWLValidators - beaconWLValidators;
-        uint newNWLValidators = _beaconNWLValidators - beaconNWLValidators;
-        int rewardBase = int((newWLValidators + newNWLValidators) * DEPOSIT_AMOUNT + beaconBalance);
+        uint newValidators = _beaconValidators - beaconValidators;
+        int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance);
 
         beaconBalance = _beaconBalance;
-        beaconWLValidators = _beaconWLValidators;
-        beaconNWLValidators = _beaconNWLValidators;
+        beaconValidators = _beaconValidators;
 
         depositChange += int(_beaconBalance) - rewardBase;
     }
@@ -125,8 +114,7 @@ contract EthStakingStrategy is Strategy {
             _deposit(pubkey, signature);
         }
 
-        depositedWLValidators += numWLDeposits;
-
+        uint numNWLDeposits;
         if (numWLDeposits < _maxDeposits) {
             uint nwlDepositRoom = MathUpgradeable.min(
                 (balance - numWLDeposits * DEPOSIT_AMOUNT) / (DEPOSIT_AMOUNT / 2),
@@ -136,7 +124,7 @@ contract EthStakingStrategy is Strategy {
                 nwlDepositRoom
             );
 
-            uint numNWLDeposits = nwlPubkeys.length / PUBKEY_LENGTH;
+            numNWLDeposits = nwlPubkeys.length / PUBKEY_LENGTH;
             require(nwlSignatures.length / SIGNATURE_LENGTH == numNWLDeposits, "Inconsistent pubkeys/signatures length");
             require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
             require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
@@ -148,9 +136,9 @@ contract EthStakingStrategy is Strategy {
                 bytes memory signature = BytesLib.slice(nwlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
                 _deposit(pubkey, signature);
             }
-
-            depositedNWLValidators += numNWLDeposits;
         }
+
+        depositedValidators += numWLDeposits + numNWLDeposits;
     }
 
     /**
@@ -172,32 +160,30 @@ contract EthStakingStrategy is Strategy {
     }
 
     /**
-     * @notice updates deposit accounting and distributes any accumulated operator rewards
+     * @notice updates deposit accounting and calculates reward distribution
      */
-    function updateDeposits() external onlyStakingPool {
+    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
         if (depositChange > 0) {
             uint rewards = uint(depositChange);
 
             uint nwlOperatorDeposits = nwlOperatorController.activeStake();
             uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) /
                 (totalDeposits() + nwlOperatorDeposits - rewards);
-            uint totalFeeBasisPoints = nwlOperatorRewardsBasisPoints + operatorFeeBasisPoints;
-
-            uint sharesToMint = (uint(rewards) * (totalFeeBasisPoints) * stakingPool.totalShares()) /
-                ((stakingPool.totalSupply() + rewards) * 10000 - totalFeeBasisPoints * rewards);
-            stakingPool.mintShares(sharesToMint);
 
             uint activeWLValidators = wlOperatorController.activeValidators();
             uint activeNWLValidators = nwlOperatorController.activeValidators();
 
-            uint nwlOperatorShares = (sharesToMint * nwlOperatorRewardsBasisPoints) /
-                (nwlOperatorRewardsBasisPoints + operatorFeeBasisPoints);
-            nwlOperatorShares +=
-                ((sharesToMint - nwlOperatorShares) * activeNWLValidators) /
-                (activeNWLValidators + activeWLValidators);
+            uint operatorFee = (rewards * operatorFeeBasisPoints) / 10000;
+            uint wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
+            uint nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / 10000;
 
-            stakingPool.transferAndCall(address(nwlOperatorController), nwlOperatorShares, "0x00");
-            stakingPool.transferAndCall(address(wlOperatorController), stakingPool.balanceOf(address(this)), "0x00");
+            receivers = new address[](2);
+            amounts = new uint[](2);
+
+            receivers[0] = address(wlOperatorController);
+            receivers[1] = address(nwlOperatorController);
+            amounts[0] = wlOperatorFee;
+            amounts[1] = nwlOperatorFee;
         }
         depositChange = 0;
     }
@@ -207,8 +193,7 @@ contract EthStakingStrategy is Strategy {
      * @return total deposits
      */
     function totalDeposits() public view override returns (uint) {
-        uint depositsInProgress = ((depositedWLValidators + depositedNWLValidators) -
-            (beaconWLValidators + beaconNWLValidators)) * DEPOSIT_AMOUNT;
+        uint depositsInProgress = (depositedValidators - beaconValidators) * DEPOSIT_AMOUNT;
         return beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.activeStake();
     }
 

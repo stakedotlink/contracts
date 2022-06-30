@@ -6,7 +6,7 @@ interface IStrategy {
 
     function withdraw(uint256 _amount) external;
 
-    function updateDeposits() external;
+    function updateDeposits() external returns (address[] memory receivers, uint[] memory amounts);
 
     function setDepositsMin(uint256 _depositsMin) external;
 

@@ -45,8 +45,7 @@ describe('StakingPool', () => {
       token.address,
       'LinkPool LINK',
       'lpLINK',
-      ownersRewards,
-      '1000',
+      [[ownersRewards, 1000]],
       accounts[0],
     ])) as StakingPool
 
@@ -89,13 +88,28 @@ describe('StakingPool', () => {
     assert.equal((await stakingPool.decimals()).toNumber(), 18, 'Decimals incorrect')
   })
 
-  it('should be able to set ownersFeeBasisPoints', async () => {
-    await stakingPool.setOwnersFeeBasisPoints('3000')
+  it('should be able to add new fee', async () => {
+    await stakingPool.addFee(accounts[1], 2500)
     assert.equal(
-      (await stakingPool.ownersFeeBasisPoints()).toNumber(),
-      3000,
-      'ownersFeeBasisPoints not set'
+      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1].toNumber()])),
+      JSON.stringify([
+        [ownersRewards, 1000],
+        [accounts[1], 2500],
+      ]),
+      'fees incorrect'
     )
+  })
+
+  it('should be able to update existing fees', async () => {
+    await stakingPool.updateFee(0, accounts[1], 2500)
+    assert.equal(
+      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1].toNumber()])),
+      JSON.stringify([[accounts[1], 2500]]),
+      'fees incorrect'
+    )
+
+    await stakingPool.updateFee(0, accounts[2], 0)
+    assert.equal((await stakingPool.getFees()).length, 0, 'fees incorrect')
   })
 
   it('should be able to add new strategies', async () => {
@@ -351,6 +365,63 @@ describe('StakingPool', () => {
       'Owners rewards balance incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6200, 'totalSupply incorrect')
+  })
+
+  it('fee splitting should work correctly', async () => {
+    await stakingPool.addFee(accounts[3], 2000)
+    await strategy1.setFeeBasisPoints(1000)
+    await stake(1, 2000)
+    await stake(2, 1000)
+    await stake(3, 2000)
+    await token.transfer(strategy1.address, toEther(1000))
+    await token.transfer(strategy3.address, toEther(600))
+    await strategy2.simulateSlash(toEther(300))
+    await stakingPool.updateStrategyRewards([0, 1, 2])
+
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[1])),
+      2324,
+      'Account-1 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[2])),
+      1162,
+      'Account-2 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[3])),
+      2324,
+      'Account-3 balance incorrect'
+    )
+
+    assert.equal(
+      Number(
+        fromEther(
+          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(ownersRewards))
+        ).toFixed(2)
+      ),
+      130,
+      'Owners rewards balance incorrect'
+    )
+    assert.equal(
+      Number(
+        fromEther(
+          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(accounts[3]))
+        ).toFixed(2)
+      ),
+      260,
+      'Second fee balance incorrect'
+    )
+    assert.equal(
+      Number(
+        fromEther(
+          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(accounts[0]))
+        ).toFixed(2)
+      ),
+      100,
+      'Strategy fee balance incorrect'
+    )
+    assert.equal(fromEther(await stakingPool.totalSupply()), 6300, 'totalSupply incorrect')
   })
 
   it('should be able to update strategy rewards when negative', async () => {
