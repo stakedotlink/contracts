@@ -256,7 +256,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
-     * @notice updates rewards based on balance changes in strategies
+     * @notice updates and distributes rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
      **/
     function updateStrategyRewards(uint[] memory _strategyIdxs) public {
@@ -273,10 +273,10 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
                 (address[] memory strategyReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
                 totalRewards += rewards;
                 if (rewards > 0) {
-                    for (uint i = 0; i < strategyReceivers.length; i++) {
-                        receivers[feeCount] = (strategyReceivers[i]);
-                        feeAmounts[feeCount] = (strategyFeeAmounts[i]);
-                        totalFeeAmounts += strategyFeeAmounts[i];
+                    for (uint j = 0; j < strategyReceivers.length; j++) {
+                        receivers[feeCount] = (strategyReceivers[j]);
+                        feeAmounts[feeCount] = (strategyFeeAmounts[j]);
+                        totalFeeAmounts += strategyFeeAmounts[j];
                         feeCount++;
                     }
                 }
