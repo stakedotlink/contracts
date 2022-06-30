@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.14;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../base/Strategy.sol";
-import "../interfaces/IWrappedETH.sol";
-import "../interfaces/IOperatorController.sol";
-import "../interfaces/INWLOperatorController.sol";
-import "../interfaces/IDepositContract.sol";
+import "../core/base/Strategy.sol";
+import "./interfaces/IWrappedETH.sol";
+import "./interfaces/IOperatorController.sol";
+import "./interfaces/INWLOperatorController.sol";
+import "./interfaces/IDepositContract.sol";
 
 /**
  * @title ETH Staking Strategy

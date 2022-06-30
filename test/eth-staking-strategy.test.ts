@@ -1,5 +1,3 @@
-//@ts-nocheck
-
 import { ethers } from 'hardhat'
 import { assert } from 'chai'
 import {
@@ -103,7 +101,7 @@ describe('EthStakingStrategy', () => {
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
     await signers[0].sendTransaction({ to: nwlOperatorController.address, value: toEther(48) })
   })
-  /*
+
   it('should be able to deposit into strategy', async () => {
     await stake(2)
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 2, 'strategy balance incorrect')
@@ -131,7 +129,11 @@ describe('EthStakingStrategy', () => {
       160,
       'deposit contract balance incorrect'
     )
-    assert.equal(await strategy.depositedValidators(), 5, 'depositValidators incorrect')
+    assert.equal(
+      (await strategy.depositedValidators()).toNumber(),
+      5,
+      'depositValidators incorrect'
+    )
   })
 
   it('depositEther should respect balance and max deposit limitations', async () => {
@@ -161,7 +163,11 @@ describe('EthStakingStrategy', () => {
       'deposit contract balance incorrect'
     )
 
-    assert.equal(await strategy.depositedValidators(), 3, 'depositValidators incorrect')
+    assert.equal(
+      (await strategy.depositedValidators()).toNumber(),
+      3,
+      'depositValidators incorrect'
+    )
 
     await assertThrowsAsync(async () => {
       await strategy.depositEther(1)
@@ -182,7 +188,11 @@ describe('EthStakingStrategy', () => {
       160,
       'deposit contract balance incorrect'
     )
-    assert.equal(await strategy.depositedValidators(), 5, 'depositValidators incorrect')
+    assert.equal(
+      (await strategy.depositedValidators()).toNumber(),
+      5,
+      'depositValidators incorrect'
+    )
   })
 
   it('reportBeaconState should correctly update values', async () => {
@@ -190,13 +200,13 @@ describe('EthStakingStrategy', () => {
     await strategy.depositEther(10)
     await strategy.reportBeaconState(3, toEther(90))
 
-    assert.equal(await strategy.beaconValidators(), 3, 'beaconValidators incorrect')
+    assert.equal((await strategy.beaconValidators()).toNumber(), 3, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 90, 'beaconBalance incorrect')
     assert.equal(fromEther(await strategy.depositChange()), -6, 'depositChange incorrect')
 
     await strategy.reportBeaconState(4, toEther(132))
 
-    assert.equal(await strategy.beaconValidators(), 4, 'beaconValidators incorrect')
+    assert.equal((await strategy.beaconValidators()).toNumber(), 4, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 132, 'beaconBalance incorrect')
     assert.equal(fromEther(await strategy.depositChange()), 4, 'depositChange incorrect')
   })
@@ -235,7 +245,7 @@ describe('EthStakingStrategy', () => {
     await strategy.reportBeaconState(5, toEther(160))
     assert.equal(fromEther(await strategy.totalDeposits()), 200, 'totalDeposits incorrect')
   })
-*/
+
   it('updateDeposits should correctly distribute rewards', async () => {
     await stake(96)
     await strategy.depositEther(10)
