@@ -132,15 +132,6 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
-     * @notice mints shares to a supported strategy
-     * @param _amount amount of shares to mint
-     **/
-    function mintShares(uint _amount) external {
-        require(_strategyExists(msg.sender), "Sender is not a supported strategy");
-        _mintShares(msg.sender, _amount);
-    }
-
-    /**
      * @notice deposits assets in a strategy
      * @param _index index of strategy to deposit in
      * @param _amount amount to deposit

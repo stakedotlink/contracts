@@ -22,8 +22,6 @@ interface IStakingPool is IStakingRewardsPool {
 
     function setGovernance(address _governance) external;
 
-    function mintShares(uint _amount) external;
-
     function strategies(uint8 _index) external view returns (address);
 
     function totalStrategies() external view returns (uint8);
