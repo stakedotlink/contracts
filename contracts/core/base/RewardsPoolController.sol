@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IRewardsPoolController.sol";
 import "../interfaces/IRewardsPool.sol";
+import "../RewardsPool.sol";
 
 /**
  * @title Rewards Pool Controller
@@ -30,6 +31,16 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         _;
     }
 
+    modifier isPoolCreator() {
+        address[] memory poolCreators = rewardPoolCreators();
+        for (uint i = 0; i < poolCreators.length; i++) {
+            if (poolCreators[i] == msg.sender) {
+                _;
+            }
+        }
+        revert("Caller is not a pool creator");
+    }
+
     /**
      * @notice returns a list of configs for all supported tokens
      * @return list of token configs
@@ -37,6 +48,26 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     function supportedTokens() external view returns (TokenConfig[] memory) {
         return tokenConfigs;
     }
+
+    /**
+     * @notice returns true/false to whether a given token is supported
+     * @param _token token address
+     * @return is token supported
+     **/
+    function isTokenSupported(address _token) public view returns (bool) {
+        for (uint i = 0; i < tokenConfigs.length; i++) {
+            if (_token == address(tokenConfigs[i].token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @notice fetch the list of addresses authorised to create RewardPools
+     * @return pool creator address list
+     **/
+    function rewardPoolCreators() public view virtual returns (address[] memory);
 
     /**
      * @notice returns a list of withdrawable rewards for an account
@@ -65,17 +96,30 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     /**
+     * @notice allows pool creators to be able to deploy a rewards pool
+     * @param _token the token address to add
+     * @param _derivativeTokenName the derivative token name to use
+     * @param _derivativeTokenSymbol the derivative token symbol to use
+     **/
+    function createRewardsPool(
+        address _token,
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) external isPoolCreator {
+        require(!isTokenSupported(_token), "Token is already supported");
+
+        RewardsPool rewardsPool = new RewardsPool(address(this), _token, _derivativeTokenName, _derivativeTokenSymbol);
+        _addToken(_token, address(rewardsPool));
+    }
+
+    /**
      * @notice adds a new token
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
     function addToken(address _token, address _rewardsPool) external onlyOwner {
-        require(!_tokenIsSupported(_token), "Token is already supported");
-
-        TokenConfig memory tokenConfig = TokenConfig(IERC20(_token), IRewardsPool(_rewardsPool));
-        tokenConfigs.push(tokenConfig);
-
-        emit AddToken(_token, _rewardsPool);
+        require(!isTokenSupported(_token), "Token is already supported");
+        _addToken(_token, _rewardsPool);
     }
 
     /**
@@ -94,16 +138,14 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     /**
-     * @notice checks whether or not a token is supported
-     * @param _token address of token
-     * @return true if token exists, false otherwise
+     * @notice adds a new token
+     * @param _token token to add
+     * @param _rewardsPool token rewards pool to add
      **/
-    function _tokenIsSupported(address _token) private view returns (bool) {
-        for (uint i = 0; i < tokenConfigs.length; i++) {
-            if (address(tokenConfigs[i].token) == _token) {
-                return true;
-            }
-        }
-        return false;
+    function _addToken(address _token, address _rewardsPool) private {
+        TokenConfig memory tokenConfig = TokenConfig(IERC20(_token), IRewardsPool(_rewardsPool));
+        tokenConfigs.push(tokenConfig);
+
+        emit AddToken(_token, _rewardsPool);
     }
 }
