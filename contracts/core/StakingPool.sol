@@ -10,8 +10,6 @@ import "./base/RewardsPoolController.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IWrappedSDToken.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Staking Pool
  * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked
@@ -80,7 +78,12 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @return pool creator address list
      **/
     function rewardPoolCreators() public view override returns (address[] memory) {
-        return strategies;
+        address[] memory addresses = new address[](strategies.length + 1);
+        for (uint i = 0; i < strategies.length; i++) {
+            addresses[i] = strategies[i];
+        }
+        addresses[strategies.length] = super.owner();
+        return addresses;
     }
 
     /**

@@ -30,11 +30,6 @@ contract RewardsPoolControllerMock is RewardsPoolController {
         return totalStaked;
     }
 
-    function rewardPoolCreators() public pure override returns (address[] memory) {
-        address[] memory addresses;
-        return addresses;
-    }
-
     function stake(uint _amount) external updateRewards(msg.sender) {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         stakeBalances[msg.sender] += _amount;

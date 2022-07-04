@@ -33,15 +33,11 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
 
     modifier isPoolCreator() {
         bool found = false;
-        if (super.owner() == msg.sender) {
-            found = true;
-        } else {
-            address[] memory poolCreators = rewardPoolCreators();
-            for (uint i = 0; i < poolCreators.length; i++) {
-                if (poolCreators[i] == msg.sender) {
-                    found = true;
-                    break;
-                }
+        address[] memory poolCreators = rewardPoolCreators();
+        for (uint i = 0; i < poolCreators.length; i++) {
+            if (poolCreators[i] == msg.sender) {
+                found = true;
+                break;
             }
         }
         require(found, "Caller is not a pool creator");
@@ -74,7 +70,11 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @notice fetch the list of addresses authorised to create RewardPools
      * @return pool creator address list
      **/
-    function rewardPoolCreators() public view virtual returns (address[] memory);
+    function rewardPoolCreators() public view virtual returns (address[] memory) {
+        address[] memory addresses = new address[](1);
+        addresses[0] = super.owner();
+        return addresses;
+    }
 
     /**
      * @notice returns a list of withdrawable rewards for an account

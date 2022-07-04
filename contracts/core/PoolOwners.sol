@@ -45,15 +45,6 @@ contract PoolOwners is RewardsPoolController {
     }
 
     /**
-     * @notice fetch the list of addresses authorised to create RewardPools
-     * @return pool creator address list
-     **/
-    function rewardPoolCreators() public view override returns (address[] memory) {
-        address[] memory addresses;
-        return addresses;
-    }
-
-    /**
      * @notice returns an account's staked amount
      * @return account's staked amount
      */
