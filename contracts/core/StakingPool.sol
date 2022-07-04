@@ -10,6 +10,8 @@ import "./base/RewardsPoolController.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IWrappedSDToken.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Staking Pool
  * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked

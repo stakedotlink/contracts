@@ -32,13 +32,20 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     modifier isPoolCreator() {
-        address[] memory poolCreators = rewardPoolCreators();
-        for (uint i = 0; i < poolCreators.length; i++) {
-            if (poolCreators[i] == msg.sender) {
-                _;
+        bool found = false;
+        if (super.owner() == msg.sender) {
+            found = true;
+        } else {
+            address[] memory poolCreators = rewardPoolCreators();
+            for (uint i = 0; i < poolCreators.length; i++) {
+                if (poolCreators[i] == msg.sender) {
+                    found = true;
+                    break;
+                }
             }
         }
-        revert("Caller is not a pool creator");
+        require(found, "Caller is not a pool creator");
+        _;
     }
 
     /**
@@ -96,28 +103,11 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     /**
-     * @notice allows pool creators to be able to deploy a rewards pool
-     * @param _token the token address to add
-     * @param _derivativeTokenName the derivative token name to use
-     * @param _derivativeTokenSymbol the derivative token symbol to use
-     **/
-    function createRewardsPool(
-        address _token,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol
-    ) external isPoolCreator {
-        require(!isTokenSupported(_token), "Token is already supported");
-
-        RewardsPool rewardsPool = new RewardsPool(address(this), _token, _derivativeTokenName, _derivativeTokenSymbol);
-        _addToken(_token, address(rewardsPool));
-    }
-
-    /**
      * @notice adds a new token
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
-    function addToken(address _token, address _rewardsPool) external onlyOwner {
+    function addToken(address _token, address _rewardsPool) external isPoolCreator {
         require(!isTokenSupported(_token), "Token is already supported");
         _addToken(_token, _rewardsPool);
     }

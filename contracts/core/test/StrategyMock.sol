@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../base/Strategy.sol";
+import "../RewardsPool.sol";
 
 /**
  * @title Strategy Mock
@@ -74,5 +75,21 @@ contract StrategyMock is Strategy {
 
     function totalDeposits() public view override returns (uint) {
         return totalDeposited;
+    }
+
+    function createRewardsPool(
+        address _token,
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) public {
+        RewardsPool rewardsPool = new RewardsPool(
+            address(stakingPool),
+            _token,
+            _derivativeTokenName,
+            _derivativeTokenSymbol
+        );
+
+        IRewardsPoolController rewardsPoolController = IRewardsPoolController(address(stakingPool));
+        rewardsPoolController.addToken(_token, address(rewardsPool));
     }
 }
