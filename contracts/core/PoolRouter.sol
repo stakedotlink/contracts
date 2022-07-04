@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "./interfaces/IERC677.sol";
 import "./interfaces/IStakingPool.sol";
@@ -18,15 +19,16 @@ contract PoolRouter is Ownable {
     IERC677 public allowanceToken;
     mapping(address => uint) public allowanceStakes;
 
-    struct TokenConfig {
+    struct Pool {
         IERC677 token;
         IStakingPool stakingPool;
-        uint stakePerAllowance;
-        mapping(address => uint) tokenStakes;
+        bool allowanceRequired;
+        mapping(address => uint) stakedAmounts;
     }
+    mapping(bytes32 => Pool) public pools;
+    mapping(address => uint16) public poolCountByToken;
 
-    address[] private tokens;
-    mapping(address => TokenConfig) public tokenConfigs;
+    address[] public tokens;
 
     event StakeAllowance(address indexed account, uint amount);
     event WithdrawAllowance(address indexed account, uint amount);
@@ -53,28 +55,27 @@ contract PoolRouter is Ownable {
      * @param _account account to return balance for
      * @return account token stake balance
      **/
-    function tokenStakes(address _token, address _account) external view returns (uint) {
-        return tokenConfigs[_token].tokenStakes[_account];
+    function stakedAmount(
+        address _token,
+        uint16 _index,
+        address _account
+    ) external view returns (uint) {
+        return pools[_poolKey(_token, _index)].stakedAmounts[_account];
     }
 
     /**
-     * @dev Calculates the amount of unused allowance for an account
-     * @param _account account to calculate for
-     * @return amount of unused allowance
-     **/
-    function unusedAllowance(address _account) external view returns (uint) {
-        uint maxAllowanceInUse;
+     * @dev Returns a list of Pool objects by the token address
+     * @param _token token address
+     * @return list of pools
+     */
+    function poolsByToken(address _token) public view returns (address[] memory) {
+        address[] memory stakingPools;
 
-        for (uint i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            TokenConfig storage config = tokenConfigs[token];
-
-            uint allowanceInUse = (1e18 * config.tokenStakes[_account]) / config.stakePerAllowance;
-            maxAllowanceInUse = Math.max(allowanceInUse, maxAllowanceInUse);
+        for (uint16 i = 0; i < poolCountByToken[_token]; i++) {
+            stakingPools[i] = address(pools[_poolKey(_token, i)].stakingPool);
         }
 
-        if (maxAllowanceInUse >= allowanceStakes[_account]) return 0;
-        return allowanceStakes[_account] - maxAllowanceInUse;
+        return stakingPools;
     }
 
     /**
@@ -85,10 +86,10 @@ contract PoolRouter is Ownable {
     function onTokenTransfer(
         address _sender,
         uint _value,
-        bytes calldata
+        bytes calldata _calldata
     ) external {
         require(
-            msg.sender == address(allowanceToken) || address(tokenConfigs[msg.sender].token) == msg.sender,
+            msg.sender == address(allowanceToken) || poolCountByToken[msg.sender] > 0,
             "Only callable by supported tokens"
         );
 
@@ -98,7 +99,9 @@ contract PoolRouter is Ownable {
             return;
         }
 
-        _stake(msg.sender, _sender, _value);
+        uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
+
+        _stake(msg.sender, index, _sender, _value);
     }
 
     /**
@@ -106,30 +109,39 @@ contract PoolRouter is Ownable {
      * @param _token token to stake
      * @param _amount amount to stake
      **/
-    function stake(address _token, uint _amount) external {
+    function stake(
+        address _token,
+        uint16 _index,
+        uint _amount
+    ) external {
         require(_tokenSupported(_token), "Token not supported");
 
         IERC677(_token).safeTransferFrom(msg.sender, address(this), _amount);
-        _stake(_token, msg.sender, _amount);
+        _stake(_token, _index, msg.sender, _amount);
     }
 
     /**
      * @dev withdraws tokens from a staking pool
      * @param _token token to withdraw
+     * @param _index pool index
      * @param _amount amount to withdraw
      **/
-    function withdraw(address _token, uint _amount) external {
+    function withdraw(
+        address _token,
+        uint16 _index,
+        uint _amount
+    ) external {
         require(_tokenSupported(_token), "Token not supported");
 
-        TokenConfig storage config = tokenConfigs[_token];
+        Pool storage pool = pools[_poolKey(_token, _index)];
 
-        if (_amount >= config.tokenStakes[msg.sender]) {
-            config.tokenStakes[msg.sender] = 0;
+        if (_amount >= pool.stakedAmounts[msg.sender]) {
+            pool.stakedAmounts[msg.sender] = 0;
         } else {
-            config.tokenStakes[msg.sender] -= _amount;
+            pool.stakedAmounts[msg.sender] -= _amount;
         }
 
-        config.stakingPool.withdraw(msg.sender, _amount);
+        pool.stakingPool.withdraw(msg.sender, _amount);
 
         emit WithdrawToken(_token, msg.sender, _amount);
     }
@@ -145,10 +157,10 @@ contract PoolRouter is Ownable {
 
         for (uint i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            TokenConfig storage config = tokenConfigs[token];
-
-            uint allowanceInUse = (1e18 * config.tokenStakes[msg.sender]) / config.stakePerAllowance;
-            require(allowanceInUse <= allowanceToRemain, "Cannot withdraw allowance that is in use");
+            for (uint16 j = 0; j < poolCountByToken[token]; j++) {
+                uint usedAllowance = allowanceInUse(token, j, msg.sender);
+                require(usedAllowance <= allowanceToRemain, "Cannot withdraw allowance that is in use");
+            }
         }
 
         allowanceStakes[msg.sender] = allowanceToRemain;
@@ -161,20 +173,26 @@ contract PoolRouter is Ownable {
      * @dev adds a new token and staking config
      * @param _token staking token to add
      * @param _stakingPool token staking pool
-     * @param _stakePerAllowance stake amount per allowance (wei per eth)
      **/
-    function addToken(
+    function addPool(
         address _token,
         address _stakingPool,
-        uint _stakePerAllowance
+        bool _allowanceRequired
     ) external onlyOwner {
         require(!_tokenSupported(_token), "Cannot add token that is already supported");
 
-        TokenConfig storage config = tokenConfigs[_token];
-        config.token = IERC677(_token);
-        config.stakingPool = IStakingPool(_stakingPool);
-        config.stakePerAllowance = _stakePerAllowance;
-        tokens.push(_token);
+        uint16 poolCount = poolCountByToken[_token];
+        Pool storage pool = pools[_poolKey(_token, poolCount)];
+
+        poolCountByToken[_token]++;
+        if (poolCount == 0) {
+            tokens.push(_token);
+        }
+
+        pool.token = IERC677(_token);
+        pool.stakingPool = IStakingPool(_stakingPool);
+        pool.allowanceRequired = _allowanceRequired;
+
         IERC677(_token).safeApprove(_stakingPool, type(uint).max);
         emit AddToken(_token);
     }
@@ -183,10 +201,12 @@ contract PoolRouter is Ownable {
      * @dev removes an existing token and staking config
      * @param _token staking token to remove
      **/
-    function removeToken(address _token) external onlyOwner {
+    function removePool(address _token, uint16 _index) external onlyOwner {
         require(_tokenSupported(_token), "Cannot remove token that is not supported");
+        require(poolCountByToken[_token] > _index, "Pool index is out of bounds");
 
-        delete tokenConfigs[_token].token;
+        delete pools[_poolKey(_token, _index)];
+        poolCountByToken[_token]--;
 
         for (uint i = 0; i < tokens.length; i++) {
             if (tokens[i] == _token) {
@@ -200,13 +220,17 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev sets the stake amount per allowance for a supported token
-     * @param _token token to set stake per allowance for
-     * @param _stakePerAllowance stake per allowance to set
-     **/
-    function setStakePerAllowance(address _token, uint _stakePerAllowance) external onlyOwner {
-        require(_tokenSupported(_token), "Token is not supported");
-        tokenConfigs[_token].stakePerAllowance = _stakePerAllowance;
+     * @dev updates a given pool to whether allowance is needed or not
+     * @param _token token address for the staking pool
+     * @param _index pool index
+     * @param _allowanceRequired bool whether allowance is required
+     */
+    function setAllowanceRequired(
+        address _token,
+        uint16 _index,
+        bool _allowanceRequired
+    ) public onlyOwner {
+        pools[_poolKey(_token, _index)].allowanceRequired = _allowanceRequired;
     }
 
     /**
@@ -217,19 +241,57 @@ contract PoolRouter is Ownable {
      **/
     function _stake(
         address _token,
+        uint16 _index,
         address _account,
         uint _amount
     ) private {
-        TokenConfig storage config = tokenConfigs[_token];
+        Pool storage pool = pools[_poolKey(_token, _index)];
 
-        uint allowanceRequired = (1e18 * _amount) / config.stakePerAllowance;
-        uint allowanceInUse = (1e18 * config.tokenStakes[_account]) / config.stakePerAllowance;
-        require((allowanceInUse + allowanceRequired) <= allowanceStakes[_account], "Not enough allowance staked");
+        uint requiredAllowance = allowanceRequired(_token, _index, _amount);
+        uint usedAllowance = allowanceInUse(_token, _index, _account);
+        require((usedAllowance + requiredAllowance) <= allowanceStakes[_account], "Not enough allowance staked");
 
-        config.tokenStakes[_account] += _amount;
-        config.stakingPool.stake(_account, _amount);
+        pool.stakedAmounts[_account] += _amount;
+        pool.stakingPool.stake(_account, _amount);
 
         emit StakeToken(_token, _account, _amount);
+    }
+
+    /**
+     * @dev calculates the amount of allowance tokens in use for a given staking pool
+     * @param _token the token address used by the staking pool
+     * @param _account the account to check how much allowance in use
+     * @return the amount of allowance tokens in use
+     **/
+    function allowanceInUse(
+        address _token,
+        uint16 _index,
+        address _account
+    ) public view returns (uint256) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return 0;
+        }
+        return
+            (1e18 * pool.stakedAmounts[_account]) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+    }
+
+    /**
+     * @dev calculates the amount of allowance tokens required for a given staking amount
+     * @param _token the token address used by the staking pool
+     * @param _amount the amount to query how much allowance is required
+     * @return the amount of allowance tokens in use
+     **/
+    function allowanceRequired(
+        address _token,
+        uint16 _index,
+        uint256 _amount
+    ) public view returns (uint256) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return 0;
+        }
+        return (1e18 * _amount) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
     }
 
     /**
@@ -238,6 +300,27 @@ contract PoolRouter is Ownable {
      * @return whether or not token is supported
      **/
     function _tokenSupported(address _token) private view returns (bool) {
-        return address(tokenConfigs[_token].token) != address(0);
+        return poolCountByToken[_token] > 0;
+    }
+
+    /**
+     * @dev returns the pool key hash by token and index
+     * @return the hashed pool key
+     */
+    function _poolKey(address _token, uint16 _index) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_token, _index));
+    }
+
+    /**
+     * @dev converts bytes to uint
+     * @param _bytes to convert
+     * @return uint256 result
+     */
+    function _bytesToUint(bytes memory _bytes) internal pure returns (uint256) {
+        uint256 number;
+        for (uint i = 0; i < _bytes.length; i++) {
+            number = number + uint(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
+        }
+        return number;
     }
 }

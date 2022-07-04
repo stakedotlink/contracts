@@ -165,6 +165,21 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
+     * @notice returns the maximum amount that can be staked via the pool
+     * @return the overall staking limit
+     **/
+    function maxDeposits() external view returns (uint256) {
+        uint256 maxDeposits;
+
+        for (uint i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            maxDeposits += strategy.canDeposit();
+        }
+        maxDeposits += totalStaked;
+        return maxDeposits;
+    }
+
+    /**
      * @notice adds a new strategy
      * @param _strategy address of strategy to add
      **/
