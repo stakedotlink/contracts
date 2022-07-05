@@ -27,15 +27,16 @@ contract PoolRouter is Ownable {
     }
     mapping(bytes32 => Pool) public pools;
     mapping(address => uint16) public poolCountByToken;
+    uint public poolCount;
 
     address[] public tokens;
 
     event StakeAllowance(address indexed account, uint amount);
     event WithdrawAllowance(address indexed account, uint amount);
-    event StakeToken(address indexed token, address indexed account, uint amount);
-    event WithdrawToken(address indexed token, address indexed account, uint amount);
-    event AddToken(address indexed token);
-    event RemoveToken(address indexed token);
+    event StakeToken(address indexed token, address indexed pool, address indexed account, uint amount);
+    event WithdrawToken(address indexed token, address indexed pool, address indexed account, uint amount);
+    event AddPool(address indexed token, address indexed pool);
+    event RemovePool(address indexed token, address indexed pool);
 
     constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
@@ -67,15 +68,36 @@ contract PoolRouter is Ownable {
      * @dev Returns a list of Pool objects by the token address
      * @param _token token address
      * @return list of pools
-     */
+     **/
     function poolsByToken(address _token) public view returns (address[] memory) {
-        address[] memory stakingPools;
+        address[] memory stakingPools = new address[](poolCountByToken[_token]);
 
         for (uint16 i = 0; i < poolCountByToken[_token]; i++) {
             stakingPools[i] = address(pools[_poolKey(_token, i)].stakingPool);
         }
 
         return stakingPools;
+    }
+
+    /**
+     * @dev Fetch a list of all pools
+     * @return an array of tokens and an array of staking pools
+     **/
+    function allPools() public view returns (address[] memory, address[] memory) {
+        address[] memory poolTokens = new address[](poolCount);
+        address[] memory stakingPools = new address[](poolCount);
+
+        uint index = 0;
+        for (uint i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            for (uint16 j = 0; j < poolCountByToken[token]; j++) {
+                poolTokens[index] = token;
+                stakingPools[index] = address(pools[_poolKey(token, j)].stakingPool);
+                index++;
+            }
+        }
+
+        return (poolTokens, stakingPools);
     }
 
     /**
@@ -102,6 +124,16 @@ contract PoolRouter is Ownable {
         uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
 
         _stake(msg.sender, index, _sender, _value);
+    }
+
+    /**
+     * @dev stakes allowance tokens
+     * @param _amount amount to stake
+     **/
+    function stakeAllowance(uint _amount) external {
+        IERC677(allowanceToken).safeTransferFrom(msg.sender, address(this), _amount);
+        allowanceStakes[msg.sender] += _amount;
+        emit StakeAllowance(msg.sender, _amount);
     }
 
     /**
@@ -134,16 +166,12 @@ contract PoolRouter is Ownable {
         require(_tokenSupported(_token), "Token not supported");
 
         Pool storage pool = pools[_poolKey(_token, _index)];
+        require(pool.stakedAmounts[msg.sender] >= _amount, "Amount exceeds staked balance");
 
-        if (_amount >= pool.stakedAmounts[msg.sender]) {
-            pool.stakedAmounts[msg.sender] = 0;
-        } else {
-            pool.stakedAmounts[msg.sender] -= _amount;
-        }
-
+        pool.stakedAmounts[msg.sender] -= _amount;
         pool.stakingPool.withdraw(msg.sender, _amount);
 
-        emit WithdrawToken(_token, msg.sender, _amount);
+        emit WithdrawToken(_token, address(pool.stakingPool), msg.sender, _amount);
     }
 
     /**
@@ -179,8 +207,7 @@ contract PoolRouter is Ownable {
         address _stakingPool,
         bool _allowanceRequired
     ) external onlyOwner {
-        require(!_tokenSupported(_token), "Cannot add token that is already supported");
-
+        poolCount++;
         uint16 poolCount = poolCountByToken[_token];
         Pool storage pool = pools[_poolKey(_token, poolCount)];
 
@@ -194,7 +221,7 @@ contract PoolRouter is Ownable {
         pool.allowanceRequired = _allowanceRequired;
 
         IERC677(_token).safeApprove(_stakingPool, type(uint).max);
-        emit AddToken(_token);
+        emit AddPool(_token, _stakingPool);
     }
 
     /**
@@ -205,18 +232,24 @@ contract PoolRouter is Ownable {
         require(_tokenSupported(_token), "Cannot remove token that is not supported");
         require(poolCountByToken[_token] > _index, "Pool index is out of bounds");
 
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        require(pool.stakingPool.totalSupply() == 0, "Only can remove a pool with no active stake");
+
         delete pools[_poolKey(_token, _index)];
         poolCountByToken[_token]--;
+        poolCount--;
 
-        for (uint i = 0; i < tokens.length; i++) {
-            if (tokens[i] == _token) {
-                tokens[i] = tokens[tokens.length - 1];
-                tokens.pop();
-                break;
+        if (poolCountByToken[_token] == 0) {
+            for (uint i = 0; i < tokens.length; i++) {
+                if (tokens[i] == _token) {
+                    tokens[i] = tokens[tokens.length - 1];
+                    tokens.pop();
+                    break;
+                }
             }
         }
 
-        emit RemoveToken(_token);
+        emit RemovePool(_token, address(pool.stakingPool));
     }
 
     /**
@@ -254,7 +287,7 @@ contract PoolRouter is Ownable {
         pool.stakedAmounts[_account] += _amount;
         pool.stakingPool.stake(_account, _amount);
 
-        emit StakeToken(_token, _account, _amount);
+        emit StakeToken(_token, address(pool.stakingPool), _account, _amount);
     }
 
     /**

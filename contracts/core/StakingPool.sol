@@ -383,8 +383,8 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     function _withdrawLiquidity(uint _amount) private {
         uint toWithdraw = _amount;
 
-        for (uint i = strategies.length - 1; i >= 0; i--) {
-            IStrategy strategy = IStrategy(strategies[i]);
+        for (uint i = strategies.length; i > 0; i--) {
+            IStrategy strategy = IStrategy(strategies[i - 1]);
             uint canWithdraw = strategy.canWithdraw();
 
             if (canWithdraw >= toWithdraw) {
