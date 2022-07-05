@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IRewardsPoolController.sol";
 import "../interfaces/IRewardsPool.sol";
+import "../RewardsPool.sol";
 
 /**
  * @title Rewards Pool Controller
@@ -30,12 +31,49 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         _;
     }
 
+    modifier isPoolCreator() {
+        bool found = false;
+        address[] memory poolCreators = rewardPoolCreators();
+        for (uint i = 0; i < poolCreators.length; i++) {
+            if (poolCreators[i] == msg.sender) {
+                found = true;
+                break;
+            }
+        }
+        require(found, "Caller is not a pool creator");
+        _;
+    }
+
     /**
      * @notice returns a list of configs for all supported tokens
      * @return list of token configs
      **/
     function supportedTokens() external view returns (TokenConfig[] memory) {
         return tokenConfigs;
+    }
+
+    /**
+     * @notice returns true/false to whether a given token is supported
+     * @param _token token address
+     * @return is token supported
+     **/
+    function isTokenSupported(address _token) public view returns (bool) {
+        for (uint i = 0; i < tokenConfigs.length; i++) {
+            if (_token == address(tokenConfigs[i].token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @notice fetch the list of addresses authorised to create RewardPools
+     * @return pool creator address list
+     **/
+    function rewardPoolCreators() public view virtual returns (address[] memory) {
+        address[] memory addresses = new address[](1);
+        addresses[0] = super.owner();
+        return addresses;
     }
 
     /**
@@ -69,13 +107,9 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
-    function addToken(address _token, address _rewardsPool) external onlyOwner {
-        require(!_tokenIsSupported(_token), "Token is already supported");
-
-        TokenConfig memory tokenConfig = TokenConfig(IERC20(_token), IRewardsPool(_rewardsPool));
-        tokenConfigs.push(tokenConfig);
-
-        emit AddToken(_token, _rewardsPool);
+    function addToken(address _token, address _rewardsPool) external isPoolCreator {
+        require(!isTokenSupported(_token), "Token is already supported");
+        _addToken(_token, _rewardsPool);
     }
 
     /**
@@ -94,16 +128,14 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     /**
-     * @notice checks whether or not a token is supported
-     * @param _token address of token
-     * @return true if token exists, false otherwise
+     * @notice adds a new token
+     * @param _token token to add
+     * @param _rewardsPool token rewards pool to add
      **/
-    function _tokenIsSupported(address _token) private view returns (bool) {
-        for (uint i = 0; i < tokenConfigs.length; i++) {
-            if (address(tokenConfigs[i].token) == _token) {
-                return true;
-            }
-        }
-        return false;
+    function _addToken(address _token, address _rewardsPool) private {
+        TokenConfig memory tokenConfig = TokenConfig(IERC20(_token), IRewardsPool(_rewardsPool));
+        tokenConfigs.push(tokenConfig);
+
+        emit AddToken(_token, _rewardsPool);
     }
 }

@@ -12,7 +12,7 @@ import "./interfaces/IWrappedSDToken.sol";
 
 /**
  * @title Staking Pool
- * @notice Allows users to stake an asset and receive deriviatve tokens 1:1, then deposits staked
+ * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked
  * assets into strategy contracts to earn returns
  */
 contract StakingPool is StakingRewardsPool, RewardsPoolController {
@@ -71,6 +71,19 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      */
     function rpcTotalStaked() external view returns (uint) {
         return totalShares;
+    }
+
+    /**
+     * @notice returns the list of strategies as the authorised addresses to create RewardsPool contracts
+     * @return pool creator address list
+     **/
+    function rewardPoolCreators() public view override returns (address[] memory) {
+        address[] memory addresses = new address[](strategies.length + 1);
+        for (uint i = 0; i < strategies.length; i++) {
+            addresses[i] = strategies[i];
+        }
+        addresses[strategies.length] = super.owner();
+        return addresses;
     }
 
     /**

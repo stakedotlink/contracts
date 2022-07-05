@@ -9,7 +9,7 @@ import "./interfaces/IRewardsPoolController.sol";
 /**
  * @title RewardsPool
  * @notice Handles reward distribution for a single asset
- * @dev rewards can only be postive (user balances can only increase)
+ * @dev rewards can only be positive (user balances can only increase)
  */
 contract RewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;

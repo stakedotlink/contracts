@@ -17,4 +17,11 @@ interface IRewardsPoolController {
      * @return total staked amount
      */
     function rpcTotalStaked() external view returns (uint);
+
+    /**
+     * @notice adds a new token
+     * @param _token token to add
+     * @param _rewardsPool token rewards pool to add
+     **/
+    function addToken(address _token, address _rewardsPool) external;
 }

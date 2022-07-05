@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
-import { assert } from 'chai'
+import { assert, expect } from 'chai'
 import {
   toEther,
   assertThrowsAsync,
@@ -596,5 +596,29 @@ describe('StakingPool', () => {
       1000,
       'account balance incorrect'
     )
+  })
+
+  it('should be able to create a RewardsPool and distribute rewards', async () => {
+    token = (await deploy('ERC677', ['WrappedETH', 'wETH', 1000000000])) as ERC677
+
+    await strategy1.createRewardsPool(token.address, 'LinkPool WrappedETH', 'lpwETH')
+
+    let isTokenSupported = await stakingPool.isTokenSupported(token.address)
+    assert.isTrue(isTokenSupported, 'token is not supported')
+  })
+
+  it('should not be able to create a RewardsPool', async () => {
+    token = (await deploy('ERC677', ['WrappedETH', 'wETH', 1000000000])) as ERC677
+
+    let strategy = (await deployUpgradeable('StrategyMock', [
+      token.address,
+      stakingPool.address,
+      toEther(1000),
+      toEther(10),
+    ])) as StrategyMock
+
+    await expect(
+      strategy.createRewardsPool(token.address, 'LinkPool WrappedETH', 'lpwETH')
+    ).to.be.revertedWith('Caller is not a pool creator')
   })
 })
