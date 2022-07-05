@@ -312,6 +312,18 @@ describe('PoolRouter', () => {
     )
   })
 
+  it('should be able to stake and withdraw when allowance is not required', async () => {
+    await poolRouter.setAllowanceRequired(token1.address, 0, false)
+
+    await token1.transferAndCall(poolRouter.address, toEther(5000), padBytes('0x0', 32))
+    let stakedAmount = await poolRouter.stakedAmount(token1.address, 0, accounts[0])
+    assert.equal(fromEther(stakedAmount), 5000, 'staked amount does not match')
+
+    await poolRouter.withdraw(token1.address, 0, toEther(5000))
+    stakedAmount = await poolRouter.stakedAmount(token1.address, 0, accounts[0])
+    assert.equal(fromEther(stakedAmount), 0, 'staked amount does not match')
+  })
+
   it('should be able to withdraw allowance', async () => {
     await poolRouter.withdrawAllowance(toEther(5))
 
