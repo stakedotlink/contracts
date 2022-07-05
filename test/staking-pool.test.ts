@@ -611,6 +611,12 @@ describe('StakingPool', () => {
     assert.equal(fromEther(stakingLimit), 14000, 'staking limit is not correct')
   })
 
+  it('should be able to correct calculate staking limits with a liquidity buffer', async () => {
+    await stakingPool.setLiquidityBuffer(toEther(5)) // 20% (100 / 5)
+    let stakingLimit = await stakingPool.maxDeposits()
+    assert.equal(fromEther(stakingLimit), 15600, 'staking limit is not correct')
+  })
+
   it('should be able to create a RewardsPool and distribute rewards', async () => {
     token = (await deploy('ERC677', ['WrappedETH', 'wETH', 1000000000])) as ERC677
 

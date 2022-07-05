@@ -25,6 +25,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
 
     address[] private strategies;
     uint public totalStaked;
+    uint public liquidityBuffer;
 
     Fee[] private fees;
     IWrappedSDToken public wsdToken;
@@ -176,6 +177,9 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
             maxDeposits += strategy.canDeposit();
         }
         maxDeposits += totalStaked;
+        if (liquidityBuffer > 0) {
+            maxDeposits += (1e18 * maxDeposits) / liquidityBuffer;
+        }
         return maxDeposits;
     }
 
@@ -272,6 +276,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         require(address(wsdToken) == address(0), "wsdToken already set");
         wsdToken = IWrappedSDToken(_wsdToken);
         _approve(address(this), _wsdToken, type(uint).max);
+    }
+
+    /**
+     * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
+     * of the pool by always keeping a % of the staked token as liquid within the pool. The buffer
+     * has the effect of diluting yield, but promotes pool liquidity with any lock-in that would prevent
+     * the un-wind of allowance.
+     * @param _liquidityBuffer the wei buffer used within a percentage calculation
+     **/
+    function setLiquidityBuffer(uint _liquidityBuffer) external onlyOwner {
+        liquidityBuffer = _liquidityBuffer;
     }
 
     /**
