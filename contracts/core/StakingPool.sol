@@ -25,6 +25,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
 
     address[] private strategies;
     uint public totalStaked;
+    uint public liquidityBuffer;
 
     Fee[] private fees;
     IWrappedSDToken public wsdToken;
@@ -111,7 +112,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        _depositLiquidity(_amount);
+        _depositLiquidity();
 
         _mint(_account, _amount);
         totalStaked += _amount;
@@ -162,6 +163,24 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     function strategyWithdraw(uint _index, uint _amount) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).withdraw(_amount);
+    }
+
+    /**
+     * @notice returns the maximum amount that can be staked via the pool
+     * @return the overall staking limit
+     **/
+    function maxDeposits() external view returns (uint256) {
+        uint256 maxDeposits;
+
+        for (uint i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            maxDeposits += strategy.canDeposit();
+        }
+        maxDeposits += totalStaked;
+        if (liquidityBuffer > 0) {
+            maxDeposits += (maxDeposits * liquidityBuffer) / 10000;
+        }
+        return maxDeposits;
     }
 
     /**
@@ -260,6 +279,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
+     * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
+     * of the pool by always keeping a % of the staked token as liquid within the pool. The buffer
+     * has the effect of diluting yield, but promotes pool liquidity with any lock-in that would prevent
+     * the un-wind of allowance.
+     * @param _liquidityBufferBasisPoints basis points to use for the liquidity buffer
+     **/
+    function setLiquidityBuffer(uint _liquidityBufferBasisPoints) external onlyOwner {
+        liquidityBuffer = _liquidityBufferBasisPoints;
+    }
+
+    /**
      * @notice updates and distributes rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
      **/
@@ -323,12 +353,18 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
+     * @notice owner only external call to be able to deposit any available liquidity into the strategies
+     **/
+    function depositLiquidity() external onlyOwner {
+        _depositLiquidity();
+    }
+
+    /**
      * @notice deposits available liquidity into strategies by order of priority
      * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
-     * @param _amount amount to deposit
      **/
-    function _depositLiquidity(uint _amount) private {
-        uint toDeposit = _amount;
+    function _depositLiquidity() private {
+        uint toDeposit = token.balanceOf(address(this));
         if (toDeposit > 0) {
             for (uint i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
@@ -353,8 +389,8 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     function _withdrawLiquidity(uint _amount) private {
         uint toWithdraw = _amount;
 
-        for (uint i = strategies.length - 1; i >= 0; i--) {
-            IStrategy strategy = IStrategy(strategies[i]);
+        for (uint i = strategies.length; i > 0; i--) {
+            IStrategy strategy = IStrategy(strategies[i - 1]);
             uint canWithdraw = strategy.canWithdraw();
 
             if (canWithdraw >= toWithdraw) {

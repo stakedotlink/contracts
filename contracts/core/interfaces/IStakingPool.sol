@@ -12,6 +12,8 @@ interface IStakingPool is IStakingRewardsPool {
 
     function strategyWithdraw(uint8 _index, uint256 _amount) external;
 
+    function maxDeposits() external view returns (uint256);
+
     function addStrategy(address _strategy) external;
 
     function removeStrategy(uint8 _index) external;
