@@ -611,8 +611,8 @@ describe('StakingPool', () => {
     assert.equal(fromEther(stakingLimit), 14000, 'staking limit is not correct')
   })
 
-  it('should be able to correct calculate staking limits with a liquidity buffer', async () => {
-    await stakingPool.setLiquidityBuffer(toEther(5)) // 20% (100 / 5)
+  it.only('should be able to correct calculate staking limits with a liquidity buffer', async () => {
+    await stakingPool.setLiquidityBuffer(2000) // 20% (0.2 * 10000)
     let stakingLimit = await stakingPool.maxDeposits()
     assert.equal(fromEther(stakingLimit), 15600, 'staking limit is not correct')
   })

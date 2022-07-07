@@ -112,7 +112,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        _depositLiquidity(_amount);
+        _depositLiquidity();
 
         _mint(_account, _amount);
         totalStaked += _amount;
@@ -178,7 +178,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         }
         maxDeposits += totalStaked;
         if (liquidityBuffer > 0) {
-            maxDeposits += (1e18 * maxDeposits) / liquidityBuffer;
+            maxDeposits += (maxDeposits * liquidityBuffer) / 10000;
         }
         return maxDeposits;
     }
@@ -283,10 +283,10 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * of the pool by always keeping a % of the staked token as liquid within the pool. The buffer
      * has the effect of diluting yield, but promotes pool liquidity with any lock-in that would prevent
      * the un-wind of allowance.
-     * @param _liquidityBuffer the wei buffer used within a percentage calculation
+     * @param _liquidityBufferBasisPoints basis points to use for the liquidity buffer
      **/
-    function setLiquidityBuffer(uint _liquidityBuffer) external onlyOwner {
-        liquidityBuffer = _liquidityBuffer;
+    function setLiquidityBuffer(uint _liquidityBufferBasisPoints) external onlyOwner {
+        liquidityBuffer = _liquidityBufferBasisPoints;
     }
 
     /**
@@ -353,12 +353,18 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
+     * @notice owner only external call to be able to deposit any available liquidity into the strategies
+     **/
+    function depositLiquidity() external onlyOwner {
+        _depositLiquidity();
+    }
+
+    /**
      * @notice deposits available liquidity into strategies by order of priority
      * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
-     * @param _amount amount to deposit
      **/
-    function _depositLiquidity(uint _amount) private {
-        uint toDeposit = _amount;
+    function _depositLiquidity() private {
+        uint toDeposit = token.balanceOf(address(this));
         if (toDeposit > 0) {
             for (uint i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
