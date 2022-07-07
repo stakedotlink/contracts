@@ -257,7 +257,7 @@ describe('PoolRouter', () => {
     let token = (await deploy('ERC677', ['Unknown', 'ANON', 1000000000])) as ERC677
     await setupToken(token, accounts)
     await expect(poolRouter.stake(token.address, 0, toEther(10))).to.be.revertedWith(
-      'Token not supported'
+      'Pool does not exist'
     )
   })
 
@@ -398,15 +398,11 @@ describe('PoolRouter', () => {
   it('should not be able to remove a pool for a non supported token', async () => {
     let token = (await deploy('ERC677', ['Unknown', 'ANON', 1000000000])) as ERC677
 
-    await expect(poolRouter.removePool(token.address, 0)).to.be.revertedWith(
-      'Cannot remove token that is not supported'
-    )
+    await expect(poolRouter.removePool(token.address, 0)).to.be.revertedWith('Pool does not exist')
   })
 
   it('should not be able to remove an out of bounds pool', async () => {
-    await expect(poolRouter.removePool(token2.address, 2)).to.be.revertedWith(
-      'Pool index is out of bounds'
-    )
+    await expect(poolRouter.removePool(token2.address, 2)).to.be.revertedWith('Pool does not exist')
   })
 
   it('should not be able to remove a pool with an active stake', async () => {

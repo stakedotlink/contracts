@@ -170,17 +170,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @return the overall staking limit
      **/
     function maxDeposits() external view returns (uint256) {
-        uint256 maxDeposits;
+        uint256 max;
 
         for (uint i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            maxDeposits += strategy.canDeposit();
+            max += strategy.canDeposit();
         }
-        maxDeposits += totalStaked;
+        max += totalStaked;
         if (liquidityBuffer > 0) {
-            maxDeposits += (maxDeposits * liquidityBuffer) / 10000;
+            max += (max * liquidityBuffer) / 10000;
         }
-        return maxDeposits;
+        return max;
     }
 
     /**
