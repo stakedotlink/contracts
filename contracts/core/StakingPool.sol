@@ -170,17 +170,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @return the overall staking limit
      **/
     function maxDeposits() external view returns (uint256) {
-        uint256 maxDeposits;
+        uint256 max;
 
         for (uint i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            maxDeposits += strategy.canDeposit();
+            max += strategy.canDeposit();
         }
-        maxDeposits += totalStaked;
+        max += totalStaked;
         if (liquidityBuffer > 0) {
-            maxDeposits += (maxDeposits * liquidityBuffer) / 10000;
+            max += (max * liquidityBuffer) / 10000;
         }
-        return maxDeposits;
+        return max;
     }
 
     /**
@@ -296,9 +296,9 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     function updateStrategyRewards(uint[] memory _strategyIdxs) public {
         int totalRewards;
         uint totalFeeAmounts;
-        uint feeCount;
-        address[] memory receivers = new address[](_strategyIdxs.length * 3 + fees.length);
-        uint[] memory feeAmounts = new uint[](_strategyIdxs.length * 3 + fees.length);
+        uint totalFeeCount;
+        address[][] memory receivers = new address[][](strategies.length + 1);
+        uint[][] memory feeAmounts = new uint[][](strategies.length + 1);
 
         for (uint i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
@@ -307,11 +307,11 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
                 (address[] memory strategyReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
                 totalRewards += rewards;
                 if (rewards > 0) {
+                    receivers[i] = (strategyReceivers);
+                    feeAmounts[i] = (strategyFeeAmounts);
+                    totalFeeCount += receivers[i].length;
                     for (uint j = 0; j < strategyReceivers.length; j++) {
-                        receivers[feeCount] = (strategyReceivers[j]);
-                        feeAmounts[feeCount] = (strategyFeeAmounts[j]);
                         totalFeeAmounts += strategyFeeAmounts[j];
-                        feeCount++;
                     }
                 }
             }
@@ -322,11 +322,14 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         }
 
         if (totalRewards > 0) {
+            receivers[receivers.length - 1] = new address[](fees.length);
+            feeAmounts[feeAmounts.length - 1] = new uint[](fees.length);
+            totalFeeCount += fees.length;
+
             for (uint i = 0; i < fees.length; i++) {
-                receivers[feeCount] = fees[i].receiver;
-                feeAmounts[feeCount] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
-                totalFeeAmounts += feeAmounts[feeCount];
-                feeCount++;
+                receivers[receivers.length - 1][i] = fees[i].receiver;
+                feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
+                totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
         }
 
@@ -335,10 +338,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
             _mintShares(address(this), sharesToMint);
             wsdToken.wrap(balanceOf(address(this)));
 
-            for (uint i = 0; i < feeCount - 1; i++) {
-                wsdToken.transferAndCall(receivers[i], getSharesByStake(feeAmounts[i]), "0x00");
+            uint feesPaidCount;
+            for (uint i = 0; i < receivers.length; i++) {
+                for (uint j = 0; j < receivers[i].length; j++) {
+                    if (feesPaidCount == totalFeeCount - 1) {
+                        wsdToken.transferAndCall(receivers[i][j], wsdToken.balanceOf(address(this)), "0x00");
+                    } else {
+                        wsdToken.transferAndCall(receivers[i][j], getSharesByStake(feeAmounts[i][j]), "0x00");
+                        feesPaidCount++;
+                    }
+                }
             }
-            wsdToken.transferAndCall(receivers[feeCount - 1], wsdToken.balanceOf(address(this)), "0x00");
         }
 
         emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, totalFeeAmounts);
