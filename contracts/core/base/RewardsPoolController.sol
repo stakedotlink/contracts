@@ -80,10 +80,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         uint balance = token.balanceOf(address(this));
         require(balance > 0, "Cannot distribute zero balance");
 
-        takeRewardFees(_token, balance);
-        uint balanceAfterFee = token.balanceOf(address(this));
-
-        token.safeTransfer(address(tokenPools[_token]), balanceAfterFee);
+        token.safeTransfer(address(tokenPools[_token]), balance);
         tokenPools[_token].distributeRewards();
     }
 
@@ -157,20 +154,6 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         }
 
         emit RemoveToken(_token, address(rewardsPool));
-    }
-
-    /**
-     * @notice takes the reward fees from the tokens in the rewards pool
-     * @param _token token address
-     * @param _amount gross amount
-     **/
-    function takeRewardFees(address _token, uint _amount) private {
-        IERC20 token = IERC20(_token);
-        (address[] memory feeReceivers, uint[] memory basisPoints) = getFees();
-
-        for (uint i = 0; i < feeReceivers.length; i++) {
-            token.safeTransfer(feeReceivers[i], (_amount * basisPoints[i]) / 10000);
-        }
     }
 
     /**

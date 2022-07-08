@@ -72,14 +72,17 @@ contract RewardsPool is VirtualERC677 {
     }
 
     /**
-     * @notice Block onTokenTransfer as it bypasses fees
+     * @notice ERC677 implementation that proxies reward distribution
+     * @param _sender of the token transfer
+     * @param _value of the token transfer
      **/
     function onTokenTransfer(
-        address,
-        uint256,
+        address _sender,
+        uint256 _value,
         bytes calldata
     ) external {
-        revert("Tokens can't be transferred directly");
+        require(msg.sender == address(token), "Only callable by token");
+        distributeRewards();
     }
 
     /**
@@ -88,6 +91,8 @@ contract RewardsPool is VirtualERC677 {
     function distributeRewards() public {
         require(controller.rpcTotalStaked() > 0, "Cannot distribute when nothing is staked");
         uint256 toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
+        _takeRewardFees(toDistribute);
+        toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
         withdrawableRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
         emit DistributeRewards(msg.sender, controller.rpcTotalStaked(), toDistribute);
@@ -126,6 +131,18 @@ contract RewardsPool is VirtualERC677 {
         uint totalStaked = controller.rpcTotalStaked();
         require(totalStaked > 0, "Staked amount must be > 0");
         rewardPerToken += ((_reward * 1e18) / totalStaked);
+    }
+
+    /**
+     * @notice takes the reward fees from the tokens in the rewards pool
+     * @param _amount gross amount
+     **/
+    function _takeRewardFees(uint _amount) private {
+        (address[] memory feeReceivers, uint[] memory basisPoints) = controller.getFees();
+
+        for (uint i = 0; i < feeReceivers.length; i++) {
+            token.safeTransfer(feeReceivers[i], (_amount * basisPoints[i]) / 10000);
+        }
     }
 
     /**

@@ -562,12 +562,12 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await rewardsPool.userRewardPerTokenPaid(accounts[1])),
-      1,
+      0.9,
       'userRewardPerTokenPaid incorrect'
     )
     assert.equal(
       fromEther(await rewardsPool.userRewardPerTokenPaid(accounts[2])),
-      1,
+      0.9,
       'userRewardPerTokenPaid incorrect'
     )
   })
@@ -581,7 +581,7 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await rewardsPool.balanceOf(accounts[1])),
-      1000,
+      900,
       'account balance incorrect'
     )
 
@@ -590,7 +590,7 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await rewardsPool.balanceOf(accounts[1])),
-      1000,
+      900,
       'account balance incorrect'
     )
 
@@ -599,7 +599,7 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await rewardsPool.balanceOf(accounts[1])),
-      1000,
+      900,
       'account balance incorrect'
     )
   })
@@ -647,7 +647,7 @@ describe('StakingPool', () => {
     ).to.be.revertedWith('Caller is not a pool creator')
   })
 
-  it.only('should be able to distribute reward tokens', async () => {
+  it('should be able to distribute reward tokens', async () => {
     await stake(1, 1000)
     await stake(2, 500)
 
