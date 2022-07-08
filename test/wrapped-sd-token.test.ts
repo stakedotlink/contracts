@@ -38,7 +38,8 @@ describe('WrappedSDToken', () => {
       token.address,
       'LinkPool LINK',
       'lplLINK',
-      [[ownersRewards, 0]],
+      [ownersRewards],
+      [0],
       accounts[0],
     ])) as StakingPool
 

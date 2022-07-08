@@ -62,8 +62,15 @@ contract PoolOwners is RewardsPoolController {
         uint _value,
         bytes calldata
     ) external {
-        require(msg.sender == address(token), "Sender must be staking token");
-        _stake(_sender, _value);
+        require(
+            msg.sender == address(token) || isTokenSupported(msg.sender),
+            "Sender must be staking token or supported rewards token"
+        );
+        if (msg.sender == address(token)) {
+            _stake(_sender, _value);
+        } else {
+            distributeToken(msg.sender);
+        }
     }
 
     /**
@@ -73,6 +80,16 @@ contract PoolOwners is RewardsPoolController {
     function stake(uint _amount) external {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         _stake(msg.sender, _amount);
+    }
+
+    /**
+     * @notice returns a list of all fees
+     * @return list of fees
+     */
+    function getFees() public pure override returns (address[] memory, uint[] memory) {
+        address[] memory receivers;
+        uint[] memory basisPoints;
+        return (receivers, basisPoints);
     }
 
     /**

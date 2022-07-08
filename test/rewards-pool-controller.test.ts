@@ -73,11 +73,7 @@ describe('RewardsPoolController', () => {
     await controller.addToken(token3.address, rewardsPool3.address)
     assert.equal(
       JSON.stringify(await controller.supportedTokens()),
-      JSON.stringify([
-        [token1.address, rewardsPool1.address],
-        [token2.address, rewardsPool2.address],
-        [token3.address, rewardsPool3.address],
-      ]),
+      JSON.stringify([token1.address, token2.address, token3.address]),
       'supportedTokens incorrect'
     )
   })
@@ -89,17 +85,17 @@ describe('RewardsPoolController', () => {
   })
 
   it('should be able to remove tokens', async () => {
-    await controller.removeToken(0)
+    await controller.removeToken(token1.address)
     assert.equal(
       JSON.stringify(await controller.supportedTokens()),
-      JSON.stringify([[token2.address, rewardsPool2.address]]),
+      JSON.stringify([token2.address]),
       'supportedTokens incorrect'
     )
   })
 
   it('should not be able to remove token thats not supported', async () => {
     await assertThrowsAsync(async () => {
-      await controller.removeToken(2)
+      await controller.removeToken(rewardsPool1.address)
     }, 'revert')
   })
 
@@ -126,8 +122,8 @@ describe('RewardsPoolController', () => {
     await stake(2, 500)
     await token1.transferAndCall(rewardsPool1.address, toEther(900), '0x00')
     await token2.transferAndCall(rewardsPool2.address, toEther(300), '0x00')
-    await controller.connect(signers[1]).withdrawRewards([0, 1])
-    await controller.connect(signers[2]).withdrawRewards([1])
+    await controller.connect(signers[1]).withdrawRewards([token1.address, token2.address])
+    await controller.connect(signers[2]).withdrawRewards([token2.address])
 
     assert.equal(
       fromEther(await token1.balanceOf(accounts[1])),
@@ -210,6 +206,26 @@ describe('RewardsPoolController', () => {
       fromEther(await rewardsPool2.userRewardPerTokenPaid(accounts[2])),
       0.2,
       'userRewardPerTokenPaid incorrect'
+    )
+  })
+
+  it('should be able to distributeTokens', async () => {
+    await stake(1, 1000)
+    await stake(2, 500)
+
+    await token1.transfer(controller.address, toEther(900))
+    await token2.transfer(controller.address, toEther(300))
+
+    await controller.distributeTokens([token1.address, token2.address])
+    assert.equal(
+      JSON.stringify((await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))),
+      JSON.stringify([600, 200]),
+      'account-1 withdrawableRewards incorrect'
+    )
+    assert.equal(
+      JSON.stringify((await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))),
+      JSON.stringify([300, 100]),
+      'account-2 withdrawableRewards incorrect'
     )
   })
 })

@@ -10,7 +10,7 @@ import {
   setupToken,
   fromEther,
 } from './utils/helpers'
-import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../typechain-types'
+import { ERC677, StrategyMock, StakingPool, WrappedSDToken, RewardsPool } from '../typechain-types'
 
 describe('StakingPool', () => {
   let token: ERC677
@@ -45,7 +45,8 @@ describe('StakingPool', () => {
       token.address,
       'LinkPool LINK',
       'lpLINK',
-      [[ownersRewards, 1000]],
+      [ownersRewards],
+      [1000],
       accounts[0],
     ])) as StakingPool
 
@@ -90,8 +91,12 @@ describe('StakingPool', () => {
 
   it('should be able to add new fee', async () => {
     await stakingPool.addFee(accounts[1], 2500)
+    let fees = await stakingPool.getFees()
     assert.equal(
-      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1].toNumber()])),
+      JSON.stringify([
+        [fees[0][0], fees[1][0].toNumber()],
+        [fees[0][1], fees[1][1].toNumber()],
+      ]),
       JSON.stringify([
         [ownersRewards, 1000],
         [accounts[1], 2500],
@@ -102,14 +107,15 @@ describe('StakingPool', () => {
 
   it('should be able to update existing fees', async () => {
     await stakingPool.updateFee(0, accounts[1], 2500)
+    let fees = await stakingPool.getFees()
     assert.equal(
-      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1].toNumber()])),
+      JSON.stringify([[fees[0][0], fees[1][0].toNumber()]]),
       JSON.stringify([[accounts[1], 2500]]),
       'fees incorrect'
     )
 
     await stakingPool.updateFee(0, accounts[2], 0)
-    assert.equal((await stakingPool.getFees()).length, 0, 'fees incorrect')
+    assert.equal((await stakingPool.getFees())[0].length, 0, 'fees incorrect')
   })
 
   it('should be able to add new strategies', async () => {
@@ -639,5 +645,46 @@ describe('StakingPool', () => {
     await expect(
       strategy.createRewardsPool(token.address, 'LinkPool WrappedETH', 'lpwETH')
     ).to.be.revertedWith('Caller is not a pool creator')
+  })
+
+  it.only('should be able to distribute reward tokens', async () => {
+    await stake(1, 1000)
+    await stake(2, 500)
+
+    let rewardToken = (await deploy('ERC677', ['Reward', 'RWD', 1000000000])) as ERC677
+    await setupToken(rewardToken, accounts)
+
+    let rewardsPool = (await deploy('RewardsPool', [
+      stakingPool.address,
+      rewardToken.address,
+      'Derivative Reward',
+      'dRWD',
+    ])) as RewardsPool
+
+    await stakingPool.addToken(rewardToken.address, rewardsPool.address)
+
+    await rewardToken.transferAndCall(stakingPool.address, toEther(1500), '0x')
+
+    assert.equal(
+      JSON.stringify((await stakingPool.withdrawableRewards(accounts[1])).map((r) => fromEther(r))),
+      JSON.stringify([900]),
+      'account-1 withdrawableRewards incorrect'
+    )
+    assert.equal(
+      JSON.stringify((await stakingPool.withdrawableRewards(accounts[2])).map((r) => fromEther(r))),
+      JSON.stringify([450]),
+      'account-2 withdrawableRewards incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardToken.balanceOf(ownersRewards)),
+      150,
+      'ownersRewards balance incorrect'
+    )
+  })
+
+  it('should not be able to transfer staking token', async () => {
+    await expect(token.transferAndCall(stakingPool.address, toEther(100), '0x')).to.be.revertedWith(
+      'Sender has to be rewards token'
+    )
   })
 })

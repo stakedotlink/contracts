@@ -18,16 +18,13 @@ import "./interfaces/IWrappedSDToken.sol";
 contract StakingPool is StakingRewardsPool, RewardsPoolController {
     using SafeERC20 for IERC677;
 
-    struct Fee {
-        address receiver;
-        uint basisPoints;
-    }
-
     address[] private strategies;
     uint public totalStaked;
     uint public liquidityBuffer;
 
-    Fee[] private fees;
+    address[] private poolFeeReceivers;
+    uint[] private poolFeeBasisPoints;
+
     IWrappedSDToken public wsdToken;
 
     address public poolRouter;
@@ -40,12 +37,12 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
-        Fee[] memory _fees,
+        address[] memory _feeReceivers,
+        uint[] memory _feeBasisPoints,
         address _poolRouter
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
-        for (uint i = 0; i < _fees.length; i++) {
-            fees.push(_fees[i]);
-        }
+        poolFeeReceivers = _feeReceivers;
+        poolFeeBasisPoints = _feeBasisPoints;
         poolRouter = _poolRouter;
     }
 
@@ -99,8 +96,20 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @notice returns a list of all fees
      * @return list of fees
      */
-    function getFees() external view returns (Fee[] memory) {
-        return fees;
+    function getFees() public view override returns (address[] memory, uint[] memory) {
+        return (poolFeeReceivers, poolFeeBasisPoints);
+    }
+
+    /**
+     * @notice ERC677 implementation for proxying reward distribution
+     **/
+    function onTokenTransfer(
+        address,
+        uint,
+        bytes calldata
+    ) external {
+        require(msg.sender != address(token) && isTokenSupported(msg.sender), "Sender has to be rewards token");
+        distributeToken(msg.sender);
     }
 
     /**
@@ -242,7 +251,8 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint _feeBasisPoints) external onlyOwner {
-        fees.push(Fee(_receiver, _feeBasisPoints));
+        poolFeeReceivers.push(_receiver);
+        poolFeeBasisPoints.push(_feeBasisPoints);
     }
 
     /**
@@ -256,14 +266,17 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         address _receiver,
         uint _feeBasisPoints
     ) external onlyOwner {
-        require(_index < fees.length, "Fee does not exist");
+        require(_index < poolFeeReceivers.length, "Fee does not exist");
 
         if (_feeBasisPoints == 0) {
-            fees[_index] = fees[fees.length - 1];
-            fees.pop();
+            poolFeeReceivers[_index] = poolFeeReceivers[poolFeeReceivers.length - 1];
+            poolFeeReceivers.pop();
+
+            poolFeeBasisPoints[_index] = poolFeeBasisPoints[poolFeeBasisPoints.length - 1];
+            poolFeeBasisPoints.pop();
         } else {
-            fees[_index].receiver = _receiver;
-            fees[_index].basisPoints = _feeBasisPoints;
+            poolFeeReceivers[_index] = _receiver;
+            poolFeeBasisPoints[_index] = _feeBasisPoints;
         }
     }
 
@@ -297,20 +310,20 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         int totalRewards;
         uint totalFeeAmounts;
         uint totalFeeCount;
-        address[][] memory receivers = new address[][](strategies.length + 1);
+        address[][] memory feeReceivers = new address[][](strategies.length + 1);
         uint[][] memory feeAmounts = new uint[][](strategies.length + 1);
 
         for (uint i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
             int rewards = strategy.depositChange();
             if (rewards != 0) {
-                (address[] memory strategyReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
+                (address[] memory strategyfeeReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
                 totalRewards += rewards;
                 if (rewards > 0) {
-                    receivers[i] = (strategyReceivers);
+                    feeReceivers[i] = (strategyfeeReceivers);
                     feeAmounts[i] = (strategyFeeAmounts);
-                    totalFeeCount += receivers[i].length;
-                    for (uint j = 0; j < strategyReceivers.length; j++) {
+                    totalFeeCount += feeReceivers[i].length;
+                    for (uint j = 0; j < strategyfeeReceivers.length; j++) {
                         totalFeeAmounts += strategyFeeAmounts[j];
                     }
                 }
@@ -322,13 +335,13 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
         }
 
         if (totalRewards > 0) {
-            receivers[receivers.length - 1] = new address[](fees.length);
-            feeAmounts[feeAmounts.length - 1] = new uint[](fees.length);
-            totalFeeCount += fees.length;
+            feeReceivers[feeReceivers.length - 1] = new address[](poolFeeReceivers.length);
+            feeAmounts[feeAmounts.length - 1] = new uint[](poolFeeReceivers.length);
+            totalFeeCount += poolFeeReceivers.length;
 
-            for (uint i = 0; i < fees.length; i++) {
-                receivers[receivers.length - 1][i] = fees[i].receiver;
-                feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
+            for (uint i = 0; i < poolFeeReceivers.length; i++) {
+                feeReceivers[feeReceivers.length - 1][i] = poolFeeReceivers[i];
+                feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * poolFeeBasisPoints[i]) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
         }
@@ -339,12 +352,12 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
             wsdToken.wrap(balanceOf(address(this)));
 
             uint feesPaidCount;
-            for (uint i = 0; i < receivers.length; i++) {
-                for (uint j = 0; j < receivers[i].length; j++) {
+            for (uint i = 0; i < feeReceivers.length; i++) {
+                for (uint j = 0; j < feeReceivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        wsdToken.transferAndCall(receivers[i][j], wsdToken.balanceOf(address(this)), "0x00");
+                        wsdToken.transferAndCall(feeReceivers[i][j], wsdToken.balanceOf(address(this)), "0x00");
                     } else {
-                        wsdToken.transferAndCall(receivers[i][j], getSharesByStake(feeAmounts[i][j]), "0x00");
+                        wsdToken.transferAndCall(feeReceivers[i][j], getSharesByStake(feeAmounts[i][j]), "0x00");
                         feesPaidCount++;
                     }
                 }
