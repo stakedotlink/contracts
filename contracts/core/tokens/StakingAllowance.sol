@@ -16,9 +16,15 @@ contract StakingAllowance is ERC677, Ownable {
      * @dev Mints a given amount of tokens to an account
      * @param _account address to mint to
      * @param _amount amount of tokens to mint
+     * @param _calldata the call data to send on `transferAndCall`
      **/
-    function mint(address _account, uint256 _amount) public onlyOwner {
-        _mint(_account, _amount);
+    function mint(
+        address _account,
+        uint256 _amount,
+        bytes calldata _calldata
+    ) public onlyOwner {
+        _mint(msg.sender, _amount);
+        transferAndCall(_account, _amount, _calldata);
     }
 
     /**
