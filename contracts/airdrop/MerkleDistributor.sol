@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -13,6 +14,8 @@ import "./interfaces/IMerkleDistributor.sol";
  * @dev Copied from https://github.com/Uniswap/merkle-distributor but modified to handle multiple airdrops concurrently
  */
 contract MerkleDistributor is IMerkleDistributor, Ownable {
+    using SafeERC20 for IERC20;
+
     struct Distribution {
         address token;
         bytes32 merkleRoot;
@@ -29,7 +32,7 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
      * @param _merkleRoots subsequent list of merkle roots for the distribution
      **/
     function addDistributions(address[] memory _tokens, bytes32[] memory _merkleRoots) external onlyOwner {
-        require(_tokens.length == _merkleRoots.length, "MerkleDistributor: array lengths need to match");
+        require(_tokens.length == _merkleRoots.length, "MerkleDistributor: Array lengths need to match.");
 
         for (uint i = 0; i < _tokens.length; i++) {
             addDistribution(_tokens[i], _merkleRoots[i]);
@@ -93,7 +96,7 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         bytes32[] calldata _merkleProof
     ) external override {
         require(!isClaimed(_distribution, _index), "MerkleDistributor: Drop already claimed.");
-        require(_distribution < nextDistribution, "MerkleDistributor: distribution does not exist");
+        require(_distribution < nextDistribution, "MerkleDistributor: Distribution does not exist.");
 
         Distribution storage distribution = distributions[_distribution];
 
@@ -103,7 +106,7 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
 
         // Mark it claimed and send the token.
         _setClaimed(_distribution, _index);
-        require(IERC20(distribution.token).transfer(_account, _amount), "MerkleDistributor: Transfer failed.");
+        IERC20(distribution.token).safeTransfer(_account, _amount);
 
         emit Claimed(_distribution, _index, _account, _amount);
     }
