@@ -33,7 +33,8 @@
     "solhint": "^3.3.6",
     "ts-node": "^10.4.0",
     "typechain": "^7.0.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.5.5",
+    "ethereumjs-util": "^7.1.5"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.0",
