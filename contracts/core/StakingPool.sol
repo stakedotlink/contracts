@@ -4,9 +4,9 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./base/StakingRewardsPool.sol";
-import "./base/RewardsPoolController.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IWrappedSDToken.sol";
 
@@ -15,7 +15,7 @@ import "./interfaces/IWrappedSDToken.sol";
  * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked
  * assets into strategy contracts to earn returns
  */
-contract StakingPool is StakingRewardsPool, RewardsPoolController {
+contract StakingPool is StakingRewardsPool, Ownable {
     using SafeERC20 for IERC677;
 
     struct Fee {
@@ -55,39 +55,6 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
     }
 
     /**
-     * @notice returns an account's stake balance for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return account's balance
-     */
-    function rpcStaked(address _account) external view returns (uint) {
-        return sharesOf(_account);
-    }
-
-    /**
-     * @notice returns the total staked amount for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return total staked amount
-     */
-    function rpcTotalStaked() external view returns (uint) {
-        return totalShares;
-    }
-
-    /**
-     * @notice returns the list of strategies as the authorised addresses to create RewardsPool contracts
-     * @return pool creator address list
-     **/
-    function rewardPoolCreators() public view override returns (address[] memory) {
-        address[] memory addresses = new address[](strategies.length + 1);
-        for (uint i = 0; i < strategies.length; i++) {
-            addresses[i] = strategies[i];
-        }
-        addresses[strategies.length] = super.owner();
-        return addresses;
-    }
-
-    /**
      * @notice returns a list of all active strategies
      * @return list of strategies
      */
@@ -108,7 +75,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function stake(address _account, uint _amount) external onlyRouter updateRewards(_account) {
+    function stake(address _account, uint _amount) external onlyRouter {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -126,7 +93,7 @@ contract StakingPool is StakingRewardsPool, RewardsPoolController {
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
-    function withdraw(address _account, uint _amount) external onlyRouter updateRewards(_account) {
+    function withdraw(address _account, uint _amount) external onlyRouter {
         uint toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(_account);

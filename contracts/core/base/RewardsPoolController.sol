@@ -13,34 +13,19 @@ import "../RewardsPool.sol";
  * @notice Acts as a proxy for any number of rewards pools
  */
 abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
-    struct TokenConfig {
-        IERC20 token;
-        IRewardsPool rewardsPool;
-    }
+    using SafeERC20 for IERC20;
 
-    TokenConfig[] private tokenConfigs;
+    mapping(address => IRewardsPool) public tokenPools;
+    address[] private tokens;
 
     event WithdrawRewards(address indexed account);
     event AddToken(address indexed token, address rewardsPool);
     event RemoveToken(address indexed token, address rewardsPool);
 
     modifier updateRewards(address _account) {
-        for (uint i = 0; i < tokenConfigs.length; i++) {
-            tokenConfigs[i].rewardsPool.updateReward(_account);
+        for (uint i = 0; i < tokens.length; i++) {
+            tokenPools[tokens[i]].updateReward(_account);
         }
-        _;
-    }
-
-    modifier isPoolCreator() {
-        bool found = false;
-        address[] memory poolCreators = rewardPoolCreators();
-        for (uint i = 0; i < poolCreators.length; i++) {
-            if (poolCreators[i] == msg.sender) {
-                found = true;
-                break;
-            }
-        }
-        require(found, "Caller is not a pool creator");
         _;
     }
 
@@ -48,8 +33,8 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @notice returns a list of configs for all supported tokens
      * @return list of token configs
      **/
-    function supportedTokens() external view returns (TokenConfig[] memory) {
-        return tokenConfigs;
+    function supportedTokens() external view returns (address[] memory) {
+        return tokens;
     }
 
     /**
@@ -58,22 +43,46 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @return is token supported
      **/
     function isTokenSupported(address _token) public view returns (bool) {
-        for (uint i = 0; i < tokenConfigs.length; i++) {
-            if (_token == address(tokenConfigs[i].token)) {
-                return true;
-            }
-        }
-        return false;
+        return address(tokenPools[_token]) != address(0) ? true : false;
     }
 
     /**
-     * @notice fetch the list of addresses authorised to create RewardPools
-     * @return pool creator address list
+     * @notice get all token balances of supported tokens within the controller
+     * @return list of tokens with a list of token balances
      **/
-    function rewardPoolCreators() public view virtual returns (address[] memory) {
-        address[] memory addresses = new address[](1);
-        addresses[0] = super.owner();
-        return addresses;
+    function tokenBalances() external view returns (address[] memory, uint[] memory) {
+        uint[] memory balances = new uint[](tokens.length);
+
+        for (uint i = 0; i < tokens.length; i++) {
+            balances[i] = IERC20(tokens[i]).balanceOf(address(this));
+        }
+
+        return (tokens, balances);
+    }
+
+    /**
+     * @notice distributes token balances to their equivalent reward pools
+     * @param _tokens list of token addresses
+     */
+    function distributeTokens(address[] memory _tokens) public {
+        for (uint i = 0; i < _tokens.length; i++) {
+            distributeToken(_tokens[i]);
+        }
+    }
+
+    /**
+     * @notice distributes a token balance to its equivalent reward pool
+     * @param _token token address
+     */
+    function distributeToken(address _token) public {
+        require(isTokenSupported(_token), "Token not supported");
+
+        IERC20 token = IERC20(_token);
+        uint balance = token.balanceOf(address(this));
+        require(balance > 0, "Cannot distribute zero balance");
+
+        token.safeTransfer(address(tokenPools[_token]), balance);
+        tokenPools[_token].distributeRewards();
     }
 
     /**
@@ -82,10 +91,10 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @return list of withdrawable reward amounts
      **/
     function withdrawableRewards(address _account) external view returns (uint[] memory) {
-        uint[] memory withdrawable = new uint[](tokenConfigs.length);
+        uint[] memory withdrawable = new uint[](tokens.length);
 
-        for (uint i = 0; i < tokenConfigs.length; i++) {
-            withdrawable[i] = tokenConfigs[i].rewardsPool.balanceOf(_account);
+        for (uint i = 0; i < tokens.length; i++) {
+            withdrawable[i] = tokenPools[tokens[i]].balanceOf(_account);
         }
 
         return withdrawable;
@@ -93,11 +102,11 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
 
     /**
      * @notice withdraws an account's earned rewards for a list of tokens
-     * @param _idxs indexes of tokens to withdraw
+     * @param _tokens list of token addresses to withdraw rewards from
      **/
-    function withdrawRewards(uint[] memory _idxs) public {
-        for (uint i = 0; i < _idxs.length; i++) {
-            tokenConfigs[_idxs[i]].rewardsPool.withdraw(msg.sender);
+    function withdrawRewards(address[] memory _tokens) public {
+        for (uint i = 0; i < _tokens.length; i++) {
+            tokenPools[_tokens[i]].withdraw(msg.sender);
         }
         emit WithdrawRewards(msg.sender);
     }
@@ -107,35 +116,36 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
-    function addToken(address _token, address _rewardsPool) external isPoolCreator {
+    function addToken(address _token, address _rewardsPool) external onlyOwner {
         require(!isTokenSupported(_token), "Token is already supported");
-        _addToken(_token, _rewardsPool);
+
+        tokenPools[_token] = IRewardsPool(_rewardsPool);
+        tokens.push(_token);
+
+        if (IERC20(_token).balanceOf(address(this)) > 0) {
+            distributeToken(_token);
+        }
+
+        emit AddToken(_token, _rewardsPool);
     }
 
     /**
      * @notice removes a supported token
-     * @param _idx index of token to remove
+     * @param _token address of token
      **/
-    function removeToken(uint _idx) external onlyOwner {
-        require(_idx < tokenConfigs.length, "Token is not supported");
+    function removeToken(address _token) external onlyOwner {
+        require(isTokenSupported(_token), "Token is not supported");
 
-        TokenConfig memory tokenConfig = tokenConfigs[_idx];
+        IRewardsPool rewardsPool = tokenPools[_token];
+        delete (tokenPools[_token]);
+        for (uint i = 0; i < tokens.length; i++) {
+            if (tokens[i] == _token) {
+                tokens[i] = tokens[tokens.length - 1];
+                tokens.pop();
+                break;
+            }
+        }
 
-        tokenConfigs[_idx] = tokenConfigs[tokenConfigs.length - 1];
-        tokenConfigs.pop();
-
-        emit RemoveToken(address(tokenConfig.token), address(tokenConfig.rewardsPool));
-    }
-
-    /**
-     * @notice adds a new token
-     * @param _token token to add
-     * @param _rewardsPool token rewards pool to add
-     **/
-    function _addToken(address _token, address _rewardsPool) private {
-        TokenConfig memory tokenConfig = TokenConfig(IERC20(_token), IRewardsPool(_rewardsPool));
-        tokenConfigs.push(tokenConfig);
-
-        emit AddToken(_token, _rewardsPool);
+        emit RemoveToken(_token, address(rewardsPool));
     }
 }

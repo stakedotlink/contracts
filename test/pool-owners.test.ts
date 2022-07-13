@@ -1,5 +1,5 @@
 import { Signer } from 'ethers'
-import { assert } from 'chai'
+import { assert, expect } from 'chai'
 import {
   toEther,
   assertThrowsAsync,
@@ -168,5 +168,35 @@ describe('PoolOwners', () => {
 
     assert.equal(fromEther(await poolOwners.rpcStaked(accounts[1])), 1000, 'rpcStaked incorrect')
     assert.equal(fromEther(await poolOwners.rpcTotalStaked()), 1500, 'rpcTotalStaked incorrect')
+  })
+
+  it('should be able to distribute rewards onTokenTransfer', async () => {
+    await stake(1, 1000)
+    await stake(2, 500)
+
+    await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      1000,
+      'reward token balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      500,
+      'reward token balance incorrect'
+    )
+  })
+
+  it('should not be able to distribute non-supported token onTokenTransfer', async () => {
+    await stake(1, 1000)
+    await stake(2, 500)
+
+    let token2 = (await deploy('ERC677', ['Token1', '1', 1000000000])) as ERC677
+    await setupToken(token2, accounts)
+
+    await expect(
+      token2.transferAndCall(poolOwners.address, toEther(1500), '0x00')
+    ).to.be.revertedWith('Sender must be staking token or supported rewards token')
   })
 })

@@ -62,8 +62,15 @@ contract PoolOwners is RewardsPoolController {
         uint _value,
         bytes calldata
     ) external {
-        require(msg.sender == address(token), "Sender must be staking token");
-        _stake(_sender, _value);
+        require(
+            msg.sender == address(token) || isTokenSupported(msg.sender),
+            "Sender must be staking token or supported rewards token"
+        );
+        if (msg.sender == address(token)) {
+            _stake(_sender, _value);
+        } else {
+            distributeToken(msg.sender);
+        }
     }
 
     /**

@@ -100,7 +100,7 @@ describe('PoolRouter', () => {
       'STA',
     ])) as StakingAllowance
     await allowanceToken.connect(signers[0])
-    await allowanceToken.mint(accounts[0], toEther(10000))
+    await allowanceToken.mint(accounts[0], toEther(10000), '0x')
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
@@ -177,7 +177,7 @@ describe('PoolRouter', () => {
     let allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(1.3))
     assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
 
-    await allowanceToken.mint(accounts[0], toEther(10000))
+    await allowanceToken.mint(accounts[0], toEther(10000), '0x')
     allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(0.65))
     assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
 

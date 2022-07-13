@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
-import { Signer } from 'ethers'
-import { assert, expect } from 'chai'
+import { BigNumber, Signer } from 'ethers'
+import { assert } from 'chai'
 import {
   toEther,
   assertThrowsAsync,
@@ -91,10 +91,10 @@ describe('StakingPool', () => {
   it('should be able to add new fee', async () => {
     await stakingPool.addFee(accounts[1], 2500)
     assert.equal(
-      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1].toNumber()])),
+      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
       JSON.stringify([
-        [ownersRewards, 1000],
-        [accounts[1], 2500],
+        [ownersRewards, BigNumber.from(1000)],
+        [accounts[1], BigNumber.from(2500)],
       ]),
       'fees incorrect'
     )
@@ -103,8 +103,8 @@ describe('StakingPool', () => {
   it('should be able to update existing fees', async () => {
     await stakingPool.updateFee(0, accounts[1], 2500)
     assert.equal(
-      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1].toNumber()])),
-      JSON.stringify([[accounts[1], 2500]]),
+      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
+      JSON.stringify([[accounts[1], BigNumber.from(2500)]]),
       'fees incorrect'
     )
 
@@ -533,71 +533,6 @@ describe('StakingPool', () => {
     )
   })
 
-  it('staking/withdrawing should update rewardsPool rewards', async () => {
-    const rewardsPool = await deploy('RewardsPool', [stakingPool.address, token.address, '1', '1'])
-    await stakingPool.addToken(token.address, rewardsPool.address)
-    await stake(1, 1000)
-    await stake(2, 500)
-    token.transferAndCall(rewardsPool.address, toEther(1500), '0x00')
-
-    assert.equal(
-      await rewardsPool.userRewardPerTokenPaid(accounts[1]),
-      0,
-      'userRewardPerTokenPaid incorrect'
-    )
-    assert.equal(
-      await rewardsPool.userRewardPerTokenPaid(accounts[2]),
-      0,
-      'userRewardPerTokenPaid incorrect'
-    )
-
-    await withdraw(1, 500)
-    await stake(2, 500)
-
-    assert.equal(
-      fromEther(await rewardsPool.userRewardPerTokenPaid(accounts[1])),
-      1,
-      'userRewardPerTokenPaid incorrect'
-    )
-    assert.equal(
-      fromEther(await rewardsPool.userRewardPerTokenPaid(accounts[2])),
-      1,
-      'userRewardPerTokenPaid incorrect'
-    )
-  })
-
-  it('rpcStaked and rpcTotalStaked should work correctly', async () => {
-    const rewardsPool = await deploy('RewardsPool', [stakingPool.address, token.address, '1', '1'])
-    await stakingPool.addToken(token.address, rewardsPool.address)
-    await stake(1, 1000)
-    await stake(2, 500)
-    token.transferAndCall(rewardsPool.address, toEther(1500), '0x00')
-
-    assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
-      1000,
-      'account balance incorrect'
-    )
-
-    await token.transfer(strategy1.address, toEther(100))
-    await stakingPool.updateStrategyRewards([0])
-
-    assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
-      1000,
-      'account balance incorrect'
-    )
-
-    await strategy1.simulateSlash(1000)
-    await stakingPool.updateStrategyRewards([0])
-
-    assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
-      1000,
-      'account balance incorrect'
-    )
-  })
-
   it('should be able to correctly calculate staking limits', async () => {
     let stakingLimit = await stakingPool.maxDeposits()
     assert.equal(fromEther(stakingLimit), 13000, 'staking limit is not correct')
@@ -615,29 +550,5 @@ describe('StakingPool', () => {
     await stakingPool.setLiquidityBuffer(2000) // 20% (0.2 * 10000)
     let stakingLimit = await stakingPool.maxDeposits()
     assert.equal(fromEther(stakingLimit), 15600, 'staking limit is not correct')
-  })
-
-  it('should be able to create a RewardsPool and distribute rewards', async () => {
-    token = (await deploy('ERC677', ['WrappedETH', 'wETH', 1000000000])) as ERC677
-
-    await strategy1.createRewardsPool(token.address, 'LinkPool WrappedETH', 'lpwETH')
-
-    let isTokenSupported = await stakingPool.isTokenSupported(token.address)
-    assert.isTrue(isTokenSupported, 'token is not supported')
-  })
-
-  it('should not be able to create a RewardsPool', async () => {
-    token = (await deploy('ERC677', ['WrappedETH', 'wETH', 1000000000])) as ERC677
-
-    let strategy = (await deployUpgradeable('StrategyMock', [
-      token.address,
-      stakingPool.address,
-      toEther(1000),
-      toEther(10),
-    ])) as StrategyMock
-
-    await expect(
-      strategy.createRewardsPool(token.address, 'LinkPool WrappedETH', 'lpwETH')
-    ).to.be.revertedWith('Caller is not a pool creator')
   })
 })
