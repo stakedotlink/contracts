@@ -15,7 +15,7 @@ describe('StakingAllowance', () => {
   beforeEach(async () => {
     token = (await deploy('StakingAllowance', ['Staking Allowance', 'STA'])) as StakingAllowance
     await token.connect(signers[0])
-    await token.mint(accounts[0], toEther(10000), '0x')
+    await token.mint(accounts[0], toEther(10000))
   })
 
   it('should be able to burn tokens', async () => {
@@ -41,8 +41,8 @@ describe('StakingAllowance', () => {
   })
 
   it('should not be able to mint tokens from non-owner', async () => {
-    await expect(
-      token.connect(signers[1]).mint(accounts[0], toEther(10000), '0x')
-    ).to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(token.connect(signers[1]).mint(accounts[0], toEther(10000))).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
   })
 })

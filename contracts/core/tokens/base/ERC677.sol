@@ -19,24 +19,25 @@ contract ERC677 is IERC677, ERC20 {
         address _to,
         uint256 _value,
         bytes calldata _data
-    ) public override returns (bool success) {
+    ) public override returns (bool) {
         super.transfer(_to, _value);
         if (isContract(_to)) {
-            contractFallback(_to, _value, _data);
+            contractFallback(msg.sender, _to, _value, _data);
         }
         return true;
     }
 
     function contractFallback(
+        address _sender,
         address _to,
         uint256 _value,
         bytes calldata _data
-    ) private {
+    ) internal {
         IERC677Receiver receiver = IERC677Receiver(_to);
-        receiver.onTokenTransfer(msg.sender, _value, _data);
+        receiver.onTokenTransfer(_sender, _value, _data);
     }
 
-    function isContract(address _addr) private view returns (bool hasCode) {
+    function isContract(address _addr) internal view returns (bool hasCode) {
         uint256 length;
         assembly {
             length := extcodesize(_addr)
