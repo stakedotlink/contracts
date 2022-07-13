@@ -1,4 +1,4 @@
-import { Signer } from 'ethers'
+import { BigNumber, Signer } from 'ethers'
 import { assert } from 'chai'
 import {
   toEther,
@@ -215,6 +215,15 @@ describe('RewardsPoolController', () => {
 
     await token1.transfer(controller.address, toEther(900))
     await token2.transfer(controller.address, toEther(300))
+
+    assert.equal(
+      JSON.stringify(await controller.tokenBalances()),
+      JSON.stringify([
+        [token1.address, token2.address],
+        [BigNumber.from(toEther(900)), BigNumber.from(toEther(300))],
+      ]),
+      'token balances incorrect'
+    )
 
     await controller.distributeTokens([token1.address, token2.address])
     assert.equal(

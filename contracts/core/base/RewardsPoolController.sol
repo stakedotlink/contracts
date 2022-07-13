@@ -47,6 +47,20 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     /**
+     * @notice get all token balances of supported tokens within the controller
+     * @return list of tokens with a list of token balances
+     **/
+    function tokenBalances() external view returns (address[] memory, uint[] memory) {
+        uint[] memory balances = new uint[](tokens.length);
+
+        for (uint i = 0; i < tokens.length; i++) {
+            balances[i] = IERC20(tokens[i]).balanceOf(address(this));
+        }
+
+        return (tokens, balances);
+    }
+
+    /**
      * @notice distributes token balances to their equivalent reward pools
      * @param _tokens list of token addresses
      */
@@ -108,10 +122,8 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         tokenPools[_token] = IRewardsPool(_rewardsPool);
         tokens.push(_token);
 
-        IERC20 token = IERC20(_token);
-        uint balance = token.balanceOf(address(this));
-        if (balance > 0) {
-            token.safeTransfer(_rewardsPool, balance);
+        if (IERC20(_token).balanceOf(address(this)) > 0) {
+            distributeToken(_token);
         }
 
         emit AddToken(_token, _rewardsPool);
