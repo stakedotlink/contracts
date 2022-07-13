@@ -19,13 +19,16 @@ import "./interfaces/IWrappedSDToken.sol";
 contract StakingPool is StakingRewardsPool, Ownable {
     using SafeERC20 for IERC677;
 
+    struct Fee {
+        address receiver;
+        uint basisPoints;
+    }
+
     address[] private strategies;
     uint public totalStaked;
     uint public liquidityBuffer;
 
-    address[] private poolFeeReceivers;
-    uint[] private poolFeeBasisPoints;
-
+    Fee[] private fees;
     IWrappedSDToken public wsdToken;
 
     address public poolRouter;
@@ -38,38 +41,18 @@ contract StakingPool is StakingRewardsPool, Ownable {
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
-        address[] memory _feeReceivers,
-        uint[] memory _feeBasisPoints,
+        Fee[] memory _fees,
         address _poolRouter
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
-        poolFeeReceivers = _feeReceivers;
-        poolFeeBasisPoints = _feeBasisPoints;
+        for (uint i = 0; i < _fees.length; i++) {
+            fees.push(_fees[i]);
+        }
         poolRouter = _poolRouter;
     }
 
     modifier onlyRouter() {
         require(poolRouter == msg.sender, "PoolRouter only");
         _;
-    }
-
-    /**
-     * @notice returns an account's stake balance for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return account's balance
-     */
-    function rpcStaked(address _account) external view returns (uint) {
-        return sharesOf(_account);
-    }
-
-    /**
-     * @notice returns the total staked amount for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return total staked amount
-     */
-    function rpcTotalStaked() external view returns (uint) {
-        return totalShares;
     }
 
     /**
@@ -84,8 +67,8 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice returns a list of all fees
      * @return list of fees
      */
-    function getFees() public view returns (address[] memory, uint[] memory) {
-        return (poolFeeReceivers, poolFeeBasisPoints);
+    function getFees() external view returns (Fee[] memory) {
+        return fees;
     }
 
     /**
@@ -227,8 +210,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint _feeBasisPoints) external onlyOwner {
-        poolFeeReceivers.push(_receiver);
-        poolFeeBasisPoints.push(_feeBasisPoints);
+        fees.push(Fee(_receiver, _feeBasisPoints));
     }
 
     /**
@@ -242,17 +224,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
         address _receiver,
         uint _feeBasisPoints
     ) external onlyOwner {
-        require(_index < poolFeeReceivers.length, "Fee does not exist");
+        require(_index < fees.length, "Fee does not exist");
 
         if (_feeBasisPoints == 0) {
-            poolFeeReceivers[_index] = poolFeeReceivers[poolFeeReceivers.length - 1];
-            poolFeeReceivers.pop();
-
-            poolFeeBasisPoints[_index] = poolFeeBasisPoints[poolFeeBasisPoints.length - 1];
-            poolFeeBasisPoints.pop();
+            fees[_index] = fees[fees.length - 1];
+            fees.pop();
         } else {
-            poolFeeReceivers[_index] = _receiver;
-            poolFeeBasisPoints[_index] = _feeBasisPoints;
+            fees[_index].receiver = _receiver;
+            fees[_index].basisPoints = _feeBasisPoints;
         }
     }
 
@@ -286,20 +265,20 @@ contract StakingPool is StakingRewardsPool, Ownable {
         int totalRewards;
         uint totalFeeAmounts;
         uint totalFeeCount;
-        address[][] memory feeReceivers = new address[][](strategies.length + 1);
+        address[][] memory receivers = new address[][](strategies.length + 1);
         uint[][] memory feeAmounts = new uint[][](strategies.length + 1);
 
         for (uint i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
             int rewards = strategy.depositChange();
             if (rewards != 0) {
-                (address[] memory strategyfeeReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
+                (address[] memory strategyReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
                 totalRewards += rewards;
                 if (rewards > 0) {
-                    feeReceivers[i] = (strategyfeeReceivers);
+                    receivers[i] = (strategyReceivers);
                     feeAmounts[i] = (strategyFeeAmounts);
-                    totalFeeCount += feeReceivers[i].length;
-                    for (uint j = 0; j < strategyfeeReceivers.length; j++) {
+                    totalFeeCount += receivers[i].length;
+                    for (uint j = 0; j < strategyReceivers.length; j++) {
                         totalFeeAmounts += strategyFeeAmounts[j];
                     }
                 }
@@ -311,13 +290,13 @@ contract StakingPool is StakingRewardsPool, Ownable {
         }
 
         if (totalRewards > 0) {
-            feeReceivers[feeReceivers.length - 1] = new address[](poolFeeReceivers.length);
-            feeAmounts[feeAmounts.length - 1] = new uint[](poolFeeReceivers.length);
-            totalFeeCount += poolFeeReceivers.length;
+            receivers[receivers.length - 1] = new address[](fees.length);
+            feeAmounts[feeAmounts.length - 1] = new uint[](fees.length);
+            totalFeeCount += fees.length;
 
-            for (uint i = 0; i < poolFeeReceivers.length; i++) {
-                feeReceivers[feeReceivers.length - 1][i] = poolFeeReceivers[i];
-                feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * poolFeeBasisPoints[i]) / 10000;
+            for (uint i = 0; i < fees.length; i++) {
+                receivers[receivers.length - 1][i] = fees[i].receiver;
+                feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
         }
@@ -328,12 +307,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
             wsdToken.wrap(balanceOf(address(this)));
 
             uint feesPaidCount;
-            for (uint i = 0; i < feeReceivers.length; i++) {
-                for (uint j = 0; j < feeReceivers[i].length; j++) {
+            for (uint i = 0; i < receivers.length; i++) {
+                for (uint j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        wsdToken.transferAndCall(feeReceivers[i][j], wsdToken.balanceOf(address(this)), "0x00");
+                        wsdToken.transferAndCall(receivers[i][j], wsdToken.balanceOf(address(this)), "0x00");
                     } else {
-                        wsdToken.transferAndCall(feeReceivers[i][j], getSharesByStake(feeAmounts[i][j]), "0x00");
+                        wsdToken.transferAndCall(receivers[i][j], getSharesByStake(feeAmounts[i][j]), "0x00");
                         feesPaidCount++;
                     }
                 }

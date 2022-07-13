@@ -41,10 +41,4 @@ contract RewardsPoolControllerMock is RewardsPoolController {
         totalStaked -= _amount;
         token.safeTransfer(msg.sender, _amount);
     }
-
-    function getFees() public pure override returns (address[] memory, uint[] memory) {
-        address[] memory receivers;
-        uint[] memory basisPoints;
-        return (receivers, basisPoints);
-    }
 }

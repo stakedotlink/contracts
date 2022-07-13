@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { Signer } from 'ethers'
+import { BigNumber, Signer } from 'ethers'
 import { assert } from 'chai'
 import {
   toEther,
@@ -45,8 +45,7 @@ describe('StakingPool', () => {
       token.address,
       'LinkPool LINK',
       'lpLINK',
-      [ownersRewards],
-      [1000],
+      [[ownersRewards, 1000]],
       accounts[0],
     ])) as StakingPool
 
@@ -91,15 +90,11 @@ describe('StakingPool', () => {
 
   it('should be able to add new fee', async () => {
     await stakingPool.addFee(accounts[1], 2500)
-    let fees = await stakingPool.getFees()
     assert.equal(
+      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
       JSON.stringify([
-        [fees[0][0], fees[1][0].toNumber()],
-        [fees[0][1], fees[1][1].toNumber()],
-      ]),
-      JSON.stringify([
-        [ownersRewards, 1000],
-        [accounts[1], 2500],
+        [ownersRewards, BigNumber.from(1000)],
+        [accounts[1], BigNumber.from(2500)],
       ]),
       'fees incorrect'
     )
@@ -107,15 +102,14 @@ describe('StakingPool', () => {
 
   it('should be able to update existing fees', async () => {
     await stakingPool.updateFee(0, accounts[1], 2500)
-    let fees = await stakingPool.getFees()
     assert.equal(
-      JSON.stringify([[fees[0][0], fees[1][0].toNumber()]]),
-      JSON.stringify([[accounts[1], 2500]]),
+      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
+      JSON.stringify([[accounts[1], BigNumber.from(2500)]]),
       'fees incorrect'
     )
 
     await stakingPool.updateFee(0, accounts[2], 0)
-    assert.equal((await stakingPool.getFees())[0].length, 0, 'fees incorrect')
+    assert.equal((await stakingPool.getFees()).length, 0, 'fees incorrect')
   })
 
   it('should be able to add new strategies', async () => {

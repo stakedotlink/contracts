@@ -62,8 +62,7 @@ describe('EthStakingStrategy', () => {
       wETH.address,
       'LinkPool ETH',
       'lplETH',
-      [ownersRewards],
-      ['1000'],
+      [[ownersRewards, '1000']],
       accounts[0],
     ])) as StakingPool
 

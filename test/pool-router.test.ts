@@ -41,8 +41,7 @@ describe('PoolRouter', () => {
       token,
       'LinkPool LINK',
       'lpLINK',
-      [ownersRewards],
-      [1000],
+      [[ownersRewards, 1000]],
       poolRouter.address,
     ])) as StakingPool
 

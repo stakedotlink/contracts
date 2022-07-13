@@ -29,19 +29,6 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         _;
     }
 
-    modifier isPoolCreator() {
-        bool found = false;
-        address[] memory poolCreators = rewardPoolCreators();
-        for (uint i = 0; i < poolCreators.length; i++) {
-            if (poolCreators[i] == msg.sender) {
-                found = true;
-                break;
-            }
-        }
-        require(found, "Caller is not a pool creator");
-        _;
-    }
-
     /**
      * @notice returns a list of configs for all supported tokens
      * @return list of token configs
@@ -85,16 +72,6 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
     }
 
     /**
-     * @notice fetch the list of addresses authorised to create RewardPools
-     * @return pool creator address list
-     **/
-    function rewardPoolCreators() public view virtual returns (address[] memory) {
-        address[] memory addresses = new address[](1);
-        addresses[0] = super.owner();
-        return addresses;
-    }
-
-    /**
      * @notice returns a list of withdrawable rewards for an account
      * @param _account account to return reward amounts for
      * @return list of withdrawable reward amounts
@@ -108,12 +85,6 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
 
         return withdrawable;
     }
-
-    /**
-     * @notice returns a list of all fees
-     * @return list of fees
-     */
-    function getFees() public view virtual returns (address[] memory, uint[] memory);
 
     /**
      * @notice withdraws an account's earned rewards for a list of tokens
@@ -131,9 +102,19 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
-    function addToken(address _token, address _rewardsPool) external isPoolCreator {
+    function addToken(address _token, address _rewardsPool) external onlyOwner {
         require(!isTokenSupported(_token), "Token is already supported");
-        _addToken(_token, _rewardsPool);
+
+        tokenPools[_token] = IRewardsPool(_rewardsPool);
+        tokens.push(_token);
+
+        IERC20 token = IERC20(_token);
+        uint balance = token.balanceOf(address(this));
+        if (balance > 0) {
+            token.safeTransfer(_rewardsPool, balance);
+        }
+
+        emit AddToken(_token, _rewardsPool);
     }
 
     /**
@@ -154,23 +135,5 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController {
         }
 
         emit RemoveToken(_token, address(rewardsPool));
-    }
-
-    /**
-     * @notice adds a new token
-     * @param _token token to add
-     * @param _rewardsPool token rewards pool to add
-     **/
-    function _addToken(address _token, address _rewardsPool) private {
-        tokenPools[_token] = IRewardsPool(_rewardsPool);
-        tokens.push(_token);
-
-        IERC20 token = IERC20(_token);
-        uint balance = token.balanceOf(address(this));
-        if (balance > 0) {
-            token.safeTransfer(_rewardsPool, balance);
-        }
-
-        emit AddToken(_token, _rewardsPool);
     }
 }

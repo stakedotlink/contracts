@@ -83,16 +83,6 @@ contract PoolOwners is RewardsPoolController {
     }
 
     /**
-     * @notice returns a list of all fees
-     * @return list of fees
-     */
-    function getFees() public pure override returns (address[] memory, uint[] memory) {
-        address[] memory receivers;
-        uint[] memory basisPoints;
-        return (receivers, basisPoints);
-    }
-
-    /**
      * @notice burns allowance tokens and withdraws staked owners tokens
      * @param _amount amount to withdraw
      **/

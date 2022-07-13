@@ -24,10 +24,4 @@ interface IRewardsPoolController {
      * @param _rewardsPool token rewards pool to add
      **/
     function addToken(address _token, address _rewardsPool) external;
-
-    /**
-     * @notice returns a list of all fees
-     * @return list of fees
-     */
-    function getFees() external view returns (address[] memory, uint[] memory);
 }
