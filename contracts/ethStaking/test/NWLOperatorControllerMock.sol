@@ -35,7 +35,7 @@ contract NWLOperatorControllerMock is WLOperatorControllerMock {
         return (retPubkeys, retSignatures);
     }
 
-    function activeStake() external view returns (uint) {
+    function totalActiveStake() external view returns (uint) {
         return activeKeys * DEPOSIT_AMOUNT;
     }
 }

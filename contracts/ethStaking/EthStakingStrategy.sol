@@ -171,12 +171,12 @@ contract EthStakingStrategy is Strategy {
         if (depositChange > 0) {
             uint rewards = uint(depositChange);
 
-            uint nwlOperatorDeposits = nwlOperatorController.activeStake();
+            uint nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
             uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) /
                 (totalDeposits() + nwlOperatorDeposits - rewards);
 
-            uint activeWLValidators = wlOperatorController.activeValidators();
-            uint activeNWLValidators = nwlOperatorController.activeValidators();
+            uint activeWLValidators = wlOperatorController.totalActiveValidators();
+            uint activeNWLValidators = nwlOperatorController.totalActiveValidators();
 
             uint operatorFee = (rewards * operatorFeeBasisPoints) / 10000;
             uint wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
@@ -199,7 +199,8 @@ contract EthStakingStrategy is Strategy {
      */
     function totalDeposits() public view override returns (uint) {
         uint depositsInProgress = (depositedValidators - beaconValidators) * DEPOSIT_AMOUNT;
-        return beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.activeStake();
+        return
+            beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.totalActiveStake();
     }
 
     /**

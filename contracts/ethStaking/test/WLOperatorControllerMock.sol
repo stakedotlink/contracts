@@ -4,13 +4,11 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../interfaces/IOperatorController.sol";
-
 /**
  * @title ETH Staking Node Operator Controller Mock
  * @notice Mocks contract for testing
  */
-contract WLOperatorControllerMock is IOperatorController {
+contract WLOperatorControllerMock {
     uint public constant PUBKEY_LENGTH = 48;
     uint public constant SIGNATURE_LENGTH = 96;
 
@@ -53,7 +51,7 @@ contract WLOperatorControllerMock is IOperatorController {
         return (retPubkeys, retSignatures);
     }
 
-    function activeValidators() external view returns (uint) {
+    function totalActiveValidators() external view returns (uint) {
         return activeKeys;
     }
 }
