@@ -38,7 +38,7 @@ contract WLOperatorController is OperatorController {
      * @param _name name of operator
      */
     function addOperator(string calldata _name) external {
-        require(operatorWhitelist.isWhitelisted(msg.sender), "Sender is not whitelisted");
+        operatorWhitelist.useWhitelist(msg.sender);
         _addOperator(_name);
     }
 
@@ -57,6 +57,44 @@ contract WLOperatorController is OperatorController {
     ) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
+    }
+
+    /**
+     * @notice Removes added pubkey/signature pairs from an operator in LIFO order
+     * @param _operatorId id of operator
+     * @param _quantity number of pairs to remove
+     */
+    function removeKeyPairs(uint _operatorId, uint _quantity) external operatorExists(_operatorId) {
+        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+        require(_quantity > 0, "Quantity must be greater than 0");
+        require(_quantity <= operators[_operatorId].totalKeyPairs, "Cannot remove more keys than are added");
+        require(
+            _quantity <= operators[_operatorId].totalKeyPairs - operators[_operatorId].usedKeyPairs,
+            "Cannot remove used key pairs"
+        );
+
+        operators[_operatorId].totalKeyPairs -= uint64(_quantity);
+        if (operators[_operatorId].validatorLimit > operators[_operatorId].totalKeyPairs) {
+            operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
+        }
+    }
+
+    /**
+     * @notice Reports the results of key pair validation for an operator
+     * @param _operatorId id of operator
+     * @param _success whether the pairs are valid
+     */
+    function reportKeyPairValidation(uint _operatorId, bool _success)
+        external
+        onlyKeyValidationOracle
+        operatorExists(_operatorId)
+    {
+        require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
+
+        if (_success) {
+            operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
+        }
+        operators[_operatorId].keyValidationInProgress = false;
     }
 
     /**
@@ -289,14 +327,6 @@ contract WLOperatorController is OperatorController {
                 validatorCounts[i] = validatorCounter[operatorTracker[i]];
             }
         }
-    }
-
-    function reportStoppedValidators(uint _operatorId, uint _newlyStoppedValidators)
-        external
-        onlyBeaconOracle
-        operatorExists(_operatorId)
-    {
-        _reportStoppedValidators(_operatorId, _newlyStoppedValidators);
     }
 
     /**

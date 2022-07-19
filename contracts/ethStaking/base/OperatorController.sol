@@ -6,13 +6,12 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../../core/base/RewardsPoolController.sol";
 import "../lib/BytesUtils.sol";
-import "../interfaces/IOperatorController.sol";
 
 /**
- * @title Whitelist Node Operator Controller
- * @notice Handles whitelisted validator keys
+ * @title Operator Controller
+ * @notice Base controller contract to be inherited from
  */
-abstract contract OperatorController is RewardsPoolController, IOperatorController {
+abstract contract OperatorController is RewardsPoolController {
     uint public constant PUBKEY_LENGTH = 48;
     uint public constant SIGNATURE_LENGTH = 96;
 
@@ -106,7 +105,7 @@ abstract contract OperatorController is RewardsPoolController, IOperatorControll
         uint _operatorId,
         uint _startIndex,
         uint _numPairs
-    ) external view returns (bytes memory keys, bytes memory signatures) {
+    ) external view operatorExists(_operatorId) returns (bytes memory keys, bytes memory signatures) {
         uint endIndex = _startIndex + _numPairs;
         if (endIndex > operators[_operatorId].totalKeyPairs) {
             endIndex = operators[_operatorId].totalKeyPairs;
@@ -115,10 +114,13 @@ abstract contract OperatorController is RewardsPoolController, IOperatorControll
         keys = BytesUtils.unsafeAllocateBytes((endIndex - _startIndex) * PUBKEY_LENGTH);
         signatures = BytesUtils.unsafeAllocateBytes((endIndex - _startIndex) * SIGNATURE_LENGTH);
 
+        uint copiedPairs;
+
         for (uint i = _startIndex; i < endIndex; i++) {
             (bytes memory key, bytes memory signature) = _loadKeyPair(_operatorId, i);
-            BytesUtils.copyBytes(key, keys, i * PUBKEY_LENGTH);
-            BytesUtils.copyBytes(signature, signatures, i * SIGNATURE_LENGTH);
+            BytesUtils.copyBytes(key, keys, copiedPairs * PUBKEY_LENGTH);
+            BytesUtils.copyBytes(signature, signatures, copiedPairs * SIGNATURE_LENGTH);
+            copiedPairs++;
         }
     }
 
@@ -126,15 +128,23 @@ abstract contract OperatorController is RewardsPoolController, IOperatorControll
         operators[_operatorId].keyValidationInProgress = true;
     }
 
-    function reportKeyPairValidation(uint _operatorId, bool _success)
+    /**
+     * @notice Reports newly stopped validators for an operator
+     * @param _operatorId id of operator to report for
+     * @param _newlyStoppedValidators number of newly stopped validators since the last report
+     */
+    function reportStoppedValidators(uint _operatorId, uint _newlyStoppedValidators)
         external
-        onlyKeyValidationOracle
+        onlyBeaconOracle
         operatorExists(_operatorId)
     {
-        if (_success) {
-            operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
-        }
-        operators[_operatorId].keyValidationInProgress = false;
+        operators[_operatorId].stoppedValidators += uint64(_newlyStoppedValidators);
+        require(
+            operators[_operatorId].stoppedValidators <= operators[_operatorId].usedKeyPairs,
+            "Reported more stopped validators than active"
+        );
+        activeValidators[operators[_operatorId].owner] -= _newlyStoppedValidators;
+        totalActiveValidators -= _newlyStoppedValidators;
     }
 
     /**
@@ -155,9 +165,10 @@ abstract contract OperatorController is RewardsPoolController, IOperatorControll
      */
     function setOperatorOwner(uint _operatorId, address _owner) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
-        require(msg.sender == operators[_operatorId].owner, "Owner address cannot be 0");
-        activeValidators[_owner] += activeValidators[msg.sender];
-        activeValidators[msg.sender] = 0;
+        require(_owner != address(0), "Owner address cannot be 0");
+        uint operatorActiveValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
+        activeValidators[_owner] += operatorActiveValidators;
+        activeValidators[msg.sender] -= operatorActiveValidators;
         operators[_operatorId].owner = _owner;
     }
 
@@ -176,12 +187,6 @@ abstract contract OperatorController is RewardsPoolController, IOperatorControll
 
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
         beaconOracle = _beaconOracle;
-    }
-
-    function _reportStoppedValidators(uint _operatorId, uint _newlyStoppedValidators) internal {
-        operators[_operatorId].stoppedValidators += uint64(_newlyStoppedValidators);
-        activeValidators[operators[_operatorId].owner] -= _newlyStoppedValidators;
-        totalActiveValidators -= _newlyStoppedValidators;
     }
 
     /**
