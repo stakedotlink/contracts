@@ -3,6 +3,9 @@ import { deploy, padBytes, concatBytes, getAccounts } from './utils/helpers'
 import { OperatorWhitelistMock, WLOperatorController } from '../typechain-types'
 import { Signer } from 'ethers'
 
+const pubkeyLength = 48 * 2
+const signatureLength = 96 * 2
+
 const keyPairs = {
   keys: concatBytes([padBytes('0xa1', 48), padBytes('0xa2', 48), padBytes('0xa3', 48)]),
   signatures: concatBytes([padBytes('0xb1', 96), padBytes('0xb2', 96), padBytes('0xb3', 96)]),
@@ -40,11 +43,119 @@ describe('WLOperatorController', () => {
     }
   })
 
+  it('addOperator should work correctly', async () => {
+    await controller.addOperator('Testing123')
+    let op = (await controller.getOperators([5]))[0]
+
+    assert.equal(op[0], 'Testing123', 'operator name incorrect')
+    assert.equal(op[1], accounts[0], 'operator owner incorrect')
+    assert.equal(op[2], true, 'operator active incorrect')
+    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
+    assert.equal(op[4].toNumber(), 0, 'operator validatorLimit incorrect')
+    assert.equal(op[5].toNumber(), 0, 'operator stoppedValidators incorrect')
+    assert.equal(op[6].toNumber(), 0, 'operator totalKeyPairs incorrect')
+    assert.equal(op[7].toNumber(), 0, 'operator usedKeyPairs incorrect')
+
+    await expect(controller.connect(signers[1]).addOperator('Testing123')).to.be.revertedWith(
+      'Operator is not whitelisted'
+    )
+  })
+
+  it('addKeyPairs should work correctly', async () => {
+    await controller.addOperator('Testing123')
+    await controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
+    let op = (await controller.getOperators([5]))[0]
+
+    assert.equal(op[4].toNumber(), 0, 'operator validatorLimit incorrect')
+    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
+    assert.equal(op[7].toNumber(), 0, 'operator usedKeyPairs incorrect')
+
+    await expect(
+      controller.connect(signers[1]).addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
+    ).to.be.revertedWith('Sender is not operator owner')
+  })
+
+  it('removeKeyPairs should work correctly', async () => {
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
+    await controller.initiateKeyPairValidation(2)
+    await controller.reportKeyPairValidation(2, true)
+    await controller.assignNextValidators([0, 2], [2, 2], 4)
+
+    await expect(controller.connect(signers[1]).removeKeyPairs(5, 2)).to.be.revertedWith(
+      'Operator does not exist'
+    )
+    await expect(controller.connect(signers[1]).removeKeyPairs(2, 2)).to.be.revertedWith(
+      'Sender is not operator owner'
+    )
+    await expect(controller.removeKeyPairs(2, 0)).to.be.revertedWith(
+      'Quantity must be greater than 0'
+    )
+    await expect(controller.removeKeyPairs(2, 7)).to.be.revertedWith(
+      'Cannot remove more keys than are added'
+    )
+    await expect(controller.removeKeyPairs(2, 5)).to.be.revertedWith('Cannot remove used key pairs')
+
+    await controller.removeKeyPairs(2, 2)
+    await controller.removeKeyPairs(2, 1)
+
+    let op = (await controller.getOperators([2]))[0]
+
+    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
+    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
+    assert.equal(op[7].toNumber(), 2, 'operator usedKeyPairs incorrect')
+  })
+
+  it('reportKeyPairValidation should work correctly', async () => {
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
+    await controller.initiateKeyPairValidation(2)
+
+    await expect(
+      controller.connect(signers[1]).reportKeyPairValidation(2, true)
+    ).to.be.revertedWith('Sender is not key validation oracle')
+
+    let op = (await controller.getOperators([2]))[0]
+
+    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
+    assert.equal(op[3], true, 'operator keyValidationInProgress incorrect')
+
+    await controller.reportKeyPairValidation(2, true)
+
+    op = (await controller.getOperators([2]))[0]
+
+    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
+    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
+
+    await controller.initiateKeyPairValidation(2)
+    await controller.reportKeyPairValidation(2, false)
+
+    op = (await controller.getOperators([2]))[0]
+
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
+    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
+    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
+
+    await expect(controller.reportKeyPairValidation(2, true)).to.be.revertedWith(
+      'No key validation in progress'
+    )
+  })
+
   it('assignNextValidators should work correctly', async () => {
+    let vals = await controller.callStatic.assignNextValidators([0, 2], [2, 2], 4)
+    assert.equal(
+      vals[0],
+      keyPairs.keys.slice(0, 2 * pubkeyLength + 2) + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'assigned keys incorrect'
+    )
+    assert.equal(
+      vals[1],
+      keyPairs.signatures.slice(0, 2 * signatureLength + 2) +
+        keyPairs.signatures.slice(2, 2 * signatureLength + 2),
+      'assigned signatures incorrect'
+    )
+
     await controller.assignNextValidators([0, 2], [2, 2], 4)
 
     let ops = await controller.getOperators([0, 1, 2, 3, 4])
-
     assert.equal(ops[0][7].toNumber(), 2, 'Operator0 usedKeyPairs incorrect')
     assert.equal(ops[1][7].toNumber(), 0, 'Operator1 usedKeyPairs incorrect')
     assert.equal(ops[2][7].toNumber(), 2, 'Operator2 usedKeyPairs incorrect')
@@ -57,10 +168,32 @@ describe('WLOperatorController', () => {
     )
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
 
+    assert.equal(
+      (await controller.rpcStaked(accounts[0])).toNumber(),
+      4,
+      'operator rpcStaked incorrect'
+    )
+    assert.equal((await controller.rpcTotalStaked()).toNumber(), 4, 'rpcTotalStaked incorrect')
+
+    vals = await controller.callStatic.assignNextValidators([4, 0, 2], [2, 1, 1], 4)
+    assert.equal(
+      vals[0],
+      keyPairs.keys.slice(0, 2 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2 * pubkeyLength + 2),
+      'assigned keys incorrect'
+    )
+    assert.equal(
+      vals[1],
+      keyPairs.signatures.slice(0, 2 * signatureLength + 2) +
+        keyPairs.signatures.slice(2 * signatureLength + 2) +
+        keyPairs.signatures.slice(2 * signatureLength + 2),
+      'assigned signatures incorrect'
+    )
+
     await controller.assignNextValidators([4, 0, 2], [2, 1, 1], 4)
 
     ops = await controller.getOperators([0, 1, 2, 3, 4])
-
     assert.equal(ops[0][7].toNumber(), 3, 'Operator0 usedKeyPairs incorrect')
     assert.equal(ops[1][7].toNumber(), 0, 'Operator1 usedKeyPairs incorrect')
     assert.equal(ops[2][7].toNumber(), 3, 'Operator2 usedKeyPairs incorrect')
@@ -72,6 +205,13 @@ describe('WLOperatorController', () => {
       'totalActiveValidators incorrect'
     )
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
+
+    assert.equal(
+      (await controller.rpcStaked(accounts[0])).toNumber(),
+      8,
+      'operator rpcStaked incorrect'
+    )
+    assert.equal((await controller.rpcTotalStaked()).toNumber(), 8, 'rpcTotalStaked incorrect')
 
     await expect(
       controller.connect(signers[1]).assignNextValidators([4], [1], 1)
@@ -230,101 +370,6 @@ describe('WLOperatorController', () => {
       (await controller.totalActiveValidators()).toNumber(),
       9,
       'totalActiveValidators incorrect'
-    )
-  })
-
-  it('addOperator should work correctly', async () => {
-    await controller.addOperator('Testing123')
-    let op = (await controller.getOperators([5]))[0]
-
-    assert.equal(op[0], 'Testing123', 'operator name incorrect')
-    assert.equal(op[1], accounts[0], 'operator owner incorrect')
-    assert.equal(op[2], true, 'operator active incorrect')
-    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-    assert.equal(op[4].toNumber(), 0, 'operator validatorLimit incorrect')
-    assert.equal(op[5].toNumber(), 0, 'operator stoppedValidators incorrect')
-    assert.equal(op[6].toNumber(), 0, 'operator totalKeyPairs incorrect')
-    assert.equal(op[7].toNumber(), 0, 'operator usedKeyPairs incorrect')
-
-    await expect(controller.connect(signers[1]).addOperator('Testing123')).to.be.revertedWith(
-      'Operator is not whitelisted'
-    )
-  })
-
-  it('addKeyPairs should work correctly', async () => {
-    await controller.addOperator('Testing123')
-    await controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
-    let op = (await controller.getOperators([5]))[0]
-
-    assert.equal(op[4].toNumber(), 0, 'operator validatorLimit incorrect')
-    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
-    assert.equal(op[7].toNumber(), 0, 'operator usedKeyPairs incorrect')
-
-    await expect(
-      controller.connect(signers[1]).addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
-    ).to.be.revertedWith('Sender is not operator owner')
-  })
-
-  it('removeKeyPairs should work correctly', async () => {
-    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
-    await controller.initiateKeyPairValidation(2)
-    await controller.reportKeyPairValidation(2, true)
-    await controller.assignNextValidators([0, 2], [2, 2], 4)
-
-    await expect(controller.connect(signers[1]).removeKeyPairs(5, 2)).to.be.revertedWith(
-      'Operator does not exist'
-    )
-    await expect(controller.connect(signers[1]).removeKeyPairs(2, 2)).to.be.revertedWith(
-      'Sender is not operator owner'
-    )
-    await expect(controller.removeKeyPairs(2, 0)).to.be.revertedWith(
-      'Quantity must be greater than 0'
-    )
-    await expect(controller.removeKeyPairs(2, 7)).to.be.revertedWith(
-      'Cannot remove more keys than are added'
-    )
-    await expect(controller.removeKeyPairs(2, 5)).to.be.revertedWith('Cannot remove used key pairs')
-
-    await controller.removeKeyPairs(2, 2)
-    await controller.removeKeyPairs(2, 1)
-
-    let op = (await controller.getOperators([2]))[0]
-
-    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
-    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
-    assert.equal(op[7].toNumber(), 2, 'operator usedKeyPairs incorrect')
-  })
-
-  it('reportKeyPairValidation should work correctly', async () => {
-    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
-    await controller.initiateKeyPairValidation(2)
-
-    await expect(
-      controller.connect(signers[1]).reportKeyPairValidation(2, true)
-    ).to.be.revertedWith('Sender is not key validation oracle')
-
-    let op = (await controller.getOperators([2]))[0]
-
-    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
-    assert.equal(op[3], true, 'operator keyValidationInProgress incorrect')
-
-    await controller.reportKeyPairValidation(2, true)
-
-    op = (await controller.getOperators([2]))[0]
-
-    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
-    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-
-    await controller.initiateKeyPairValidation(2)
-    await controller.reportKeyPairValidation(2, false)
-
-    op = (await controller.getOperators([2]))[0]
-
-    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
-    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-
-    await expect(controller.reportKeyPairValidation(2, true)).to.be.revertedWith(
-      'No key validation in progress'
     )
   })
 

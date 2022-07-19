@@ -8,8 +8,8 @@ import "./base/OperatorController.sol";
 import "./interfaces/IOperatorWhitelist.sol";
 
 /**
- * @title Whitelist Node Operator Controller
- * @notice Handles whitelisted validator keys
+ * @title Whitelist Operator Controller
+ * @notice Handles whitelisted validator keys and operator rewards distirbution
  */
 contract WLOperatorController is OperatorController {
     struct OperatorCache {
@@ -152,13 +152,11 @@ contract WLOperatorController is OperatorController {
                 "Inconsistent total validator count"
             );
 
-            for (uint j = totalValidatorCount; j < totalValidatorCount + operator.validatorCount; j++) {
-                (bytes memory key, bytes memory signature) = _loadKeyPair(
-                    operatorId,
-                    operator.usedKeyPairs - operator.validatorCount + j
-                );
-                BytesUtils.copyBytes(key, keys, j * PUBKEY_LENGTH);
-                BytesUtils.copyBytes(signature, signatures, j * SIGNATURE_LENGTH);
+            for (uint j = operator.usedKeyPairs - operator.validatorCount; j < operator.usedKeyPairs; j++) {
+                (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
+                BytesUtils.copyBytes(key, keys, totalValidatorCount * PUBKEY_LENGTH);
+                BytesUtils.copyBytes(signature, signatures, totalValidatorCount * SIGNATURE_LENGTH);
+                totalValidatorCount++;
             }
 
             require(operator.usedKeyPairs <= operator.validatorLimit, "Assigned more keys than validator limit");
@@ -213,7 +211,6 @@ contract WLOperatorController is OperatorController {
             }
 
             lastOperator = operator;
-            totalValidatorCount += operator.validatorCount;
         }
 
         require(totalValidatorCount == _totalValidatorCount, "Inconsistent total validator count");
