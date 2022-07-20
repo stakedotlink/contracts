@@ -23,6 +23,7 @@ contract WLOperatorController is OperatorController {
 
     uint public batchSize;
     uint public assignmentIndex;
+    uint public queueLength;
 
     constructor(
         address _ethStakingStrategy,
@@ -75,6 +76,7 @@ contract WLOperatorController is OperatorController {
 
         operators[_operatorId].totalKeyPairs -= uint64(_quantity);
         if (operators[_operatorId].validatorLimit > operators[_operatorId].totalKeyPairs) {
+            queueLength -= operators[_operatorId].validatorLimit - operators[_operatorId].totalKeyPairs;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
     }
@@ -92,6 +94,7 @@ contract WLOperatorController is OperatorController {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
         if (_success) {
+            queueLength += operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
         operators[_operatorId].keyValidationInProgress = false;
@@ -250,6 +253,7 @@ contract WLOperatorController is OperatorController {
         }
 
         totalActiveValidators += totalValidatorCount;
+        queueLength -= totalValidatorCount;
     }
 
     /**
@@ -324,6 +328,41 @@ contract WLOperatorController is OperatorController {
                 validatorCounts[i] = validatorCounter[operatorTracker[i]];
             }
         }
+    }
+
+    /**
+     * @notice Reports lifetime stopped validators for a list of operators
+     * @param _operatorIds list of operator ids to report for
+     * @param _stoppedValidators list of lifetime stopped validators for each operator
+     */
+    function reportStoppedValidators(uint[] calldata _operatorIds, uint[] calldata _stoppedValidators)
+        external
+        onlyBeaconOracle
+    {
+        require(_operatorIds.length == _stoppedValidators.length, "Inconsistent list lengths");
+
+        uint totalNewlyStoppedValidators;
+
+        for (uint i = 0; i < _operatorIds.length; i++) {
+            uint operatorId = _operatorIds[i];
+            require(operatorId < operators.length, "Operator does not exist");
+            require(
+                _stoppedValidators[i] > operators[operatorId].stoppedValidators,
+                "Reported negative or zero stopped validators"
+            );
+            require(
+                (_stoppedValidators[i]) <= operators[operatorId].usedKeyPairs,
+                "Reported more stopped validators than active"
+            );
+
+            uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
+
+            operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
+            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+            totalNewlyStoppedValidators += newlyStoppedValidators;
+        }
+
+        totalActiveValidators -= totalNewlyStoppedValidators;
     }
 
     /**

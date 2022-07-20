@@ -210,6 +210,11 @@ describe('NWLOperatorController', () => {
       5,
       'totalActiveValidators incorrect'
     )
+    assert.equal(
+      fromEther(await controller.totalActiveStake()),
+      5 * 16,
+      'totalActiveStake incorrect'
+    )
     assert.equal((await controller.queueIndex()).toNumber(), 1, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 4, 'queueLength incorrect')
 
@@ -227,7 +232,11 @@ describe('NWLOperatorController', () => {
       'queue entry incorrect'
     )
 
-    vals = await controller.callStatic.assignNextValidators(5)
+    await expect(controller.assignNextValidators(5)).to.be.revertedWith(
+      'Cannot assign more than queue length'
+    )
+
+    vals = await controller.callStatic.assignNextValidators(4)
     assert.equal(
       vals[0],
       '0x' + keyPairs.keys.slice(2 * pubkeyLength + 2) + keyPairs.keys.slice(2),
@@ -239,7 +248,7 @@ describe('NWLOperatorController', () => {
       'assigned signatures incorrect'
     )
 
-    await controller.assignNextValidators(30)
+    await controller.assignNextValidators(4)
 
     ops = await controller.getOperators([0, 1, 2, 3, 4])
     assert.equal(ops[0][7].toNumber(), 3, 'Operator0 usedKeyPairs incorrect')
@@ -251,6 +260,11 @@ describe('NWLOperatorController', () => {
       (await controller.totalActiveValidators()).toNumber(),
       9,
       'totalActiveValidators incorrect'
+    )
+    assert.equal(
+      fromEther(await controller.totalActiveStake()),
+      9 * 16,
+      'totalActiveStake incorrect'
     )
     assert.equal((await controller.queueIndex()).toNumber(), 3, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 0, 'queueLength incorrect')
@@ -265,5 +279,54 @@ describe('NWLOperatorController', () => {
     await expect(controller.connect(signers[1]).assignNextValidators(1)).to.be.revertedWith(
       'Sender is not ETH staking strategy'
     )
+  })
+
+  it('reportStoppedValidators should work correctly', async () => {
+    await controller.assignNextValidators(7)
+    await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(2), toEther(1)])
+
+    let op = await controller.getOperators([0, 2, 4])
+    assert.equal(op[0][5].toNumber(), 2, 'operator stoppedValidators incorrect')
+    assert.equal(op[1][5].toNumber(), 0, 'operator stoppedValidators incorrect')
+    assert.equal(op[2][5].toNumber(), 1, 'operator stoppedValidators incorrect')
+
+    assert.equal(fromEther(await controller.ethLost(0)), 2, 'operator ethLost incorrect')
+    assert.equal(fromEther(await controller.ethLost(2)), 0, 'operator ethLost incorrect')
+    assert.equal(fromEther(await controller.ethLost(4)), 1, 'operator ethLost incorrect')
+
+    assert.equal(fromEther(await controller.totalEthLost()), 3, 'totalEthLost incorrect')
+    assert.equal(fromEther(await controller.totalActiveStake()), 61, 'totalActiveStake incorrect')
+    assert.equal(
+      (await controller.totalActiveValidators()).toNumber(),
+      4,
+      'totalActiveValidators incorrect'
+    )
+    assert.equal(
+      (await controller.rpcStaked(accounts[0])).toNumber(),
+      4,
+      'operator rpcStaked incorrect'
+    )
+    assert.equal((await controller.rpcTotalStaked()).toNumber(), 4, 'rpcTotalStaked incorrect')
+
+    await expect(
+      controller.reportStoppedValidators([0, 5], [3, 1], [toEther(2), toEther(1)])
+    ).to.be.revertedWith('Operator does not exist')
+    await expect(
+      controller
+        .connect(signers[1])
+        .reportStoppedValidators([0, 4], [3, 2], [toEther(2), toEther(1)])
+    ).to.be.revertedWith('Sender is not beacon oracle')
+    await expect(
+      controller.reportStoppedValidators([0, 4], [1, 3], [toEther(2), toEther(1)])
+    ).to.be.revertedWith('Reported negative or zero stopped validators')
+    await expect(
+      controller.reportStoppedValidators([0, 4], [3, 0], [toEther(2), toEther(1)])
+    ).to.be.revertedWith('Reported negative or zero stopped validators')
+    await expect(controller.reportStoppedValidators([0], [3], [toEther(1)])).to.be.revertedWith(
+      'Reported negative lost ETH'
+    )
+    await expect(
+      controller.reportStoppedValidators([0, 4], [4, 3], [toEther(2), toEther(1)])
+    ).to.be.revertedWith('Reported more stopped validators than active')
   })
 })

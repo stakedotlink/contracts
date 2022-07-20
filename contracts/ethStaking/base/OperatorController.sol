@@ -129,25 +129,6 @@ abstract contract OperatorController is RewardsPoolController {
     }
 
     /**
-     * @notice Reports newly stopped validators for an operator
-     * @param _operatorId id of operator to report for
-     * @param _newlyStoppedValidators number of newly stopped validators since the last report
-     */
-    function reportStoppedValidators(uint _operatorId, uint _newlyStoppedValidators)
-        external
-        onlyBeaconOracle
-        operatorExists(_operatorId)
-    {
-        operators[_operatorId].stoppedValidators += uint64(_newlyStoppedValidators);
-        require(
-            operators[_operatorId].stoppedValidators <= operators[_operatorId].usedKeyPairs,
-            "Reported more stopped validators than active"
-        );
-        activeValidators[operators[_operatorId].owner] -= _newlyStoppedValidators;
-        totalActiveValidators -= _newlyStoppedValidators;
-    }
-
-    /**
      * @notice Sets the name of an existing operator
      * @param _name new name of operator
      */

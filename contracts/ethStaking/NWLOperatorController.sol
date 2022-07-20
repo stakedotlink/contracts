@@ -23,6 +23,9 @@ contract NWLOperatorController is OperatorController {
     uint public queueIndex;
     uint public queueLength;
 
+    uint public totalEthLost;
+    mapping(uint => uint) public ethLost;
+
     constructor(address _ethStakingStrategy) OperatorController(_ethStakingStrategy) {}
 
     /**
@@ -41,6 +44,14 @@ contract NWLOperatorController is OperatorController {
         for (uint i = _startIndex; i < endIndex; i++) {
             entries[i] = queue[i];
         }
+    }
+
+    /**
+     * @notice Returns the total active stake across all validators
+     * @return totalActiveStake total active stake
+     */
+    function totalActiveStake() external view returns (uint) {
+        return totalActiveValidators * DEPOSIT_AMOUNT - totalEthLost;
     }
 
     /**
@@ -143,16 +154,18 @@ contract NWLOperatorController is OperatorController {
 
     /**
      * @notice Assigns the next set of validators in the queue
-     * @param _validatorCount total number of validators to assign
+     * @param _totalValidatorCount total number of validators to assign
      * @return keys concatenated list of pubkeys
      * @return signatures concatenated list of signatures
      */
-    function assignNextValidators(uint _validatorCount)
+    function assignNextValidators(uint _totalValidatorCount)
         external
         onlyEthStakingStrategy
         returns (bytes memory keys, bytes memory signatures)
     {
-        uint toAssign = _validatorCount > queueLength ? queueLength : _validatorCount;
+        require(_totalValidatorCount > 0, "Validator count must be greater than 0");
+        require(_totalValidatorCount <= queueLength, "Cannot assign more than queue length");
+        uint toAssign = _totalValidatorCount;
         uint totalValidatorCount;
         uint index = queueIndex;
 
@@ -204,5 +217,52 @@ contract NWLOperatorController is OperatorController {
         totalActiveValidators += totalValidatorCount;
         queueLength -= totalValidatorCount;
         queueIndex = index;
+    }
+
+    /**
+     * @notice Reports lifetime stopped validators and ETH lost for a list of operators
+     * @param _operatorIds list of operator ids to report for
+     * @param _stoppedValidators list of lifetime stopped validators for each operator
+     * @param _ethLost list of lifetime lost ETH sum for each operator
+     */
+    function reportStoppedValidators(
+        uint[] calldata _operatorIds,
+        uint[] calldata _stoppedValidators,
+        uint[] calldata _ethLost
+    ) external onlyBeaconOracle {
+        require(
+            _operatorIds.length == _stoppedValidators.length && _operatorIds.length == _ethLost.length,
+            "Inconsistent list lengths"
+        );
+
+        uint totalNewlyStoppedValidators;
+        uint totalNewlyLostETH;
+
+        for (uint i = 0; i < _operatorIds.length; i++) {
+            uint operatorId = _operatorIds[i];
+            require(operatorId < operators.length, "Operator does not exist");
+            require(
+                _stoppedValidators[i] > operators[operatorId].stoppedValidators,
+                "Reported negative or zero stopped validators"
+            );
+            require(_ethLost[i] >= ethLost[operatorId], "Reported negative lost ETH");
+            require(
+                (_stoppedValidators[i]) <= operators[operatorId].usedKeyPairs,
+                "Reported more stopped validators than active"
+            );
+
+            uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
+            uint newlyLostETH = _ethLost[i] - ethLost[operatorId];
+
+            operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
+            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+            ethLost[operatorId] += newlyLostETH;
+
+            totalNewlyStoppedValidators += newlyStoppedValidators;
+            totalNewlyLostETH += newlyLostETH;
+        }
+
+        totalActiveValidators -= totalNewlyStoppedValidators;
+        totalEthLost += totalNewlyLostETH;
     }
 }

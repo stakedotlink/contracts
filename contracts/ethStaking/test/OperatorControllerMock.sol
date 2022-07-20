@@ -33,7 +33,7 @@ contract OperatorControllerMock is OperatorController {
         uint _quantity,
         bytes calldata _pubkeys,
         bytes calldata _signatures
-    ) external operatorExists(_operatorId) {
+    ) external {
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
     }
 
@@ -59,11 +59,7 @@ contract OperatorControllerMock is OperatorController {
         }
     }
 
-    function reportKeyPairValidation(uint _operatorId, bool _success)
-        external
-        onlyKeyValidationOracle
-        operatorExists(_operatorId)
-    {
+    function reportKeyPairValidation(uint _operatorId, bool _success) external {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
         if (_success) {

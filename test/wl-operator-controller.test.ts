@@ -75,6 +75,40 @@ describe('WLOperatorController', () => {
     ).to.be.revertedWith('Sender is not operator owner')
   })
 
+  it('reportKeyPairValidation should work correctly', async () => {
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
+    await controller.initiateKeyPairValidation(2)
+
+    await expect(
+      controller.connect(signers[1]).reportKeyPairValidation(2, true)
+    ).to.be.revertedWith('Sender is not key validation oracle')
+
+    let op = (await controller.getOperators([2]))[0]
+    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
+    assert.equal(op[3], true, 'operator keyValidationInProgress incorrect')
+
+    await controller.reportKeyPairValidation(2, true)
+
+    op = (await controller.getOperators([2]))[0]
+    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
+    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
+
+    assert.equal((await controller.queueLength()).toNumber(), 12, 'queueLength incorrect')
+
+    await controller.initiateKeyPairValidation(2)
+    await controller.reportKeyPairValidation(2, false)
+
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
+
+    op = (await controller.getOperators([2]))[0]
+    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
+    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
+
+    await expect(controller.reportKeyPairValidation(2, true)).to.be.revertedWith(
+      'No key validation in progress'
+    )
+  })
+
   it('removeKeyPairs should work correctly', async () => {
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
     await controller.initiateKeyPairValidation(2)
@@ -103,40 +137,8 @@ describe('WLOperatorController', () => {
     assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
     assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
     assert.equal(op[7].toNumber(), 2, 'operator usedKeyPairs incorrect')
-  })
 
-  it('reportKeyPairValidation should work correctly', async () => {
-    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
-    await controller.initiateKeyPairValidation(2)
-
-    await expect(
-      controller.connect(signers[1]).reportKeyPairValidation(2, true)
-    ).to.be.revertedWith('Sender is not key validation oracle')
-
-    let op = (await controller.getOperators([2]))[0]
-
-    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
-    assert.equal(op[3], true, 'operator keyValidationInProgress incorrect')
-
-    await controller.reportKeyPairValidation(2, true)
-
-    op = (await controller.getOperators([2]))[0]
-
-    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
-    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-
-    await controller.initiateKeyPairValidation(2)
-    await controller.reportKeyPairValidation(2, false)
-
-    op = (await controller.getOperators([2]))[0]
-
-    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
-    assert.equal(op[4].toNumber(), 6, 'operator validatorLimit incorrect')
-    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-
-    await expect(controller.reportKeyPairValidation(2, true)).to.be.revertedWith(
-      'No key validation in progress'
-    )
+    assert.equal((await controller.queueLength()).toNumber(), 5, 'queueLength incorrect')
   })
 
   it('assignNextValidators should work correctly', async () => {
@@ -167,6 +169,7 @@ describe('WLOperatorController', () => {
       'totalActiveValidators incorrect'
     )
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
+    assert.equal((await controller.queueLength()).toNumber(), 5, 'queueLength incorrect')
 
     assert.equal(
       (await controller.rpcStaked(accounts[0])).toNumber(),
@@ -205,6 +208,7 @@ describe('WLOperatorController', () => {
       'totalActiveValidators incorrect'
     )
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
+    assert.equal((await controller.queueLength()).toNumber(), 1, 'queueLength incorrect')
 
     assert.equal(
       (await controller.rpcStaked(accounts[0])).toNumber(),
@@ -370,6 +374,44 @@ describe('WLOperatorController', () => {
       (await controller.totalActiveValidators()).toNumber(),
       9,
       'totalActiveValidators incorrect'
+    )
+  })
+
+  it('reportStoppedValidators should work correctly', async () => {
+    await controller.assignNextValidators([0, 2, 4], [3, 2, 2], 7)
+    await controller.reportStoppedValidators([0, 4], [1, 2])
+
+    let op = await controller.getOperators([0, 2, 4])
+    assert.equal(op[0][5].toNumber(), 1, 'operator stoppedValidators incorrect')
+    assert.equal(op[1][5].toNumber(), 0, 'operator stoppedValidators incorrect')
+    assert.equal(op[2][5].toNumber(), 2, 'operator stoppedValidators incorrect')
+
+    assert.equal(
+      (await controller.totalActiveValidators()).toNumber(),
+      4,
+      'totalActiveValidators incorrect'
+    )
+    assert.equal(
+      (await controller.rpcStaked(accounts[0])).toNumber(),
+      4,
+      'operator rpcStaked incorrect'
+    )
+    assert.equal((await controller.rpcTotalStaked()).toNumber(), 4, 'rpcTotalStaked incorrect')
+
+    await expect(controller.reportStoppedValidators([0, 5], [3, 1])).to.be.revertedWith(
+      'Operator does not exist'
+    )
+    await expect(
+      controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2])
+    ).to.be.revertedWith('Sender is not beacon oracle')
+    await expect(controller.reportStoppedValidators([0, 4], [1, 3])).to.be.revertedWith(
+      'Reported negative or zero stopped validators'
+    )
+    await expect(controller.reportStoppedValidators([0, 4], [3, 0])).to.be.revertedWith(
+      'Reported negative or zero stopped validators'
+    )
+    await expect(controller.reportStoppedValidators([0, 4], [3, 3])).to.be.revertedWith(
+      'Reported more stopped validators than active'
     )
   })
 
