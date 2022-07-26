@@ -37,7 +37,11 @@ describe('PoolOwners', () => {
     ownersToken = (await deploy('ERC677', ['LinkPool', 'LPL', 1000000000])) as ERC677
     await setupToken(ownersToken, accounts)
 
-    poolOwners = (await deploy('PoolOwners', [ownersToken.address])) as PoolOwners
+    poolOwners = (await deploy('PoolOwners', [
+      ownersToken.address,
+      'stLPL',
+      'Staked LinkPool',
+    ])) as PoolOwners
 
     rewardsPool = (await deploy('RewardsPool', [
       poolOwners.address,
@@ -54,19 +58,19 @@ describe('PoolOwners', () => {
     await stake(2, 500)
 
     assert.equal(
-      fromEther(await poolOwners.staked(accounts[1])),
+      fromEther(await ownersToken.balanceOf(poolOwners.address)),
+      1500,
+      'poolOwners balance incorrect'
+    )
+    assert.equal(
+      fromEther(await poolOwners.balanceOf(accounts[1])),
       1000,
       'account-1 stake balance incorrect'
     )
     assert.equal(
-      fromEther(await poolOwners.staked(accounts[2])),
+      fromEther(await poolOwners.balanceOf(accounts[2])),
       500,
       'account-2 stake balance incorrect'
-    )
-    assert.equal(
-      fromEther(await ownersToken.balanceOf(poolOwners.address)),
-      1500,
-      'poolOwners balance incorrect'
     )
   })
 
@@ -79,7 +83,7 @@ describe('PoolOwners', () => {
       'poolOwners balance incorrect'
     )
     assert.equal(
-      fromEther(await poolOwners.staked(accounts[1])),
+      fromEther(await poolOwners.balanceOf(accounts[1])),
       1000,
       'account-1 stake balance incorrect'
     )
@@ -98,12 +102,12 @@ describe('PoolOwners', () => {
     await withdraw(2, 200)
 
     assert.equal(
-      fromEther(await poolOwners.staked(accounts[1])),
+      fromEther(await poolOwners.balanceOf(accounts[1])),
       900,
       'account-1 stake balance incorrect'
     )
     assert.equal(
-      fromEther(await poolOwners.staked(accounts[2])),
+      fromEther(await poolOwners.balanceOf(accounts[2])),
       300,
       'account-2 stake balance incorrect'
     )
@@ -159,6 +163,45 @@ describe('PoolOwners', () => {
       fromEther(await rewardsPool.userRewardPerTokenPaid(accounts[2])),
       1,
       'userRewardPerTokenPaid incorrect'
+    )
+  })
+
+  it.only('should update rewardsPool rewards on derivative transfer', async () => {
+    await stake(1, 1000)
+    await stake(2, 500)
+    await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      1000,
+      'reward balance incorrect'
+    )
+    await poolOwners.connect(signers[1]).transfer(accounts[2], toEther(1000))
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      1000,
+      'reward balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      500,
+      'reward balance incorrect'
+    )
+
+    await poolOwners.connect(signers[1]).withdrawRewards([token.address])
+    await poolOwners.connect(signers[2]).transfer(accounts[1], toEther(500))
+    await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      500,
+      'reward balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      1500,
+      'reward balance incorrect'
     )
   })
 
