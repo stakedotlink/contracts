@@ -36,7 +36,7 @@ contract PoolOwners is RewardsPoolController {
         address _sender,
         uint _value,
         bytes calldata
-    ) external {
+    ) external override {
         require(
             msg.sender == address(token) || isTokenSupported(msg.sender),
             "Sender must be staking token or supported rewards token"

@@ -215,6 +215,7 @@ describe('NWLOperatorController', () => {
       5 * 16,
       'totalActiveStake incorrect'
     )
+    assert.equal(fromEther(await controller.totalStake()), 5 * 16, 'totalStake incorrect')
     assert.equal((await controller.queueIndex()).toNumber(), 1, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 4, 'queueLength incorrect')
 
@@ -266,6 +267,7 @@ describe('NWLOperatorController', () => {
       9 * 16,
       'totalActiveStake incorrect'
     )
+    assert.equal(fromEther(await controller.totalStake()), 9 * 16, 'totalStake incorrect')
     assert.equal((await controller.queueIndex()).toNumber(), 3, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 0, 'queueLength incorrect')
 
@@ -294,8 +296,8 @@ describe('NWLOperatorController', () => {
     assert.equal(fromEther(await controller.ethLost(2)), 0, 'operator ethLost incorrect')
     assert.equal(fromEther(await controller.ethLost(4)), 1, 'operator ethLost incorrect')
 
-    assert.equal(fromEther(await controller.totalEthLost()), 3, 'totalEthLost incorrect')
-    assert.equal(fromEther(await controller.totalActiveStake()), 61, 'totalActiveStake incorrect')
+    assert.equal(fromEther(await controller.totalStake()), 109, 'totalStake incorrect')
+    assert.equal(fromEther(await controller.totalActiveStake()), 64, 'totalActiveStake incorrect')
     assert.equal(
       (await controller.totalActiveValidators()).toNumber(),
       4,

@@ -23,7 +23,7 @@ contract NWLOperatorController is OperatorController {
     uint public queueIndex;
     uint public queueLength;
 
-    uint public totalEthLost;
+    uint public totalStake;
     mapping(uint => uint) public ethLost;
 
     constructor(address _ethStakingStrategy) OperatorController(_ethStakingStrategy) {}
@@ -51,7 +51,7 @@ contract NWLOperatorController is OperatorController {
      * @return totalActiveStake total active stake
      */
     function totalActiveStake() external view returns (uint) {
-        return totalActiveValidators * DEPOSIT_AMOUNT - totalEthLost;
+        return totalActiveValidators * DEPOSIT_AMOUNT;
     }
 
     /**
@@ -215,6 +215,7 @@ contract NWLOperatorController is OperatorController {
         require(success, "ETH transfer failed");
 
         totalActiveValidators += totalValidatorCount;
+        totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= totalValidatorCount;
         queueIndex = index;
     }
@@ -263,6 +264,6 @@ contract NWLOperatorController is OperatorController {
         }
 
         totalActiveValidators -= totalNewlyStoppedValidators;
-        totalEthLost += totalNewlyLostETH;
+        totalStake -= totalNewlyLostETH;
     }
 }

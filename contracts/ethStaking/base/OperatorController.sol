@@ -255,7 +255,6 @@ abstract contract OperatorController is RewardsPoolController {
     {
         uint256 storageAddress = _keyPairStorageAddress(_operatorId, _keyIndex);
 
-        // key
         bytes memory tmpKey = new bytes(64);
         assembly {
             mstore(add(tmpKey, 0x20), sload(storageAddress))
@@ -264,7 +263,6 @@ abstract contract OperatorController is RewardsPoolController {
         storageAddress += 2;
         key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
 
-        // signature
         signature = new bytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
             assembly {

@@ -91,30 +91,6 @@ describe('OperatorController', () => {
     ).to.be.revertedWith('Key validation in progress')
   })
 
-  it('reportStoppedValidators should work correctly', async () => {
-    await controller.assignNextValidators([0, 2, 4], [3, 2, 2], 7)
-    await controller.reportStoppedValidators(0, 2)
-
-    let op = (await controller.getOperators([0]))[0]
-    assert.equal(op[5].toNumber(), 2, 'operator stoppedValidators incorrect')
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      5,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 5, 'rpcTotalStaked incorrect')
-
-    await expect(controller.reportStoppedValidators(5, 1)).to.be.revertedWith(
-      'Operator does not exist'
-    )
-    await expect(controller.connect(signers[1]).reportStoppedValidators(0, 1)).to.be.revertedWith(
-      'Sender is not beacon oracle'
-    )
-    await expect(controller.reportStoppedValidators(0, 2)).to.be.revertedWith(
-      'Reported more stopped validators than active'
-    )
-  })
-
   it('setOperatorName should work correctly', async () => {
     await controller.setOperatorName(0, '1234')
 
