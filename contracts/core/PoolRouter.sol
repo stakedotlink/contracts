@@ -16,6 +16,13 @@ import "./interfaces/IStakingPool.sol";
 contract PoolRouter is Ownable {
     using SafeERC20 for IERC677;
 
+    enum PoolStatus {
+        OPEN,
+        DRAINING,
+        CLOSED
+    }
+    address public emergencyWallet;
+
     IERC677 public allowanceToken;
     mapping(address => uint) public allowanceStakes;
 
@@ -23,6 +30,7 @@ contract PoolRouter is Ownable {
         IERC677 token;
         IStakingPool stakingPool;
         bool allowanceRequired;
+        PoolStatus status;
         mapping(address => uint) stakedAmounts;
     }
     mapping(bytes32 => Pool) public pools;
@@ -43,8 +51,9 @@ contract PoolRouter is Ownable {
         _;
     }
 
-    constructor(address _allowanceToken) {
+    constructor(address _allowanceToken, address _emergencyWallet) {
         allowanceToken = IERC677(_allowanceToken);
+        emergencyWallet = _emergencyWallet;
     }
 
     /**
@@ -83,6 +92,15 @@ contract PoolRouter is Ownable {
         }
 
         return stakingPools;
+    }
+
+    /**
+     * @notice Returns the current status of a pool
+     * @param _token pool token
+     * @param _index pool index
+     */
+    function poolStatus(address _token, uint16 _index) external view returns (PoolStatus) {
+        return pools[_poolKey(_token, _index)].status;
     }
 
     /**
@@ -159,6 +177,7 @@ contract PoolRouter is Ownable {
         uint _amount
     ) external poolExists(_token, _index) {
         Pool storage pool = pools[_poolKey(_token, _index)];
+        require(pool.status != PoolStatus.CLOSED, "Pool is closed");
         require(pool.stakedAmounts[msg.sender] >= _amount, "Amount exceeds staked balance");
 
         pool.stakedAmounts[msg.sender] -= _amount;
@@ -201,6 +220,45 @@ contract PoolRouter is Ownable {
     }
 
     /**
+     * @dev calculates the amount of allowance tokens in use for a given staking pool
+     * @param _token the token address used by the staking pool
+     * @param _index  pool index
+     * @param _account the account to check how much allowance in use
+     * @return the amount of allowance tokens in use
+     **/
+    function allowanceInUse(
+        address _token,
+        uint16 _index,
+        address _account
+    ) public view poolExists(_token, _index) returns (uint256) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return 0;
+        }
+        return
+            (1e18 * pool.stakedAmounts[_account]) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+    }
+
+    /**
+     * @dev calculates the amount of allowance tokens required for a given staking amount
+     * @param _token the token address used by the staking pool
+     * @param _index  pool index
+     * @param _amount the amount to query how much allowance is required
+     * @return the amount of allowance tokens in use
+     **/
+    function allowanceRequired(
+        address _token,
+        uint16 _index,
+        uint256 _amount
+    ) public view poolExists(_token, _index) returns (uint256) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return 0;
+        }
+        return (1e18 * _amount) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+    }
+
+    /**
      * @dev adds a new token and staking config
      * @param _token staking token to add
      * @param _stakingPool token staking pool
@@ -209,7 +267,8 @@ contract PoolRouter is Ownable {
     function addPool(
         address _token,
         address _stakingPool,
-        bool _allowanceRequired
+        bool _allowanceRequired,
+        PoolStatus _status
     ) external onlyOwner {
         poolCount++;
         uint16 tokenPoolCount = poolCountByToken[_token];
@@ -223,6 +282,7 @@ contract PoolRouter is Ownable {
         pool.token = IERC677(_token);
         pool.stakingPool = IStakingPool(_stakingPool);
         pool.allowanceRequired = _allowanceRequired;
+        pool.status = _status;
 
         IERC677(_token).safeApprove(_stakingPool, type(uint).max);
         emit AddPool(_token, _stakingPool);
@@ -269,42 +329,28 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev calculates the amount of allowance tokens in use for a given staking pool
-     * @param _token the token address used by the staking pool
-     * @param _index  pool index
-     * @param _account the account to check how much allowance in use
-     * @return the amount of allowance tokens in use
-     **/
-    function allowanceInUse(
+     * @notice emergency wallet function to set the pool status
+     * @param _token pool token
+     * @param _index pool index
+     * @param _status pool status
+     */
+    function setPoolStatus(
         address _token,
         uint16 _index,
-        address _account
-    ) public view poolExists(_token, _index) returns (uint256) {
+        PoolStatus _status
+    ) external {
+        require((_status == PoolStatus.CLOSED ? emergencyWallet : super.owner()) == msg.sender, "Unauthorised");
         Pool storage pool = pools[_poolKey(_token, _index)];
-        if (!pool.allowanceRequired) {
-            return 0;
-        }
-        return
-            (1e18 * pool.stakedAmounts[_account]) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+        pool.status = _status;
     }
 
     /**
-     * @dev calculates the amount of allowance tokens required for a given staking amount
-     * @param _token the token address used by the staking pool
-     * @param _index  pool index
-     * @param _amount the amount to query how much allowance is required
-     * @return the amount of allowance tokens in use
-     **/
-    function allowanceRequired(
-        address _token,
-        uint16 _index,
-        uint256 _amount
-    ) public view poolExists(_token, _index) returns (uint256) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
-        if (!pool.allowanceRequired) {
-            return 0;
-        }
-        return (1e18 * _amount) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+     * @notice transfer ownership of the emergency wallet
+     * @param _to the account to transfer to
+     */
+    function transferEmergencyWallet(address _to) external {
+        require(emergencyWallet == msg.sender, "Unauthorised");
+        emergencyWallet = _to;
     }
 
     /**
@@ -321,6 +367,7 @@ contract PoolRouter is Ownable {
         uint _amount
     ) private {
         Pool storage pool = pools[_poolKey(_token, _index)];
+        require(pool.status == PoolStatus.OPEN, "Pool is not open");
 
         uint requiredAllowance = allowanceRequired(_token, _index, _amount);
         uint usedAllowance = allowanceInUse(_token, _index, _account);
