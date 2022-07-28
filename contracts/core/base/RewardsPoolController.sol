@@ -111,7 +111,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         address _from,
         address _to,
         uint256 _amount
-    ) internal override updateRewards(_from) updateRewards(_to) {
+    ) internal virtual override updateRewards(_from) updateRewards(_to) {
         address rewardRedirectFrom = rewardRedirects[_from];
         address rewardRedirectTo = rewardRedirects[_to];
 
