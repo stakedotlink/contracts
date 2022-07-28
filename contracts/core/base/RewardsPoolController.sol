@@ -265,8 +265,9 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         require(rewardRedirects[_from] == address(0) ? (_from != _to) : true, "Cannot redirect to self");
 
         uint balanceFrom = balanceOf(_from);
-        address previousRedirect = rewardRedirects[_from];
+        require(balanceFrom > 0, "A balance is required to redirect rewards");
 
+        address previousRedirect = rewardRedirects[_from];
         if (previousRedirect != address(0)) {
             _updateRewards(previousRedirect);
             redirectedStakes[previousRedirect] -= balanceFrom;

@@ -432,6 +432,7 @@ describe('PoolOwners', () => {
   })
 
   it('should not be able to redirect rewards to the same address twice', async () => {
+    await stake(1, 500)
     await poolOwners.connect(signers[1]).redirectRewards(accounts[2])
     await expect(poolOwners.connect(signers[1]).redirectRewards(accounts[2])).to.be.revertedWith(
       'Cannot redirect rewards to the same address'
@@ -439,6 +440,7 @@ describe('PoolOwners', () => {
   })
 
   it('should be able to approve address to redirect rewards', async () => {
+    await stake(1, 500)
     await poolOwners.connect(signers[1]).approveRedirect(accounts[2])
     await poolOwners.connect(signers[2]).redirectRewardsFrom(accounts[1], accounts[2])
 
