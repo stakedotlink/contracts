@@ -192,6 +192,8 @@ contract NWLOperatorController is OperatorController {
                     toAssign = 0;
                 }
 
+                _updateRewards(operators[operatorId].owner);
+
                 operators[operatorId].usedKeyPairs += uint64(assignToOperator);
                 activeValidators[operators[operatorId].owner] += assignToOperator;
 
@@ -251,6 +253,8 @@ contract NWLOperatorController is OperatorController {
                 (_stoppedValidators[i]) <= operators[operatorId].usedKeyPairs,
                 "Reported more stopped validators than active"
             );
+
+            _updateRewards(operators[operatorId].owner);
 
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
             uint newlyLostETH = _ethLost[i] - ethLost[operatorId];

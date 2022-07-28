@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from './utils/helpers'
-import { NWLOperatorController } from '../typechain-types'
+import { ERC677, NWLOperatorController, RewardsPool } from '../typechain-types'
 import { Signer } from 'ethers'
 
 const pubkeyLength = 48 * 2
@@ -330,5 +330,72 @@ describe('NWLOperatorController', () => {
     await expect(
       controller.reportStoppedValidators([0, 4], [4, 3], [toEther(2), toEther(1)])
     ).to.be.revertedWith('Reported more stopped validators than active')
+  })
+
+  it('RewardsPoolController functions should work', async () => {
+    const token = (await deploy('ERC677', ['test', 'test', 10000000000])) as ERC677
+    const rewardsPool = (await deploy('RewardsPool', [
+      controller.address,
+      token.address,
+      'test',
+      'test',
+    ])) as RewardsPool
+    await controller.addToken(token.address, rewardsPool.address)
+    await controller.setOperatorOwner(2, accounts[2])
+    await controller.setOperatorOwner(4, accounts[4])
+    await controller.assignNextValidators(8)
+    await token.transferAndCall(rewardsPool.address, toEther(100), '0x00')
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      37.5,
+      'rewards pool account balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      37.5,
+      'rewards pool account balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[4])),
+      25,
+      'rewards pool account balance incorrect'
+    )
+
+    await controller.reportStoppedValidators([0, 4], [1, 2], [0, 0])
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      37.5,
+      'rewards pool account balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      37.5,
+      'rewards pool account balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[4])),
+      25,
+      'rewards pool account balance incorrect'
+    )
+
+    await controller.assignNextValidators(1)
+
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      37.5,
+      'rewards pool account balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      37.5,
+      'rewards pool account balance incorrect'
+    )
+    assert.equal(
+      fromEther(await rewardsPool.balanceOf(accounts[4])),
+      25,
+      'rewards pool account balance incorrect'
+    )
   })
 })

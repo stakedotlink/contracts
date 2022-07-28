@@ -140,6 +140,8 @@ contract WLOperatorController is OperatorController {
             require(!seenOperatorIds[operatorId], "Duplicate operator");
             seenOperatorIds[operatorId] = true;
 
+            _updateRewards(operators[operatorId].owner);
+
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
             activeValidators[operators[operatorId].owner] += _validatorCounts[i];
 
@@ -354,6 +356,8 @@ contract WLOperatorController is OperatorController {
                 (_stoppedValidators[i]) <= operators[operatorId].usedKeyPairs,
                 "Reported more stopped validators than active"
             );
+
+            _updateRewards(operators[operatorId].owner);
 
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
 
