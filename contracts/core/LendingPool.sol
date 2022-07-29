@@ -19,7 +19,7 @@ import "./interfaces/ILendingPool.sol";
  * @dev Allows users to lend allowance tokens to others who wish to stake,
  * borrowers pay lenders a percentage of earned rewards in return
  */
-contract LendingPool is ILendingPool, RewardsPoolController, ERC677 {
+contract LendingPool is ILendingPool, RewardsPoolController {
     using SafeERC20 for IERC677;
     using SafeERC20 for IERC20;
 
@@ -66,29 +66,11 @@ contract LendingPool is ILendingPool, RewardsPoolController, ERC677 {
         uint256 _rateConstantC,
         uint256 _rateConstantD,
         uint256 _rateConstantE
-    ) ERC677(_dTokenName, _dTokenSymbol, 0) {
+    ) RewardsPoolController(_dTokenName, _dTokenSymbol) {
         allowanceToken = IERC677(_allowanceToken);
         poolRouter = IPoolRouter(_poolRouter);
         allowanceToken.safeApprove(_poolRouter, type(uint256).max);
         setRateConstants(_rateConstantA, _rateConstantB, _rateConstantC, _rateConstantD, _rateConstantE);
-    }
-
-    /**
-     * @notice returns an account's stake balance for use by reward pools
-     * controlled by this contract
-     * @return account's balance
-     */
-    function rpcStaked(address _account) external view returns (uint) {
-        return balanceOf(_account);
-    }
-
-    /**
-     * @notice returns the total staked amount for use by reward pools
-     * controlled by this contract
-     * @return total staked amount
-     */
-    function rpcTotalStaked() external view returns (uint) {
-        return totalSupply();
     }
 
     /**
@@ -98,20 +80,6 @@ contract LendingPool is ILendingPool, RewardsPoolController, ERC677 {
      */
     function isPoolSupported(address _token, uint16 _index) external view returns (bool) {
         return address(borrowingPools[_poolKey(_token, _index)]) != address(0) ? true : false;
-    }
-
-    /**
-     * @dev updates the lenders rewards on token transfer so reward balance is retained
-     * @param _from account sending from
-     * @param _to account sending to
-     * @param _amount amount being sent
-     */
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) internal override updateRewards(_from) updateRewards(_to) {
-        super._transfer(_from, _to, _amount);
     }
 
     /**

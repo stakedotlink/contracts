@@ -135,7 +135,7 @@ describe('LendingPool', () => {
 
   it('should be able to lend allowance by transferAndCall', async () => {
     assert.equal(
-      fromEther(await lendingPool.rpcTotalStaked()),
+      fromEther(await lendingPool.totalStaked()),
       1000,
       'total allowance staked does not match'
     )
@@ -200,7 +200,7 @@ describe('LendingPool', () => {
     await lendingPool.lendAllowance(toEther(1000))
 
     assert.equal(
-      fromEther(await lendingPool.rpcTotalStaked()),
+      fromEther(await lendingPool.totalStaked()),
       2000,
       'total allowance staked does not match'
     )
@@ -225,7 +225,7 @@ describe('LendingPool', () => {
     await lendingPool.withdrawAllowance(toEther(500))
 
     assert.equal(
-      fromEther(await lendingPool.rpcTotalStaked()),
+      fromEther(await lendingPool.totalStaked()),
       500,
       'total allowance staked does not match'
     )
