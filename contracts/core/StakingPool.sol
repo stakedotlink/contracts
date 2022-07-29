@@ -32,6 +32,8 @@ contract StakingPool is StakingRewardsPool, Ownable {
 
     address public poolRouter;
 
+    address private emergencyWallet;
+
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
     event UpdateStrategyRewards(address indexed account, uint totalStaked, int rewardsAmount, uint totalFees);
@@ -41,12 +43,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
         Fee[] memory _fees,
-        address _poolRouter
+        address _poolRouter,
+        address _emergencyWallet
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
         for (uint i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         poolRouter = _poolRouter;
+        emergencyWallet = _emergencyWallet;
     }
 
     modifier onlyRouter() {
@@ -68,6 +72,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
      */
     function getFees() external view returns (Fee[] memory) {
         return fees;
+    }
+
+    /**
+     * @notice returns the emergency wallet address
+     * @return emergency wallet address
+     */
+    function getEmergencyWallet() external view returns (address) {
+        return emergencyWallet;
     }
 
     /**
@@ -334,6 +346,15 @@ contract StakingPool is StakingRewardsPool, Ownable {
      **/
     function depositLiquidity() external onlyOwner {
         _depositLiquidity();
+    }
+
+    /**
+     * @notice transfer ownership of the emergency wallet
+     * @param _to the account to transfer to
+     */
+    function transferEmergencyWallet(address _to) external {
+        require(emergencyWallet == msg.sender, "Unauthorised");
+        emergencyWallet = _to;
     }
 
     /**

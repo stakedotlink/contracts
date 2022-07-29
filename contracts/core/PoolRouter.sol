@@ -21,7 +21,6 @@ contract PoolRouter is Ownable {
         DRAINING,
         CLOSED
     }
-    address public emergencyWallet;
 
     IERC677 public allowanceToken;
     mapping(address => uint) public allowanceStakes;
@@ -33,7 +32,8 @@ contract PoolRouter is Ownable {
         PoolStatus status;
         mapping(address => uint) stakedAmounts;
     }
-    mapping(bytes32 => Pool) public pools;
+
+    mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
     uint public poolCount;
 
@@ -51,9 +51,8 @@ contract PoolRouter is Ownable {
         _;
     }
 
-    constructor(address _allowanceToken, address _emergencyWallet) {
+    constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
-        emergencyWallet = _emergencyWallet;
     }
 
     /**
@@ -99,8 +98,18 @@ contract PoolRouter is Ownable {
      * @param _token pool token
      * @param _index pool index
      */
-    function poolStatus(address _token, uint16 _index) external view returns (PoolStatus) {
-        return pools[_poolKey(_token, _index)].status;
+    function getPool(address _token, uint16 _index)
+        external
+        view
+        returns (
+            address,
+            address,
+            bool,
+            PoolStatus
+        )
+    {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        return (address(pool.token), address(pool.stakingPool), pool.allowanceRequired, pool.status);
     }
 
     /**
@@ -338,19 +347,13 @@ contract PoolRouter is Ownable {
         address _token,
         uint16 _index,
         PoolStatus _status
-    ) external {
-        require((_status == PoolStatus.CLOSED ? emergencyWallet : super.owner()) == msg.sender, "Unauthorised");
-        Pool storage pool = pools[_poolKey(_token, _index)];
-        pool.status = _status;
-    }
-
-    /**
-     * @notice transfer ownership of the emergency wallet
-     * @param _to the account to transfer to
-     */
-    function transferEmergencyWallet(address _to) external {
-        require(emergencyWallet == msg.sender, "Unauthorised");
-        emergencyWallet = _to;
+    ) external poolExists(_token, _index) {
+        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        require(
+            (_status == PoolStatus.CLOSED ? stakingPool.getEmergencyWallet() : super.owner()) == msg.sender,
+            "Unauthorised"
+        );
+        pools[_poolKey(_token, _index)].status = _status;
     }
 
     /**
