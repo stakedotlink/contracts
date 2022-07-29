@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IERC677.sol";
 import "./base/RewardsPoolController.sol";
+import "./tokens/base/ERC677.sol";
 
 /**
  * @title Pool Owners
@@ -14,42 +15,16 @@ contract PoolOwners is RewardsPoolController {
     using SafeERC20 for IERC677;
 
     IERC677 public token;
-    mapping(address => uint) private tokenStakes;
-    uint public totalStaked;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
 
-    constructor(address _token) {
+    constructor(
+        address _token,
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) RewardsPoolController(_derivativeTokenName, _derivativeTokenSymbol) {
         token = IERC677(_token);
-    }
-
-    /**
-     * @notice returns an account's staked amount for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return account's staked amount
-     */
-    function rpcStaked(address _account) external view returns (uint) {
-        return staked(_account);
-    }
-
-    /**
-     * @notice returns the total staked amount for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return total staked amount
-     */
-    function rpcTotalStaked() external view returns (uint) {
-        return totalStaked;
-    }
-
-    /**
-     * @notice returns an account's staked amount
-     * @return account's staked amount
-     */
-    function staked(address _account) public view returns (uint) {
-        return tokenStakes[_account];
     }
 
     /**
@@ -87,8 +62,7 @@ contract PoolOwners is RewardsPoolController {
      * @param _amount amount to withdraw
      **/
     function withdraw(uint _amount) public updateRewards(msg.sender) {
-        tokenStakes[msg.sender] -= _amount;
-        totalStaked -= _amount;
+        _burn(msg.sender, _amount);
         token.safeTransfer(msg.sender, _amount);
         emit Withdraw(msg.sender, _amount);
     }
@@ -99,8 +73,7 @@ contract PoolOwners is RewardsPoolController {
      * @param _amount amount to stake
      **/
     function _stake(address _account, uint _amount) private updateRewards(_account) {
-        tokenStakes[_account] += _amount;
-        totalStaked += _amount;
+        _mint(_account, _amount);
         emit Stake(_account, _amount);
     }
 }

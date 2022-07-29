@@ -41,7 +41,7 @@ contract RewardsPool is VirtualERC677 {
      **/
     function balanceOf(address _account) public view virtual override(IERC20, VirtualERC20) returns (uint) {
         return
-            (controller.rpcStaked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
     }
@@ -89,11 +89,11 @@ contract RewardsPool is VirtualERC677 {
      * @notice distributes new rewards that have been deposited
      **/
     function distributeRewards() public {
-        require(controller.rpcTotalStaked() > 0, "Cannot distribute when nothing is staked");
+        require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
         uint256 toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
         withdrawableRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
-        emit DistributeRewards(msg.sender, controller.rpcTotalStaked(), toDistribute);
+        emit DistributeRewards(msg.sender, controller.totalStaked(), toDistribute);
     }
 
     /**
@@ -126,7 +126,7 @@ contract RewardsPool is VirtualERC677 {
      * @param _reward deposited reward amount
      **/
     function _updateRewardPerToken(uint _reward) internal {
-        uint totalStaked = controller.rpcTotalStaked();
+        uint totalStaked = controller.totalStaked();
         require(totalStaked > 0, "Staked amount must be > 0");
         rewardPerToken += ((_reward * 1e18) / totalStaked);
     }

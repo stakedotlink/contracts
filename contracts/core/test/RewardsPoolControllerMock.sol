@@ -15,30 +15,34 @@ contract RewardsPoolControllerMock is RewardsPoolController {
 
     IERC20 public token;
 
-    uint public totalStaked;
+    uint public stakedTotal;
     mapping(address => uint) public stakeBalances;
 
-    constructor(address _token) {
+    constructor(
+        address _token,
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) RewardsPoolController(_derivativeTokenName, _derivativeTokenSymbol) {
         token = IERC20(_token);
     }
 
-    function rpcStaked(address _account) external view returns (uint) {
+    function staked(address _account) external view override returns (uint) {
         return stakeBalances[_account];
     }
 
-    function rpcTotalStaked() external view returns (uint) {
-        return totalStaked;
+    function totalStaked() external view override returns (uint) {
+        return stakedTotal;
     }
 
     function stake(uint _amount) external updateRewards(msg.sender) {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         stakeBalances[msg.sender] += _amount;
-        totalStaked += _amount;
+        stakedTotal += _amount;
     }
 
     function withdraw(uint _amount) external updateRewards(msg.sender) {
         stakeBalances[msg.sender] -= _amount;
-        totalStaked -= _amount;
+        stakedTotal -= _amount;
         token.safeTransfer(msg.sender, _amount);
     }
 }

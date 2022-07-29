@@ -43,6 +43,8 @@ describe('RewardsPoolController', () => {
 
     controller = (await deploy('RewardsPoolControllerMock', [
       stakingToken.address,
+      'lSTA',
+      'Lent Staking Allowance',
     ])) as RewardsPoolControllerMock
 
     rewardsPool1 = (await deploy('RewardsPool', [
