@@ -30,7 +30,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @notice returns the total supply of staking derivative tokens
      * @return total supply
      */
-    function totalSupply() public view virtual override(IERC20, VirtualERC20) returns (uint) {
+    function totalSupply() public view override(IERC20, VirtualERC20) returns (uint) {
         return _totalStaked();
     }
 
@@ -39,7 +39,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _account account to return balance for
      * @return account's stake balance
      **/
-    function balanceOf(address _account) public view virtual override(IERC20, VirtualERC20) returns (uint) {
+    function balanceOf(address _account) public view override(IERC20, VirtualERC20) returns (uint) {
         return getStakeByShares(shares[_account]);
     }
 

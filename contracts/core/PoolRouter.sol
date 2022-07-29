@@ -191,9 +191,7 @@ contract PoolRouter is Ownable {
 
         require(poolBalance >= _amount, "Amount exceeds staked balance");
 
-        if (_amount == poolBalance) {
-            delete (pool.stakedAmounts[msg.sender]);
-        } else if (_amount > pool.stakedAmounts[msg.sender] && _amount < poolBalance) {
+        if (_amount > pool.stakedAmounts[msg.sender]) {
             uint newStakedAmount = poolBalance - _amount;
             if (newStakedAmount >= pool.stakedAmounts[msg.sender]) {
                 newStakedAmount = pool.stakedAmounts[msg.sender];
@@ -431,7 +429,7 @@ contract PoolRouter is Ownable {
     ) external view poolExists(_token, _index) returns (uint256) {
         Pool storage pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
-            return 0;
+            return type(uint256).max;
         }
         uint availableAllowance = allowanceStakes[_account] - allowanceInUse(_token, _index, _account);
         if (availableAllowance == 0) {

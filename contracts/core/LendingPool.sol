@@ -9,23 +9,20 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "./interfaces/IPoolRouter.sol";
-import "./tokens/base/ERC677.sol";
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IBorrowingPool.sol";
 import "./interfaces/ILendingPool.sol";
 
 /**
  * @title Lending Pool
- * @dev Allows users to lend allowance tokens to others who wish to stake,
+ * @notice Allows users to lend allowance tokens to others who wish to stake,
  * borrowers pay lenders a percentage of earned rewards in return
  */
 contract LendingPool is ILendingPool, RewardsPoolController {
-    using SafeERC20 for IERC677;
     using SafeERC20 for IERC20;
-
     using PRBMathUD60x18 for uint256;
 
-    IERC677 public allowanceToken;
+    IERC20 public allowanceToken;
     IPoolRouter public poolRouter;
 
     uint256 public rateConstantA;
@@ -67,7 +64,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
         uint256 _rateConstantD,
         uint256 _rateConstantE
     ) RewardsPoolController(_dTokenName, _dTokenSymbol) {
-        allowanceToken = IERC677(_allowanceToken);
+        allowanceToken = IERC20(_allowanceToken);
         poolRouter = IPoolRouter(_poolRouter);
         allowanceToken.safeApprove(_poolRouter, type(uint256).max);
         setRateConstants(_rateConstantA, _rateConstantB, _rateConstantC, _rateConstantD, _rateConstantE);
@@ -83,7 +80,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev ERC677 implementation to lend allowance or stake
+     * @notice ERC677 implementation to lend allowance or stake
      * @param _sender of the stake
      * @param _value of the token transfer
      **/
@@ -109,7 +106,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev calculates the total amount that users can stake
+     * @notice calculates the total amount that users can stake
      * @param _token the token address of the pool
      * @param _index the pool index
      * @return amount users can stake
@@ -119,8 +116,9 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev calculates the current percentage of rewards that lenders
+     * @notice calculates the current percentage of rewards that lenders
      * receive and borrowers pay. Fee cap of 95% hardcoded.
+     * @dev Equation: y = (A*x/B)^C + x/D + E
      * @return current rate
      **/
     function currentRate(address _token, uint16 _index) public view returns (uint256) {
@@ -144,7 +142,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev calculates the amount of allowance tokens available for staking
+     * @notice calculates the amount of allowance tokens available for staking
      * in staking pool
      * @return available allowance tokens
      **/
@@ -153,7 +151,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev stakes allowance tokens for lending
+     * @notice stakes allowance tokens for lending
      * @param _amount amount to lend
      **/
     function lendAllowance(uint256 _amount) external {
@@ -162,7 +160,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev withdraws lent allowance tokens if there are enough available
+     * @notice withdraws lent allowance tokens if there are enough available
      * @param _amount amount to withdraw
      **/
     function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
@@ -172,14 +170,14 @@ contract LendingPool is ILendingPool, RewardsPoolController {
         }
 
         _burn(msg.sender, toWithdraw);
-        poolRouter.withdrawAllowance(_amount);
+        poolRouter.withdrawAllowance(toWithdraw);
         allowanceToken.safeTransfer(msg.sender, toWithdraw);
 
         emit AllowanceWithdrawn(msg.sender, toWithdraw);
     }
 
     /**
-     * @dev stakes user asset tokens with available lent allowance tokens
+     * @notice stakes user asset tokens with available lent allowance tokens
      * in staking pool, mints derivative tokens 1:1
      * @param _token the token address of the pool
      * @param _index the pool index
@@ -195,7 +193,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev withdraws asset & allowance tokens from staking pool, burns
+     * @notice withdraws asset & allowance tokens from staking pool, burns
      * derivative tokens 1:1, transfers user withdrawn asset tokens
      * @param _token pool token address
      * @param _index pool index
@@ -222,7 +220,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev sets the constants used for calculating current rate
+     * @notice sets the constants used for calculating current rate
      * @param _rateConstantA value to set for rateA
      * @param _rateConstantB value to set for rateB
      * @param _rateConstantC value to set for rateC
@@ -246,7 +244,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev add a pool to be supported for allowance borrowing
+     * @notice add a pool to be supported for allowance borrowing
      * @param _token token address of the pool
      * @param _index pool index
      * @param _borrowingPool address of the borrowing pool
@@ -268,7 +266,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev remove a pool to be supported for allowance borrowing
+     * @notice remove a pool to be supported for allowance borrowing
      * @param _token token address of the pool
      * @param _index pool index
      */
@@ -292,7 +290,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev stakes allowance tokens for lending
+     * @notice stakes allowance tokens for lending
      * @param _amount amount to lend
      **/
     function _lendAllowance(address _sender, uint256 _amount) private updateRewards(_sender) {
@@ -302,7 +300,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev stakes user asset tokens with available lent allowance tokens
+     * @notice stakes user asset tokens with available lent allowance tokens
      * in staking pool, mints derivative tokens 1:1
      * @param _sender the address of the stake sender
      * @param _token the token address of the pool
@@ -327,7 +325,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev returns the hashed pool key
+     * @notice returns the hashed pool key
      * @param _token pool token address
      * @param _index pool index
      * @return hash bytes32 hash of the pool key
@@ -337,7 +335,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @dev converts bytes to uint
+     * @notice converts bytes to uint
      * @param _bytes to convert
      * @return uint256 result
      */
