@@ -22,9 +22,12 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         // This is a packed array of booleans.
         mapping(uint256 => uint256) claimedBitMap;
     }
+    Distribution[] public distributions;
 
-    mapping(uint256 => Distribution) public distributions;
-    uint256 public nextDistribution;
+    modifier distributionExists(uint256 _distribution) {
+        require(_distribution < distributions.length, "MerkleDistributor: Distribution does not exist.");
+        _;
+    }
 
     /**
      * @notice add multiple token distributions
@@ -45,14 +48,13 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
      * @param _merkleRoot merkle root for token distribution
      **/
     function addDistribution(address _token, bytes32 _merkleRoot) public onlyOwner {
-        Distribution storage distribution = distributions[nextDistribution];
-        distribution.token = _token;
-        distribution.merkleRoot = _merkleRoot;
+        uint distributionIndex = distributions.length;
 
-        emit DistributionAdded(nextDistribution, _token);
-        unchecked {
-            nextDistribution++;
-        }
+        distributions.push();
+        distributions[distributionIndex].token = _token;
+        distributions[distributionIndex].merkleRoot = _merkleRoot;
+
+        emit DistributionAdded(distributionIndex, _token);
     }
 
     /**
@@ -60,7 +62,13 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
      * @param _distribution distribution index
      * @param _index index of the claim within the distribution
      **/
-    function isClaimed(uint256 _distribution, uint256 _index) public view override returns (bool) {
+    function isClaimed(uint256 _distribution, uint256 _index)
+        public
+        view
+        override
+        distributionExists(_distribution)
+        returns (bool)
+    {
         uint256 claimedWordIndex = _index / 256;
         uint256 claimedBitIndex = _index % 256;
         uint256 claimedWord = distributions[_distribution].claimedBitMap[claimedWordIndex];
@@ -94,10 +102,8 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
         address _account,
         uint256 _amount,
         bytes32[] calldata _merkleProof
-    ) external override {
+    ) external override distributionExists(_distribution) {
         require(!isClaimed(_distribution, _index), "MerkleDistributor: Drop already claimed.");
-        require(_distribution < nextDistribution, "MerkleDistributor: Distribution does not exist.");
-
         Distribution storage distribution = distributions[_distribution];
 
         // Verify the merkle proof.
