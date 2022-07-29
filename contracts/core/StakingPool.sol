@@ -153,9 +153,8 @@ contract StakingPool is StakingRewardsPool, Ownable {
 
         for (uint i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            max += strategy.canDeposit();
+            max += strategy.maxDeposits();
         }
-        max += totalStaked;
         if (liquidityBuffer > 0) {
             max += (max * liquidityBuffer) / 10000;
         }

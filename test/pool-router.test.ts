@@ -101,7 +101,7 @@ describe('PoolRouter', () => {
       'STA',
     ])) as StakingAllowance
     await allowanceToken.connect(signers[0])
-    await allowanceToken.mint(accounts[0], toEther(10000), '0x')
+    await allowanceToken.mint(accounts[0], toEther(10000))
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
@@ -178,7 +178,7 @@ describe('PoolRouter', () => {
     let allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(1.3))
     assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
 
-    await allowanceToken.mint(accounts[0], toEther(10000), '0x')
+    await allowanceToken.mint(accounts[0], toEther(10000))
     allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(0.65))
     assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
 
@@ -302,6 +302,84 @@ describe('PoolRouter', () => {
     assert.equal(fromEther(stakedAmount), 13, 'staked amount does not match')
   })
 
+  it('should be able to fully withdraw with rewards', async () => {
+    await token1.transferAndCall(poolRouter.address, toEther(13), padBytes('0x0', 32))
+
+    await token1.transfer((await stakingPool1.getStrategies())[0], toEther(10))
+    await stakingPool1.updateStrategyRewards([0])
+
+    let rewardBalance = await stakingPool1.balanceOf(accounts[0])
+    assert.isAbove(fromEther(rewardBalance), 13, 'balance after rewards is not greater')
+
+    let previousBalance = fromEther(await token1.balanceOf(accounts[0]))
+    await poolRouter.withdraw(token1.address, 0, rewardBalance)
+
+    assert.equal(
+      fromEther(await token1.balanceOf(accounts[0])),
+      previousBalance + fromEther(rewardBalance),
+      'token balance after withdraw does not match'
+    )
+    assert.equal(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[0])),
+      0,
+      'staked amount does not match'
+    )
+  })
+
+  it('should be able to fully withdraw with rewards in batches', async () => {
+    await token1.transferAndCall(poolRouter.address, toEther(13), padBytes('0x0', 32))
+
+    await token1.transfer((await stakingPool1.getStrategies())[0], toEther(50))
+    await stakingPool1.updateStrategyRewards([0])
+
+    await poolRouter.withdraw(token1.address, 0, toEther(14))
+    assert.equal(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[0])),
+      13,
+      'staked amount does not match'
+    )
+
+    await poolRouter.withdraw(token1.address, 0, toEther(20))
+    assert.equal(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[0])),
+      13,
+      'staked amount does not match'
+    )
+
+    await poolRouter.withdraw(token1.address, 0, toEther(14))
+    assert.equal(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[0])),
+      10,
+      'staked amount does not match'
+    )
+
+    await poolRouter.withdraw(token1.address, 0, toEther(10))
+    assert.approximately(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[0])),
+      0,
+      0.00000001,
+      'staked amount does not match'
+    )
+  })
+
+  it('should be able to withdraw when no allowance is staked', async () => {
+    await token1.transferAndCall(poolRouter.address, toEther(13), padBytes('0x0', 32))
+    await stakingPool1.transfer(accounts[1], toEther(13))
+
+    await poolRouter.connect(signers[1]).withdraw(token1.address, 0, toEther(6))
+    assert.equal(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[1])),
+      0,
+      'staked amount does not match'
+    )
+    await poolRouter.connect(signers[1]).withdraw(token1.address, 0, toEther(7))
+    assert.equal(
+      fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[1])),
+      0,
+      'staked amount does not match'
+    )
+  })
+
   it('should not be able to withdraw when amount exceeds stake', async () => {
     await token1.transferAndCall(poolRouter.address, toEther(13), padBytes('0x0', 32))
     await token1
@@ -350,6 +428,15 @@ describe('PoolRouter', () => {
     await token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
 
     await expect(poolRouter.withdrawAllowance(toEther(5.1))).to.be.revertedWith(
+      'Cannot withdraw allowance that is in use'
+    )
+  })
+
+  it('should not be able to withdraw allowance when the derivative token is transferred', async () => {
+    await token1.transferAndCall(poolRouter.address, toEther(13), padBytes('0x0', 32))
+    await stakingPool1.transfer(accounts[2], toEther(13))
+
+    await expect(poolRouter.withdrawAllowance(toEther(5))).to.be.revertedWith(
       'Cannot withdraw allowance that is in use'
     )
   })

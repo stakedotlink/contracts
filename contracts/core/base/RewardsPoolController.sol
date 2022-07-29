@@ -221,7 +221,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
-    function addToken(address _token, address _rewardsPool) external onlyOwner {
+    function addToken(address _token, address _rewardsPool) public onlyOwner {
         require(!isTokenSupported(_token), "Token is already supported");
 
         tokenPools[_token] = IRewardsPool(_rewardsPool);

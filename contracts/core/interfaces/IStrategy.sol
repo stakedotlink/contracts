@@ -14,6 +14,10 @@ interface IStrategy {
 
     function totalDeposits() external view returns (uint256);
 
+    function maxDeposits() external view returns (uint256);
+
+    function minDeposits() external view returns (uint256);
+
     function canDeposit() external view returns (uint256);
 
     function canWithdraw() external view returns (uint256);
