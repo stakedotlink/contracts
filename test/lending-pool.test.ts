@@ -68,7 +68,6 @@ describe('LendingPool', () => {
       'lpLINK',
       [[ownersRewards, 1000]],
       poolRouter.address,
-      accounts[1],
     ])) as StakingPool
 
     let wsdToken = (await deploy('WrappedSDToken', [
@@ -86,7 +85,7 @@ describe('LendingPool', () => {
     ])) as StrategyMock
     await stakingPool.addStrategy(strategy.address)
 
-    await poolRouter.addPool(token.address, stakingPool.address, true, 0)
+    await poolRouter.addPool(token.address, stakingPool.address, accounts[1], true, 0)
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
 
     lendingPool = (await deploy('LendingPool', [

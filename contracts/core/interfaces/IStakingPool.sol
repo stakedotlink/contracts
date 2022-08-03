@@ -27,6 +27,4 @@ interface IStakingPool is IStakingRewardsPool {
     function strategies(uint8 _index) external view returns (address);
 
     function totalStrategies() external view returns (uint8);
-
-    function getEmergencyWallet() external view returns (address);
 }
