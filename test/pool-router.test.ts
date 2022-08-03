@@ -43,7 +43,6 @@ describe('PoolRouter', () => {
       'lpLINK',
       [[ownersRewards, 1000]],
       poolRouter.address,
-      accounts[1],
     ])) as StakingPool
 
     let wsdToken = (await deploy('WrappedSDToken', [
@@ -76,7 +75,7 @@ describe('PoolRouter', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
 
-    await poolRouter.addPool(token, stakingPool.address, true, 0)
+    await poolRouter.addPool(token, stakingPool.address, accounts[1], true, 0)
     await token1.approve(stakingPool.address, ethers.constants.MaxUint256)
     await token2.approve(stakingPool.address, ethers.constants.MaxUint256)
 
@@ -505,7 +504,7 @@ describe('PoolRouter', () => {
     await token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     await poolRouter.setPoolStatus(token1.address, 0, 1)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 1, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 1, 'pool status does not match')
     await poolRouter.withdraw(token1.address, 0, toEther(6.5))
     assert.equal(
       fromEther(await poolRouter.stakedAmount(token1.address, 0, accounts[0])),
@@ -517,7 +516,7 @@ describe('PoolRouter', () => {
   it('should not be able to deposit when pool status is draining', async () => {
     await poolRouter.setPoolStatus(token1.address, 0, 1)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 1, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 1, 'pool status does not match')
     await expect(
       token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     ).to.be.revertedWith('Pool is not open')
@@ -526,7 +525,7 @@ describe('PoolRouter', () => {
   it('should not be able to deposit when pool status is closed', async () => {
     await poolRouter.connect(signers[1]).setPoolStatus(token1.address, 0, 2)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 2, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 2, 'pool status does not match')
     await expect(
       token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     ).to.be.revertedWith('Pool is not open')
@@ -536,7 +535,7 @@ describe('PoolRouter', () => {
     await token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     await poolRouter.connect(signers[1]).setPoolStatus(token1.address, 0, 2)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 2, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 2, 'pool status does not match')
     await expect(poolRouter.withdraw(token1.address, 0, toEther(6.5))).to.be.revertedWith(
       'Pool is closed'
     )
@@ -547,17 +546,17 @@ describe('PoolRouter', () => {
   })
 
   it('should be able to transfer ownership of the emergency wallet', async () => {
-    await stakingPool1.connect(signers[1]).transferEmergencyWallet(accounts[0])
+    await poolRouter.connect(signers[1]).transferEmergencyWallet(token1.address, 0, accounts[0])
     assert.equal(
-      await stakingPool1.getEmergencyWallet(),
+      (await poolRouter.getPool(token1.address, 0))[2],
       accounts[0],
       'emergency wallet does not match'
     )
   })
 
   it('should not be able to transfer the emergency wallet when not the emergency wallet', async () => {
-    await expect(stakingPool1.transferEmergencyWallet(accounts[0])).to.be.revertedWith(
-      'Unauthorised'
-    )
+    await expect(
+      poolRouter.transferEmergencyWallet(token1.address, 0, accounts[1])
+    ).to.be.revertedWith('Unauthorised')
   })
 })
