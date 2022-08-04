@@ -43,6 +43,8 @@ contract EthStakingStrategy is Strategy {
     uint private depositMax;
     uint private depositMin;
 
+    event DepositEther(uint nwlValidatorCount, uint wlValidatorCount);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -151,6 +153,7 @@ contract EthStakingStrategy is Strategy {
         }
 
         depositedValidators += _nwlTotalValidatorCount + _wlTotalValidatorCount;
+        emit DepositEther(_nwlTotalValidatorCount, _wlTotalValidatorCount);
     }
 
     /**

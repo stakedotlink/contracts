@@ -26,6 +26,10 @@ contract NWLOperatorController is OperatorController {
     uint public totalStake;
     mapping(uint => uint) public ethLost;
 
+    event RemoveKeyPairs(uint operatorId, uint quantity);
+    event ReportKeyPairValidation(uint operatorId, bool success);
+    event ReportStoppedValidators(uint operatorId, uint totalStoppedValidators, uint totalEthLost);
+
     constructor(address _ethStakingStrategy)
         OperatorController(_ethStakingStrategy, "Non-whitelisted Validator Token", "nwlVT")
     {}
@@ -131,6 +135,8 @@ contract NWLOperatorController is OperatorController {
 
         (bool success, ) = payable(msg.sender).call{value: _quantity * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
+
+        emit RemoveKeyPairs(_operatorId, _quantity);
     }
 
     /**
@@ -152,6 +158,8 @@ contract NWLOperatorController is OperatorController {
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
         operators[_operatorId].keyValidationInProgress = false;
+
+        emit ReportKeyPairValidation(_operatorId, _success);
     }
 
     /**
@@ -239,7 +247,6 @@ contract NWLOperatorController is OperatorController {
             "Inconsistent list lengths"
         );
 
-        uint totalNewlyStoppedValidators;
         uint totalNewlyLostETH;
 
         for (uint i = 0; i < _operatorIds.length; i++) {
@@ -264,8 +271,8 @@ contract NWLOperatorController is OperatorController {
             _burn(operators[operatorId].owner, newlyStoppedValidators);
             ethLost[operatorId] += newlyLostETH;
 
-            totalNewlyStoppedValidators += newlyStoppedValidators;
             totalNewlyLostETH += newlyLostETH;
+            emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
         }
 
         totalStake -= totalNewlyLostETH;

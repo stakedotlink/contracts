@@ -32,6 +32,10 @@ abstract contract OperatorController is RewardsPoolController {
 
     Operator[] internal operators;
 
+    event AddOperator(address indexed owner, string name);
+    event OperatorOwnerChange(uint indexed operatorId, address indexed from, address indexed to);
+    event AddKeyPairs(uint indexed operatorId, uint quantity);
+
     modifier operatorExists(uint _id) {
         require(_id < operators.length, "Operator does not exist");
         _;
@@ -132,9 +136,12 @@ abstract contract OperatorController is RewardsPoolController {
     function setOperatorOwner(uint _operatorId, address _owner) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_owner != address(0), "Owner address cannot be 0");
+
         uint operatorActiveValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
         ERC20._transfer(msg.sender, _owner, operatorActiveValidators);
         operators[_operatorId].owner = _owner;
+
+        emit OperatorOwnerChange(_operatorId, msg.sender, _owner);
     }
 
     /**
@@ -161,6 +168,8 @@ abstract contract OperatorController is RewardsPoolController {
     function _addOperator(string calldata _name) internal {
         Operator memory operator = Operator(_name, msg.sender, true, false, 0, 0, 0, 0);
         operators.push(operator);
+
+        emit AddOperator(msg.sender, _name);
     }
 
     /**
@@ -189,6 +198,8 @@ abstract contract OperatorController is RewardsPoolController {
         }
 
         operators[_operatorId].totalKeyPairs += uint64(_quantity);
+
+        emit AddKeyPairs(_operatorId, _quantity);
     }
 
     /**

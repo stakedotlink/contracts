@@ -25,6 +25,10 @@ contract WLOperatorController is OperatorController {
     uint public assignmentIndex;
     uint public queueLength;
 
+    event RemoveKeyPairs(uint operatorId, uint quantity);
+    event ReportKeyPairValidation(uint operatorId, bool success);
+    event ReportStoppedValidators(uint operatorId, uint totalStoppedValidators);
+
     constructor(
         address _ethStakingStrategy,
         address _operatorWhitelist,
@@ -79,6 +83,8 @@ contract WLOperatorController is OperatorController {
             queueLength -= operators[_operatorId].validatorLimit - operators[_operatorId].totalKeyPairs;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
+
+        emit RemoveKeyPairs(_operatorId, _quantity);
     }
 
     /**
@@ -98,6 +104,8 @@ contract WLOperatorController is OperatorController {
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
         operators[_operatorId].keyValidationInProgress = false;
+
+        emit ReportKeyPairValidation(_operatorId, _success);
     }
 
     /**
@@ -360,6 +368,8 @@ contract WLOperatorController is OperatorController {
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
             _burn(operators[operatorId].owner, newlyStoppedValidators);
+
+            emit ReportStoppedValidators(operatorId, _stoppedValidators[i]);
         }
     }
 
