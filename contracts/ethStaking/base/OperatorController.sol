@@ -32,9 +32,6 @@ abstract contract OperatorController is RewardsPoolController {
 
     Operator[] internal operators;
 
-    uint public totalActiveValidators;
-    mapping(address => uint) internal activeValidators;
-
     modifier operatorExists(uint _id) {
         require(_id < operators.length, "Operator does not exist");
         _;
@@ -55,28 +52,16 @@ abstract contract OperatorController is RewardsPoolController {
         _;
     }
 
-    constructor(address _ethStakingStrategy) {
+    constructor(
+        address _ethStakingStrategy,
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) RewardsPoolController(_derivativeTokenName, _derivativeTokenSymbol) {
         ethStakingStrategy = _ethStakingStrategy;
     }
 
-    /**
-     * @notice returns an account's stake balance for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return account's balance
-     */
-    function rpcStaked(address _account) external view returns (uint) {
-        return activeValidators[_account];
-    }
-
-    /**
-     * @notice returns the total staked amount for use by reward pools
-     * controlled by this contract
-     * @dev required by RewardsPoolController
-     * @return total staked amount
-     */
-    function rpcTotalStaked() external view returns (uint) {
-        return totalActiveValidators;
+    function totalActiveValidators() external view returns (uint) {
+        return totalSupply();
     }
 
     /**
@@ -148,8 +133,7 @@ abstract contract OperatorController is RewardsPoolController {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_owner != address(0), "Owner address cannot be 0");
         uint operatorActiveValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
-        activeValidators[_owner] += operatorActiveValidators;
-        activeValidators[msg.sender] -= operatorActiveValidators;
+        ERC20._transfer(msg.sender, _owner, operatorActiveValidators);
         operators[_operatorId].owner = _owner;
     }
 
@@ -300,5 +284,13 @@ abstract contract OperatorController is RewardsPoolController {
         }
 
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
+    }
+
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal override {
+        revert("Non-transferrable");
     }
 }

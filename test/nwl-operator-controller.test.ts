@@ -219,12 +219,8 @@ describe('NWLOperatorController', () => {
     assert.equal((await controller.queueIndex()).toNumber(), 1, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 4, 'queueLength incorrect')
 
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      5,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 5, 'rpcTotalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 5, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 5, 'totalStaked incorrect')
 
     let queue = await controller.getQueueEntries(0, 100)
     assert.deepEqual(
@@ -271,12 +267,8 @@ describe('NWLOperatorController', () => {
     assert.equal((await controller.queueIndex()).toNumber(), 3, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 0, 'queueLength incorrect')
 
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      9,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 9, 'rpcTotalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 9, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 9, 'totalStaked incorrect')
 
     await expect(controller.connect(signers[1]).assignNextValidators(1)).to.be.revertedWith(
       'Sender is not ETH staking strategy'
@@ -303,12 +295,8 @@ describe('NWLOperatorController', () => {
       4,
       'totalActiveValidators incorrect'
     )
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      4,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 4, 'rpcTotalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
 
     await expect(
       controller.reportStoppedValidators([0, 5], [3, 1], [toEther(2), toEther(1)])

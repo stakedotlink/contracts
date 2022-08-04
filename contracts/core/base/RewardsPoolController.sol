@@ -297,7 +297,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @dev triggers a reward update for a given account
      * @param _account account to update rewards for
      */
-    function _updateRewards(address _account) private {
+    function _updateRewards(address _account) internal {
         for (uint i = 0; i < tokens.length; i++) {
             tokenPools[tokens[i]].updateReward(_account);
         }

@@ -110,16 +110,8 @@ describe('OperatorController', () => {
     let op = (await controller.getOperators([0]))[0]
     assert.equal(op[1], accounts[2], 'operator owner incorrect')
 
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      4,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal(
-      (await controller.rpcStaked(accounts[2])).toNumber(),
-      3,
-      'operator rpcStaked incorrect'
-    )
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
+    assert.equal((await controller.staked(accounts[2])).toNumber(), 3, 'operator staked incorrect')
 
     await expect(controller.setOperatorOwner(5, accounts[1])).to.be.revertedWith(
       'Operator does not exist'

@@ -29,7 +29,7 @@ contract WLOperatorController is OperatorController {
         address _ethStakingStrategy,
         address _operatorWhitelist,
         uint _batchSize
-    ) OperatorController(_ethStakingStrategy) {
+    ) OperatorController(_ethStakingStrategy, "Whitelisted Validator Token", "wlVT") {
         operatorWhitelist = IOperatorWhitelist(_operatorWhitelist);
         batchSize = _batchSize;
     }
@@ -143,7 +143,7 @@ contract WLOperatorController is OperatorController {
             _updateRewards(operators[operatorId].owner);
 
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
-            activeValidators[operators[operatorId].owner] += _validatorCounts[i];
+            _mint(operators[operatorId].owner, _validatorCounts[i]);
 
             OperatorCache memory operator = OperatorCache(
                 operatorId,
@@ -254,7 +254,6 @@ contract WLOperatorController is OperatorController {
             assignmentIndex = maxBatchOperatorId + 1;
         }
 
-        totalActiveValidators += totalValidatorCount;
         queueLength -= totalValidatorCount;
     }
 
@@ -343,8 +342,6 @@ contract WLOperatorController is OperatorController {
     {
         require(_operatorIds.length == _stoppedValidators.length, "Inconsistent list lengths");
 
-        uint totalNewlyStoppedValidators;
-
         for (uint i = 0; i < _operatorIds.length; i++) {
             uint operatorId = _operatorIds[i];
             require(operatorId < operators.length, "Operator does not exist");
@@ -362,11 +359,8 @@ contract WLOperatorController is OperatorController {
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
-            totalNewlyStoppedValidators += newlyStoppedValidators;
+            _burn(operators[operatorId].owner, newlyStoppedValidators);
         }
-
-        totalActiveValidators -= totalNewlyStoppedValidators;
     }
 
     /**

@@ -176,12 +176,8 @@ describe('WLOperatorController', () => {
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 5, 'queueLength incorrect')
 
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      4,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 4, 'rpcTotalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
 
     vals = await controller.callStatic.assignNextValidators([4, 0, 2], [2, 1, 1], 4)
     assert.equal(
@@ -215,12 +211,8 @@ describe('WLOperatorController', () => {
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 1, 'queueLength incorrect')
 
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      8,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 8, 'rpcTotalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 8, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 8, 'totalStaked incorrect')
 
     await expect(
       controller.connect(signers[1]).assignNextValidators([4], [1], 1)
@@ -396,12 +388,8 @@ describe('WLOperatorController', () => {
       4,
       'totalActiveValidators incorrect'
     )
-    assert.equal(
-      (await controller.rpcStaked(accounts[0])).toNumber(),
-      4,
-      'operator rpcStaked incorrect'
-    )
-    assert.equal((await controller.rpcTotalStaked()).toNumber(), 4, 'rpcTotalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
 
     await expect(controller.reportStoppedValidators([0, 5], [3, 1])).to.be.revertedWith(
       'Operator does not exist'

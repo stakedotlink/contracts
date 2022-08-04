@@ -11,7 +11,7 @@ import "../base/OperatorController.sol";
  * @notice Base controller contract to be inherited from
  */
 contract OperatorControllerMock is OperatorController {
-    constructor(address _ethStakingStrategy) OperatorController(_ethStakingStrategy) {}
+    constructor(address _ethStakingStrategy) OperatorController(_ethStakingStrategy, "Validator Token", "VT") {}
 
     /**
      * @notice Adds a new operator
@@ -54,8 +54,7 @@ contract OperatorControllerMock is OperatorController {
             uint operatorId = _operatorIds[i];
 
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
-            activeValidators[operators[operatorId].owner] += _validatorCounts[i];
-            totalActiveValidators += _validatorCounts[i];
+            _mint(operators[operatorId].owner, _validatorCounts[i]);
         }
     }
 

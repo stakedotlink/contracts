@@ -26,7 +26,9 @@ contract NWLOperatorController is OperatorController {
     uint public totalStake;
     mapping(uint => uint) public ethLost;
 
-    constructor(address _ethStakingStrategy) OperatorController(_ethStakingStrategy) {}
+    constructor(address _ethStakingStrategy)
+        OperatorController(_ethStakingStrategy, "Non-whitelisted Validator Token", "nwlVT")
+    {}
 
     /**
      * @notice Returns a list of queue entries
@@ -51,7 +53,7 @@ contract NWLOperatorController is OperatorController {
      * @return totalActiveStake total active stake
      */
     function totalActiveStake() external view returns (uint) {
-        return totalActiveValidators * DEPOSIT_AMOUNT;
+        return totalSupply() * DEPOSIT_AMOUNT;
     }
 
     /**
@@ -195,7 +197,7 @@ contract NWLOperatorController is OperatorController {
                 _updateRewards(operators[operatorId].owner);
 
                 operators[operatorId].usedKeyPairs += uint64(assignToOperator);
-                activeValidators[operators[operatorId].owner] += assignToOperator;
+                _mint(operators[operatorId].owner, assignToOperator);
 
                 uint usedKeyPairs = operators[operatorId].usedKeyPairs;
 
@@ -216,7 +218,6 @@ contract NWLOperatorController is OperatorController {
         (bool success, ) = payable(ethStakingStrategy).call{value: totalValidatorCount * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
 
-        totalActiveValidators += totalValidatorCount;
         totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= totalValidatorCount;
         queueIndex = index;
@@ -260,14 +261,13 @@ contract NWLOperatorController is OperatorController {
             uint newlyLostETH = _ethLost[i] - ethLost[operatorId];
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+            _burn(operators[operatorId].owner, newlyStoppedValidators);
             ethLost[operatorId] += newlyLostETH;
 
             totalNewlyStoppedValidators += newlyStoppedValidators;
             totalNewlyLostETH += newlyLostETH;
         }
 
-        totalActiveValidators -= totalNewlyStoppedValidators;
         totalStake -= totalNewlyLostETH;
     }
 }
