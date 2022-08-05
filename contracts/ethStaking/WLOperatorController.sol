@@ -25,9 +25,9 @@ contract WLOperatorController is OperatorController {
     uint public assignmentIndex;
     uint public queueLength;
 
-    event RemoveKeyPairs(uint operatorId, uint quantity);
-    event ReportKeyPairValidation(uint operatorId, bool success);
-    event ReportStoppedValidators(uint operatorId, uint totalStoppedValidators);
+    event RemoveKeyPairs(uint indexed operatorId, uint quantity);
+    event ReportKeyPairValidation(uint indexed operatorId, bool success);
+    event ReportStoppedValidators(uint indexed operatorId, uint totalStoppedValidators);
 
     constructor(
         address _ethStakingStrategy,

@@ -168,9 +168,20 @@ contract EthStakingStrategy is Strategy {
     /**
      * @notice withdraws ETH
      * @dev not implemented yet
-     * @param _amount Amount of ETH to withdraw
+     * @param _amount amount of ETH to withdraw
      */
     function withdraw(uint _amount) external onlyStakingPool {
+        revert("Not implemented yet");
+    }
+
+    /**
+     * @notice withdraws ETH to non-whitelisted operator
+     * @dev not implemented yet
+     * @param _receiver receiver of ETH
+     * @param _amount amount of ETH to withdraw
+     */
+    function nwlWithdraw(address _receiver, uint _amount) external {
+        require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
         revert("Not implemented yet");
     }
 

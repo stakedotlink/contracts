@@ -1,7 +1,12 @@
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from './utils/helpers'
-import { ERC677, NWLOperatorController, RewardsPool } from '../typechain-types'
+import {
+  ERC677,
+  EthStakingStrategyMock,
+  NWLOperatorController,
+  RewardsPool,
+} from '../typechain-types'
 import { Signer } from 'ethers'
 
 const pubkeyLength = 48 * 2
@@ -17,13 +22,7 @@ describe('NWLOperatorController', () => {
   let signers: Signer[]
   let accounts: string[]
 
-  before(async () => {
-    ;({ signers, accounts } = await getAccounts())
-  })
-
-  beforeEach(async () => {
-    controller = (await deploy('NWLOperatorController', [accounts[0]])) as NWLOperatorController
-
+  const setupController = async (controller: NWLOperatorController) => {
     await controller.setKeyValidationOracle(accounts[0])
     await controller.setBeaconOracle(accounts[0])
 
@@ -37,6 +36,15 @@ describe('NWLOperatorController', () => {
         await controller.reportKeyPairValidation(i, true)
       }
     }
+  }
+
+  before(async () => {
+    ;({ signers, accounts } = await getAccounts())
+  })
+
+  beforeEach(async () => {
+    controller = (await deploy('NWLOperatorController', [accounts[0]])) as NWLOperatorController
+    await setupController(controller)
   })
 
   it('addOperator should work correctly', async () => {
@@ -275,49 +283,52 @@ describe('NWLOperatorController', () => {
     )
   })
 
-  it('reportStoppedValidators should work correctly', async () => {
-    await controller.assignNextValidators(7)
-    await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(2), toEther(1)])
+  it.only('reportStoppedValidators should work correctly', async () => {
+    await controller.assignNextValidators(8)
+    await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(4), toEther(1)])
 
     let op = await controller.getOperators([0, 2, 4])
     assert.equal(op[0][5].toNumber(), 2, 'operator stoppedValidators incorrect')
     assert.equal(op[1][5].toNumber(), 0, 'operator stoppedValidators incorrect')
     assert.equal(op[2][5].toNumber(), 1, 'operator stoppedValidators incorrect')
 
-    assert.equal(fromEther(await controller.ethLost(0)), 2, 'operator ethLost incorrect')
+    assert.equal(fromEther(await controller.ethLost(0)), 4, 'operator ethLost incorrect')
     assert.equal(fromEther(await controller.ethLost(2)), 0, 'operator ethLost incorrect')
     assert.equal(fromEther(await controller.ethLost(4)), 1, 'operator ethLost incorrect')
 
-    assert.equal(fromEther(await controller.totalStake()), 109, 'totalStake incorrect')
-    assert.equal(fromEther(await controller.totalActiveStake()), 64, 'totalActiveStake incorrect')
+    assert.equal(fromEther(await controller.totalStake()), 123, 'totalStake incorrect')
+    assert.equal(fromEther(await controller.totalActiveStake()), 80, 'totalActiveStake incorrect')
     assert.equal(
       (await controller.totalActiveValidators()).toNumber(),
-      4,
+      5,
       'totalActiveValidators incorrect'
     )
-    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
-    assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 5, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 5, 'totalStaked incorrect')
 
     await expect(
-      controller.reportStoppedValidators([0, 5], [3, 1], [toEther(2), toEther(1)])
+      controller.reportStoppedValidators([0, 5], [3, 1], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Operator does not exist')
     await expect(
       controller
         .connect(signers[1])
-        .reportStoppedValidators([0, 4], [3, 2], [toEther(2), toEther(1)])
+        .reportStoppedValidators([0, 4], [3, 2], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Sender is not beacon oracle')
     await expect(
-      controller.reportStoppedValidators([0, 4], [1, 3], [toEther(2), toEther(1)])
+      controller.reportStoppedValidators([0, 4], [1, 3], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Reported negative or zero stopped validators')
     await expect(
-      controller.reportStoppedValidators([0, 4], [3, 0], [toEther(2), toEther(1)])
+      controller.reportStoppedValidators([0, 4], [3, 0], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Reported negative or zero stopped validators')
     await expect(controller.reportStoppedValidators([0], [3], [toEther(1)])).to.be.revertedWith(
       'Reported negative lost ETH'
     )
     await expect(
-      controller.reportStoppedValidators([0, 4], [4, 3], [toEther(2), toEther(1)])
+      controller.reportStoppedValidators([0, 4], [4, 3], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Reported more stopped validators than active')
+    await expect(controller.reportStoppedValidators([4], [2], [toEther(18)])).to.be.revertedWith(
+      'Reported more than max loss of 16 ETH per validator'
+    )
   })
 
   it('RewardsPoolController functions should work', async () => {
@@ -384,6 +395,48 @@ describe('NWLOperatorController', () => {
       fromEther(await rewardsPool.balanceOf(accounts[4])),
       25,
       'rewards pool account balance incorrect'
+    )
+  })
+
+  it('withdrawableStake and withdrawStake should work correctly', async () => {
+    const strategy = (await deploy('EthStakingStrategyMock')) as EthStakingStrategyMock
+    const controller = (await deploy('NWLOperatorController', [
+      strategy.address,
+    ])) as NWLOperatorController
+    await strategy.setNWLOperatorController(controller.address)
+    await setupController(controller)
+
+    await strategy.depositEther(8)
+
+    assert.equal(fromEther(await controller.withdrawableStake(0)), 0, 'withdrawableStake incorrect')
+    assert.equal(fromEther(await controller.totalStake()), 128, 'totalStake incorrect')
+
+    await controller.reportStoppedValidators([0, 4], [1, 2], [0, toEther(6)])
+
+    assert.equal(
+      fromEther(await controller.withdrawableStake(0)),
+      16,
+      'withdrawableStake incorrect'
+    )
+    assert.equal(
+      fromEther(await controller.withdrawableStake(4)),
+      26,
+      'withdrawableStake incorrect'
+    )
+    assert.equal(fromEther(await controller.totalStake()), 122, 'totalStake incorrect')
+
+    await controller.withdrawStake(0, toEther(10))
+    await controller.withdrawStake(4, toEther(26))
+
+    assert.equal(fromEther(await controller.withdrawableStake(0)), 6, 'withdrawableStake incorrect')
+    assert.equal(fromEther(await controller.withdrawableStake(4)), 0, 'withdrawableStake incorrect')
+    assert.equal(fromEther(await controller.totalStake()), 86, 'totalStake incorrect')
+
+    await expect(controller.withdrawStake(0, toEther(7))).to.be.revertedWith(
+      'Cannot withdraw more than available'
+    )
+    await expect(controller.connect(signers[1]).withdrawStake(0, toEther(1))).to.be.revertedWith(
+      'Sender is not operator owner'
     )
   })
 })

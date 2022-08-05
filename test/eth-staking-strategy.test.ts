@@ -445,4 +445,15 @@ describe('EthStakingStrategy', () => {
       'Ownable: caller is not the owner'
     )
   })
+
+  it('nwlWithdraw should work correctly', async () => {
+    await strategy.setNWLOperatorController(accounts[1])
+
+    await expect(strategy.nwlWithdraw(accounts[2], toEther(1))).to.be.revertedWith(
+      'Sender is not non-whitelisted operator controller'
+    )
+    await expect(
+      strategy.connect(signers[1]).nwlWithdraw(accounts[2], toEther(1))
+    ).to.be.revertedWith('Not implemented yet')
+  })
 })

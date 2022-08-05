@@ -6,7 +6,7 @@ import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 
-const balance = '10000000000000000000000'
+const balance = '100000000000000000000000'
 const accounts = [
   'c3381a96fa2be2aae2f2798e0887272e634417710aa09ecad9328754cdc8db8a',
   '33a3d35ee3408a701f0ff775390ede800f728562ed656ec0036f9e4fd96e7d5b',

@@ -6,6 +6,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "./base/OperatorController.sol";
 import "./interfaces/IOperatorWhitelist.sol";
+import "./interfaces/IEthStakingStrategy.sol";
 
 /**
  * @title Non-Whitelist Operator Controller
@@ -25,10 +26,12 @@ contract NWLOperatorController is OperatorController {
 
     uint public totalStake;
     mapping(uint => uint) public ethLost;
+    mapping(uint => uint) public ethWithdrawn;
 
-    event RemoveKeyPairs(uint operatorId, uint quantity);
-    event ReportKeyPairValidation(uint operatorId, bool success);
-    event ReportStoppedValidators(uint operatorId, uint totalStoppedValidators, uint totalEthLost);
+    event RemoveKeyPairs(uint indexed operatorId, uint quantity);
+    event ReportKeyPairValidation(uint indexed operatorId, bool success);
+    event ReportStoppedValidators(uint indexed operatorId, uint totalStoppedValidators, uint totalEthLost);
+    event WithdrawStake(uint indexed _operatorId, uint amount);
 
     constructor(address _ethStakingStrategy)
         OperatorController(_ethStakingStrategy, "Non-whitelisted Validator Token", "nwlVT")
@@ -267,6 +270,11 @@ contract NWLOperatorController is OperatorController {
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
             uint newlyLostETH = _ethLost[i] - ethLost[operatorId];
 
+            require(
+                newlyLostETH <= newlyStoppedValidators * DEPOSIT_AMOUNT,
+                "Reported more than max loss of 16 ETH per validator"
+            );
+
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
             _burn(operators[operatorId].owner, newlyStoppedValidators);
             ethLost[operatorId] += newlyLostETH;
@@ -276,5 +284,31 @@ contract NWLOperatorController is OperatorController {
         }
 
         totalStake -= totalNewlyLostETH;
+    }
+
+    /**
+     * @notice Withdraws an operator's stake
+     * @param _operatorId id of operator
+     * @param _amount amount to withdraw
+     */
+    function withdrawStake(uint _operatorId, uint _amount) external operatorExists(_operatorId) {
+        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+        require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
+
+        ethWithdrawn[_operatorId] += _amount;
+        totalStake -= _amount;
+        IEthStakingStrategy(ethStakingStrategy).nwlWithdraw(msg.sender, _amount);
+
+        emit WithdrawStake(_operatorId, _amount);
+    }
+
+    /**
+     * @notice Returns the total withdrawable stake for an operator
+     * @param _operatorId id of operator
+     * @return withdrawableStake total withdrawable stake
+     */
+    function withdrawableStake(uint _operatorId) public view returns (uint) {
+        return
+            operators[_operatorId].stoppedValidators * DEPOSIT_AMOUNT - (ethLost[_operatorId] + ethWithdrawn[_operatorId]);
     }
 }
