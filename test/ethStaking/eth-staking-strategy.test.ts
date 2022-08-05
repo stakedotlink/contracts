@@ -9,7 +9,7 @@ import {
   padBytes,
   concatBytes,
   assertThrowsAsync,
-} from './utils/helpers'
+} from '../utils/helpers'
 import {
   StakingPool,
   WrappedSDToken,
@@ -19,7 +19,7 @@ import {
   WLOperatorController,
   NWLOperatorController,
   OperatorWhitelistMock,
-} from '../typechain-types'
+} from '../../typechain-types'
 import { Signer } from 'ethers'
 
 const depositAmount = '0x0040597307000000'

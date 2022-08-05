@@ -1,11 +1,11 @@
 import { assert, expect } from 'chai'
-import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from './utils/helpers'
+import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from '../utils/helpers'
 import {
   ERC677,
   OperatorWhitelistMock,
   RewardsPool,
   WLOperatorController,
-} from '../typechain-types'
+} from '../../typechain-types'
 import { Signer } from 'ethers'
 
 const pubkeyLength = 48 * 2

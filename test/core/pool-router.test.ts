@@ -9,7 +9,7 @@ import {
   setupToken,
   fromEther,
   padBytes,
-} from './utils/helpers'
+} from '../utils/helpers'
 import {
   ERC677,
   StrategyMock,
@@ -17,8 +17,7 @@ import {
   WrappedSDToken,
   PoolRouter,
   StakingAllowance,
-  WrappedETH,
-} from '../typechain-types'
+} from '../../typechain-types'
 
 describe('PoolRouter', () => {
   let token1: ERC677

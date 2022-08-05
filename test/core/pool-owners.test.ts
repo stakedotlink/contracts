@@ -8,8 +8,8 @@ import {
   setupToken,
   fromEther,
   padBytes,
-} from './utils/helpers'
-import { ERC677, PoolOwners, RewardsPool } from '../typechain-types'
+} from '../utils/helpers'
+import { ERC677, PoolOwners, RewardsPool } from '../../typechain-types'
 
 describe('PoolOwners', () => {
   let ownersToken: ERC677

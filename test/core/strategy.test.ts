@@ -9,8 +9,8 @@ import {
   setupToken,
   fromEther,
   assertThrowsAsync,
-} from './utils/helpers'
-import { ERC677, StrategyMock } from '../typechain-types'
+} from '../utils/helpers'
+import { ERC677, StrategyMock } from '../../typechain-types'
 
 describe('Strategy', () => {
   let token: ERC677

@@ -1,12 +1,12 @@
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from './utils/helpers'
+import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from '../utils/helpers'
 import {
   ERC677,
   EthStakingStrategyMock,
   NWLOperatorController,
   RewardsPool,
-} from '../typechain-types'
+} from '../../typechain-types'
 import { Signer } from 'ethers'
 
 const pubkeyLength = 48 * 2
@@ -283,7 +283,7 @@ describe('NWLOperatorController', () => {
     )
   })
 
-  it.only('reportStoppedValidators should work correctly', async () => {
+  it('reportStoppedValidators should work correctly', async () => {
     await controller.assignNextValidators(8)
     await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(4), toEther(1)])
 

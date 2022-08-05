@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai'
-import { deploy, padBytes, concatBytes, getAccounts } from './utils/helpers'
-import { OperatorControllerMock } from '../typechain-types'
+import { deploy, padBytes, concatBytes, getAccounts } from '../utils/helpers'
+import { OperatorControllerMock } from '../../typechain-types'
 import { Signer, constants } from 'ethers'
 
 const pubkeyLength = 48 * 2
