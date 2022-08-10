@@ -26,12 +26,16 @@ export const config = {
     fees: [],
     ownersFeeBasisPoints: 1000,
   },
+  LinkBorrowingPool: {
+    derivativeTokenName: 'bstLINK',
+    derivativeTokenSymbol: 'Borrowed stLINK',
+  },
   LinkWrappedSDToken: {
     name: 'Wrapped stLINK',
     symbol: 'wstLINK',
   },
-  LinkBorrowingPool: {
-    derivativeTokenName: 'bstLINK',
-    derivativeTokenSymbol: 'Borrowed stLINK',
+  LinkWrappedBSDToken: {
+    name: 'Wrapped bstLINK',
+    symbol: 'wbstLINK',
   },
 }

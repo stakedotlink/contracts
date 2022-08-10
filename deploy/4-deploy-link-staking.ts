@@ -7,7 +7,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { LinkStakingPool, LinkWrappedSDToken, LinkBorrowingPool } = config
+  const { LinkStakingPool, LinkWrappedSDToken, LinkBorrowingPool, LinkWrappedBSDToken } = config
 
   const linkToken = await ethers.getContract('LinkToken')
   const poolRouter = await ethers.getContract('PoolRouter')
@@ -58,6 +58,18 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
       LinkBorrowingPool.derivativeTokenSymbol,
     ],
   })
+  const borrowingPool = await ethers.getContract('LinkBorrowingPool')
+
+  await deploy('LinkWrappedBSDToken', {
+    contract: 'WrappedSDToken',
+    from: deployer,
+    log: true,
+    args: [borrowingPool.address, LinkWrappedBSDToken.name, LinkWrappedBSDToken.symbol],
+  })
+  const wbsdToken = await ethers.getContract('LinkWrappedBSDToken')
+
+  tx = await borrowingPool.init(wbsdToken.address)
+  await tx.wait()
 }
 
 module.exports.tags = ['Link-Staking']
