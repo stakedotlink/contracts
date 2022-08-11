@@ -1,7 +1,21 @@
 import { assert, expect } from 'chai'
-import { deploy, padBytes, concatBytes, getAccounts } from '../utils/helpers'
-import { OperatorControllerMock } from '../../typechain-types'
+import {
+  padBytes,
+  concatBytes,
+  getAccounts,
+  deployUpgradeable,
+  deploy,
+  toEther,
+  fromEther,
+} from '../utils/helpers'
+import {
+  ERC677,
+  OperatorControllerMock,
+  OperatorControllerMockV2,
+  RewardsPool,
+} from '../../typechain-types'
 import { Signer, constants } from 'ethers'
+import { ethers, upgrades } from 'hardhat'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -13,6 +27,8 @@ const keyPairs = {
 
 describe('OperatorController', () => {
   let controller: OperatorControllerMock
+  let wsdToken: ERC677
+  let rewardsPool: RewardsPool
   let signers: Signer[]
   let accounts: string[]
 
@@ -21,8 +37,19 @@ describe('OperatorController', () => {
   })
 
   beforeEach(async () => {
-    controller = (await deploy('OperatorControllerMock', [accounts[0]])) as OperatorControllerMock
+    wsdToken = (await deploy('ERC677', ['test', 'test', 50])) as ERC677
+    controller = (await deployUpgradeable('OperatorControllerMock', [
+      accounts[0],
+      wsdToken.address,
+    ])) as OperatorControllerMock
+    rewardsPool = (await deploy('RewardsPool', [
+      controller.address,
+      wsdToken.address,
+      'test',
+      'test',
+    ])) as RewardsPool
 
+    await controller.setRewardsPool(rewardsPool.address)
     await controller.setKeyValidationOracle(accounts[0])
     await controller.setBeaconOracle(accounts[0])
 
@@ -91,6 +118,40 @@ describe('OperatorController', () => {
     ).to.be.revertedWith('Key validation in progress')
   })
 
+  it('rewards distribution should work correctly', async () => {
+    await controller.assignNextValidators([0], [1], [1])
+    await wsdToken.transferAndCall(controller.address, toEther(50), '0x00')
+
+    assert.equal(
+      fromEther(await wsdToken.balanceOf(rewardsPool.address)),
+      50,
+      'rewards pool balance incorrect'
+    )
+    assert.equal(
+      fromEther(await controller.withdrawableRewards(accounts[0])),
+      50,
+      'account rewards balance incorrect'
+    )
+    assert.equal(
+      fromEther(await controller.withdrawableRewards(accounts[1])),
+      0,
+      'account rewards balance incorrect'
+    )
+
+    await controller.connect(signers[1]).withdrawRewards()
+    await controller.withdrawRewards()
+
+    assert.equal(
+      fromEther(await wsdToken.balanceOf(accounts[0])),
+      50,
+      'account wsdToken balance incorrect'
+    )
+
+    await expect(controller.onTokenTransfer(accounts[0], 10, '0x00')).to.be.revertedWith(
+      'Sender is not wsdToken'
+    )
+  })
+
   it('setOperatorName should work correctly', async () => {
     await controller.setOperatorName(0, '1234')
 
@@ -157,5 +218,43 @@ describe('OperatorController', () => {
     await expect(controller.connect(signers[1]).setBeaconOracle(accounts[2])).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
+  })
+
+  it('contract upgradeability should work correctly', async () => {
+    await controller.assignNextValidators([0], [2], 2)
+
+    let Controller = await ethers.getContractFactory('OperatorControllerMockV2')
+    let upgradedImpAddress = (await upgrades.prepareUpgrade(controller.address, Controller, {
+      kind: 'uups',
+    })) as string
+
+    await expect(controller.connect(signers[1]).upgradeTo(upgradedImpAddress)).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+
+    await controller.upgradeTo(upgradedImpAddress)
+
+    let upgraded = (await ethers.getContractAt(
+      'OperatorControllerMockV2',
+      controller.address
+    )) as OperatorControllerMockV2
+    assert.equal((await upgraded.contractVersion()).toNumber(), 2, 'contract not upgraded')
+
+    let op = (await controller.getOperators([0]))[0]
+    assert.equal(op[0], 'test', 'operator name incorrect')
+    assert.equal(op[1], accounts[0], 'operator owner incorrect')
+    assert.equal(op[2], true, 'operator active incorrect')
+    assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
+    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
+    assert.equal(op[5].toNumber(), 0, 'operator stoppedValidators incorrect')
+    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
+    assert.equal(op[7].toNumber(), 2, 'operator usedKeyPairs incorrect')
+
+    assert.equal(
+      (await upgraded.totalActiveValidators()).toNumber(),
+      2,
+      'totalActiveValidator incorrect'
+    )
+    assert.equal((await upgraded.staked(accounts[0])).toNumber(), 2, 'operator staked incorrect')
   })
 })

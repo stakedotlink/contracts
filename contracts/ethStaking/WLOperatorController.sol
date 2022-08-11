@@ -29,11 +29,18 @@ contract WLOperatorController is OperatorController {
     event ReportKeyPairValidation(uint indexed operatorId, bool success);
     event ReportStoppedValidators(uint indexed operatorId, uint totalStoppedValidators);
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _ethStakingStrategy,
+        address _wsdToken,
         address _operatorWhitelist,
         uint _batchSize
-    ) OperatorController(_ethStakingStrategy, "Whitelisted Validator Token", "wlVT") {
+    ) public initializer {
+        __OperatorController_init(_ethStakingStrategy, _wsdToken);
         operatorWhitelist = IOperatorWhitelist(_operatorWhitelist);
         batchSize = _batchSize;
     }
@@ -148,10 +155,10 @@ contract WLOperatorController is OperatorController {
             require(!seenOperatorIds[operatorId], "Duplicate operator");
             seenOperatorIds[operatorId] = true;
 
-            _updateRewards(operators[operatorId].owner);
+            rewardsPool.updateReward(operators[operatorId].owner);
 
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
-            _mint(operators[operatorId].owner, _validatorCounts[i]);
+            activeValidators[operators[operatorId].owner] += _validatorCounts[i];
 
             OperatorCache memory operator = OperatorCache(
                 operatorId,
@@ -262,6 +269,7 @@ contract WLOperatorController is OperatorController {
             assignmentIndex = maxBatchOperatorId + 1;
         }
 
+        totalActiveValidators += totalValidatorCount;
         queueLength -= totalValidatorCount;
     }
 
@@ -350,6 +358,8 @@ contract WLOperatorController is OperatorController {
     {
         require(_operatorIds.length == _stoppedValidators.length, "Inconsistent list lengths");
 
+        uint totalNewlyStoppedValidators;
+
         for (uint i = 0; i < _operatorIds.length; i++) {
             uint operatorId = _operatorIds[i];
             require(operatorId < operators.length, "Operator does not exist");
@@ -362,15 +372,18 @@ contract WLOperatorController is OperatorController {
                 "Reported more stopped validators than active"
             );
 
-            _updateRewards(operators[operatorId].owner);
+            rewardsPool.updateReward(operators[operatorId].owner);
 
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            _burn(operators[operatorId].owner, newlyStoppedValidators);
+            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+            totalNewlyStoppedValidators += newlyStoppedValidators;
 
             emit ReportStoppedValidators(operatorId, _stoppedValidators[i]);
         }
+
+        totalActiveValidators -= totalNewlyStoppedValidators;
     }
 
     /**

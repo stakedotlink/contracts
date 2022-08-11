@@ -11,7 +11,14 @@ import "../base/OperatorController.sol";
  * @notice Base controller contract to be inherited from
  */
 contract OperatorControllerMock is OperatorController {
-    constructor(address _ethStakingStrategy) OperatorController(_ethStakingStrategy, "Validator Token", "VT") {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _ethStakingStrategy, address _wsdToken) public initializer {
+        __OperatorController_init(_ethStakingStrategy, _wsdToken);
+    }
 
     /**
      * @notice Adds a new operator
@@ -54,7 +61,8 @@ contract OperatorControllerMock is OperatorController {
             uint operatorId = _operatorIds[i];
 
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
-            _mint(operators[operatorId].owner, _validatorCounts[i]);
+            activeValidators[operators[operatorId].owner] += _validatorCounts[i];
+            totalActiveValidators += _validatorCounts[i];
         }
     }
 

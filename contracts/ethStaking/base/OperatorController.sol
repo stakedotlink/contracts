@@ -2,16 +2,20 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../../core/base/RewardsPoolController.sol";
 import "../lib/BytesUtils.sol";
+import "../../core/interfaces/IRewardsPool.sol";
+import "../../core/interfaces/IERC677.sol";
 
 /**
  * @title Operator Controller
  * @notice Base controller contract to be inherited from
  */
-abstract contract OperatorController is RewardsPoolController {
+abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     uint public constant PUBKEY_LENGTH = 48;
     uint public constant SIGNATURE_LENGTH = 96;
 
@@ -30,7 +34,13 @@ abstract contract OperatorController is RewardsPoolController {
     address public keyValidationOracle;
     address public beaconOracle;
 
+    IERC677 public wsdToken;
+    IRewardsPool public rewardsPool;
+
     Operator[] internal operators;
+
+    uint public totalActiveValidators;
+    mapping(address => uint) internal activeValidators;
 
     event AddOperator(address indexed owner, string name);
     event OperatorOwnerChange(uint indexed operatorId, address indexed from, address indexed to);
@@ -56,16 +66,29 @@ abstract contract OperatorController is RewardsPoolController {
         _;
     }
 
-    constructor(
-        address _ethStakingStrategy,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol
-    ) RewardsPoolController(_derivativeTokenName, _derivativeTokenSymbol) {
+    function __OperatorController_init(address _ethStakingStrategy, address _wsdToken) public onlyInitializing {
+        __UUPSUpgradeable_init();
+        __Ownable_init();
         ethStakingStrategy = _ethStakingStrategy;
+        wsdToken = IERC677(_wsdToken);
     }
 
-    function totalActiveValidators() external view returns (uint) {
-        return totalSupply();
+    /**
+     * @notice returns an account's stake balance for use by reward pools
+     * controlled by this contract
+     * @return account's balance
+     */
+    function staked(address _account) public view returns (uint) {
+        return activeValidators[_account];
+    }
+
+    /**
+     * @notice returns the total staked amount for use by reward pools
+     * controlled by this contract
+     * @return total staked amount
+     */
+    function totalStaked() public view returns (uint) {
+        return totalActiveValidators;
     }
 
     /**
@@ -113,6 +136,23 @@ abstract contract OperatorController is RewardsPoolController {
         }
     }
 
+    function onTokenTransfer(
+        address _sender,
+        uint256 _value,
+        bytes calldata _data
+    ) external {
+        require(msg.sender == address(wsdToken), "Sender is not wsdToken");
+        wsdToken.transferAndCall(address(rewardsPool), _value, "0x00");
+    }
+
+    function withdrawRewards() public {
+        rewardsPool.withdraw(msg.sender);
+    }
+
+    function withdrawableRewards(address _account) external view returns (uint) {
+        return rewardsPool.balanceOf(_account);
+    }
+
     function initiateKeyPairValidation(uint _operatorId) external onlyKeyValidationOracle operatorExists(_operatorId) {
         operators[_operatorId].keyValidationInProgress = true;
     }
@@ -138,7 +178,8 @@ abstract contract OperatorController is RewardsPoolController {
         require(_owner != address(0), "Owner address cannot be 0");
 
         uint operatorActiveValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
-        ERC20._transfer(msg.sender, _owner, operatorActiveValidators);
+        activeValidators[_owner] += operatorActiveValidators;
+        activeValidators[msg.sender] -= operatorActiveValidators;
         operators[_operatorId].owner = _owner;
 
         emit OperatorOwnerChange(_operatorId, msg.sender, _owner);
@@ -159,6 +200,10 @@ abstract contract OperatorController is RewardsPoolController {
 
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
         beaconOracle = _beaconOracle;
+    }
+
+    function setRewardsPool(address _rewardsPool) external onlyOwner {
+        rewardsPool = IRewardsPool(_rewardsPool);
     }
 
     /**
@@ -297,11 +342,5 @@ abstract contract OperatorController is RewardsPoolController {
         return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
     }
 
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal override {
-        revert("Non-transferrable");
-    }
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

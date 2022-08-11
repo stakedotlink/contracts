@@ -19,6 +19,7 @@ import {
   WLOperatorController,
   NWLOperatorController,
   OperatorWhitelistMock,
+  RewardsPool,
 } from '../../typechain-types'
 import { Signer } from 'ethers'
 
@@ -43,6 +44,8 @@ describe('EthStakingStrategy', () => {
   let depositContract: DepositContract
   let nwlOperatorController: NWLOperatorController
   let wlOperatorController: WLOperatorController
+  let nwlRewardsPool: RewardsPool
+  let wlRewardsPool: RewardsPool
   let strategy: EthStakingStrategy
   let ownersRewards: string
   let accounts: string[]
@@ -89,8 +92,9 @@ describe('EthStakingStrategy', () => {
     ])) as EthStakingStrategy
     await strategy.setBeaconOracle(accounts[0])
 
-    nwlOperatorController = (await deploy('NWLOperatorController', [
+    nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
       strategy.address,
+      wsdToken.address,
     ])) as NWLOperatorController
     await nwlOperatorController.setKeyValidationOracle(accounts[0])
     await nwlOperatorController.setBeaconOracle(accounts[0])
@@ -98,13 +102,30 @@ describe('EthStakingStrategy', () => {
     let operatorWhitelist = (await deploy('OperatorWhitelistMock', [
       [accounts[0]],
     ])) as OperatorWhitelistMock
-    wlOperatorController = (await deploy('WLOperatorController', [
+    wlOperatorController = (await deployUpgradeable('WLOperatorController', [
       strategy.address,
+      wsdToken.address,
       operatorWhitelist.address,
       2,
     ])) as WLOperatorController
     await wlOperatorController.setKeyValidationOracle(accounts[0])
     await wlOperatorController.setBeaconOracle(accounts[0])
+
+    nwlRewardsPool = (await deploy('RewardsPool', [
+      nwlOperatorController.address,
+      wsdToken.address,
+      'test',
+      'test',
+    ])) as RewardsPool
+    wlRewardsPool = (await deploy('RewardsPool', [
+      wlOperatorController.address,
+      wsdToken.address,
+      'test',
+      'test',
+    ])) as RewardsPool
+
+    await nwlOperatorController.setRewardsPool(nwlRewardsPool.address)
+    await wlOperatorController.setRewardsPool(wlRewardsPool.address)
 
     for (let i = 0; i < 5; i++) {
       await nwlOperatorController.addOperator('test')
@@ -353,18 +374,14 @@ describe('EthStakingStrategy', () => {
     await stakingPool.updateStrategyRewards([0])
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(
-          await wsdToken.balanceOf(nwlOperatorController.address)
-        )
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
       ),
       16.25,
       'nwl operator rewards incorrect'
     )
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(
-          await wsdToken.balanceOf(wlOperatorController.address)
-        )
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(wlRewardsPool.address))
       ),
       2.5,
       'wl operator rewards incorrect'
@@ -385,18 +402,14 @@ describe('EthStakingStrategy', () => {
 
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(
-          await wsdToken.balanceOf(wlOperatorController.address)
-        )
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(wlRewardsPool.address))
       ),
       0,
       'wl operator rewards incorrect'
     )
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(
-          await wsdToken.balanceOf(nwlOperatorController.address)
-        )
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
       ),
       0,
       'nwl operator rewards incorrect'

@@ -33,9 +33,14 @@ contract NWLOperatorController is OperatorController {
     event ReportStoppedValidators(uint indexed operatorId, uint totalStoppedValidators, uint totalEthLost);
     event WithdrawStake(uint indexed _operatorId, uint amount);
 
-    constructor(address _ethStakingStrategy)
-        OperatorController(_ethStakingStrategy, "Non-whitelisted Validator Token", "nwlVT")
-    {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _ethStakingStrategy, address _wsdToken) public initializer {
+        __OperatorController_init(_ethStakingStrategy, _wsdToken);
+    }
 
     /**
      * @notice Returns a list of queue entries
@@ -60,7 +65,7 @@ contract NWLOperatorController is OperatorController {
      * @return totalActiveStake total active stake
      */
     function totalActiveStake() external view returns (uint) {
-        return totalSupply() * DEPOSIT_AMOUNT;
+        return totalActiveValidators * DEPOSIT_AMOUNT;
     }
 
     /**
@@ -205,10 +210,10 @@ contract NWLOperatorController is OperatorController {
                     toAssign = 0;
                 }
 
-                _updateRewards(operators[operatorId].owner);
+                rewardsPool.updateReward(operators[operatorId].owner);
 
                 operators[operatorId].usedKeyPairs += uint64(assignToOperator);
-                _mint(operators[operatorId].owner, assignToOperator);
+                activeValidators[operators[operatorId].owner] += assignToOperator;
 
                 uint usedKeyPairs = operators[operatorId].usedKeyPairs;
 
@@ -229,6 +234,7 @@ contract NWLOperatorController is OperatorController {
         (bool success, ) = payable(ethStakingStrategy).call{value: totalValidatorCount * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
 
+        totalActiveValidators += totalValidatorCount;
         totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= totalValidatorCount;
         queueIndex = index;
@@ -250,6 +256,7 @@ contract NWLOperatorController is OperatorController {
             "Inconsistent list lengths"
         );
 
+        uint totalNewlyStoppedValidators;
         uint totalNewlyLostETH;
 
         for (uint i = 0; i < _operatorIds.length; i++) {
@@ -265,7 +272,7 @@ contract NWLOperatorController is OperatorController {
                 "Reported more stopped validators than active"
             );
 
-            _updateRewards(operators[operatorId].owner);
+            rewardsPool.updateReward(operators[operatorId].owner);
 
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
             uint newlyLostETH = _ethLost[i] - ethLost[operatorId];
@@ -276,13 +283,15 @@ contract NWLOperatorController is OperatorController {
             );
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            _burn(operators[operatorId].owner, newlyStoppedValidators);
+            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
             ethLost[operatorId] += newlyLostETH;
 
+            totalNewlyStoppedValidators += newlyStoppedValidators;
             totalNewlyLostETH += newlyLostETH;
             emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
         }
 
+        totalActiveValidators -= totalNewlyStoppedValidators;
         totalStake -= totalNewlyLostETH;
     }
 

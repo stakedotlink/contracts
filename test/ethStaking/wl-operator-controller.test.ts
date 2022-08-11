@@ -1,5 +1,13 @@
 import { assert, expect } from 'chai'
-import { deploy, padBytes, concatBytes, getAccounts, toEther, fromEther } from '../utils/helpers'
+import {
+  deploy,
+  padBytes,
+  concatBytes,
+  getAccounts,
+  toEther,
+  fromEther,
+  deployUpgradeable,
+} from '../utils/helpers'
 import {
   ERC677,
   OperatorWhitelistMock,
@@ -18,6 +26,8 @@ const keyPairs = {
 
 describe('WLOperatorController', () => {
   let controller: WLOperatorController
+  let rewardsPool: RewardsPool
+  let wsdToken: ERC677
   let signers: Signer[]
   let accounts: string[]
 
@@ -29,12 +39,21 @@ describe('WLOperatorController', () => {
     let operatorWhitelist = (await deploy('OperatorWhitelistMock', [
       [accounts[0]],
     ])) as OperatorWhitelistMock
-    controller = (await deploy('WLOperatorController', [
+    wsdToken = (await deploy('ERC677', ['test', 'test', 100000])) as ERC677
+    controller = (await deployUpgradeable('WLOperatorController', [
       accounts[0],
+      wsdToken.address,
       operatorWhitelist.address,
       2,
     ])) as WLOperatorController
+    rewardsPool = (await deploy('RewardsPool', [
+      controller.address,
+      wsdToken.address,
+      'test',
+      'test',
+    ])) as RewardsPool
 
+    await controller.setRewardsPool(rewardsPool.address)
     await controller.setKeyValidationOracle(accounts[0])
     await controller.setBeaconOracle(accounts[0])
 
@@ -409,18 +428,10 @@ describe('WLOperatorController', () => {
   })
 
   it('RewardsPoolController functions should work', async () => {
-    const token = (await deploy('ERC677', ['test', 'test', 10000000000])) as ERC677
-    const rewardsPool = (await deploy('RewardsPool', [
-      controller.address,
-      token.address,
-      'test',
-      'test',
-    ])) as RewardsPool
-    await controller.addToken(token.address, rewardsPool.address)
     await controller.setOperatorOwner(2, accounts[2])
     await controller.setOperatorOwner(4, accounts[4])
     await controller.assignNextValidators([0, 2, 4], [3, 3, 2], 8)
-    await token.transferAndCall(rewardsPool.address, toEther(100), '0x00')
+    await wsdToken.transferAndCall(rewardsPool.address, toEther(100), '0x00')
 
     assert.equal(
       fromEther(await rewardsPool.balanceOf(accounts[0])),
