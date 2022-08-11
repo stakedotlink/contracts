@@ -40,6 +40,11 @@ const config: HardhatUserConfig = {
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
     },
   },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+  },
   solidity: {
     compilers: [
       {
