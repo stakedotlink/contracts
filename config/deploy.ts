@@ -16,26 +16,35 @@ export const config = {
     rateConstantD: 12,
     rateConstantE: 20,
   },
-  LinkOwnersRewardsPool: {
-    derivativeTokenName: 'LinkPool LINK',
-    derivativeTokenSymbol: 'lplLINK',
-  },
-  LinkStakingPool: {
-    derivativeTokenName: 'stLINK',
-    derivativeTokenSymbol: 'Staked LINK',
-    fees: [],
-    ownersFeeBasisPoints: 1000,
-  },
-  LinkBorrowingPool: {
-    derivativeTokenName: 'bstLINK',
-    derivativeTokenSymbol: 'Borrowed stLINK',
-  },
-  LinkWrappedSDToken: {
+
+  LINK_WrappedSDToken: {
     name: 'Wrapped stLINK',
     symbol: 'wstLINK',
   },
-  LinkWrappedBSDToken: {
+  LINK_WrappedBorrowedSDToken: {
     name: 'Wrapped bstLINK',
     symbol: 'wbstLINK',
+  },
+  LINK_StakingPool: {
+    derivativeTokenName: 'Staked LINK',
+    derivativeTokenSymbol: 'stLINK',
+    fees: [],
+    ownersFeeBasisPoints: 1000,
+  },
+  LINK_BorrowingPool: {
+    derivativeTokenName: 'Borrowed stLINK',
+    derivativeTokenSymbol: 'bstLINK',
+  },
+  LINK_OwnersRewardsPool: {
+    derivativeTokenName: 'Owners LINK',
+    derivativeTokenSymbol: 'oLINK',
+  },
+  wstLINK_OwnersRewardsPool: {
+    derivativeTokenName: 'Owners wstLINK',
+    derivativeTokenSymbol: 'owstLINK',
+  },
+  wbstLINK_LendingRewardsPool: {
+    derivativeTokenName: 'Reward wbstLINK',
+    derivativeTokenSymbol: 'rwbstLINK',
   },
 }
