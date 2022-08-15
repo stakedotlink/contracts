@@ -53,7 +53,7 @@ contract BorrowingPool is StakingRewardsPool, Ownable {
      * @dev Manually trigger a reward update. Reward update will query for the rewards earned in the
      * staking pool and distribute them between borrowers and lenders.
      */
-    function updateRewards() public {
+    function updateRewards() external {
         int totalRewards = int(stakingPool.balanceOf(address(lendingPool))) - int(totalStaked);
         if (totalRewards != 0) {
             totalStaked = uint(int(totalStaked) + totalRewards);
@@ -76,7 +76,6 @@ contract BorrowingPool is StakingRewardsPool, Ownable {
      * @param _amount the stake amount
      */
     function stake(address _account, uint _amount) external onlyOwner {
-        updateRewards();
         _mint(_account, _amount);
         totalStaked += _amount;
     }
@@ -87,7 +86,6 @@ contract BorrowingPool is StakingRewardsPool, Ownable {
      * @param _amount the withdrawal amount
      */
     function withdraw(address _account, uint _amount) external onlyOwner {
-        updateRewards();
         _burn(_account, _amount);
         totalStaked -= _amount;
     }
