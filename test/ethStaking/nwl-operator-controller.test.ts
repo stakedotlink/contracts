@@ -484,4 +484,44 @@ describe('NWLOperatorController', () => {
       'Sender is not operator owner'
     )
   })
+
+  it('currentStateHash should be properly updated', async () => {
+    let hash = await controller.currentStateHash()
+
+    await controller.removeKeyPairs(3, 2, [])
+
+    hash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'string', 'uint', 'uint', 'uint[]'],
+      [hash, 'removeKeyPairs', 3, 2, []]
+    )
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+
+    await controller.initiateKeyPairValidation(1)
+    await controller.reportKeyPairValidation(1, true)
+
+    hash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'string', 'uint'],
+      [hash, 'reportKeyPairValidation', 1]
+    )
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+
+    await controller.assignNextValidators(4)
+
+    for (let i = 0; i < 3; i++) {
+      hash = ethers.utils.solidityKeccak256(
+        ['bytes32', 'string', 'uint', 'bytes'],
+        [
+          hash,
+          'assignKey',
+          0,
+          '0x' + keyPairs.keys.slice(i * pubkeyLength + 2, (i + 1) * pubkeyLength + 2),
+        ]
+      )
+    }
+    hash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'string', 'uint', 'bytes'],
+      [hash, 'assignKey', 2, keyPairs.keys.slice(0, pubkeyLength + 2)]
+    )
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+  })
 })

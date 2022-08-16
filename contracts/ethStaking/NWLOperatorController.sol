@@ -138,6 +138,10 @@ contract NWLOperatorController is OperatorController {
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
 
+        currentStateHash = keccak256(
+            abi.encodePacked(currentStateHash, "removeKeyPairs", _operatorId, _quantity, _queueEntryIndexes)
+        );
+
         (bool success, ) = payable(msg.sender).call{value: _quantity * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
 
@@ -161,6 +165,7 @@ contract NWLOperatorController is OperatorController {
             queue.push(QueueEntry(_operatorId, newKeyPairs));
             queueLength += newKeyPairs;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
+            currentStateHash = keccak256(abi.encodePacked(currentStateHash, "reportKeyPairValidation", _operatorId));
         }
         operators[_operatorId].keyValidationInProgress = false;
 
@@ -180,6 +185,8 @@ contract NWLOperatorController is OperatorController {
     {
         require(_totalValidatorCount > 0, "Validator count must be greater than 0");
         require(_totalValidatorCount <= queueLength, "Cannot assign more than queue length");
+
+        bytes32 stateHash = currentStateHash;
         uint toAssign = _totalValidatorCount;
         uint totalValidatorCount;
         uint index = queueIndex;
@@ -218,6 +225,7 @@ contract NWLOperatorController is OperatorController {
                     (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
                     BytesUtils.copyBytes(key, keys, totalValidatorCount * PUBKEY_LENGTH);
                     BytesUtils.copyBytes(signature, signatures, totalValidatorCount * SIGNATURE_LENGTH);
+                    stateHash = keccak256(abi.encodePacked(stateHash, "assignKey", operatorId, key));
                     totalValidatorCount++;
                 }
 
@@ -231,6 +239,7 @@ contract NWLOperatorController is OperatorController {
         (bool success, ) = payable(ethStakingStrategy).call{value: totalValidatorCount * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
 
+        currentStateHash = stateHash;
         totalActiveValidators += totalValidatorCount;
         totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= totalValidatorCount;

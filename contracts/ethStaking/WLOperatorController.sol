@@ -88,6 +88,8 @@ contract WLOperatorController is OperatorController {
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
 
+        currentStateHash = keccak256(abi.encodePacked(currentStateHash, "removeKeyPairs", _operatorId, _quantity));
+
         emit RemoveKeyPairs(_operatorId, _quantity);
     }
 
@@ -106,6 +108,7 @@ contract WLOperatorController is OperatorController {
         if (_success) {
             queueLength += operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
+            currentStateHash = keccak256(abi.encodePacked(currentStateHash, "reportKeyPairValidation", _operatorId));
         }
         operators[_operatorId].keyValidationInProgress = false;
 
@@ -128,8 +131,6 @@ contract WLOperatorController is OperatorController {
         require(_operatorIds.length > 0, "Empty operatorIds");
         require(_operatorIds.length == _validatorCounts.length, "Inconsistent operatorIds and validatorCounts length");
 
-        uint _batchSize = batchSize;
-
         keys = BytesUtils.unsafeAllocateBytes(_totalValidatorCount * PUBKEY_LENGTH);
         signatures = BytesUtils.unsafeAllocateBytes(_totalValidatorCount * SIGNATURE_LENGTH);
 
@@ -144,6 +145,7 @@ contract WLOperatorController is OperatorController {
         uint totalValidatorCount;
         uint maxBatches;
         uint maxBatchOperatorId;
+        bytes32 stateHash = currentStateHash;
 
         for (uint i = 0; i < _operatorIds.length; i++) {
             uint operatorId = _operatorIds[i];
@@ -173,12 +175,13 @@ contract WLOperatorController is OperatorController {
                 (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
                 BytesUtils.copyBytes(key, keys, totalValidatorCount * PUBKEY_LENGTH);
                 BytesUtils.copyBytes(signature, signatures, totalValidatorCount * SIGNATURE_LENGTH);
+                stateHash = keccak256(abi.encodePacked(stateHash, "assignKey", operatorId, key));
                 totalValidatorCount++;
             }
 
             require(operator.usedKeyPairs <= operator.validatorLimit, "Assigned more keys than validator limit");
             require(
-                (operator.validatorCount % _batchSize == 0) || (operator.usedKeyPairs == operator.validatorLimit),
+                (operator.validatorCount % batchSize == 0) || (operator.usedKeyPairs == operator.validatorLimit),
                 "Invalid batching"
             );
 
@@ -215,13 +218,13 @@ contract WLOperatorController is OperatorController {
                 // An operator cannot be assigned greater than a single batch more than the operator after unless the operator
                 // after is at capacity
                 require(
-                    ((lastOperator.validatorCount - operator.validatorCount) <= _batchSize) ||
+                    ((lastOperator.validatorCount - operator.validatorCount) <= batchSize) ||
                         (operator.usedKeyPairs == operator.validatorLimit),
                     "2: Validator assignments incorrectly split"
                 );
             }
 
-            uint batches = operator.validatorCount / _batchSize + (operator.validatorCount % _batchSize > 0 ? 1 : 0);
+            uint batches = operator.validatorCount / batchSize + (operator.validatorCount % batchSize > 0 ? 1 : 0);
             if (batches >= maxBatches) {
                 maxBatches = batches;
                 maxBatchOperatorId = operatorId;
@@ -268,6 +271,7 @@ contract WLOperatorController is OperatorController {
 
         totalActiveValidators += totalValidatorCount;
         queueLength -= totalValidatorCount;
+        currentStateHash = stateHash;
     }
 
     /**

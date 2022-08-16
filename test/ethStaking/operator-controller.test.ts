@@ -152,6 +152,32 @@ describe('OperatorController', () => {
     )
   })
 
+  it('currentStateHash should be properly updated', async () => {
+    let hash = await controller.currentStateHash()
+
+    await controller.addKeyPairs(3, 3, keyPairs.keys, keyPairs.signatures)
+    for (let i = 0; i < 3; i++) {
+      hash = ethers.utils.solidityKeccak256(
+        ['bytes32', 'string', 'uint', 'bytes'],
+        [
+          hash,
+          'addKey',
+          3,
+          '0x' + keyPairs.keys.slice(i * pubkeyLength + 2, (i + 1) * pubkeyLength + 2),
+        ]
+      )
+    }
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+
+    await controller.setOperatorActive(1, false)
+
+    hash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'string', 'uint', 'bool'],
+      [hash, 'setOperatorActive', 1, false]
+    )
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+  })
+
   it('setOperatorName should work correctly', async () => {
     await controller.setOperatorName(0, '1234')
 

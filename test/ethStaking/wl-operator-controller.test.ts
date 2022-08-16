@@ -15,6 +15,7 @@ import {
   WLOperatorController,
 } from '../../typechain-types'
 import { Signer } from 'ethers'
+import { ethers } from 'hardhat'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -509,6 +510,44 @@ describe('WLOperatorController', () => {
       25,
       'rewards pool account balance incorrect'
     )
+  })
+
+  it('currentStateHash should be properly updated', async () => {
+    let hash = await controller.currentStateHash()
+
+    await controller.removeKeyPairs(3, 2)
+
+    hash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'string', 'uint', 'uint', 'uint[]'],
+      [hash, 'removeKeyPairs', 3, 2, []]
+    )
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+
+    await controller.initiateKeyPairValidation(1)
+    await controller.reportKeyPairValidation(1, true)
+
+    hash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'string', 'uint'],
+      [hash, 'reportKeyPairValidation', 1]
+    )
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
+
+    await controller.assignNextValidators([0, 1], [2, 2], 4)
+
+    for (let i = 0; i <= 1; i++) {
+      for (let j = 0; j < 2; j++) {
+        hash = ethers.utils.solidityKeccak256(
+          ['bytes32', 'string', 'uint', 'bytes'],
+          [
+            hash,
+            'assignKey',
+            i,
+            '0x' + keyPairs.keys.slice(j * pubkeyLength + 2, (j + 1) * pubkeyLength + 2),
+          ]
+        )
+      }
+    }
+    assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
   })
 
   it('setBatchSize should work correctly', async () => {

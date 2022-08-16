@@ -41,6 +41,8 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     uint public totalActiveValidators;
     mapping(address => uint) internal activeValidators;
 
+    bytes32 public currentStateHash;
+
     event AddOperator(address indexed owner, string name);
     event OperatorOwnerChange(uint indexed operatorId, address indexed from, address indexed to);
     event AddKeyPairs(uint indexed operatorId, uint quantity);
@@ -70,6 +72,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         __Ownable_init();
         ethStakingStrategy = _ethStakingStrategy;
         wsdToken = IERC677(_wsdToken);
+        currentStateHash = keccak256("initialized");
     }
 
     /**
@@ -191,6 +194,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      */
     function setOperatorActive(uint _operatorId, bool _active) external onlyOwner operatorExists(_operatorId) {
         operators[_operatorId].active = _active;
+        currentStateHash = keccak256(abi.encodePacked(currentStateHash, "setOperatorActive", _operatorId, _active));
     }
 
     function setKeyValidationOracle(address _keyValidationOracle) external onlyOwner {
@@ -233,15 +237,19 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         require(_pubkeys.length == _quantity * PUBKEY_LENGTH, "Invalid pubkeys length");
         require(_signatures.length == _quantity * SIGNATURE_LENGTH, "Invalid signatures length");
 
+        bytes32 stateHash = currentStateHash;
+
         for (uint256 i = 0; i < _quantity; ++i) {
             bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptyKey(key), "Empty key");
             bytes memory signature = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
             _storeKeyPair(_operatorId, operators[_operatorId].totalKeyPairs + i, key, signature);
+            stateHash = keccak256(abi.encodePacked(stateHash, "addKey", _operatorId, key));
         }
 
         operators[_operatorId].totalKeyPairs += uint64(_quantity);
+        currentStateHash = stateHash;
 
         emit AddKeyPairs(_operatorId, _quantity);
     }
