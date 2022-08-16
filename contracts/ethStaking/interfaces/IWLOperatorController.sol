@@ -9,4 +9,13 @@ interface IWLOperatorController is IOperatorController {
         uint[] calldata _validatorCounts,
         uint _totalValidatorCount
     ) external returns (bytes memory keys, bytes memory signatures);
+
+    function getNextValidators(uint _validatorCount)
+        external
+        view
+        returns (
+            uint[] memory operatorIds,
+            uint[] memory validatorCounts,
+            bytes memory keys
+        );
 }

@@ -305,6 +305,36 @@ describe('NWLOperatorController', () => {
     )
   })
 
+  it('getNextValidators should work correctly', async () => {
+    let keys = await controller.getNextValidators(5)
+    assert.equal(
+      keys,
+      keyPairs.keys + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'keys incorrect'
+    )
+
+    await controller.assignNextValidators(2)
+
+    keys = await controller.getNextValidators(5)
+    assert.equal(
+      keys,
+      '0x' +
+        keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2) +
+        keyPairs.keys.slice(2, pubkeyLength + 2),
+      'keys incorrect'
+    )
+
+    await controller.assignNextValidators(1)
+
+    keys = await controller.getNextValidators(5)
+    assert.equal(
+      keys,
+      keyPairs.keys + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'keys incorrect'
+    )
+  })
+
   it('reportStoppedValidators should work correctly', async () => {
     await controller.assignNextValidators(8)
     await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(4), toEther(1)])

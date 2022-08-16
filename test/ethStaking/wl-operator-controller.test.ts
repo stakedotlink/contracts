@@ -321,7 +321,7 @@ describe('WLOperatorController', () => {
     assert.equal((await controller.assignmentIndex()).toNumber(), 3)
   })
 
-  it('getNextValidators should correctly determine the next set of validators to assign', async () => {
+  it('getNextValidators should work correctly', async () => {
     let nextValidators = await controller.getNextValidators(2)
     assert.deepEqual(
       nextValidators[0].map((op) => op.toNumber()),
@@ -331,6 +331,7 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [2]
     )
+    assert.equal(nextValidators[2], keyPairs.keys.slice(0, 2 * pubkeyLength + 2), 'keys incorrect')
 
     nextValidators = await controller.getNextValidators(7)
     assert.deepEqual(
@@ -340,6 +341,13 @@ describe('WLOperatorController', () => {
     assert.deepEqual(
       nextValidators[1].map((v) => v.toNumber()),
       [3, 2, 2]
+    )
+    assert.equal(
+      nextValidators[2],
+      keyPairs.keys +
+        keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'keys incorrect'
     )
 
     await controller.assignNextValidators([0], [2], 2)
@@ -353,6 +361,13 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [2, 2, 1]
     )
+    assert.equal(
+      nextValidators[2],
+      keyPairs.keys.slice(0, 2 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2),
+      'keys incorrect'
+    )
 
     nextValidators = await controller.getNextValidators(4)
     assert.deepEqual(
@@ -362,6 +377,11 @@ describe('WLOperatorController', () => {
     assert.deepEqual(
       nextValidators[1].map((v) => v.toNumber()),
       [2, 2]
+    )
+    assert.equal(
+      nextValidators[2],
+      keyPairs.keys.slice(0, 2 * pubkeyLength + 2) + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'keys incorrect'
     )
 
     await controller.setOperatorActive(4, false)
@@ -374,17 +394,22 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [3, 1]
     )
+    assert.equal(
+      nextValidators[2],
+      keyPairs.keys + keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2),
+      'keys incorrect'
+    )
   })
 
   it('getNextValidators and assignNextValidators should work together', async () => {
     let nextValidators = await controller.getNextValidators(2)
-    await controller.assignNextValidators(nextValidators[0], nextValidators[1], nextValidators[2])
+    await controller.assignNextValidators(nextValidators[0], nextValidators[1], 2)
 
     nextValidators = await controller.getNextValidators(5)
-    await controller.assignNextValidators(nextValidators[0], nextValidators[1], nextValidators[2])
+    await controller.assignNextValidators(nextValidators[0], nextValidators[1], 5)
 
-    nextValidators = await controller.getNextValidators(5)
-    await controller.assignNextValidators(nextValidators[0], nextValidators[1], nextValidators[2])
+    nextValidators = await controller.getNextValidators(2)
+    await controller.assignNextValidators(nextValidators[0], nextValidators[1], 2)
 
     assert.equal(
       (await controller.totalActiveValidators()).toNumber(),

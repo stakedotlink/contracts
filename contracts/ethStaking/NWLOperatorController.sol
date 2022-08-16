@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "solidity-bytes-utils/contracts/BytesLib.sol";
-
 import "./base/OperatorController.sol";
 import "./interfaces/IOperatorWhitelist.sol";
 import "./interfaces/IEthStakingStrategy.sol";
@@ -238,6 +235,52 @@ contract NWLOperatorController is OperatorController {
         totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= totalValidatorCount;
         queueIndex = index;
+    }
+
+    /**
+     * @notice Returns the next set of validator keys to be assigned
+     * @param _validatorCount total number of validators to assign
+     * @return keys validator keys to be assigned
+     */
+    function getNextValidators(uint _validatorCount) external view returns (bytes memory keys) {
+        require(_validatorCount > 0, "Validator count must be greater than 0");
+        require(_validatorCount <= queueLength, "Cannot assign more than queue length");
+
+        uint toAssign = _validatorCount;
+        uint keysAssigned;
+        uint index = queueIndex;
+
+        keys = new bytes(toAssign * PUBKEY_LENGTH);
+
+        while (index < queue.length) {
+            uint numKeyPairs = queue[index].numKeyPairs;
+
+            if (numKeyPairs > 0) {
+                uint operatorId = queue[index].operatorId;
+                uint assignToOperator;
+
+                if (numKeyPairs < toAssign) {
+                    assignToOperator = numKeyPairs;
+                    toAssign -= numKeyPairs;
+                } else {
+                    assignToOperator = toAssign;
+                    toAssign = 0;
+                }
+
+                uint usedKeyPairs = operators[operatorId].usedKeyPairs;
+
+                for (uint j = usedKeyPairs; j < usedKeyPairs + assignToOperator; j++) {
+                    (bytes memory key, ) = _loadKeyPair(operatorId, j);
+                    BytesUtils.copyBytes(key, keys, keysAssigned * PUBKEY_LENGTH);
+                    keysAssigned++;
+                }
+
+                if (toAssign == 0) {
+                    break;
+                }
+            }
+            index++;
+        }
     }
 
     /**

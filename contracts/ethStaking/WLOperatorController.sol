@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "solidity-bytes-utils/contracts/BytesLib.sol";
-
 import "./base/OperatorController.sol";
 import "./interfaces/IOperatorWhitelist.sol";
 
@@ -278,6 +275,7 @@ contract WLOperatorController is OperatorController {
      * @param _validatorCount total number of validators to assign
      * @return operatorIds ids of operators that should be assigned validators
      * @return validatorCounts number of validators to assign each operator
+     * @return keys validator keys to be assigned
      */
     function getNextValidators(uint _validatorCount)
         external
@@ -285,19 +283,23 @@ contract WLOperatorController is OperatorController {
         returns (
             uint[] memory operatorIds,
             uint[] memory validatorCounts,
-            uint totalValidatorCount
+            bytes memory keys
         )
     {
+        require(_validatorCount > 0, "Validator count must be greater than 0");
+        require(_validatorCount <= queueLength, "Cannot assign more than queue length");
+
         uint[] memory validatorCounter = new uint[](operators.length);
         uint[] memory operatorTracker = new uint[](operators.length);
         uint operatorCount;
+        uint remainingToAssign = _validatorCount;
+
         uint loopValidatorCount;
         uint index = assignmentIndex;
         uint loopEnd = index == 0 ? operators.length - 1 : index - 1;
 
         while (true) {
             uint validatorRoom = operators[index].validatorLimit - (operators[index].usedKeyPairs + validatorCounter[index]);
-            uint remainingToAssign = _validatorCount - (totalValidatorCount + loopValidatorCount);
 
             if (validatorRoom > 0 && operators[index].active) {
                 if (validatorRoom <= batchSize && validatorRoom <= remainingToAssign) {
@@ -307,6 +309,7 @@ contract WLOperatorController is OperatorController {
                     }
                     validatorCounter[index] += validatorRoom;
                     loopValidatorCount += validatorRoom;
+                    remainingToAssign -= validatorRoom;
                 } else if (batchSize <= remainingToAssign) {
                     if (validatorCounter[index] == 0) {
                         operatorTracker[operatorCount] = index;
@@ -314,8 +317,8 @@ contract WLOperatorController is OperatorController {
                     }
                     validatorCounter[index] += batchSize;
                     loopValidatorCount += batchSize;
+                    remainingToAssign -= batchSize;
                 } else {
-                    totalValidatorCount += loopValidatorCount;
                     break;
                 }
             }
@@ -324,7 +327,6 @@ contract WLOperatorController is OperatorController {
                 if (loopValidatorCount == 0) {
                     break;
                 } else {
-                    totalValidatorCount += loopValidatorCount;
                     loopValidatorCount = 0;
                 }
             }
@@ -336,13 +338,23 @@ contract WLOperatorController is OperatorController {
             }
         }
 
-        if (operatorCount > 0) {
-            operatorIds = new uint[](operatorCount);
-            validatorCounts = new uint[](operatorCount);
+        operatorIds = new uint[](operatorCount);
+        validatorCounts = new uint[](operatorCount);
+        keys = new bytes(_validatorCount * PUBKEY_LENGTH);
 
-            for (uint i = 0; i < operatorCount; i++) {
-                operatorIds[i] = operatorTracker[i];
-                validatorCounts[i] = validatorCounter[operatorTracker[i]];
+        uint addedKeys;
+
+        for (uint i = 0; i < operatorCount; i++) {
+            operatorIds[i] = operatorTracker[i];
+            validatorCounts[i] = validatorCounter[operatorTracker[i]];
+
+            uint operatorId = operatorIds[i];
+            uint usedKeyPairs = operators[operatorId].usedKeyPairs;
+
+            for (uint j = usedKeyPairs; j < usedKeyPairs + validatorCounts[i]; j++) {
+                (bytes memory key, ) = _loadKeyPair(operatorId, j);
+                BytesUtils.copyBytes(key, keys, addedKeys * PUBKEY_LENGTH);
+                addedKeys++;
             }
         }
     }
