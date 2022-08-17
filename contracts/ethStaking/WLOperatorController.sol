@@ -276,9 +276,10 @@ contract WLOperatorController is OperatorController {
 
     /**
      * @notice Returns the next set of validators to be assigned
-     * @param _validatorCount total number of validators to assign
+     * @param _validatorCount target number of validators to assign
      * @return operatorIds ids of operators that should be assigned validators
      * @return validatorCounts number of validators to assign each operator
+     * @return totalValidatorCount actual number of validators to be assigned
      * @return keys validator keys to be assigned
      */
     function getNextValidators(uint _validatorCount)
@@ -287,6 +288,7 @@ contract WLOperatorController is OperatorController {
         returns (
             uint[] memory operatorIds,
             uint[] memory validatorCounts,
+            uint totalValidatorCount,
             bytes memory keys
         )
     {
@@ -342,9 +344,11 @@ contract WLOperatorController is OperatorController {
             }
         }
 
+        totalValidatorCount = _validatorCount - remainingToAssign;
+
         operatorIds = new uint[](operatorCount);
         validatorCounts = new uint[](operatorCount);
-        keys = new bytes(_validatorCount * PUBKEY_LENGTH);
+        keys = new bytes(totalValidatorCount * PUBKEY_LENGTH);
 
         uint addedKeys;
 

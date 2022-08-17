@@ -156,6 +156,7 @@ describe('EthStakingStrategy', () => {
 
     await strategy.setNWLOperatorController(nwlOperatorController.address)
     await strategy.setWLOperatorController(wlOperatorController.address)
+    await strategy.setDepositController(accounts[0])
     await stakingPool.addStrategy(strategy.address)
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
@@ -306,6 +307,9 @@ describe('EthStakingStrategy', () => {
   it('depositEther validation should work correctly', async () => {
     await stake(100)
 
+    await expect(strategy.connect(signers[1]).depositEther(1, 0, [], [])).to.be.revertedWith(
+      'Sender is not deposit controller'
+    )
     await expect(strategy.depositEther(0, 0, [], [])).to.be.revertedWith('Cannot deposit 0')
     await expect(strategy.depositEther(6, 4, [0, 2], [2, 2])).to.be.revertedWith(
       'Insufficient balance for deposit'
@@ -453,6 +457,16 @@ describe('EthStakingStrategy', () => {
     await strategy.setBeaconOracle(accounts[2])
 
     assert.equal(await strategy.beaconOracle(), accounts[2], 'beaconOracle incorrect')
+
+    await expect(strategy.connect(signers[1]).setBeaconOracle(accounts[2])).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+  })
+
+  it('setDepositController should work correctly', async () => {
+    await strategy.setDepositController(accounts[2])
+
+    assert.equal(await strategy.depositController(), accounts[2], 'beaconOracle incorrect')
 
     await expect(strategy.connect(signers[1]).setBeaconOracle(accounts[2])).to.be.revertedWith(
       'Ownable: caller is not the owner'

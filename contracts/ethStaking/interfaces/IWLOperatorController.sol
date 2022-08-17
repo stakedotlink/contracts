@@ -16,6 +16,7 @@ interface IWLOperatorController is IOperatorController {
         returns (
             uint[] memory operatorIds,
             uint[] memory validatorCounts,
+            uint totalValidatorCount,
             bytes memory keys
         );
 }

@@ -29,6 +29,7 @@ contract EthStakingStrategy is Strategy {
     IWLOperatorController public wlOperatorController;
     INWLOperatorController public nwlOperatorController;
     address public beaconOracle;
+    address public depositController;
 
     bytes32 public withdrawalCredentials;
 
@@ -104,6 +105,8 @@ contract EthStakingStrategy is Strategy {
         uint[] calldata _wlOperatorIds,
         uint[] calldata _wlValidatorCounts
     ) external {
+        require(msg.sender == depositController, "Sender is not deposit controller");
+
         uint totalDepositAmount = (DEPOSIT_AMOUNT * _wlTotalValidatorCount + (DEPOSIT_AMOUNT / 2) * _nwlTotalValidatorCount);
         require(totalDepositAmount > 0, "Cannot deposit 0");
         require(token.balanceOf(address(this)) >= totalDepositAmount, "Insufficient balance for deposit");
@@ -277,6 +280,14 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositMin(uint256 _depositMin) external onlyOwner {
         depositMin = _depositMin;
+    }
+
+    /**
+     * @notice sets the deposit controller
+     * @param _depositController deposit controller address
+     */
+    function setDepositController(address _depositController) external onlyOwner {
+        depositController = _depositController;
     }
 
     /**

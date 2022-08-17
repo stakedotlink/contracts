@@ -332,7 +332,8 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [2]
     )
-    assert.equal(nextValidators[2], keyPairs.keys.slice(0, 2 * pubkeyLength + 2), 'keys incorrect')
+    assert.equal(nextValidators[2].toNumber(), 2, 'totalValidatorCount incorrect')
+    assert.equal(nextValidators[3], keyPairs.keys.slice(0, 2 * pubkeyLength + 2), 'keys incorrect')
 
     nextValidators = await controller.getNextValidators(7)
     assert.deepEqual(
@@ -343,8 +344,9 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [3, 2, 2]
     )
+    assert.equal(nextValidators[2].toNumber(), 7, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[2],
+      nextValidators[3],
       keyPairs.keys +
         keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
         keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
@@ -362,8 +364,9 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [2, 2, 1]
     )
+    assert.equal(nextValidators[2].toNumber(), 5, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[2],
+      nextValidators[3],
       keyPairs.keys.slice(0, 2 * pubkeyLength + 2) +
         keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
         keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2),
@@ -379,8 +382,9 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [2, 2]
     )
+    assert.equal(nextValidators[2].toNumber(), 4, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[2],
+      nextValidators[3],
       keyPairs.keys.slice(0, 2 * pubkeyLength + 2) + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
       'keys incorrect'
     )
@@ -395,8 +399,9 @@ describe('WLOperatorController', () => {
       nextValidators[1].map((v) => v.toNumber()),
       [3, 1]
     )
+    assert.equal(nextValidators[2].toNumber(), 4, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[2],
+      nextValidators[3],
       keyPairs.keys + keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2),
       'keys incorrect'
     )
