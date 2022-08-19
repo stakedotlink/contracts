@@ -63,6 +63,7 @@ contract OperatorControllerMock is OperatorController {
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
             activeValidators[operators[operatorId].owner] += _validatorCounts[i];
             totalActiveValidators += _validatorCounts[i];
+            totalAssignedValidators += _validatorCounts[i];
         }
     }
 

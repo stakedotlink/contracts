@@ -248,6 +248,11 @@ describe('NWLOperatorController', () => {
     assert.equal(fromEther(await controller.totalStake()), 5 * 16, 'totalStake incorrect')
     assert.equal((await controller.queueIndex()).toNumber(), 1, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 4, 'queueLength incorrect')
+    assert.equal(
+      (await controller.totalAssignedValidators()).toNumber(),
+      5,
+      'totalAssignedValidators incorrect'
+    )
 
     assert.equal((await controller.staked(accounts[0])).toNumber(), 5, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 5, 'totalStaked incorrect')
@@ -296,6 +301,11 @@ describe('NWLOperatorController', () => {
     assert.equal(fromEther(await controller.totalStake()), 9 * 16, 'totalStake incorrect')
     assert.equal((await controller.queueIndex()).toNumber(), 3, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 0, 'queueLength incorrect')
+    assert.equal(
+      (await controller.totalAssignedValidators()).toNumber(),
+      9,
+      'totalAssignedValidators incorrect'
+    )
 
     assert.equal((await controller.staked(accounts[0])).toNumber(), 9, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 9, 'totalStaked incorrect')

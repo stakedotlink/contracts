@@ -240,6 +240,7 @@ contract NWLOperatorController is OperatorController {
         require(success, "ETH transfer failed");
 
         currentStateHash = stateHash;
+        totalAssignedValidators += totalValidatorCount;
         totalActiveValidators += totalValidatorCount;
         totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= totalValidatorCount;

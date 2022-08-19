@@ -99,6 +99,7 @@ describe('OperatorController', () => {
     assert.equal(pairs[1], '0x' + keyPairs.signatures.slice(signatureLength + 2))
 
     await expect(controller.getKeyPairs(6, 0, 2)).to.be.revertedWith('Operator does not exist')
+    await expect(controller.getKeyPairs(0, 4, 1)).to.be.revertedWith('startIndex out of range')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys.slice(0, 50), keyPairs.signatures)
     ).to.be.revertedWith('Invalid pubkeys length')
@@ -119,7 +120,7 @@ describe('OperatorController', () => {
   })
 
   it('rewards distribution should work correctly', async () => {
-    await controller.assignNextValidators([0], [1], [1])
+    await controller.assignNextValidators([0], [1], 1)
     await wsdToken.transferAndCall(controller.address, toEther(50), '0x00')
 
     assert.equal(
@@ -150,6 +151,31 @@ describe('OperatorController', () => {
     await expect(controller.onTokenTransfer(accounts[0], 10, '0x00')).to.be.revertedWith(
       'Sender is not wsdToken'
     )
+  })
+
+  it('getAssignedKeys should work correctly', async () => {
+    await controller.assignNextValidators([0, 2, 4], [3, 2, 1], 6)
+
+    let keys = await controller.getAssignedKeys(0, 100)
+    assert.equal(
+      keys,
+      keyPairs.keys +
+        keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
+        keyPairs.keys.slice(2, pubkeyLength + 2),
+      'keys incorrect'
+    )
+
+    keys = await controller.getAssignedKeys(0, 4)
+    assert.equal(keys, keyPairs.keys + keyPairs.keys.slice(2, pubkeyLength + 2), 'keys incorrect')
+
+    keys = await controller.getAssignedKeys(2, 3)
+    assert.equal(
+      keys,
+      '0x' + keyPairs.keys.slice(-pubkeyLength) + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'keys incorrect'
+    )
+
+    await expect(controller.getAssignedKeys(10, 1)).to.be.revertedWith('startIndex out of range')
   })
 
   it('currentStateHash should be properly updated', async () => {

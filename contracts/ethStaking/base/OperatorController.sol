@@ -38,6 +38,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
 
     Operator[] internal operators;
 
+    uint public totalAssignedValidators;
     uint public totalActiveValidators;
     mapping(address => uint) internal activeValidators;
 
@@ -120,6 +121,8 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint _startIndex,
         uint _numPairs
     ) external view operatorExists(_operatorId) returns (bytes memory keys, bytes memory signatures) {
+        require(_startIndex < operators[_operatorId].totalKeyPairs, "startIndex out of range");
+
         uint endIndex = _startIndex + _numPairs;
         if (endIndex > operators[_operatorId].totalKeyPairs) {
             endIndex = operators[_operatorId].totalKeyPairs;
@@ -135,6 +138,37 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
             BytesUtils.copyBytes(key, keys, copiedPairs * PUBKEY_LENGTH);
             BytesUtils.copyBytes(signature, signatures, copiedPairs * SIGNATURE_LENGTH);
             copiedPairs++;
+        }
+    }
+
+    /**
+     * @notice returns a list of assigned validator keys
+     * @param _startIndex index of first key to return
+     * @param _numKeys total number of keys to return
+     * @return keys concatenated list of pubkeys
+     */
+    function getAssignedKeys(uint _startIndex, uint _numKeys) external view returns (bytes memory keys) {
+        require(_startIndex < totalAssignedValidators, "startIndex out of range");
+
+        uint endIndex = _startIndex + _numKeys;
+        if (endIndex > totalAssignedValidators) {
+            endIndex = totalAssignedValidators;
+        }
+
+        keys = BytesUtils.unsafeAllocateBytes((endIndex - _startIndex) * PUBKEY_LENGTH);
+
+        uint index;
+
+        for (uint i = 0; i < operators.length && index < endIndex; i++) {
+            uint usedKeyPairs = operators[i].usedKeyPairs;
+
+            for (uint j = 0; j < usedKeyPairs && index < endIndex; j++) {
+                if (index >= _startIndex) {
+                    (bytes memory key, ) = _loadKeyPair(i, j);
+                    BytesUtils.copyBytes(key, keys, (index - _startIndex) * PUBKEY_LENGTH);
+                }
+                index++;
+            }
         }
     }
 

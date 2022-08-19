@@ -269,6 +269,7 @@ contract WLOperatorController is OperatorController {
             assignmentIndex = maxBatchOperatorId + 1;
         }
 
+        totalAssignedValidators += totalValidatorCount;
         totalActiveValidators += totalValidatorCount;
         queueLength -= totalValidatorCount;
         currentStateHash = stateHash;

@@ -195,6 +195,11 @@ describe('WLOperatorController', () => {
     )
     assert.equal((await controller.assignmentIndex()).toNumber(), 3, 'assignmentIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 5, 'queueLength incorrect')
+    assert.equal(
+      (await controller.totalAssignedValidators()).toNumber(),
+      4,
+      'totalAssignedValidators incorrect'
+    )
 
     assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
