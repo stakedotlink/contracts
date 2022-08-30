@@ -186,6 +186,11 @@ describe('PoolRouter', () => {
     assert.equal(fromEther(allowanceRequired), 0, 'allowance required does not match')
   })
 
+  it('should correctly calculate stakePerAllowance', async () => {
+    let stakePerAllowance = await poolRouter.stakePerAllowance(token1.address, 0)
+    assert.equal(fromEther(stakePerAllowance), 1.3, 'stake per allowance does not match')
+  })
+
   it('should be able to stake via transferAndCall', async () => {
     await token1.transferAndCall(poolRouter.address, toEther(13), padBytes('0x0', 32))
 

@@ -5,3 +5,4 @@ artifacts
 typechain-types
 deployments/localhost
 .openzeppelin/unknown-31337.json
+.openzeppelin/unknown-7777.json
