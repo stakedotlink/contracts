@@ -324,7 +324,7 @@ contract PoolRouter is Ownable {
     /**
      * @dev calculates the amount of allowance tokens in use for a given staking pool
      * @param _token the token address used by the staking pool
-     * @param _index  pool index
+     * @param _index pool index
      * @param _account the account to check how much allowance in use
      * @return the amount of allowance tokens in use
      **/
@@ -345,7 +345,7 @@ contract PoolRouter is Ownable {
     /**
      * @dev calculates the amount of allowance tokens required for a given staking amount
      * @param _token the token address used by the staking pool
-     * @param _index  pool index
+     * @param _index pool index
      * @param _amount the amount to query how much allowance is required
      * @return the amount of allowance tokens in use
      **/
@@ -364,7 +364,7 @@ contract PoolRouter is Ownable {
     /**
      * @dev calculates the amount of stake that can be deposited based on allowance staked
      * @param _token the token address used by the staking pool
-     * @param _index  pool index
+     * @param _index pool index
      * @param _account the account to query available stake
      * @return the amount of allowance tokens in use
      **/
@@ -382,6 +382,20 @@ contract PoolRouter is Ownable {
             return 0;
         }
         return (1e18 * pool.stakingPool.maxDeposits()) / ((allowanceToken.totalSupply() * 1e18) / availableAllowance);
+    }
+
+    /**
+     * @dev calculates the amount of stake per a single allowance
+     * @param _token the token address used by the staking pool
+     * @param _index pool index
+     * @return the amount of tokens that can be staked per one allowance
+     **/
+    function stakePerAllowance(address _token, uint16 _index) external view poolExists(_token, _index) returns (uint256) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return type(uint256).max;
+        }
+        return (1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply();
     }
 
     /**
