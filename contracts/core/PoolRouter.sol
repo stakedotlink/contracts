@@ -322,6 +322,26 @@ contract PoolRouter is Ownable {
     }
 
     /**
+     * @dev returns the amount of allowance available for a given account
+     * @param _token the token address used by the staking pool
+     * @param _index pool index
+     * @param _account the account to check how much allowance in use
+     * @return allowance available
+     **/
+    function availableAllowance(
+        address _token,
+        uint16 _index,
+        address _account
+    ) public view poolExists(_token, _index) returns (uint256) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return 0;
+        }
+
+        return allowanceStakes[_account] - allowanceInUse(_token, _index, _account);
+    }
+
+    /**
      * @dev calculates the amount of allowance tokens in use for a given staking pool
      * @param _token the token address used by the staking pool
      * @param _index pool index
