@@ -147,9 +147,9 @@ describe('EthStakingStrategy', () => {
       )
 
       if (i % 2 == 0) {
-        await nwlOperatorController.initiateKeyPairValidation(i)
+        await nwlOperatorController.initiateKeyPairValidation(accounts[0], i)
         await nwlOperatorController.reportKeyPairValidation(i, true)
-        await wlOperatorController.initiateKeyPairValidation(i)
+        await wlOperatorController.initiateKeyPairValidation(accounts[0], i)
         await wlOperatorController.reportKeyPairValidation(i, true)
       }
     }

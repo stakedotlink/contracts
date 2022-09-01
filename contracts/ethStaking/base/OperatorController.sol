@@ -189,7 +189,12 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         return rewardsPool.balanceOf(_account);
     }
 
-    function initiateKeyPairValidation(uint _operatorId) external onlyKeyValidationOracle operatorExists(_operatorId) {
+    function initiateKeyPairValidation(address _sender, uint _operatorId)
+        external
+        onlyKeyValidationOracle
+        operatorExists(_operatorId)
+    {
+        require(_sender == operators[_operatorId].owner, "Sender is not operator owner");
         operators[_operatorId].keyValidationInProgress = true;
     }
 

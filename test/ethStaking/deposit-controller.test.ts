@@ -129,9 +129,9 @@ describe('DepositController', () => {
       await wlOperatorController.addKeyPairs(i, 3, wlOps.keys, wlOps.signatures)
 
       if (i % 3 == 0) {
-        await nwlOperatorController.initiateKeyPairValidation(i)
+        await nwlOperatorController.initiateKeyPairValidation(accounts[0], i)
         await nwlOperatorController.reportKeyPairValidation(i, true)
-        await wlOperatorController.initiateKeyPairValidation(i)
+        await wlOperatorController.initiateKeyPairValidation(accounts[0], i)
         await wlOperatorController.reportKeyPairValidation(i, true)
       }
     }

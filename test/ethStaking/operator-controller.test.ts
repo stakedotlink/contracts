@@ -57,7 +57,7 @@ describe('OperatorController', () => {
       await controller.addOperator('test')
       await controller.addKeyPairs(i, 3, keyPairs.keys, keyPairs.signatures)
       if (i % 2 == 0) {
-        await controller.initiateKeyPairValidation(i)
+        await controller.initiateKeyPairValidation(accounts[0], i)
         await controller.reportKeyPairValidation(i, true)
       }
     }
@@ -109,7 +109,11 @@ describe('OperatorController', () => {
   })
 
   it('initiateKeyPairValidation should work correctly', async () => {
-    await controller.initiateKeyPairValidation(3)
+    await expect(controller.initiateKeyPairValidation(accounts[1], 3)).to.be.revertedWith(
+      'Sender is not operator owner'
+    )
+
+    await controller.initiateKeyPairValidation(accounts[0], 3)
 
     let op = (await controller.getOperators([3]))[0]
     assert.equal(op[3], true, 'operator keyValidationInProgress incorrect')

@@ -50,7 +50,7 @@ describe('NWLOperatorController', () => {
         value: toEther(16 * 3),
       })
       if (i % 2 == 0) {
-        await controller.initiateKeyPairValidation(i)
+        await controller.initiateKeyPairValidation(accounts[0], i)
         await controller.reportKeyPairValidation(i, true)
       }
     }
@@ -114,7 +114,7 @@ describe('NWLOperatorController', () => {
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
       value: toEther(3 * 16),
     })
-    await controller.initiateKeyPairValidation(2)
+    await controller.initiateKeyPairValidation(accounts[0], 2)
 
     await expect(
       controller.connect(signers[1]).reportKeyPairValidation(2, true)
@@ -135,7 +135,7 @@ describe('NWLOperatorController', () => {
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
       value: toEther(3 * 16),
     })
-    await controller.initiateKeyPairValidation(2)
+    await controller.initiateKeyPairValidation(accounts[0], 2)
     await controller.reportKeyPairValidation(2, false)
 
     op = (await controller.getOperators([2]))[0]
@@ -162,7 +162,7 @@ describe('NWLOperatorController', () => {
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
       value: toEther(3 * 16),
     })
-    await controller.initiateKeyPairValidation(2)
+    await controller.initiateKeyPairValidation(accounts[0], 2)
     await controller.reportKeyPairValidation(2, true)
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
       value: toEther(3 * 16),
@@ -506,7 +506,7 @@ describe('NWLOperatorController', () => {
     )
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
 
-    await controller.initiateKeyPairValidation(1)
+    await controller.initiateKeyPairValidation(accounts[0], 1)
     await controller.reportKeyPairValidation(1, true)
 
     hash = ethers.utils.solidityKeccak256(
