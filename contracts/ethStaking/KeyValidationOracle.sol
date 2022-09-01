@@ -36,6 +36,13 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         fee = _fee;
     }
 
+    /**
+     * @notice ERC677 implementation that accepts a fee and initiates a key pair validation
+     * @param _sender sender of the token transfer
+     * @param _value value of the token transfer
+     * @param _calldata (operatorId - id of operator to validate for,
+     * isWhitelisted - whether or not operator is whitelisted) ABI encoded
+     */
     function onTokenTransfer(
         address _sender,
         uint _value,
@@ -49,6 +56,13 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         _initiateKeyPairValidation(_sender, operatorId, isWhitelisted);
     }
 
+    /**
+     * @notice Reports the results of a validation request
+     * @param _requestId id of chainlink request
+     * @param _operatorId id of operator receiving the validation report
+     * @param _isWhitelisted whether or not operator is whitelisted
+     * @param _success whether or not validation was successful
+     */
     function reportKeyPairValidation(
         bytes32 _requestId,
         uint _operatorId,
@@ -62,6 +76,12 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         }
     }
 
+    /**
+     * @notice Sets oracle config variables
+     * @param _chainlinkOracle address of oracle
+     * @param _jobId id of job
+     * @param _fee fee that must be paid for each request
+     */
     function setOracleConfig(
         address _chainlinkOracle,
         bytes32 _jobId,
@@ -72,6 +92,12 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         fee = _fee;
     }
 
+    /**
+     * @notice Constructs and sends a key pair validation request
+     * @param _sender sender of request
+     * @param _operatorId id of operator to validate for
+     * @param _isWhitelisted whether or not operator is whitelisted
+     */
     function _initiateKeyPairValidation(
         address _sender,
         uint _operatorId,
