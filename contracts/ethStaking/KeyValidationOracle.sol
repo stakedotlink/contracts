@@ -18,7 +18,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
     IOperatorController public wlOperatorController;
 
     uint public fee;
-    bytes32 private jobId;
+    bytes32 public jobId;
 
     constructor(
         address _nwlOperatorController,
@@ -78,18 +78,26 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
 
     /**
      * @notice Sets oracle config variables
-     * @param _chainlinkOracle address of oracle
+     * @param _oracleAddress address of oracle
      * @param _jobId id of job
      * @param _fee fee that must be paid for each request
      */
     function setOracleConfig(
-        address _chainlinkOracle,
+        address _oracleAddress,
         bytes32 _jobId,
         uint _fee
     ) external onlyOwner {
-        setChainlinkOracle(_chainlinkOracle);
+        setChainlinkOracle(_oracleAddress);
         jobId = _jobId;
         fee = _fee;
+    }
+
+    /**
+     * @notice Returns the chainlink oracle address
+     * @return oracleAddress oracle address
+     */
+    function oracleAddress() external view returns (address) {
+        return chainlinkOracleAddress();
     }
 
     /**
