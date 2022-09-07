@@ -166,6 +166,11 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         }
     }
 
+    /**
+     * @notice ERC677 implementation to receive operator rewards
+     * @param _sender of the token transfer
+     * @param _value of the token transfer
+     **/
     function onTokenTransfer(
         address _sender,
         uint256 _value,
@@ -175,14 +180,26 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         wsdToken.transferAndCall(address(rewardsPool), _value, "0x00");
     }
 
+    /**
+     * @notice Withdraws all available rewards for an operator owner
+     **/
     function withdrawRewards() public {
         rewardsPool.withdraw(msg.sender);
     }
 
+    /**
+     * @notice Returns an operator owner's withdrawable reward amount
+
+     **/
     function withdrawableRewards(address _account) external view returns (uint) {
         return rewardsPool.balanceOf(_account);
     }
 
+    /**
+     * @notice Initiates a key pair validation for an operator
+     * @param _sender account initiating the validation
+     * @param _operatorId id of operator to initiate validation for
+     **/
     function initiateKeyPairValidation(address _sender, uint _operatorId)
         external
         onlyKeyValidationOracle
@@ -230,14 +247,26 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         currentStateHash = keccak256(abi.encodePacked(currentStateHash, "setOperatorActive", _operatorId, _active));
     }
 
+    /**
+     * @notice Sets the key validation oracle
+     * @param _keyValidationOracle oracle address
+     */
     function setKeyValidationOracle(address _keyValidationOracle) external onlyOwner {
         keyValidationOracle = _keyValidationOracle;
     }
 
+    /**
+     * @notice Sets the beacon oracle
+     * @param _beaconOracle oracle address
+     */
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
         beaconOracle = _beaconOracle;
     }
 
+    /**
+     * @notice Sets the rewards pool
+     * @param _rewardsPool rewards pool address
+     */
     function setRewardsPool(address _rewardsPool) external onlyOwner {
         rewardsPool = IRewardsPool(_rewardsPool);
     }
