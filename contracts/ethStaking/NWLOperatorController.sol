@@ -191,9 +191,6 @@ contract NWLOperatorController is OperatorController {
         uint totalValidatorCount;
         uint index = queueIndex;
 
-        keys = BytesUtils.unsafeAllocateBytes(toAssign * PUBKEY_LENGTH);
-        signatures = BytesUtils.unsafeAllocateBytes(toAssign * SIGNATURE_LENGTH);
-
         while (index < queue.length) {
             uint numKeyPairs = queue[index].numKeyPairs;
 
@@ -223,8 +220,8 @@ contract NWLOperatorController is OperatorController {
 
                 for (uint j = usedKeyPairs - assignToOperator; j < usedKeyPairs; j++) {
                     (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
-                    BytesUtils.copyBytes(key, keys, totalValidatorCount * PUBKEY_LENGTH);
-                    BytesUtils.copyBytes(signature, signatures, totalValidatorCount * SIGNATURE_LENGTH);
+                    keys = bytes.concat(keys, key);
+                    signatures = bytes.concat(signatures, signature);
                     stateHash = keccak256(abi.encodePacked(stateHash, "assignKey", operatorId, key));
                     totalValidatorCount++;
                 }
@@ -260,8 +257,6 @@ contract NWLOperatorController is OperatorController {
         uint keysAssigned;
         uint index = queueIndex;
 
-        keys = new bytes(toAssign * PUBKEY_LENGTH);
-
         while (index < queue.length) {
             uint numKeyPairs = queue[index].numKeyPairs;
 
@@ -281,7 +276,7 @@ contract NWLOperatorController is OperatorController {
 
                 for (uint j = usedKeyPairs; j < usedKeyPairs + assignToOperator; j++) {
                     (bytes memory key, ) = _loadKeyPair(operatorId, j);
-                    BytesUtils.copyBytes(key, keys, keysAssigned * PUBKEY_LENGTH);
+                    keys = bytes.concat(keys, key);
                     keysAssigned++;
                 }
 

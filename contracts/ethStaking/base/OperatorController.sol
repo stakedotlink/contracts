@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../lib/BytesUtils.sol";
 import "../../core/interfaces/IRewardsPool.sol";
 import "../../core/interfaces/IERC677.sol";
 
@@ -128,15 +127,12 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
             endIndex = operators[_operatorId].totalKeyPairs;
         }
 
-        keys = BytesUtils.unsafeAllocateBytes((endIndex - _startIndex) * PUBKEY_LENGTH);
-        signatures = BytesUtils.unsafeAllocateBytes((endIndex - _startIndex) * SIGNATURE_LENGTH);
-
         uint copiedPairs;
 
         for (uint i = _startIndex; i < endIndex; i++) {
             (bytes memory key, bytes memory signature) = _loadKeyPair(_operatorId, i);
-            BytesUtils.copyBytes(key, keys, copiedPairs * PUBKEY_LENGTH);
-            BytesUtils.copyBytes(signature, signatures, copiedPairs * SIGNATURE_LENGTH);
+            keys = bytes.concat(keys, key);
+            signatures = bytes.concat(signatures, signature);
             copiedPairs++;
         }
     }
@@ -155,8 +151,6 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
             endIndex = totalAssignedValidators;
         }
 
-        keys = BytesUtils.unsafeAllocateBytes((endIndex - _startIndex) * PUBKEY_LENGTH);
-
         uint index;
 
         for (uint i = 0; i < operators.length && index < endIndex; i++) {
@@ -165,7 +159,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
             for (uint j = 0; j < usedKeyPairs && index < endIndex; j++) {
                 if (index >= _startIndex) {
                     (bytes memory key, ) = _loadKeyPair(i, j);
-                    BytesUtils.copyBytes(key, keys, (index - _startIndex) * PUBKEY_LENGTH);
+                    keys = bytes.concat(keys, key);
                 }
                 index++;
             }

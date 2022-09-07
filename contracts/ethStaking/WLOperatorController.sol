@@ -131,9 +131,6 @@ contract WLOperatorController is OperatorController {
         require(_operatorIds.length > 0, "Empty operatorIds");
         require(_operatorIds.length == _validatorCounts.length, "Inconsistent operatorIds and validatorCounts length");
 
-        keys = BytesUtils.unsafeAllocateBytes(_totalValidatorCount * PUBKEY_LENGTH);
-        signatures = BytesUtils.unsafeAllocateBytes(_totalValidatorCount * SIGNATURE_LENGTH);
-
         OperatorCache memory lastOperator = OperatorCache(
             assignmentIndex == 0 ? operators.length - 1 : assignmentIndex - 1,
             0,
@@ -173,8 +170,8 @@ contract WLOperatorController is OperatorController {
 
             for (uint j = operator.usedKeyPairs - operator.validatorCount; j < operator.usedKeyPairs; j++) {
                 (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
-                BytesUtils.copyBytes(key, keys, totalValidatorCount * PUBKEY_LENGTH);
-                BytesUtils.copyBytes(signature, signatures, totalValidatorCount * SIGNATURE_LENGTH);
+                keys = bytes.concat(keys, key);
+                signatures = bytes.concat(signatures, signature);
                 stateHash = keccak256(abi.encodePacked(stateHash, "assignKey", operatorId, key));
                 totalValidatorCount++;
             }
@@ -349,7 +346,6 @@ contract WLOperatorController is OperatorController {
 
         operatorIds = new uint[](operatorCount);
         validatorCounts = new uint[](operatorCount);
-        keys = new bytes(totalValidatorCount * PUBKEY_LENGTH);
 
         uint addedKeys;
 
@@ -362,7 +358,7 @@ contract WLOperatorController is OperatorController {
 
             for (uint j = usedKeyPairs; j < usedKeyPairs + validatorCounts[i]; j++) {
                 (bytes memory key, ) = _loadKeyPair(operatorId, j);
-                BytesUtils.copyBytes(key, keys, addedKeys * PUBKEY_LENGTH);
+                keys = bytes.concat(keys, key);
                 addedKeys++;
             }
         }
