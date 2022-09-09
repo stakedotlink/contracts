@@ -116,29 +116,24 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     }
 
     /**
-     * @notice calculates the current percentage of rewards that lenders
-     * receive and borrowers pay. Fee cap of 95% hardcoded.
-     * @dev Equation: y = (A*x/B)^C + x/D + E
+     * @notice returns the current fee rate based on the % of allowance token borrowed
+     * @param _token the token address of the pool
+     * @param _index the pool index
      * @return current rate
      **/
     function currentRate(address _token, uint16 _index) public view returns (uint256) {
         uint256 allowanceInUse = poolRouter.allowanceInUse(_token, _index, address(this));
+        return _currentRate(allowanceInUse.div(allowanceInUse + availableAllowance(_token, _index)));
+    }
 
-        if (allowanceInUse == 0) {
-            return rateConstantE * 100;
-        }
-
-        uint256 x = allowanceInUse.div(allowanceInUse + availableAllowance(_token, _index));
-        uint256 y = x.div(rateConstantB).mul(rateConstantA * 100).powu(rateConstantC);
-        if (rateConstantD > 1) {
-            y = y + (x * 100).div(rateConstantD).toUint();
-        }
-        y = y / 1e16 + rateConstantE * 100;
-
-        if (y > 9500) {
-            return 9500;
-        }
-        return y;
+    /**
+     * @notice returns the current fee rate based on a specified percentage
+     * @dev 1 ether = 100%, 0.5 ether = 50% etc
+     * @param _percentageBorrowed the percentage borrowed for fee calculation
+     * @return current rate
+     **/
+    function currentRateAt(uint _percentageBorrowed) public view returns (uint256) {
+        return _currentRate(_percentageBorrowed);
     }
 
     /**
@@ -345,5 +340,28 @@ contract LendingPool is ILendingPool, RewardsPoolController {
             number = number + uint(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
         }
         return number;
+    }
+
+    /**
+     * @notice calculates the current percentage of rewards that lenders
+     * receive and borrowers pay. Fee cap of 95% hardcoded.
+     * @dev Equation: y = (A*x/B)^C + x/D + E
+     * @return current rate
+     **/
+    function _currentRate(uint256 _percentageBorrowed) internal view returns (uint256) {
+        if (_percentageBorrowed == 0) {
+            return rateConstantE * 100;
+        }
+        uint256 x = _percentageBorrowed;
+        uint256 y = x.div(rateConstantB).mul(rateConstantA * 100).powu(rateConstantC);
+        if (rateConstantD > 1) {
+            y = y + (x * 100).div(rateConstantD).toUint();
+        }
+        y = y / 1e16 + rateConstantE * 100;
+
+        if (y > 9500) {
+            return 9500;
+        }
+        return y;
     }
 }
