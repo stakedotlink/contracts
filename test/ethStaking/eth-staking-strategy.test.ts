@@ -483,4 +483,19 @@ describe('EthStakingStrategy', () => {
       strategy.connect(signers[1]).nwlWithdraw(accounts[2], toEther(1))
     ).to.be.revertedWith('Not implemented yet')
   })
+
+  it('setDepositMax and setDepositMin should work correctly', async () => {
+    await strategy.setDepositMax(toEther(33))
+    await strategy.setDepositMin(toEther(44))
+
+    assert.equal(fromEther(await strategy.maxDeposits()), 33, 'maxDeposits incorrect')
+    assert.equal(fromEther(await strategy.minDeposits()), 44, 'minDeposits incorrect')
+
+    await expect(strategy.connect(signers[1]).setDepositMax(toEther(1))).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+    await expect(strategy.connect(signers[1]).setDepositMin(toEther(1))).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+  })
 })
