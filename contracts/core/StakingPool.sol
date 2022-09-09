@@ -150,6 +150,20 @@ contract StakingPool is StakingRewardsPool, Ownable {
     }
 
     /**
+     * @notice returns the max amount of the token that can be withdrawn from the pool
+     * @return withdrawable amount
+     **/
+    function canWithdraw() external view returns (uint256) {
+        uint256 withdrawable;
+
+        for (uint i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            withdrawable += strategy.canWithdraw();
+        }
+        return withdrawable + token.balanceOf(address(this));
+    }
+
+    /**
      * @notice adds a new strategy
      * @param _strategy address of strategy to add
      **/

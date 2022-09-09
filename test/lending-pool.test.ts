@@ -557,6 +557,14 @@ describe('LendingPool', () => {
     })
   })
 
+  it('should be able to getCurrentRateAt with specified percentage', async () => {
+    assert.equal(
+      (await lendingPool.currentRateAt(toEther(0.5))).toNumber(),
+      2516,
+      'current rate is wrong'
+    )
+  })
+
   it('should be able to distribute rewards and calculate lenders fees', async () => {
     await allowanceToken
       .connect(signers[1])
