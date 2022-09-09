@@ -8,23 +8,19 @@ interface IStakingPool is IStakingRewardsPool {
 
     function withdraw(address _account, uint256 _amount) external;
 
-    function strategyDeposit(uint8 _index, uint256 _amount) external;
+    function strategyDeposit(uint _index, uint256 _amount) external;
 
-    function strategyWithdraw(uint8 _index, uint256 _amount) external;
+    function strategyWithdraw(uint _index, uint256 _amount) external;
+
+    function updateStrategyRewards(uint[] memory _strategyIdxs) external;
 
     function maxDeposits() external view returns (uint256);
 
     function addStrategy(address _strategy) external;
 
-    function removeStrategy(uint8 _index) external;
+    function removeStrategy(uint _index) external;
 
-    function reorderStrategies(uint8[] calldata _newOrder) external;
+    function reorderStrategies(uint[] calldata _newOrder) external;
 
-    function setOwnersTakePercent(uint256 _ownersTakePercent) external;
-
-    function setGovernance(address _governance) external;
-
-    function strategies(uint8 _index) external view returns (address);
-
-    function totalStrategies() external view returns (uint8);
+    function getStrategies() external view returns (address[] memory);
 }
