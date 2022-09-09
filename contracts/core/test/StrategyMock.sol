@@ -14,6 +14,9 @@ import "../RewardsPool.sol";
 contract StrategyMock is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint private depositMax;
+    uint private depositMin;
+
     uint private totalDeposited;
     uint public feeBasisPoints;
 
@@ -25,11 +28,13 @@ contract StrategyMock is Strategy {
     function initialize(
         address _token,
         address _stakingPool,
-        uint _depositsMax,
-        uint _depositsMin
+        uint _depositMax,
+        uint _depositMin
     ) public initializer {
-        __Strategy_init(_token, _stakingPool, _depositsMax, _depositsMin);
+        __Strategy_init(_token, _stakingPool);
         feeBasisPoints = 0;
+        depositMax = _depositMax;
+        depositMin = _depositMin;
     }
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
@@ -75,6 +80,22 @@ contract StrategyMock is Strategy {
 
     function totalDeposits() public view override returns (uint) {
         return totalDeposited;
+    }
+
+    function maxDeposits() public view override returns (uint) {
+        return depositMax;
+    }
+
+    function minDeposits() public view override returns (uint) {
+        return depositMin;
+    }
+
+    function setDepositMax(uint256 _depositMax) external onlyOwner {
+        depositMax = _depositMax;
+    }
+
+    function setDepositMin(uint256 _depositMin) external onlyOwner {
+        depositMin = _depositMin;
     }
 
     function createRewardsPool(
