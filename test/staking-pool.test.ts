@@ -268,7 +268,7 @@ describe('StakingPool', () => {
 
   it('should not be able to withdraw more tokens than balance', async () => {
     await stake(1, 1000)
-    await strategy1.setDepositsMin(0)
+    await strategy1.setDepositMin(0)
     await assertThrowsAsync(async () => {
       await withdraw(1, 1001)
     }, 'revert')
@@ -541,7 +541,7 @@ describe('StakingPool', () => {
     stakingLimit = await stakingPool.maxDeposits()
     assert.equal(fromEther(stakingLimit), 13000, 'staking limit is not correct')
 
-    await strategy1.setDepositsMax(toEther(2000))
+    await strategy1.setDepositMax(toEther(2000))
     stakingLimit = await stakingPool.maxDeposits()
     assert.equal(fromEther(stakingLimit), 14000, 'staking limit is not correct')
   })

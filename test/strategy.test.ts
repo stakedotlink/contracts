@@ -36,13 +36,6 @@ describe('Strategy', () => {
     await token.approve(strategy.address, ethers.constants.MaxUint256)
   })
 
-  it('should be able to set depositsMax and depositsMin', async () => {
-    await strategy.setDepositsMax(22)
-    await strategy.setDepositsMin(11)
-    assert.equal((await strategy.depositsMax()).toNumber(), 22, 'depositsMax incorrect')
-    assert.equal((await strategy.depositsMin()).toNumber(), 11, 'depositsMin incorrect')
-  })
-
   it('should be able to upgrade contract, state should persist', async () => {
     await strategy.deposit(toEther(1000))
 

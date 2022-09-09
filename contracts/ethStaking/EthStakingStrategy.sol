@@ -40,6 +40,9 @@ contract EthStakingStrategy is Strategy {
 
     int public depositChange;
 
+    uint private depositMax;
+    uint private depositMin;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -48,8 +51,8 @@ contract EthStakingStrategy is Strategy {
     function initialize(
         address _wETH,
         address _stakingPool,
-        uint _depositsMax,
-        uint _depositsMin,
+        uint _depositMax,
+        uint _depositMin,
         address _depositContract,
         address _wlOperatorController,
         address _nwlOperatorController,
@@ -57,13 +60,15 @@ contract EthStakingStrategy is Strategy {
         bytes32 _withdrawalCredentials,
         uint _operatorFeeBasisPoints
     ) public initializer {
-        __Strategy_init(_wETH, _stakingPool, _depositsMax, _depositsMin);
+        __Strategy_init(_wETH, _stakingPool);
         depositContract = IDepositContract(_depositContract);
         wlOperatorController = IOperatorController(_wlOperatorController);
         nwlOperatorController = INWLOperatorController(_nwlOperatorController);
         oracle = _oracle;
         withdrawalCredentials = _withdrawalCredentials;
         operatorFeeBasisPoints = _operatorFeeBasisPoints;
+        depositMax = _depositMax;
+        depositMin = _depositMin;
     }
 
     receive() external payable {}
@@ -195,6 +200,38 @@ contract EthStakingStrategy is Strategy {
     function totalDeposits() public view override returns (uint) {
         uint depositsInProgress = (depositedValidators - beaconValidators) * DEPOSIT_AMOUNT;
         return beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.activeStake();
+    }
+
+    /**
+     * @notice returns the maximum that can be deposited into the strategy
+     * @return max deposit
+     */
+    function maxDeposits() public view override returns (uint) {
+        return depositMax;
+    }
+
+    /**
+     * @notice returns the minimum that can be deposited into the strategy
+     * @return min deposit
+     */
+    function minDeposits() public view override returns (uint) {
+        return depositMin;
+    }
+
+    /**
+     * @notice sets the maximum that can be deposited into the strategy
+     * @param _depositMax maximum deposits
+     */
+    function setDepositMax(uint256 _depositMax) external onlyOwner {
+        depositMax = _depositMax;
+    }
+
+    /**
+     * @notice sets the minimum that can be deposited into the strategy
+     * @param _depositMin minimum deposits
+     */
+    function setDepositMin(uint256 _depositMin) external onlyOwner {
+        depositMin = _depositMin;
     }
 
     /**
