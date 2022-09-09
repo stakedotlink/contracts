@@ -211,7 +211,7 @@ contract EthStakingStrategy is Strategy {
     }
 
     /**
-     * @notice returns the minimum that can be deposited into the strategy
+     * @notice returns the minimum that must remain the strategy
      * @return min deposit
      */
     function minDeposits() public view override returns (uint) {

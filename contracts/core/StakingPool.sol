@@ -136,7 +136,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice returns the maximum amount that can be staked via the pool
      * @return the overall staking limit
      **/
-    function maxDeposits() external view returns (uint256) {
+    function maxDeposits() public view returns (uint256) {
         uint256 max;
 
         for (uint i = 0; i < strategies.length; i++) {
@@ -150,17 +150,46 @@ contract StakingPool is StakingRewardsPool, Ownable {
     }
 
     /**
-     * @notice returns the max amount of the token that can be withdrawn from the pool
-     * @return withdrawable amount
-     **/
-    function canWithdraw() external view returns (uint256) {
-        uint256 withdrawable;
+     * @notice returns the minimum amount that must remain the pool
+     * @return min deposit
+     */
+    function minDeposits() public view returns (uint256) {
+        uint256 min;
 
         for (uint i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            withdrawable += strategy.canWithdraw();
+            min += strategy.minDeposits();
         }
-        return withdrawable + token.balanceOf(address(this));
+
+        return min;
+    }
+
+    /**
+     * @notice returns the available deposit room for this pool
+     * @return available deposit room
+     */
+    function canDeposit() external view returns (uint256) {
+        uint max = maxDeposits();
+
+        if (max <= totalStaked) {
+            return 0;
+        } else {
+            return max - totalStaked;
+        }
+    }
+
+    /**
+     * @notice returns the available withdrawal room for this pool
+     * @return available withdrawal room
+     */
+    function canWithdraw() external view returns (uint256) {
+        uint min = minDeposits();
+
+        if (min >= totalStaked) {
+            return 0;
+        } else {
+            return totalStaked - min;
+        }
     }
 
     /**
