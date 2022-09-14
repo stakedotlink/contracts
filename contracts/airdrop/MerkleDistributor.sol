@@ -27,8 +27,17 @@ contract MerkleDistributor is Ownable {
     event DistributionUpdated(address indexed token);
 
     modifier distributionExists(address _token) {
-        require(distributions[_token].merkleRoot != bytes32(0), "MerkleDistributor: Distribution does not exist.");
+        require(distributions[_token].token != address(0), "MerkleDistributor: Distribution does not exist.");
         _;
+    }
+
+    /**
+     * @notice returns the total amount that an account has claimed from a distribution
+     * @param _token token address
+     * @param _account address of the account to return claimed amount for
+     **/
+    function getClaimed(address _token, address _account) external view distributionExists(_token) returns (uint) {
+        return distributions[_token].claimed[_account];
     }
 
     /**
@@ -50,7 +59,7 @@ contract MerkleDistributor is Ownable {
      * @param _merkleRoot merkle root for token distribution
      **/
     function addDistribution(address _token, bytes32 _merkleRoot) public onlyOwner {
-        require(distributions[_token].merkleRoot == bytes32(0), "MerkleDistributor: Distribution is already added.");
+        require(distributions[_token].token == address(0), "MerkleDistributor: Distribution is already added.");
 
         tokens.push(_token);
 
@@ -132,6 +141,7 @@ contract MerkleDistributor is Ownable {
         require(distribution.claimed[_account] < _amount, "MerkleDistributor: Tokens already claimed.");
 
         uint amount = _amount - distribution.claimed[_account];
+        distribution.claimed[_account] = _amount;
         IERC20(_token).safeTransfer(_account, amount);
 
         emit Claimed(_token, _index, _account, amount);
