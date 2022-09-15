@@ -1,12 +1,9 @@
 import { deployUpgradeable, getAccounts, toEther } from './utils/helpers'
-import {
-  ERC677,
-  StakingPool,
-} from '../typechain-types'
+import { ERC677, StakingPool } from '../typechain-types'
 import { ethers } from 'hardhat'
 
 async function main() {
-  const {  accounts } = await getAccounts()
+  const { accounts } = await getAccounts()
 
   const linkToken = (await ethers.getContract('LinkToken')) as ERC677
   const ownersToken = (await ethers.getContract('OwnersToken')) as ERC677
