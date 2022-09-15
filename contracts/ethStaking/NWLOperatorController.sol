@@ -46,6 +46,8 @@ contract NWLOperatorController is OperatorController {
      * @return entries list of queue entries
      */
     function getQueueEntries(uint _startIndex, uint _numEntries) external view returns (QueueEntry[] memory entries) {
+        require(_startIndex < queue.length, "startIndex out of range");
+
         uint endIndex = _startIndex + _numEntries;
         if (endIndex > queue.length) {
             endIndex = queue.length;
@@ -188,7 +190,6 @@ contract NWLOperatorController is OperatorController {
 
         bytes32 stateHash = currentStateHash;
         uint toAssign = _totalValidatorCount;
-        uint totalValidatorCount;
         uint index = queueIndex;
 
         while (index < queue.length) {
@@ -223,7 +224,6 @@ contract NWLOperatorController is OperatorController {
                     keys = bytes.concat(keys, key);
                     signatures = bytes.concat(signatures, signature);
                     stateHash = keccak256(abi.encodePacked(stateHash, "assignKey", operatorId, key));
-                    totalValidatorCount++;
                 }
 
                 if (toAssign == 0) {
@@ -233,14 +233,14 @@ contract NWLOperatorController is OperatorController {
             index++;
         }
 
-        (bool success, ) = payable(ethStakingStrategy).call{value: totalValidatorCount * DEPOSIT_AMOUNT}("");
+        (bool success, ) = payable(ethStakingStrategy).call{value: _totalValidatorCount * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
 
         currentStateHash = stateHash;
-        totalAssignedValidators += totalValidatorCount;
-        totalActiveValidators += totalValidatorCount;
-        totalStake += totalValidatorCount * DEPOSIT_AMOUNT;
-        queueLength -= totalValidatorCount;
+        totalAssignedValidators += _totalValidatorCount;
+        totalActiveValidators += _totalValidatorCount;
+        totalStake += _totalValidatorCount * DEPOSIT_AMOUNT;
+        queueLength -= _totalValidatorCount;
         queueIndex = index;
     }
 
@@ -254,7 +254,6 @@ contract NWLOperatorController is OperatorController {
         require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
         uint toAssign = _validatorCount;
-        uint keysAssigned;
         uint index = queueIndex;
 
         while (index < queue.length) {
@@ -277,7 +276,6 @@ contract NWLOperatorController is OperatorController {
                 for (uint j = usedKeyPairs; j < usedKeyPairs + assignToOperator; j++) {
                     (bytes memory key, ) = _loadKeyPair(operatorId, j);
                     keys = bytes.concat(keys, key);
-                    keysAssigned++;
                 }
 
                 if (toAssign == 0) {
@@ -316,7 +314,7 @@ contract NWLOperatorController is OperatorController {
             );
             require(_ethLost[i] >= ethLost[operatorId], "Reported negative lost ETH");
             require(
-                (_stoppedValidators[i]) <= operators[operatorId].usedKeyPairs,
+                _stoppedValidators[i] <= operators[operatorId].usedKeyPairs,
                 "Reported more stopped validators than active"
             );
 

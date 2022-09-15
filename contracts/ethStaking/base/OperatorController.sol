@@ -58,7 +58,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     }
 
     modifier onlyBeaconOracle() {
-        require(msg.sender == keyValidationOracle, "Sender is not beacon oracle");
+        require(msg.sender == beaconOracle, "Sender is not beacon oracle");
         _;
     }
 
@@ -127,13 +127,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
             endIndex = operators[_operatorId].totalKeyPairs;
         }
 
-        uint copiedPairs;
-
         for (uint i = _startIndex; i < endIndex; i++) {
             (bytes memory key, bytes memory signature) = _loadKeyPair(_operatorId, i);
             keys = bytes.concat(keys, key);
             signatures = bytes.concat(signatures, signature);
-            copiedPairs++;
         }
     }
 
@@ -390,7 +387,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @return storageAddress storage address of pair
      */
     function _keyPairStorageAddress(uint _operatorId, uint _keyIndex) internal pure returns (uint) {
-        return uint256(keccak256(abi.encodePacked("wl-operator-controller-keys", _operatorId, _keyIndex)));
+        return uint256(keccak256(abi.encodePacked("operator-controller-keys", _operatorId, _keyIndex)));
     }
 
     /**

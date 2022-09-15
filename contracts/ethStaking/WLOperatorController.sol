@@ -347,8 +347,6 @@ contract WLOperatorController is OperatorController {
         operatorIds = new uint[](operatorCount);
         validatorCounts = new uint[](operatorCount);
 
-        uint addedKeys;
-
         for (uint i = 0; i < operatorCount; i++) {
             operatorIds[i] = operatorTracker[i];
             validatorCounts[i] = validatorCounter[operatorTracker[i]];
@@ -359,7 +357,6 @@ contract WLOperatorController is OperatorController {
             for (uint j = usedKeyPairs; j < usedKeyPairs + validatorCounts[i]; j++) {
                 (bytes memory key, ) = _loadKeyPair(operatorId, j);
                 keys = bytes.concat(keys, key);
-                addedKeys++;
             }
         }
     }
@@ -385,7 +382,7 @@ contract WLOperatorController is OperatorController {
                 "Reported negative or zero stopped validators"
             );
             require(
-                (_stoppedValidators[i]) <= operators[operatorId].usedKeyPairs,
+                _stoppedValidators[i] <= operators[operatorId].usedKeyPairs,
                 "Reported more stopped validators than active"
             );
 
