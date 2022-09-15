@@ -91,9 +91,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice withdraws asset tokens and burns derivative tokens
      * @dev will withdraw from strategies if not enough liquidity
      * @param _account account to withdraw for
+     * @param _receiver address to receive withdrawal
      * @param _amount amount to withdraw
      **/
-    function withdraw(address _account, uint _amount) external onlyRouter {
+    function withdraw(
+        address _account,
+        address _receiver,
+        uint _amount
+    ) external onlyRouter {
         uint toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(_account);
@@ -107,7 +112,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
 
         _burn(_account, toWithdraw);
         totalStaked -= toWithdraw;
-        token.safeTransfer(_account, toWithdraw);
+        token.safeTransfer(_receiver, toWithdraw);
 
         emit Withdraw(_account, toWithdraw);
     }

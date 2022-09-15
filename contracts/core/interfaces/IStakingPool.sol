@@ -6,7 +6,11 @@ import "./IStakingRewardsPool.sol";
 interface IStakingPool is IStakingRewardsPool {
     function stake(address _account, uint256 _amount) external;
 
-    function withdraw(address _account, uint256 _amount) external;
+    function withdraw(
+        address _account,
+        address _receiver,
+        uint256 _amount
+    ) external;
 
     function strategyDeposit(uint _index, uint256 _amount) external;
 

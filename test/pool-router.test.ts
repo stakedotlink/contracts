@@ -17,6 +17,7 @@ import {
   WrappedSDToken,
   PoolRouter,
   StakingAllowance,
+  WrappedETH,
 } from '../typechain-types'
 
 describe('PoolRouter', () => {
@@ -563,5 +564,41 @@ describe('PoolRouter', () => {
     await expect(
       poolRouter.transferEmergencyWallet(token1.address, 0, accounts[1])
     ).to.be.revertedWith('Unauthorised')
+  })
+
+  it('should be able to set wrappedETH', async () => {
+    const wETH = (await deploy('WrappedETH', [])) as WrappedETH
+    await poolRouter.setWrappedETH(wETH.address)
+    assert.equal(await poolRouter.wrappedETH(), wETH.address, 'wrappedETH incorrect')
+
+    await expect(poolRouter.setWrappedETH(wETH.address)).to.be.revertedWith(
+      'wrappedETH already set'
+    )
+  })
+
+  it('should be able to stake/withdraw ETH', async () => {
+    const wETH = (await deploy('WrappedETH', [])) as WrappedETH
+    const stakingPool = await createPool(poolRouter, wETH.address)
+    await poolRouter.setWrappedETH(wETH.address)
+
+    await poolRouter.stakeETH(0, { value: toEther(10) })
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[0])), 10, 'incorrect stake balance')
+
+    const initialBalance = await ethers.provider.getBalance(accounts[0])
+    await poolRouter.withdrawETH(0, toEther(2))
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[0])), 8, 'incorrect stake balance')
+    assert.equal(
+      (await ethers.provider.getBalance(accounts[0])).gt(initialBalance),
+      true,
+      'incorrect amount withdrawn'
+    )
+
+    await expect(poolRouter.stakeETH(1, { value: toEther(10) })).to.be.revertedWith(
+      'Pool does not exist'
+    )
+    await expect(poolRouter.withdrawETH(1, toEther(8))).to.be.revertedWith('Pool does not exist')
+    await expect(poolRouter.withdrawETH(0, toEther(10))).to.be.revertedWith(
+      'Amount exceeds staked balance'
+    )
   })
 })

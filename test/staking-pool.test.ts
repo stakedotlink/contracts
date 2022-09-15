@@ -29,7 +29,7 @@ describe('StakingPool', () => {
   }
 
   async function withdraw(account: number, amount: number) {
-    await stakingPool.withdraw(accounts[account], toEther(amount))
+    await stakingPool.withdraw(accounts[account], accounts[account], toEther(amount))
   }
 
   before(async () => {
