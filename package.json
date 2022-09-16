@@ -12,7 +12,8 @@
     "tsc": "tsc",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
     "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
-    "solhint": "solhint contracts/**/*.sol"
+    "solhint": "solhint contracts/**/*.sol",
+    "ui-testing-deyta": "npx hardhat run scripts/ui-testing-deyta.ts"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
