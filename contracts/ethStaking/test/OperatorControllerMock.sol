@@ -71,6 +71,7 @@ contract OperatorControllerMock is OperatorController {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
         if (_success) {
+            queueLength += operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
         operators[_operatorId].keyValidationInProgress = false;

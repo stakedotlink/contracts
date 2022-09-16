@@ -186,6 +186,8 @@ describe('OperatorController', () => {
     let hash = await controller.currentStateHash()
 
     await controller.addKeyPairs(3, 3, keyPairs.keys, keyPairs.signatures)
+    await controller.initiateKeyPairValidation(accounts[0], 3)
+    await controller.reportKeyPairValidation(3, true)
     for (let i = 0; i < 3; i++) {
       hash = ethers.utils.solidityKeccak256(
         ['bytes32', 'string', 'uint', 'bytes'],
@@ -199,11 +201,11 @@ describe('OperatorController', () => {
     }
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
 
-    await controller.setOperatorActive(1, false)
+    await controller.disableOperator(3)
 
     hash = ethers.utils.solidityKeccak256(
-      ['bytes32', 'string', 'uint', 'bool'],
-      [hash, 'setOperatorActive', 1, false]
+      ['bytes32', 'string', 'uint'],
+      [hash, 'disableOperator', 3]
     )
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
   })
@@ -241,13 +243,13 @@ describe('OperatorController', () => {
     )
   })
 
-  it('setOperatorActive should work correctly', async () => {
-    await controller.setOperatorActive(0, false)
+  it('disableOperator should work correctly', async () => {
+    await controller.disableOperator(0)
 
     let op = (await controller.getOperators([0]))[0]
     assert.equal(op[2], false, 'operator active incorrect')
 
-    await expect(controller.connect(signers[1]).setOperatorActive(2, false)).to.be.revertedWith(
+    await expect(controller.connect(signers[1]).disableOperator(2)).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
   })

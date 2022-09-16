@@ -41,6 +41,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     uint public totalActiveValidators;
     mapping(address => uint) internal activeValidators;
 
+    uint public queueLength;
     bytes32 public currentStateHash;
 
     event AddOperator(address indexed owner, string name);
@@ -203,6 +204,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         operatorExists(_operatorId)
     {
         require(_sender == operators[_operatorId].owner, "Sender is not operator owner");
+        require(operators[_operatorId].active, "Operator is not active");
         operators[_operatorId].keyValidationInProgress = true;
     }
 
@@ -235,13 +237,26 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     }
 
     /**
-     * @notice Sets the active status of an operator
+     * @notice Permanently disables an operator
+     * @dev used when an operator misbehaves
      * @param _operatorId id of operator
-     * @param _active status of operator
      */
-    function setOperatorActive(uint _operatorId, bool _active) external onlyOwner operatorExists(_operatorId) {
-        operators[_operatorId].active = _active;
-        currentStateHash = keccak256(abi.encodePacked(currentStateHash, "setOperatorActive", _operatorId, _active));
+    function disableOperator(uint _operatorId) external onlyOwner operatorExists(_operatorId) {
+        require(operators[_operatorId].active, "Operator is already disabled");
+
+        uint unusedKeys = operators[_operatorId].validatorLimit - operators[_operatorId].usedKeyPairs;
+        if (unusedKeys > 0) {
+            queueLength -= unusedKeys;
+            currentStateHash = keccak256(abi.encodePacked(currentStateHash, "disableOperator", _operatorId));
+        }
+
+        uint unstoppedValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
+        if (unstoppedValidators > 0) {
+            activeValidators[operators[_operatorId].owner] -= unstoppedValidators;
+            totalActiveValidators -= unstoppedValidators;
+        }
+
+        operators[_operatorId].active = false;
     }
 
     /**

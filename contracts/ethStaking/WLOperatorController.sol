@@ -20,7 +20,6 @@ contract WLOperatorController is OperatorController {
 
     uint public batchSize;
     uint public assignmentIndex;
-    uint public queueLength;
 
     event RemoveKeyPairs(uint indexed operatorId, uint quantity);
     event ReportKeyPairValidation(uint indexed operatorId, bool success);
@@ -391,8 +390,11 @@ contract WLOperatorController is OperatorController {
             uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
-            totalNewlyStoppedValidators += newlyStoppedValidators;
+
+            if (operators[operatorId].active) {
+                activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+                totalNewlyStoppedValidators += newlyStoppedValidators;
+            }
 
             emit ReportStoppedValidators(operatorId, _stoppedValidators[i]);
         }

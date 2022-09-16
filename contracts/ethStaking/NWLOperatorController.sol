@@ -19,7 +19,6 @@ contract NWLOperatorController is OperatorController {
 
     QueueEntry[] private queue;
     uint public queueIndex;
-    uint public queueLength;
 
     uint public totalStake;
     mapping(uint => uint) public ethLost;
@@ -194,9 +193,9 @@ contract NWLOperatorController is OperatorController {
 
         while (index < queue.length) {
             uint numKeyPairs = queue[index].numKeyPairs;
+            uint operatorId = queue[index].operatorId;
 
-            if (numKeyPairs > 0) {
-                uint operatorId = queue[index].operatorId;
+            if (numKeyPairs > 0 && operators[operatorId].active) {
                 uint assignToOperator;
 
                 if (numKeyPairs < toAssign) {
@@ -258,9 +257,9 @@ contract NWLOperatorController is OperatorController {
 
         while (index < queue.length) {
             uint numKeyPairs = queue[index].numKeyPairs;
+            uint operatorId = queue[index].operatorId;
 
-            if (numKeyPairs > 0) {
-                uint operatorId = queue[index].operatorId;
+            if (numKeyPairs > 0 && operators[operatorId].active) {
                 uint assignToOperator;
 
                 if (numKeyPairs < toAssign) {
@@ -329,11 +328,14 @@ contract NWLOperatorController is OperatorController {
             );
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
             ethLost[operatorId] += newlyLostETH;
-
-            totalNewlyStoppedValidators += newlyStoppedValidators;
             totalNewlyLostETH += newlyLostETH;
+
+            if (operators[operatorId].active) {
+                activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+                totalNewlyStoppedValidators += newlyStoppedValidators;
+            }
+
             emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
         }
 

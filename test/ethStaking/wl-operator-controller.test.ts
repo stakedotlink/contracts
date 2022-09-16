@@ -262,7 +262,7 @@ describe('WLOperatorController', () => {
       'Inconsistent total validator count'
     )
 
-    await controller.setOperatorActive(0, false)
+    await controller.disableOperator(0)
     await expect(controller.assignNextValidators([0], [2], 2)).to.be.revertedWith(
       'Inactive operator'
     )
@@ -394,7 +394,7 @@ describe('WLOperatorController', () => {
       'keys incorrect'
     )
 
-    await controller.setOperatorActive(4, false)
+    await controller.disableOperator(4)
     nextValidators = await controller.getNextValidators(4)
     assert.deepEqual(
       nextValidators[0].map((op) => op.toNumber()),
