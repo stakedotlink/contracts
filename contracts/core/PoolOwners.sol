@@ -14,7 +14,7 @@ import "./tokens/base/ERC677.sol";
 contract PoolOwners is RewardsPoolController {
     using SafeERC20 for IERC677;
 
-    IERC677 public token;
+    IERC677 public immutable token;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);

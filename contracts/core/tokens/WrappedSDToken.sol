@@ -9,7 +9,7 @@ import "../interfaces/IStakingRewardsPool.sol";
  * @notice Wraps rebasing derivative tokens with a normal ERC20 token
  */
 contract WrappedSDToken is ERC677 {
-    IStakingRewardsPool public sdToken;
+    IStakingRewardsPool public immutable sdToken;
 
     constructor(
         address _stakingRewardsPool,

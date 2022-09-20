@@ -16,12 +16,12 @@ import "./interfaces/IWrappedSDToken.sol";
 contract BorrowingPool is StakingRewardsPool, Ownable {
     using SafeERC20 for IERC20;
 
-    ILendingPool public lendingPool;
-    IStakingRewardsPool public stakingPool;
+    ILendingPool public immutable lendingPool;
+    IStakingRewardsPool public immutable stakingPool;
     IWrappedSDToken public wsdToken;
 
-    address public baseToken;
-    uint16 public poolIndex;
+    address public immutable baseToken;
+    uint16 public immutable poolIndex;
     uint public totalStaked;
 
     constructor(

@@ -30,7 +30,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
     Fee[] private fees;
     IWrappedSDToken public wsdToken;
 
-    address public poolRouter;
+    address public immutable poolRouter;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
@@ -216,6 +216,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
         IStrategy strategy = IStrategy(strategies[_index]);
         uint totalStrategyDeposits = strategy.totalDeposits();
         if (totalStrategyDeposits > 0) {
+            require(strategy.canWithdraw() == totalStrategyDeposits, "Strategy contains deposits that cannot be withdrawn");
             strategy.withdraw(totalStrategyDeposits);
         }
 

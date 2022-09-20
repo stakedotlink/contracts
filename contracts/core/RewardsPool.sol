@@ -14,8 +14,8 @@ import "./interfaces/IRewardsPoolController.sol";
 contract RewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
 
-    IERC677 public token;
-    IRewardsPoolController public controller;
+    IERC677 public immutable token;
+    IRewardsPoolController public immutable controller;
 
     uint public withdrawableRewards;
     uint public rewardPerToken;
