@@ -1,5 +1,5 @@
 import { deployUpgradeable, getAccounts, toEther } from './utils/helpers'
-import { ERC677, PoolOwners, PoolRouter, StakingPool } from '../typechain-types'
+import { ERC677, PoolOwners, PoolRouter, StakingPool, LendingPool } from '../typechain-types'
 import { ethers } from 'hardhat'
 
 /*
@@ -19,6 +19,7 @@ async function main() {
   const stakingPool = (await ethers.getContract('LINK_StakingPool')) as StakingPool
   const poolOwners = (await ethers.getContract('PoolOwners')) as PoolOwners
   const poolRouter = (await ethers.getContract('PoolRouter')) as PoolRouter
+  const lendingPool = (await ethers.getContract('LendingPool')) as LendingPool
 
   const strategyMock = await deployUpgradeable('StrategyMock', [
     linkToken.address,
@@ -38,7 +39,7 @@ async function main() {
 
   await linkToken.transfer(accounts[3], toEther(10000))
   await ownersToken.transfer(accounts[3], toEther(10000))
-  await stakingAllowance.transfer(accounts[3], toEther(10000))
+  await stakingAllowance.transfer(accounts[3], toEther(20000))
 
   // stake LPL
   await ownersToken.connect(signers[3]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
@@ -48,6 +49,10 @@ async function main() {
     .transferAndCall(poolRouter.address, toEther(1000), '0x00')
   // stake LINK
   await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(10), '0x00')
+  // lend STA
+  await stakingAllowance
+    .connect(signers[3])
+    .transferAndCall(lendingPool.address, toEther(10000), '0x00')
 
   // account 4
   // ...
