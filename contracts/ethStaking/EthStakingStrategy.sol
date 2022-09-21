@@ -40,8 +40,11 @@ contract EthStakingStrategy is Strategy {
     uint public depositedValidators;
     uint public beaconValidators;
     uint public beaconBalance;
+    uint public nwlLostOperatorStakes;
 
     int public depositChange;
+    uint public depositTotal;
+    uint public bufferedETH;
 
     uint private depositMax;
     uint private depositMin;
@@ -77,23 +80,31 @@ contract EthStakingStrategy is Strategy {
      * @dev periodically called by the Oracle contract
      * @param _beaconValidators number of validators in the beacon state
      * @param _beaconBalance summed balance of all validators
+     * @param _nwlLostOperatorStakes sum of all lost non-whitelisted operator stakes (max of 16 ETH per nwl validator -
+     * the first 16 ETH lost for each nwl validator is staked by the operator, not this pool)
      */
-    function reportBeaconState(uint _beaconValidators, uint _beaconBalance) external {
+    function reportBeaconState(
+        uint _beaconValidators,
+        uint _beaconBalance,
+        uint _nwlLostOperatorStakes
+    ) external {
         require(msg.sender == beaconOracle, "Sender is not beacon oracle");
         require(_beaconValidators <= depositedValidators, "Reported more validators than deposited");
         require(_beaconValidators >= beaconValidators, "Reported less validators than tracked");
 
         uint newValidators = _beaconValidators - beaconValidators;
-        int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance);
+        int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance + nwlLostOperatorStakes);
 
         beaconBalance = _beaconBalance;
         beaconValidators = _beaconValidators;
+        nwlLostOperatorStakes = _nwlLostOperatorStakes;
 
-        int change = int(_beaconBalance) - rewardBase;
+        int change = int(_beaconBalance) - rewardBase + int(_nwlLostOperatorStakes);
         if (change > 0) {
             uint rewards = rewardsReceiver.withdraw();
             if (rewards > 0) {
                 IWrappedETH(address(token)).wrap{value: rewards}();
+                bufferedETH += rewards;
                 change += int(rewards);
             }
         }
@@ -120,7 +131,7 @@ contract EthStakingStrategy is Strategy {
 
         uint totalDepositAmount = (DEPOSIT_AMOUNT * _wlTotalValidatorCount + (DEPOSIT_AMOUNT / 2) * _nwlTotalValidatorCount);
         require(totalDepositAmount > 0, "Cannot deposit 0");
-        require(token.balanceOf(address(this)) >= totalDepositAmount, "Insufficient balance for deposit");
+        require(bufferedETH >= totalDepositAmount, "Insufficient balance for deposit");
 
         bytes memory nwlPubkeys;
         bytes memory nwlSignatures;
@@ -166,6 +177,7 @@ contract EthStakingStrategy is Strategy {
             _deposit(pubkey, signature);
         }
 
+        bufferedETH -= totalDepositAmount;
         depositedValidators += _nwlTotalValidatorCount + _wlTotalValidatorCount;
         emit DepositEther(_nwlTotalValidatorCount, _wlTotalValidatorCount);
     }
@@ -177,6 +189,8 @@ contract EthStakingStrategy is Strategy {
     function deposit(uint _amount) external onlyStakingPool {
         require(_amount <= canDeposit(), "Insufficient deposit room");
         token.transferFrom(address(stakingPool), address(this), _amount);
+        depositTotal += _amount;
+        bufferedETH += _amount;
     }
 
     /**
@@ -207,8 +221,7 @@ contract EthStakingStrategy is Strategy {
             uint rewards = uint(depositChange);
 
             uint nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
-            uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) /
-                (totalDeposits() + nwlOperatorDeposits - rewards);
+            uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) / (depositTotal + nwlOperatorDeposits);
 
             uint activeWLValidators = wlOperatorController.totalActiveValidators();
             uint activeNWLValidators = nwlOperatorController.totalActiveValidators();
@@ -225,16 +238,8 @@ contract EthStakingStrategy is Strategy {
             amounts[0] = wlOperatorFee;
             amounts[1] = nwlOperatorFee;
         }
+        depositTotal = uint(int(depositTotal) + depositChange);
         depositChange = 0;
-    }
-
-    /**
-     * @notice returns the total amount of deposits in this strategy
-     * @return total deposits
-     */
-    function totalDeposits() public view override returns (uint) {
-        uint depositsInProgress = (depositedValidators - beaconValidators) * DEPOSIT_AMOUNT;
-        return beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.totalStake();
     }
 
     /**
@@ -259,6 +264,14 @@ contract EthStakingStrategy is Strategy {
      */
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
         beaconOracle = _beaconOracle;
+    }
+
+    /**
+     * @notice returns the total amount of deposits in this strategy
+     * @return total deposits
+     */
+    function totalDeposits() public view override returns (uint) {
+        return depositTotal;
     }
 
     /**

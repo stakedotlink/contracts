@@ -245,7 +245,6 @@ describe('NWLOperatorController', () => {
       5 * 16,
       'totalActiveStake incorrect'
     )
-    assert.equal(fromEther(await controller.totalStake()), 5 * 16, 'totalStake incorrect')
     assert.equal((await controller.queueIndex()).toNumber(), 1, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 4, 'queueLength incorrect')
     assert.equal(
@@ -298,7 +297,6 @@ describe('NWLOperatorController', () => {
       9 * 16,
       'totalActiveStake incorrect'
     )
-    assert.equal(fromEther(await controller.totalStake()), 9 * 16, 'totalStake incorrect')
     assert.equal((await controller.queueIndex()).toNumber(), 3, 'queueIndex incorrect')
     assert.equal((await controller.queueLength()).toNumber(), 0, 'queueLength incorrect')
     assert.equal(
@@ -358,7 +356,6 @@ describe('NWLOperatorController', () => {
     assert.equal(fromEther(await controller.ethLost(2)), 0, 'operator ethLost incorrect')
     assert.equal(fromEther(await controller.ethLost(4)), 1, 'operator ethLost incorrect')
 
-    assert.equal(fromEther(await controller.totalStake()), 123, 'totalStake incorrect')
     assert.equal(fromEther(await controller.totalActiveStake()), 80, 'totalActiveStake incorrect')
     assert.equal(
       (await controller.totalActiveValidators()).toNumber(),
@@ -464,7 +461,6 @@ describe('NWLOperatorController', () => {
     await strategy.depositEther(8)
 
     assert.equal(fromEther(await controller.withdrawableStake(0)), 0, 'withdrawableStake incorrect')
-    assert.equal(fromEther(await controller.totalStake()), 128, 'totalStake incorrect')
 
     await controller.reportStoppedValidators([0, 4], [1, 2], [0, toEther(6)])
 
@@ -478,14 +474,12 @@ describe('NWLOperatorController', () => {
       26,
       'withdrawableStake incorrect'
     )
-    assert.equal(fromEther(await controller.totalStake()), 122, 'totalStake incorrect')
 
     await controller.withdrawStake(0, toEther(10))
     await controller.withdrawStake(4, toEther(26))
 
     assert.equal(fromEther(await controller.withdrawableStake(0)), 6, 'withdrawableStake incorrect')
     assert.equal(fromEther(await controller.withdrawableStake(4)), 0, 'withdrawableStake incorrect')
-    assert.equal(fromEther(await controller.totalStake()), 86, 'totalStake incorrect')
 
     await expect(controller.withdrawStake(0, toEther(7))).to.be.revertedWith(
       'Cannot withdraw more than available'

@@ -20,7 +20,6 @@ contract NWLOperatorController is OperatorController {
     QueueEntry[] private queue;
     uint public queueIndex;
 
-    uint public totalStake;
     mapping(uint => uint) public ethLost;
     mapping(uint => uint) public ethWithdrawn;
 
@@ -238,7 +237,6 @@ contract NWLOperatorController is OperatorController {
         currentStateHash = stateHash;
         totalAssignedValidators += _totalValidatorCount;
         totalActiveValidators += _totalValidatorCount;
-        totalStake += _totalValidatorCount * DEPOSIT_AMOUNT;
         queueLength -= _totalValidatorCount;
         queueIndex = index;
     }
@@ -340,7 +338,6 @@ contract NWLOperatorController is OperatorController {
         }
 
         totalActiveValidators -= totalNewlyStoppedValidators;
-        totalStake -= totalNewlyLostETH;
     }
 
     /**
@@ -353,7 +350,6 @@ contract NWLOperatorController is OperatorController {
         require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
 
         ethWithdrawn[_operatorId] += _amount;
-        totalStake -= _amount;
         IEthStakingStrategy(ethStakingStrategy).nwlWithdraw(msg.sender, _amount);
 
         emit WithdrawStake(_operatorId, _amount);
