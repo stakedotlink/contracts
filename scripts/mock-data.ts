@@ -8,6 +8,7 @@ Accounts:
 1 - account with no tokens.
 2 - account with STA/LINK/LPL and with no staked assets
 3 -  account with staked STA/LINK/LPL
+4 -  account with without STA
 */
 
 async function main() {
@@ -21,11 +22,14 @@ async function main() {
   const poolRouter = (await ethers.getContract('PoolRouter')) as PoolRouter
   const lendingPool = (await ethers.getContract('LendingPool')) as LendingPool
 
+  const poolMin = 10
+  const poolMax = 1000000
+  
   const strategyMock = await deployUpgradeable('StrategyMock', [
     linkToken.address,
     stakingPool.address,
-    toEther(1000000),
-    toEther(100000),
+    toEther(poolMax),
+    toEther(poolMin),
   ])
   await stakingPool.addStrategy(strategyMock.address)
 
@@ -55,7 +59,10 @@ async function main() {
     .transferAndCall(lendingPool.address, toEther(10000), '0x00')
 
   // account 4
-  // ...
+  
+  await linkToken.transfer(accounts[4], toEther(10000))
+  await ownersToken.transfer(accounts[4], toEther(10000))
+  
 }
 
 main()

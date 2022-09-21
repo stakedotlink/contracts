@@ -1,4 +1,4 @@
-var child_process = require('child_process')
+const child_process = require('child_process')
 
 // Start hardhat, wait for `deploy-status-ready` status, then run mock data script
 
