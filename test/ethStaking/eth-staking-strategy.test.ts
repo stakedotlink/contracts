@@ -20,6 +20,7 @@ import {
   NWLOperatorController,
   OperatorWhitelistMock,
   RewardsPool,
+  RewardsReceiver,
 } from '../../typechain-types'
 import { Signer } from 'ethers'
 
@@ -42,6 +43,7 @@ describe('EthStakingStrategy', () => {
   let wsdToken: WrappedSDToken
   let stakingPool: StakingPool
   let depositContract: DepositContract
+  let rewardsReceiver: RewardsReceiver
   let nwlOperatorController: NWLOperatorController
   let wlOperatorController: WLOperatorController
   let nwlRewardsPool: RewardsPool
@@ -154,9 +156,16 @@ describe('EthStakingStrategy', () => {
       }
     }
 
+    rewardsReceiver = (await deploy('RewardsReceiver', [
+      strategy.address,
+      toEther(4),
+      toEther(5),
+    ])) as RewardsReceiver
+
     await strategy.setNWLOperatorController(nwlOperatorController.address)
     await strategy.setWLOperatorController(wlOperatorController.address)
     await strategy.setDepositController(accounts[0])
+    await strategy.setRewardsReceiver(rewardsReceiver.address)
     await stakingPool.addStrategy(strategy.address)
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
@@ -423,6 +432,40 @@ describe('EthStakingStrategy', () => {
       0,
       'owners rewards incorrect'
     )
+  })
+
+  it.only('rewards receiver should work correctly', async () => {
+    await signers[0].sendTransaction({ to: rewardsReceiver.address, value: toEther(8) })
+    await stake(32)
+    await strategy.depositEther(2, 0, [], [])
+
+    await strategy.reportBeaconState(2, toEther(64))
+    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 0)
+    assert.equal(fromEther(await strategy.depositChange()), 0)
+
+    await strategy.reportBeaconState(2, toEther(63))
+    assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 0)
+    assert.equal(fromEther(await strategy.depositChange()), -1)
+
+    await strategy.reportBeaconState(2, toEther(65))
+    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 5)
+    assert.equal(fromEther(await strategy.depositChange()), 6)
+
+    await strategy.reportBeaconState(2, toEther(66))
+    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 5)
+    assert.equal(fromEther(await strategy.depositChange()), 7)
+
+    await rewardsReceiver.setWithdrawalLimits(toEther(0), toEther(4))
+
+    await strategy.reportBeaconState(2, toEther(67))
+    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 8)
+    assert.equal(fromEther(await strategy.depositChange()), 11)
+
+    await strategy.reportBeaconState(2, toEther(68))
+    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 8)
+    assert.equal(fromEther(await strategy.depositChange()), 12)
+
+    assert.equal(fromEther(await strategy.totalDeposits()), 64)
   })
 
   it('setWLOperatorController should work correctly', async () => {

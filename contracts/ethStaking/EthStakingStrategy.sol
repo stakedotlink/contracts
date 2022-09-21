@@ -11,6 +11,7 @@ import "./interfaces/IWrappedETH.sol";
 import "./interfaces/IWLOperatorController.sol";
 import "./interfaces/INWLOperatorController.sol";
 import "./interfaces/IDepositContract.sol";
+import "./interfaces/IRewardsReceiver.sol";
 
 /**
  * @title ETH Staking Strategy
@@ -28,6 +29,7 @@ contract EthStakingStrategy is Strategy {
     IDepositContract public depositContract;
     IWLOperatorController public wlOperatorController;
     INWLOperatorController public nwlOperatorController;
+    IRewardsReceiver public rewardsReceiver;
     address public beaconOracle;
     address public depositController;
 
@@ -87,7 +89,16 @@ contract EthStakingStrategy is Strategy {
         beaconBalance = _beaconBalance;
         beaconValidators = _beaconValidators;
 
-        depositChange += int(_beaconBalance) - rewardBase;
+        int change = int(_beaconBalance) - rewardBase;
+        if (change > 0) {
+            uint rewards = rewardsReceiver.withdraw();
+            if (rewards > 0) {
+                IWrappedETH(address(token)).wrap{value: rewards}();
+                change += int(rewards);
+            }
+        }
+
+        depositChange += change;
     }
 
     /**
@@ -288,6 +299,14 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositController(address _depositController) external onlyOwner {
         depositController = _depositController;
+    }
+
+    /**
+     * @notice sets the rewards receiver
+     * @param _rewardsReceiver rewards receiver address
+     */
+    function setRewardsReceiver(address _rewardsReceiver) external onlyOwner {
+        rewardsReceiver = IRewardsReceiver(_rewardsReceiver);
     }
 
     /**
