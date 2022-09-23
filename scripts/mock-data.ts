@@ -24,7 +24,7 @@ async function main() {
 
   const poolMin = 10
   const poolMax = 1000000
-  
+
   const strategyMock = await deployUpgradeable('StrategyMock', [
     linkToken.address,
     stakingPool.address,
@@ -59,10 +59,9 @@ async function main() {
     .transferAndCall(lendingPool.address, toEther(10000), '0x00')
 
   // account 4
-  
+
   await linkToken.transfer(accounts[4], toEther(10000))
   await ownersToken.transfer(accounts[4], toEther(10000))
-  
 }
 
 main()
