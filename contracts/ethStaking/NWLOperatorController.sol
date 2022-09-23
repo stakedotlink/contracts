@@ -160,7 +160,7 @@ contract NWLOperatorController is OperatorController {
     {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
-        if (_success) {
+        if (_success && operators[_operatorId].active) {
             uint newKeyPairs = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
             queue.push(QueueEntry(_operatorId, newKeyPairs));
             queueLength += newKeyPairs;

@@ -104,7 +104,7 @@ contract WLOperatorController is OperatorController {
     {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
-        if (_success) {
+        if (_success && operators[_operatorId].active) {
             queueLength += operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
             currentStateHash = keccak256(abi.encodePacked(currentStateHash, "reportKeyPairValidation", _operatorId));
