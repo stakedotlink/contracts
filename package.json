@@ -13,7 +13,8 @@
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
     "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
     "solhint": "solhint contracts/**/*.sol",
-    "ui-testing-deyta": "npx hardhat run scripts/ui-testing-deyta.ts"
+    "mock-data": "npx hardhat run scripts/mock-data.ts",
+    "start-mock-data": "node scripts/start-mock-data.js"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",

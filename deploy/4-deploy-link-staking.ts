@@ -111,6 +111,8 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await lendingPool.addPool(linkToken.address, 0, borrowingPool.address)
   await tx.wait()
+
+  console.log('deploy-status-ready')
 }
 
 module.exports.tags = ['Link-Staking']
