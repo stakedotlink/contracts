@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract RewardsReceiver is Ownable {
     address payable public immutable ethStakingStrategy;
-    uint public minWithdrawableAmount;
+    uint public minWithdrawalAmount;
     uint public maxWithdrawalAmount;
 
     event RewardsReceived(uint amount);
@@ -17,11 +17,11 @@ contract RewardsReceiver is Ownable {
 
     constructor(
         address _ethStakingStrategy,
-        uint _minWithdrawableAmount,
+        uint _minWithdrawalAmount,
         uint _maxWithdrawalAmount
     ) {
         ethStakingStrategy = payable(_ethStakingStrategy);
-        minWithdrawableAmount = _minWithdrawableAmount;
+        minWithdrawalAmount = _minWithdrawalAmount;
         maxWithdrawalAmount = _maxWithdrawalAmount;
     }
 
@@ -38,7 +38,7 @@ contract RewardsReceiver is Ownable {
         uint balance = address(this).balance;
         uint value;
 
-        if (balance < minWithdrawableAmount) {
+        if (balance < minWithdrawalAmount) {
             value = 0;
         } else if (balance > maxWithdrawalAmount) {
             value = maxWithdrawalAmount;
@@ -57,12 +57,12 @@ contract RewardsReceiver is Ownable {
 
     /**
      * @notice Sets the minimum and maximum amount that can be withdrawn per transaction
-     * @param _minWithdrawableAmount minimum amount
-     * @param _maxWithdrawableAmount maximum amount
+     * @param _minWithdrawalAmount minimum amount
+     * @param _maxWithdrawalAmount maximum amount
      */
-    function setWithdrawalLimits(uint _minWithdrawableAmount, uint _maxWithdrawableAmount) external onlyOwner {
-        require(_minWithdrawableAmount <= _maxWithdrawableAmount, "min must be less than or equal to max");
-        minWithdrawableAmount = _minWithdrawableAmount;
-        maxWithdrawalAmount = _maxWithdrawableAmount;
+    function setWithdrawalLimits(uint _minWithdrawalAmount, uint _maxWithdrawalAmount) external onlyOwner {
+        require(_minWithdrawalAmount <= _maxWithdrawalAmount, "min must be less than or equal to max");
+        minWithdrawalAmount = _minWithdrawalAmount;
+        maxWithdrawalAmount = _maxWithdrawalAmount;
     }
 }
