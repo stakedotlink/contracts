@@ -15,6 +15,7 @@
     "solhint": "solhint contracts/**/*.sol"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
     "@openzeppelin/hardhat-upgrades": "^1.19.0",
@@ -27,7 +28,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethereumjs-util": "^7.1.5",
     "ethers": "^5.5.4",
-    "hardhat": "^2.8.3",
+    "hardhat": "^2.11.2",
     "hardhat-deploy": "^0.10.4",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
