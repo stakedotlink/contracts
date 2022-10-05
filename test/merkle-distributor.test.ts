@@ -165,13 +165,13 @@ describe('MerkleDistributor', () => {
         await distributor.setTimeLimitEnabled(token.address, true)
         expect((await distributor.distributions(token.address))[1]).to.eq(true)
         let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        expect((await distributor.distributions(token.address))[2]).to.eq(ts)
+        expect((await distributor.distributions(token.address))[3]).to.eq(ts)
         await expect(distributor.setTimeLimitEnabled(token.address, true)).to.be.revertedWith(
           'MerkleDistributor: Value already set.'
         )
         await distributor.setTimeLimitEnabled(token.address, false)
         expect((await distributor.distributions(token.address))[1]).to.eq(false)
-        expect((await distributor.distributions(token.address))[2]).to.eq(ts)
+        expect((await distributor.distributions(token.address))[3]).to.eq(ts)
         await expect(distributor.setTimeLimitEnabled(token.address, false)).to.be.revertedWith(
           'MerkleDistributor: Value already set.'
         )
@@ -285,12 +285,12 @@ describe('MerkleDistributor', () => {
         await distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
         await expect(
           distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
-        ).to.be.revertedWith('MerkleDistributor: Tokens already claimed.')
+        ).to.be.revertedWith('MerkleDistributor: No claimable tokens.')
 
         await distributor.claimDistribution(token2.address, 0, wallet0, 100, proof0)
         await expect(
           distributor.claimDistribution(token2.address, 0, wallet0, 100, proof0)
-        ).to.be.revertedWith('MerkleDistributor: Tokens already claimed.')
+        ).to.be.revertedWith('MerkleDistributor: No claimable tokens.')
       })
 
       it('cannot add distributions of unequal length', async () => {
@@ -318,7 +318,7 @@ describe('MerkleDistributor', () => {
         )
 
         let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        expect((await distributor.distributions(token.address))[2]).to.eq(ts)
+        expect((await distributor.distributions(token.address))[3]).to.eq(ts)
 
         proof0 = newTree.getProof(0, wallet0, BigNumber.from(200))
         let proof1 = newTree.getProof(1, wallet1, BigNumber.from(201))
