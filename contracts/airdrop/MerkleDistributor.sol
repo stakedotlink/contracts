@@ -6,39 +6,63 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./interfaces/IMerkleDistributor.sol";
-
 /**
  * @title MerkleDistributor
  * @notice Handles token airdrops from an unlimited amount of token rewards
- * @dev Copied from https://github.com/Uniswap/merkle-distributor but modified to handle multiple airdrops concurrently
+ * @dev Based on https://github.com/Uniswap/merkle-distributor but modified to handle multiple airdrops concurrently
  */
-contract MerkleDistributor is IMerkleDistributor, Ownable {
+contract MerkleDistributor is Ownable {
     using SafeERC20 for IERC20;
+
+    uint public constant TIME_LIMIT = 90 days;
 
     struct Distribution {
         address token;
+        bool timeLimitEnabled;
+        bool isPaused;
+        uint timeOfLastUpdate;
         bytes32 merkleRoot;
-        // This is a packed array of booleans.
-        mapping(uint256 => uint256) claimedBitMap;
+        mapping(address => uint256) claimed;
     }
-    Distribution[] public distributions;
+    address[] public tokens;
+    mapping(address => Distribution) public distributions;
 
-    modifier distributionExists(uint256 _distribution) {
-        require(_distribution < distributions.length, "MerkleDistributor: Distribution does not exist.");
+    event Claimed(address indexed token, uint256 index, address indexed account, uint256 amount);
+    event DistributionAdded(uint256 indexed tokenIndex, address indexed token);
+    event DistributionUpdated(address indexed token);
+
+    modifier distributionExists(address _token) {
+        require(distributions[_token].token != address(0), "MerkleDistributor: Distribution does not exist.");
         _;
+    }
+
+    /**
+     * @notice returns the total amount that an account has claimed from a distribution
+     * @param _token token address
+     * @param _account address of the account to return claimed amount for
+     **/
+    function getClaimed(address _token, address _account) external view distributionExists(_token) returns (uint) {
+        return distributions[_token].claimed[_account];
     }
 
     /**
      * @notice add multiple token distributions
      * @param _tokens the list of token addresses to add
-     * @param _merkleRoots subsequent list of merkle roots for the distribution
+     * @param _merkleRoots list of merkle roots for each distribution
+     * @param _totalAmounts list of total distribution amounts for each token
      **/
-    function addDistributions(address[] memory _tokens, bytes32[] memory _merkleRoots) external onlyOwner {
-        require(_tokens.length == _merkleRoots.length, "MerkleDistributor: Array lengths need to match.");
+    function addDistributions(
+        address[] calldata _tokens,
+        bytes32[] calldata _merkleRoots,
+        uint[] calldata _totalAmounts
+    ) external onlyOwner {
+        require(
+            _tokens.length == _merkleRoots.length && _tokens.length == _totalAmounts.length,
+            "MerkleDistributor: Array lengths need to match."
+        );
 
         for (uint i = 0; i < _tokens.length; i++) {
-            addDistribution(_tokens[i], _merkleRoots[i]);
+            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i]);
         }
     }
 
@@ -46,74 +70,168 @@ contract MerkleDistributor is IMerkleDistributor, Ownable {
      * @notice add a token distribution
      * @param _token token address
      * @param _merkleRoot merkle root for token distribution
+     * @param _totalAmount total distribution amount
      **/
-    function addDistribution(address _token, bytes32 _merkleRoot) public onlyOwner {
-        uint distributionIndex = distributions.length;
+    function addDistribution(
+        address _token,
+        bytes32 _merkleRoot,
+        uint _totalAmount
+    ) public onlyOwner {
+        require(distributions[_token].token == address(0), "MerkleDistributor: Distribution is already added.");
 
-        distributions.push();
-        distributions[distributionIndex].token = _token;
-        distributions[distributionIndex].merkleRoot = _merkleRoot;
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _totalAmount);
+        tokens.push(_token);
 
-        emit DistributionAdded(distributionIndex, _token);
+        distributions[_token].token = _token;
+        distributions[_token].merkleRoot = _merkleRoot;
+        distributions[_token].timeOfLastUpdate = block.timestamp;
+
+        emit DistributionAdded(tokens.length - 1, _token);
     }
 
     /**
-     * @notice check whether a given distribution with the index has been claimed
-     * @param _distribution distribution index
-     * @param _index index of the claim within the distribution
+     * @notice update multiple token distributions
+     * @param _tokens the list of token addresses to update
+     * @param _merkleRoots list of updated merkle roots for the distributions
+     * @param _additionalAmounts list of total additional distribution amounts for each token
      **/
-    function isClaimed(uint256 _distribution, uint256 _index)
-        public
-        view
-        override
-        distributionExists(_distribution)
-        returns (bool)
-    {
-        uint256 claimedWordIndex = _index / 256;
-        uint256 claimedBitIndex = _index % 256;
-        uint256 claimedWord = distributions[_distribution].claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
+    function updateDistributions(
+        address[] calldata _tokens,
+        bytes32[] calldata _merkleRoots,
+        uint[] calldata _additionalAmounts
+    ) external onlyOwner {
+        require(
+            _tokens.length == _merkleRoots.length && _tokens.length == _additionalAmounts.length,
+            "MerkleDistributor: Array lengths need to match."
+        );
+
+        for (uint i = 0; i < _tokens.length; i++) {
+            updateDistribution(_tokens[i], _merkleRoots[i], _additionalAmounts[i]);
+        }
     }
 
     /**
-     * @notice internal function to mark an index within a distribution as claimed
-     * @param _distribution distribution index
-     * @param _index index of the claim within the distribution
+     * @notice update a token distribution
+     * @dev merkle root should be updated to reflect additional amount - the amount for each
+     * account should be incremented by any additional allocation and any new accounts should be added
+     * to the tree
+     * @param _token token address
+     * @param _merkleRoot updated merkle root for token distribution
+     * @param _additionalAmount total additional distribution amount
      **/
-    function _setClaimed(uint256 _distribution, uint256 _index) private {
-        Distribution storage distribution = distributions[_distribution];
-        uint256 claimedWordIndex = _index / 256;
-        uint256 claimedBitIndex = _index % 256;
-        distribution.claimedBitMap[claimedWordIndex] = distribution.claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+    function updateDistribution(
+        address _token,
+        bytes32 _merkleRoot,
+        uint _additionalAmount
+    ) public onlyOwner distributionExists(_token) {
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _additionalAmount);
+
+        distributions[_token].merkleRoot = _merkleRoot;
+        distributions[_token].timeOfLastUpdate = block.timestamp;
+
+        emit DistributionUpdated(_token);
+    }
+
+    /**
+     * @notice claim multiple token distributions
+     * @param _tokens list of token address
+     * @param _indexes list of indexes of the claims within the distributions
+     * @param _account address of the account to claim for
+     * @param _amounts list of lifetime amounts of the tokens allocated to account
+     * @param _merkleProofs list of merkle proofs for the token claims
+     **/
+    function claimDistributions(
+        address[] calldata _tokens,
+        uint256[] calldata _indexes,
+        address _account,
+        uint256[] calldata _amounts,
+        bytes32[][] calldata _merkleProofs
+    ) external {
+        require(
+            _tokens.length == _indexes.length && _tokens.length == _amounts.length && _tokens.length == _merkleProofs.length,
+            "MerkleDistributor: Array lengths need to match."
+        );
+
+        for (uint i = 0; i < _tokens.length; i++) {
+            claimDistribution(_tokens[i], _indexes[i], _account, _amounts[i], _merkleProofs[i]);
+        }
     }
 
     /**
      * @notice claim a token distribution
-     * @param _distribution distribution index
+     * @param _token token address
      * @param _index index of the claim within the distribution
      * @param _account address of the account to claim for
-     * @param _amount amount of the token to claim
+     * @param _amount lifetime amount of the token allocated to account
      * @param _merkleProof the merkle proof for the token claim
      **/
-    function claim(
-        uint256 _distribution,
+    function claimDistribution(
+        address _token,
         uint256 _index,
         address _account,
         uint256 _amount,
         bytes32[] calldata _merkleProof
-    ) external override distributionExists(_distribution) {
-        require(!isClaimed(_distribution, _index), "MerkleDistributor: Drop already claimed.");
-        Distribution storage distribution = distributions[_distribution];
+    ) public distributionExists(_token) {
+        require(!distributions[_token].isPaused, "MerkleDistributor: Distribution is paused.");
+        Distribution storage distribution = distributions[_token];
 
-        // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(_index, _account, _amount));
         require(MerkleProof.verify(_merkleProof, distribution.merkleRoot, node), "MerkleDistributor: Invalid proof.");
 
-        // Mark it claimed and send the token.
-        _setClaimed(_distribution, _index);
-        IERC20(distribution.token).safeTransfer(_account, _amount);
+        require(distribution.claimed[_account] < _amount, "MerkleDistributor: No claimable tokens.");
 
-        emit Claimed(_distribution, _index, _account, _amount);
+        uint amount = _amount - distribution.claimed[_account];
+        distribution.claimed[_account] = _amount;
+        IERC20(_token).safeTransfer(_account, amount);
+
+        emit Claimed(_token, _index, _account, amount);
+    }
+
+    /**
+     * @notice withdraws unclaimed tokens
+     * @dev merkle root should be updated to reflect current state of claims - the amount for each
+     * account should be equal to it's claimed amount
+     * @param _token token address
+     * @param _merkleRoot updated merkle root
+     **/
+    function withdrawUnclaimedTokens(address _token, bytes32 _merkleRoot) external onlyOwner distributionExists(_token) {
+        require(distributions[_token].isPaused, "MerkleDistributor: Distribution is not paused.");
+
+        IERC20 token = IERC20(_token);
+        uint balance = token.balanceOf(address(this));
+        if (balance > 0) {
+            token.safeTransfer(msg.sender, balance);
+        }
+
+        distributions[_token].isPaused = false;
+    }
+
+    /**
+     * @notice pauses a token distribution for withdrawal of unclaimed tokens
+     * @dev must be called before withdrawUnlclaimedTokens to ensure state doesn't change
+     * while the new merkle root is calculated
+     * @param _token token address
+     **/
+    function pauseForWithdrawal(address _token) external onlyOwner distributionExists(_token) {
+        require(distributions[_token].timeLimitEnabled, "MerkleDistributor: Time limit is not enabled.");
+        require(
+            block.timestamp > distributions[_token].timeOfLastUpdate + TIME_LIMIT,
+            "MerkleDistributor: Time limit has not been reached."
+        );
+
+        distributions[_token].isPaused = true;
+    }
+
+    /**
+     * @notice enables/disables the time limit for a token
+     * @param _token token addresse
+     * @param _enabled whether to enable or disable the limit
+     **/
+    function setTimeLimitEnabled(address _token, bool _enabled) external onlyOwner distributionExists(_token) {
+        require(distributions[_token].timeLimitEnabled != _enabled, "MerkleDistributor: Value already set.");
+        distributions[_token].timeLimitEnabled = _enabled;
+        if (_enabled) {
+            distributions[_token].timeOfLastUpdate = block.timestamp;
+        }
     }
 }
