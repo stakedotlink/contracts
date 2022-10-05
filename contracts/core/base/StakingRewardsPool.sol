@@ -40,7 +40,12 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @return account's stake balance
      **/
     function balanceOf(address _account) public view override(IERC20, VirtualERC20) returns (uint) {
-        return getStakeByShares(shares[_account]);
+        uint balance = getStakeByShares(shares[_account]);
+        if (balance < 100) {
+            return 0;
+        } else {
+            return balance;
+        }
     }
 
     /**
