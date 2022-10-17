@@ -326,7 +326,7 @@ describe('EthStakingStrategy', () => {
       'Insufficient balance for deposit'
     )
     await expect(strategy.depositEther(0, 2, [0], [2])).to.be.revertedWith(
-      'Non-whitelisted queue must be empty to assign whitlisted'
+      'Non-whitelisted queue must be empty to assign whitelisted'
     )
   })
 

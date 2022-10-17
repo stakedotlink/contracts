@@ -178,10 +178,10 @@ describe('NWLOperatorController', () => {
       'Quantity must be greater than 0'
     )
     await expect(controller.removeKeyPairs(2, 10, [1])).to.be.revertedWith(
-      'Cannot remove more keys than are added'
+      'Cannot remove used key pairs or more keys than are added'
     )
     await expect(controller.removeKeyPairs(2, 9, [1])).to.be.revertedWith(
-      'Cannot remove used key pairs'
+      'Cannot remove used key pairs or more keys than are added'
     )
     await expect(controller.removeKeyPairs(2, 4, [0])).to.be.revertedWith(
       'Cannot remove from queue entry that is already passed by'
@@ -339,6 +339,29 @@ describe('NWLOperatorController', () => {
     assert.equal(
       keys,
       keyPairs.keys + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
+      'keys incorrect'
+    )
+  })
+
+  it('getNextValidators should work correctly with duplicate operators in queue', async () => {
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
+      value: toEther(3 * 16),
+    })
+    await controller.initiateKeyPairValidation(accounts[0], 2)
+    await controller.reportKeyPairValidation(2, true)
+
+    await controller.removeKeyPairs(2, 2, [1, 3])
+    await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
+      value: toEther(3 * 16),
+    })
+
+    let keys = await controller.getNextValidators(9)
+    assert.equal(
+      keys,
+      keyPairs.keys +
+        keyPairs.keys.slice(2, pubkeyLength + 2) +
+        keyPairs.keys.slice(2) +
+        keyPairs.keys.slice(pubkeyLength + 2),
       'keys incorrect'
     )
   })

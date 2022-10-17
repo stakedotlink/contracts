@@ -6,7 +6,7 @@ import "./interfaces/IOperatorWhitelist.sol";
 
 /**
  * @title Whitelist Operator Controller
- * @notice Handles whitelisted validator keys and operator rewards distirbution
+ * @notice Handles whitelisted validator keys and operator rewards distribution
  */
 contract WLOperatorController is OperatorController {
     struct OperatorCache {
@@ -404,7 +404,7 @@ contract WLOperatorController is OperatorController {
 
     /**
      * @notice Sets the batch size for validator assignment
-     * @param _batchSize new location of operator whitelist
+     * @param _batchSize new batch size
      */
     function setBatchSize(uint _batchSize) external onlyOwner {
         batchSize = _batchSize;

@@ -104,10 +104,9 @@ contract NWLOperatorController is OperatorController {
     ) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_quantity > 0, "Quantity must be greater than 0");
-        require(_quantity <= operators[_operatorId].totalKeyPairs, "Cannot remove more keys than are added");
         require(
             _quantity <= operators[_operatorId].totalKeyPairs - operators[_operatorId].usedKeyPairs,
-            "Cannot remove used key pairs"
+            "Cannot remove used key pairs or more keys than are added"
         );
 
         uint toRemove = _quantity;
@@ -250,6 +249,7 @@ contract NWLOperatorController is OperatorController {
         require(_validatorCount > 0, "Validator count must be greater than 0");
         require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
+        uint[] memory assignedToOperators = new uint[](operators.length);
         uint toAssign = _validatorCount;
         uint index = queueIndex;
 
@@ -268,7 +268,8 @@ contract NWLOperatorController is OperatorController {
                     toAssign = 0;
                 }
 
-                uint usedKeyPairs = operators[operatorId].usedKeyPairs;
+                uint usedKeyPairs = operators[operatorId].usedKeyPairs + assignedToOperators[operatorId];
+                assignedToOperators[operatorId] += assignToOperator;
 
                 for (uint j = usedKeyPairs; j < usedKeyPairs + assignToOperator; j++) {
                     (bytes memory key, ) = _loadKeyPair(operatorId, j);

@@ -20,6 +20,8 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
     uint public fee;
     bytes32 public jobId;
 
+    event SetOracleConfig(address oracleAddress, bytes32 jobId, uint fee);
+
     constructor(
         address _nwlOperatorController,
         address _wlOperatorController,
@@ -90,6 +92,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         setChainlinkOracle(_oracleAddress);
         jobId = _jobId;
         fee = _fee;
+        emit SetOracleConfig(_oracleAddress, _jobId, _fee);
     }
 
     /**
