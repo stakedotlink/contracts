@@ -4,17 +4,17 @@
   "description": "LinkPool V2 Staking Contracts",
   "license": "MIT",
   "scripts": {
+    "start": "npx hardhat node --network hardhat",
+    "deploy": "npx hardhat deploy",
     "test": "npx hardhat test --network hardhat",
     "luv-deyta": "npx hardhat run scripts/luv-deyta.ts",
-    "start": "npx hardhat node --network hardhat",
+    "mock-data": "npx hardhat run scripts/mock-data.ts",
+    "start-mock-data": "node scripts/start-mock-data.js",
     "compile": "npx hardhat compile",
-    "deploy": "npx hardhat deploy",
     "tsc": "tsc",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
     "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
-    "solhint": "solhint contracts/**/*.sol",
-    "mock-data": "npx hardhat run scripts/mock-data.ts",
-    "start-mock-data": "node scripts/start-mock-data.js"
+    "solhint": "solhint contracts/**/*.sol"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
