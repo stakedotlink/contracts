@@ -58,9 +58,7 @@ async function main() {
     .connect(signers[3])
     .transferAndCall(lendingPool.address, toEther(10000), '0x00')
   // borrow
-  await linkToken
-    .connect(signers[3])
-    .transferAndCall(lendingPool.address, toEther(10), '0x00')
+  await linkToken.connect(signers[3]).transferAndCall(lendingPool.address, toEther(10), '0x00')
 
   // account 4
 
