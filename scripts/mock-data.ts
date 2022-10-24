@@ -43,7 +43,7 @@ async function main() {
 
   await linkToken.transfer(accounts[3], toEther(10000))
   await ownersToken.transfer(accounts[3], toEther(10000))
-  await stakingAllowance.transfer(accounts[3], toEther(20000))
+  await stakingAllowance.transfer(accounts[3], toEther(40000))
 
   // stake LPL
   await ownersToken.connect(signers[3]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
@@ -57,6 +57,10 @@ async function main() {
   await stakingAllowance
     .connect(signers[3])
     .transferAndCall(lendingPool.address, toEther(10000), '0x00')
+  // borrow
+  await linkToken
+    .connect(signers[3])
+    .transferAndCall(lendingPool.address, toEther(10), '0x00')
 
   // account 4
 
