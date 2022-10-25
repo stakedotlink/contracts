@@ -22,7 +22,7 @@ contract PoolRouter is Ownable {
         CLOSED
     }
 
-    IERC677 public allowanceToken;
+    IERC677 public immutable allowanceToken;
     mapping(address => uint) public allowanceStakes;
 
     struct Pool {
@@ -261,7 +261,10 @@ contract PoolRouter is Ownable {
         pool.allowanceRequired = _allowanceRequired;
         pool.status = _status;
 
-        IERC677(_token).safeApprove(_stakingPool, type(uint).max);
+        if (IERC677(_token).allowance(address(this), _stakingPool) == 0) {
+            IERC677(_token).safeApprove(_stakingPool, type(uint).max);
+        }
+
         emit AddPool(_token, _stakingPool);
     }
 
@@ -272,7 +275,9 @@ contract PoolRouter is Ownable {
      **/
     function removePool(address _token, uint16 _index) external onlyOwner poolExists(_token, _index) {
         Pool storage pool = pools[_poolKey(_token, _index)];
-        require(pool.stakingPool.totalSupply() == 0, "Only can remove a pool with no active stake");
+        require(pool.stakingPool.totalSupply() == 0, "Can only remove a pool with no active stake");
+
+        emit RemovePool(_token, address(pool.stakingPool));
 
         delete pools[_poolKey(_token, _index)];
         poolCountByToken[_token]--;
@@ -287,8 +292,6 @@ contract PoolRouter is Ownable {
                 }
             }
         }
-
-        emit RemovePool(_token, address(pool.stakingPool));
     }
 
     /**
@@ -332,7 +335,7 @@ contract PoolRouter is Ownable {
         address _token,
         uint16 _index,
         address _account
-    ) public view poolExists(_token, _index) returns (uint256) {
+    ) public view returns (uint256) {
         Pool storage pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
             return 0;
@@ -352,7 +355,7 @@ contract PoolRouter is Ownable {
         address _token,
         uint16 _index,
         address _account
-    ) public view poolExists(_token, _index) returns (uint256) {
+    ) public view returns (uint256) {
         Pool storage pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
             return 0;

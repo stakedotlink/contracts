@@ -22,8 +22,8 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     using SafeERC20 for IERC20;
     using PRBMathUD60x18 for uint256;
 
-    IERC20 public allowanceToken;
-    IPoolRouter public poolRouter;
+    IERC20 public immutable allowanceToken;
+    IPoolRouter public immutable poolRouter;
 
     uint256 public rateConstantA;
     uint256 public rateConstantB;
@@ -52,6 +52,13 @@ contract LendingPool is ILendingPool, RewardsPoolController {
     );
     event PoolAdded(address indexed token, uint16 indexed index);
     event PoolRemoved(address indexed token, uint16 indexed index);
+    event RateConstantsSet(
+        uint256 _rateConstantA,
+        uint256 _rateConstantB,
+        uint256 _rateConstantC,
+        uint256 _rateConstantD,
+        uint256 _rateConstantE
+    );
 
     constructor(
         address _allowanceToken,
@@ -209,7 +216,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
 
         borrowingPool.withdraw(msg.sender, toWithdraw);
         poolRouter.withdraw(_token, _index, toWithdraw);
-        IERC20(_token).transfer(msg.sender, toWithdraw);
+        IERC20(_token).safeTransfer(msg.sender, toWithdraw);
 
         emit Withdraw(_token, _index, msg.sender, poolRouter.allowanceRequired(_token, _index, toWithdraw), toWithdraw);
     }
@@ -236,6 +243,8 @@ contract LendingPool is ILendingPool, RewardsPoolController {
         rateConstantC = _rateConstantC;
         rateConstantD = _rateConstantD;
         rateConstantE = _rateConstantE;
+
+        emit RateConstantsSet(_rateConstantA, _rateConstantB, _rateConstantC, _rateConstantD, _rateConstantE);
     }
 
     /**
@@ -255,7 +264,10 @@ contract LendingPool is ILendingPool, RewardsPoolController {
         bytes32 poolKey = _poolKey(_token, _index);
         borrowingPools[poolKey] = IBorrowingPool(_borrowingPool);
         supportedPools.push(poolKey);
-        IERC20(_token).approve(address(poolRouter), type(uint256).max);
+
+        if (IERC20(_token).allowance(address(this), address(poolRouter)) == 0) {
+            IERC20(_token).safeApprove(address(poolRouter), type(uint256).max);
+        }
 
         emit PoolAdded(_token, _index);
     }

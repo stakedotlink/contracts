@@ -13,7 +13,7 @@ import "../tokens/base/VirtualERC677.sol";
 abstract contract StakingRewardsPool is VirtualERC677 {
     using SafeERC20 for IERC677;
 
-    IERC677 public token;
+    IERC677 public immutable token;
 
     mapping(address => uint) private shares;
     uint public totalShares;

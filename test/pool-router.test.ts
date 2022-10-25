@@ -501,7 +501,7 @@ describe('PoolRouter', () => {
     await token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
 
     await expect(poolRouter.removePool(token1.address, 0)).to.be.revertedWith(
-      'Only can remove a pool with no active stake'
+      'Can only remove a pool with no active stake'
     )
   })
 
