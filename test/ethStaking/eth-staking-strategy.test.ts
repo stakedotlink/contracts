@@ -483,40 +483,6 @@ describe('EthStakingStrategy', () => {
     assert.equal(fromEther(await strategy.bufferedETH()), 8)
   })
 
-  it.only('rewards receiver should work correctly', async () => {
-    await signers[0].sendTransaction({ to: rewardsReceiver.address, value: toEther(8) })
-    await stake(32)
-    await strategy.depositEther(2, 0, [], [])
-
-    await strategy.reportBeaconState(2, toEther(64))
-    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 0)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
-
-    await strategy.reportBeaconState(2, toEther(63))
-    assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 0)
-    assert.equal(fromEther(await strategy.depositChange()), -1)
-
-    await strategy.reportBeaconState(2, toEther(65))
-    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 5)
-    assert.equal(fromEther(await strategy.depositChange()), 6)
-
-    await strategy.reportBeaconState(2, toEther(66))
-    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 5)
-    assert.equal(fromEther(await strategy.depositChange()), 7)
-
-    await rewardsReceiver.setWithdrawalLimits(toEther(0), toEther(4))
-
-    await strategy.reportBeaconState(2, toEther(67))
-    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 8)
-    assert.equal(fromEther(await strategy.depositChange()), 11)
-
-    await strategy.reportBeaconState(2, toEther(68))
-    assert.equal(fromEther(await ethers.provider.getBalance(strategy.address)), 8)
-    assert.equal(fromEther(await strategy.depositChange()), 12)
-
-    assert.equal(fromEther(await strategy.totalDeposits()), 64)
-  })
-
   it('setWLOperatorController should work correctly', async () => {
     await strategy.setWLOperatorController(accounts[2])
 
