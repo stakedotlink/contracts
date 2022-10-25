@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "./interfaces/IERC677.sol";
 import "./interfaces/IStakingPool.sol";
+import "../ethStaking/interfaces/IWrappedETH.sol";
 
 /**
  * @title PoolRouter
@@ -39,6 +40,7 @@ contract PoolRouter is Ownable {
     uint public poolCount;
 
     address[] public tokens;
+    address public wrappedETH;
 
     event StakeAllowance(address indexed account, uint amount);
     event WithdrawAllowance(address indexed account, uint amount);
@@ -55,6 +57,8 @@ contract PoolRouter is Ownable {
     constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
     }
+
+    receive() external payable {}
 
     /**
      * @dev Returns a list of all supported tokens
@@ -187,24 +191,28 @@ contract PoolRouter is Ownable {
         uint16 _index,
         uint _amount
     ) external poolExists(_token, _index) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
-        uint poolBalance = pool.stakingPool.balanceOf(msg.sender);
-        require(pool.status != PoolStatus.CLOSED, "Pool is closed");
+        _withdraw(_token, _index, _amount, msg.sender);
+    }
 
-        require(poolBalance >= _amount, "Amount exceeds staked balance");
+    /**
+     * @dev wraps ETH and stakes wrapped ETH in a staking pool
+     * @param _index index of pool to stake in
+     **/
+    function stakeETH(uint16 _index) external payable poolExists(wrappedETH, _index) {
+        IWrappedETH(wrappedETH).wrap{value: msg.value}();
+        _stake(wrappedETH, _index, msg.sender, msg.value);
+    }
 
-        if (_amount > pool.stakedAmounts[msg.sender]) {
-            uint newStakedAmount = poolBalance - _amount;
-            if (newStakedAmount >= pool.stakedAmounts[msg.sender]) {
-                newStakedAmount = pool.stakedAmounts[msg.sender];
-            }
-            pool.stakedAmounts[msg.sender] = newStakedAmount;
-        } else {
-            pool.stakedAmounts[msg.sender] -= _amount;
-        }
-        pool.stakingPool.withdraw(msg.sender, _amount);
-
-        emit WithdrawToken(_token, address(pool.stakingPool), msg.sender, _amount);
+    /**
+     * @dev withdraws wrapped ETH from a staking pool and unwraps
+     * @param _index pool index
+     * @param _amount amount to withdraw
+     **/
+    function withdrawETH(uint16 _index, uint _amount) external poolExists(wrappedETH, _index) {
+        _withdraw(wrappedETH, _index, _amount, address(this));
+        IWrappedETH(wrappedETH).unwrap(_amount);
+        (bool success, ) = payable(msg.sender).call{value: _amount}("");
+        require(success, "ETH transfer failed");
     }
 
     /**
@@ -454,6 +462,17 @@ contract PoolRouter is Ownable {
     }
 
     /**
+     * @notice sets the wrapped ETH token
+     * @param _wrappedETH wrapped ETH token to set
+     * @dev must be set for ETH staking to work, can only be set once
+     **/
+    function setWrappedETH(address _wrappedETH) external onlyOwner {
+        require(wrappedETH == address(0), "wrappedETH already set");
+        wrappedETH = _wrappedETH;
+        IWrappedETH(_wrappedETH).approve(_wrappedETH, type(uint).max);
+    }
+
+    /**
      * @dev stakes tokens in a staking pool
      * @param _token token to stake
      * @param _index index of pool to stake in
@@ -477,6 +496,39 @@ contract PoolRouter is Ownable {
         pool.stakingPool.stake(_account, _amount);
 
         emit StakeToken(_token, address(pool.stakingPool), _account, _amount);
+    }
+
+    /**
+     * @dev withdraws tokens from a staking pool
+     * @param _token token to withdraw
+     * @param _index pool index
+     * @param _amount amount to withdraw
+     * @param _receiver address to receive tokens
+     **/
+    function _withdraw(
+        address _token,
+        uint16 _index,
+        uint _amount,
+        address _receiver
+    ) private poolExists(_token, _index) {
+        Pool storage pool = pools[_poolKey(_token, _index)];
+        uint poolBalance = pool.stakingPool.balanceOf(msg.sender);
+        require(pool.status != PoolStatus.CLOSED, "Pool is closed");
+
+        require(poolBalance >= _amount, "Amount exceeds staked balance");
+
+        if (_amount > pool.stakedAmounts[msg.sender]) {
+            uint newStakedAmount = poolBalance - _amount;
+            if (newStakedAmount >= pool.stakedAmounts[msg.sender]) {
+                newStakedAmount = pool.stakedAmounts[msg.sender];
+            }
+            pool.stakedAmounts[msg.sender] = newStakedAmount;
+        } else {
+            pool.stakedAmounts[msg.sender] -= _amount;
+        }
+        pool.stakingPool.withdraw(msg.sender, _receiver, _amount);
+
+        emit WithdrawToken(_token, address(pool.stakingPool), msg.sender, _amount);
     }
 
     /**

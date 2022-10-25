@@ -110,7 +110,7 @@ describe('EthStakingStrategy', () => {
   it('should not be able to withdraw from strategy', async () => {
     await stake(2)
     await assertThrowsAsync(async () => {
-      await stakingPool.withdraw(accounts[0], toEther(1))
+      await stakingPool.withdraw(accounts[0], accounts[0], toEther(1))
     }, 'revert')
   })
 

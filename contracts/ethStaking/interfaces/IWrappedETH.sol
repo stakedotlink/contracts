@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IWrappedETH is IERC20 {
-    function wrap() external;
+    function wrap() external payable;
 
     function unwrap(uint256 _amount) external;
 }
