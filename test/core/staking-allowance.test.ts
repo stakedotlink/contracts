@@ -1,6 +1,6 @@
-import { deploy, fromEther, getAccounts, toEther } from './utils/helpers'
+import { deploy, fromEther, getAccounts, toEther } from '../utils/helpers'
 import { Signer } from 'ethers'
-import { StakingAllowance } from '../typechain-types'
+import { StakingAllowance } from '../../typechain-types'
 import { assert, expect } from 'chai'
 
 describe('StakingAllowance', () => {

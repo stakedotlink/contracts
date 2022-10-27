@@ -8,9 +8,10 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../core/base/Strategy.sol";
 import "./interfaces/IWrappedETH.sol";
-import "./interfaces/IOperatorController.sol";
+import "./interfaces/IWLOperatorController.sol";
 import "./interfaces/INWLOperatorController.sol";
 import "./interfaces/IDepositContract.sol";
+import "./interfaces/IRewardsReceiver.sol";
 
 /**
  * @title ETH Staking Strategy
@@ -25,10 +26,14 @@ contract EthStakingStrategy is Strategy {
     uint public constant DEPOSIT_AMOUNT = 32 ether;
     uint internal constant DEPOSIT_AMOUNT_UNIT = 1 gwei;
 
+    uint internal constant BASIS_POINTS = 10000;
+
     IDepositContract public depositContract;
-    IOperatorController public wlOperatorController;
+    IWLOperatorController public wlOperatorController;
     INWLOperatorController public nwlOperatorController;
-    address public oracle;
+    IRewardsReceiver public rewardsReceiver;
+    address public beaconOracle;
+    address public depositController;
 
     bytes32 public withdrawalCredentials;
 
@@ -37,11 +42,24 @@ contract EthStakingStrategy is Strategy {
     uint public depositedValidators;
     uint public beaconValidators;
     uint public beaconBalance;
+    uint public nwlLostOperatorStakes;
 
     int public depositChange;
+    uint public depositTotal;
+    uint public bufferedETH;
 
     uint private depositMax;
     uint private depositMin;
+
+    event DepositEther(uint nwlValidatorCount, uint wlValidatorCount);
+    event ReportBeaconState(uint beaconValidators, uint beaconBalance, uint nwlLostOperatorStakes);
+    event SetDepositMax(uint max);
+    event SetDepositMin(uint min);
+    event SetDepositController(address controller);
+    event SetRewardsReceiver(address rewardsReceiver);
+    event SetBeaconOracle(address oracle);
+    event SetWLOperatorController(address controller);
+    event SetNWLOperatorController(address controller);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -54,17 +72,11 @@ contract EthStakingStrategy is Strategy {
         uint _depositMax,
         uint _depositMin,
         address _depositContract,
-        address _wlOperatorController,
-        address _nwlOperatorController,
-        address _oracle,
         bytes32 _withdrawalCredentials,
         uint _operatorFeeBasisPoints
     ) public initializer {
         __Strategy_init(_wETH, _stakingPool);
         depositContract = IDepositContract(_depositContract);
-        wlOperatorController = IOperatorController(_wlOperatorController);
-        nwlOperatorController = INWLOperatorController(_nwlOperatorController);
-        oracle = _oracle;
         withdrawalCredentials = _withdrawalCredentials;
         operatorFeeBasisPoints = _operatorFeeBasisPoints;
         depositMax = _depositMax;
@@ -78,72 +90,116 @@ contract EthStakingStrategy is Strategy {
      * @dev periodically called by the Oracle contract
      * @param _beaconValidators number of validators in the beacon state
      * @param _beaconBalance summed balance of all validators
+     * @param _nwlLostOperatorStakes sum of all lost non-whitelisted operator stakes (max of 16 ETH per nwl validator -
+     * the first 16 ETH lost for each nwl validator is staked by the operator, not this pool)
      */
-    function reportBeaconState(uint _beaconValidators, uint _beaconBalance) external {
-        require(msg.sender == oracle, "Sender is not oracle");
-        require(_beaconValidators <= depositedValidators, "Reported more beacon validators than deposited");
+    function reportBeaconState(
+        uint _beaconValidators,
+        uint _beaconBalance,
+        uint _nwlLostOperatorStakes
+    ) external {
+        require(msg.sender == beaconOracle, "Sender is not beacon oracle");
+        require(_beaconValidators <= depositedValidators, "Reported more validators than deposited");
         require(_beaconValidators >= beaconValidators, "Reported less validators than tracked");
 
         uint newValidators = _beaconValidators - beaconValidators;
-        int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance);
+        int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance + nwlLostOperatorStakes);
 
         beaconBalance = _beaconBalance;
         beaconValidators = _beaconValidators;
+        nwlLostOperatorStakes = _nwlLostOperatorStakes;
 
-        depositChange += int(_beaconBalance) - rewardBase;
+        int change = int(_beaconBalance) - rewardBase + int(_nwlLostOperatorStakes);
+        if (change > 0) {
+            uint rewards = rewardsReceiver.withdraw();
+            if (rewards > 0) {
+                IWrappedETH(address(token)).wrap{value: rewards}();
+                bufferedETH += rewards;
+                change += int(rewards);
+            }
+        }
+
+        depositChange += change;
+        emit ReportBeaconState(_beaconValidators, _beaconBalance, _nwlLostOperatorStakes);
     }
 
     /**
      * @notice unwraps wETH and deposits ETH into the DepositContract
-     * @dev always deposits for whitelisted validators first, followed by non-whitelisted only if there
-     * are no whitelisted remaining in the queue
-     * @param _maxDeposits maximum number of separate deposits to execute
+     * @dev always deposits for non-whitelisted validators first, followed by whitelisted only if there
+     * are no non-whitelisted remaining in the queue
+     * @param _nwlTotalValidatorCount sum of all validators to assign non-whitelisted operators
+     * @param _wlTotalValidatorCount sum of all validators to assign whitelisted operators
+     * @param _wlOperatorIds ids of whitelisted operators that should be assigned validators
+     * @param _wlValidatorCounts number of validators to assign each whitelisted operator
      */
-    function depositEther(uint _maxDeposits) external {
-        uint balance = token.balanceOf(address(this));
-        require(balance >= DEPOSIT_AMOUNT, "Insufficient balance for deposit");
+    function depositEther(
+        uint _nwlTotalValidatorCount,
+        uint _wlTotalValidatorCount,
+        uint[] calldata _wlOperatorIds,
+        uint[] calldata _wlValidatorCounts
+    ) external {
+        require(msg.sender == depositController, "Sender is not deposit controller");
 
-        uint wlDepositRoom = MathUpgradeable.min(balance / DEPOSIT_AMOUNT, _maxDeposits);
-        (bytes memory wlPubkeys, bytes memory wlSignatures) = wlOperatorController.assignNextValidators(wlDepositRoom);
+        uint totalDepositAmount = (DEPOSIT_AMOUNT * _wlTotalValidatorCount + (DEPOSIT_AMOUNT / 2) * _nwlTotalValidatorCount);
+        require(totalDepositAmount > 0, "Cannot deposit 0");
+        require(bufferedETH >= totalDepositAmount, "Insufficient balance for deposit");
 
-        uint numWLDeposits = wlPubkeys.length / PUBKEY_LENGTH;
-        require(wlSignatures.length / SIGNATURE_LENGTH == numWLDeposits, "Inconsistent pubkeys/signatures length");
-        require(wlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
-        require(wlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
+        bytes memory nwlPubkeys;
+        bytes memory nwlSignatures;
 
-        IWrappedETH(address(token)).unwrap(numWLDeposits * DEPOSIT_AMOUNT);
+        if (_nwlTotalValidatorCount > 0) {
+            (nwlPubkeys, nwlSignatures) = nwlOperatorController.assignNextValidators(_nwlTotalValidatorCount);
 
-        for (uint i = 0; i < numWLDeposits; i++) {
+            require(
+                nwlPubkeys.length / PUBKEY_LENGTH == _nwlTotalValidatorCount,
+                "Incorrect non-whitelisted pubkeys length"
+            );
+            require(
+                nwlSignatures.length / SIGNATURE_LENGTH == _nwlTotalValidatorCount,
+                "Incorrect non-whitelisted signatures length"
+            );
+            require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid non-whitelisted pubkeys");
+            require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid non-whitelisted signatures");
+        }
+
+        bytes memory wlPubkeys;
+        bytes memory wlSignatures;
+
+        if (_wlTotalValidatorCount > 0) {
+            require(nwlOperatorController.queueLength() == 0, "Non-whitelisted queue must be empty to assign whitelisted");
+
+            (wlPubkeys, wlSignatures) = wlOperatorController.assignNextValidators(
+                _wlOperatorIds,
+                _wlValidatorCounts,
+                _wlTotalValidatorCount
+            );
+
+            require(wlPubkeys.length / PUBKEY_LENGTH == _wlTotalValidatorCount, "Incorrect whitelisted pubkeys length");
+            require(
+                wlSignatures.length / SIGNATURE_LENGTH == _wlTotalValidatorCount,
+                "Incorrect whitelisted signatures length"
+            );
+            require(wlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid whitelisted pubkeys");
+            require(wlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid whitelisted signatures");
+        }
+
+        IWrappedETH(address(token)).unwrap(totalDepositAmount);
+
+        for (uint i = 0; i < _nwlTotalValidatorCount; i++) {
+            bytes memory pubkey = BytesLib.slice(nwlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            bytes memory signature = BytesLib.slice(nwlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            _deposit(pubkey, signature);
+        }
+
+        for (uint i = 0; i < _wlTotalValidatorCount; i++) {
             bytes memory pubkey = BytesLib.slice(wlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             bytes memory signature = BytesLib.slice(wlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
             _deposit(pubkey, signature);
         }
 
-        uint numNWLDeposits;
-        if (numWLDeposits < _maxDeposits) {
-            uint nwlDepositRoom = MathUpgradeable.min(
-                (balance - numWLDeposits * DEPOSIT_AMOUNT) / (DEPOSIT_AMOUNT / 2),
-                _maxDeposits - numWLDeposits
-            );
-            (bytes memory nwlPubkeys, bytes memory nwlSignatures) = nwlOperatorController.assignNextValidators(
-                nwlDepositRoom
-            );
-
-            numNWLDeposits = nwlPubkeys.length / PUBKEY_LENGTH;
-            require(nwlSignatures.length / SIGNATURE_LENGTH == numNWLDeposits, "Inconsistent pubkeys/signatures length");
-            require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
-            require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
-
-            IWrappedETH(address(token)).unwrap(numNWLDeposits * (DEPOSIT_AMOUNT / 2));
-
-            for (uint i = 0; i < numNWLDeposits; i++) {
-                bytes memory pubkey = BytesLib.slice(nwlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-                bytes memory signature = BytesLib.slice(nwlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
-                _deposit(pubkey, signature);
-            }
-        }
-
-        depositedValidators += numWLDeposits + numNWLDeposits;
+        bufferedETH -= totalDepositAmount;
+        depositedValidators += _nwlTotalValidatorCount + _wlTotalValidatorCount;
+        emit DepositEther(_nwlTotalValidatorCount, _wlTotalValidatorCount);
     }
 
     /**
@@ -153,14 +209,27 @@ contract EthStakingStrategy is Strategy {
     function deposit(uint _amount) external onlyStakingPool {
         require(_amount <= canDeposit(), "Insufficient deposit room");
         token.transferFrom(address(stakingPool), address(this), _amount);
+        depositTotal += _amount;
+        bufferedETH += _amount;
     }
 
     /**
      * @notice withdraws ETH
      * @dev not implemented yet
-     * @param _amount Amount of ETH to withdraw
+     * @param _amount amount of ETH to withdraw
      */
     function withdraw(uint _amount) external onlyStakingPool {
+        revert("Not implemented yet");
+    }
+
+    /**
+     * @notice withdraws ETH to non-whitelisted operator
+     * @dev not implemented yet
+     * @param _receiver receiver of ETH
+     * @param _amount amount of ETH to withdraw
+     */
+    function nwlWithdraw(address _receiver, uint _amount) external {
+        require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
         revert("Not implemented yet");
     }
 
@@ -171,16 +240,15 @@ contract EthStakingStrategy is Strategy {
         if (depositChange > 0) {
             uint rewards = uint(depositChange);
 
-            uint nwlOperatorDeposits = nwlOperatorController.activeStake();
-            uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) /
-                (totalDeposits() + nwlOperatorDeposits - rewards);
+            uint nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
+            uint nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) / (depositTotal + nwlOperatorDeposits);
 
-            uint activeWLValidators = wlOperatorController.activeValidators();
-            uint activeNWLValidators = nwlOperatorController.activeValidators();
+            uint activeWLValidators = wlOperatorController.totalActiveValidators();
+            uint activeNWLValidators = nwlOperatorController.totalActiveValidators();
 
-            uint operatorFee = (rewards * operatorFeeBasisPoints) / 10000;
+            uint operatorFee = (rewards * operatorFeeBasisPoints) / BASIS_POINTS;
             uint wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
-            uint nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / 10000;
+            uint nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / BASIS_POINTS;
 
             receivers = new address[](2);
             amounts = new uint[](2);
@@ -190,7 +258,35 @@ contract EthStakingStrategy is Strategy {
             amounts[0] = wlOperatorFee;
             amounts[1] = nwlOperatorFee;
         }
+        depositTotal = uint(int(depositTotal) + depositChange);
         depositChange = 0;
+    }
+
+    /**
+     * @notice sets the whitelisted operator controller
+     * @param _wlOperatorController controller address
+     */
+    function setWLOperatorController(address _wlOperatorController) external onlyOwner {
+        wlOperatorController = IWLOperatorController(_wlOperatorController);
+        emit SetWLOperatorController(_wlOperatorController);
+    }
+
+    /**
+     * @notice sets the non-whitelisted operator controller
+     * @param _nwlOperatorController controller address
+     */
+    function setNWLOperatorController(address _nwlOperatorController) external onlyOwner {
+        nwlOperatorController = INWLOperatorController(_nwlOperatorController);
+        emit SetNWLOperatorController(_nwlOperatorController);
+    }
+
+    /**
+     * @notice sets the beacon oracle
+     * @param _beaconOracle oracle address
+     */
+    function setBeaconOracle(address _beaconOracle) external onlyOwner {
+        beaconOracle = _beaconOracle;
+        emit SetBeaconOracle(_beaconOracle);
     }
 
     /**
@@ -198,8 +294,7 @@ contract EthStakingStrategy is Strategy {
      * @return total deposits
      */
     function totalDeposits() public view override returns (uint) {
-        uint depositsInProgress = (depositedValidators - beaconValidators) * DEPOSIT_AMOUNT;
-        return beaconBalance + depositsInProgress + token.balanceOf(address(this)) - nwlOperatorController.activeStake();
+        return depositTotal;
     }
 
     /**
@@ -224,6 +319,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositMax(uint256 _depositMax) external onlyOwner {
         depositMax = _depositMax;
+        emit SetDepositMax(_depositMax);
     }
 
     /**
@@ -232,6 +328,25 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositMin(uint256 _depositMin) external onlyOwner {
         depositMin = _depositMin;
+        emit SetDepositMin(_depositMin);
+    }
+
+    /**
+     * @notice sets the deposit controller
+     * @param _depositController deposit controller address
+     */
+    function setDepositController(address _depositController) external onlyOwner {
+        depositController = _depositController;
+        emit SetDepositController(_depositController);
+    }
+
+    /**
+     * @notice sets the rewards receiver
+     * @param _rewardsReceiver rewards receiver address
+     */
+    function setRewardsReceiver(address _rewardsReceiver) external onlyOwner {
+        rewardsReceiver = IRewardsReceiver(_rewardsReceiver);
+        emit SetRewardsReceiver(_rewardsReceiver);
     }
 
     /**

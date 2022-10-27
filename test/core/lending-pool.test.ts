@@ -8,7 +8,7 @@ import {
   setupToken,
   fromEther,
   padBytes,
-} from './utils/helpers'
+} from '../utils/helpers'
 import {
   ERC677,
   StrategyMock,
@@ -19,7 +19,7 @@ import {
   LendingPool,
   BorrowingPool,
   RewardsPool,
-} from '../typechain-types'
+} from '../../typechain-types'
 import { assert, expect } from 'chai'
 
 describe('LendingPool', () => {

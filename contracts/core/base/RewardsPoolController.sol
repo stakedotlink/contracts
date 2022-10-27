@@ -71,6 +71,16 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         return (tokens, balances);
     }
 
+    function onTokenTransfer(
+        address _sender,
+        uint256 _value,
+        bytes calldata _data
+    ) external virtual {
+        if (isTokenSupported(msg.sender)) {
+            distributeToken(msg.sender);
+        }
+    }
+
     /**
      * @notice returns an account's staked amount for use by reward pools
      * controlled by this contract. If rewards are redirected, it returns the sum of the amount
@@ -287,7 +297,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @dev triggers a reward update for a given account
      * @param _account account to update rewards for
      */
-    function _updateRewards(address _account) private {
+    function _updateRewards(address _account) internal {
         for (uint i = 0; i < tokens.length; i++) {
             tokenPools[tokens[i]].updateReward(_account);
         }

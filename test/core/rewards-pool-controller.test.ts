@@ -7,8 +7,8 @@ import {
   getAccounts,
   setupToken,
   fromEther,
-} from './utils/helpers'
-import { ERC677, RewardsPool, RewardsPoolControllerMock } from '../typechain-types'
+} from '../utils/helpers'
+import { ERC677, RewardsPool, RewardsPoolControllerMock } from '../../typechain-types'
 
 describe('RewardsPoolController', () => {
   let stakingToken: ERC677

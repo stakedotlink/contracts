@@ -2,7 +2,13 @@
 pragma solidity 0.8.15;
 
 interface IOperatorController {
-    function assignNextValidators(uint _numValidators) external returns (bytes memory pubkeys, bytes memory signatures);
+    function initiateKeyPairValidation(address _sender, uint _operatorId) external;
 
-    function activeValidators() external view returns (uint);
+    function reportKeyPairValidation(uint _operatorId, bool _success) external;
+
+    function queueLength() external view returns (uint);
+
+    function totalActiveValidators() external view returns (uint);
+
+    function currentStateHash() external view returns (bytes32);
 }

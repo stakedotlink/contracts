@@ -1,10 +1,10 @@
-import { expect } from 'chai'
-import { BigNumber } from 'ethers'
-import BalanceTree from './utils/merkle/balance-tree'
-import { deploy, getAccounts } from './utils/helpers'
-import { ERC677, MerkleDistributor } from '../typechain-types'
 import { ethers } from 'hardhat'
+import { BigNumber } from 'ethers'
+import { expect } from 'chai'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
+import BalanceTree from '../utils/merkle/balance-tree'
+import { deploy, getAccounts } from '../utils/helpers'
+import { ERC677, MerkleDistributor } from '../../typechain-types'
 
 // Copied and modified from: https://github.com/Uniswap/merkle-distributor/blob/master/test/MerkleDistributor.spec.ts
 // to test contract changes.

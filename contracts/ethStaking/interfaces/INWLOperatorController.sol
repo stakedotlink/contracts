@@ -4,5 +4,9 @@ pragma solidity 0.8.15;
 import "./IOperatorController.sol";
 
 interface INWLOperatorController is IOperatorController {
-    function activeStake() external view returns (uint);
+    function assignNextValidators(uint _totalValidatorCount) external returns (bytes memory keys, bytes memory signatures);
+
+    function totalActiveStake() external view returns (uint);
+
+    function getNextValidators(uint _validatorCount) external view returns (bytes memory keys);
 }

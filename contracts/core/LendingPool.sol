@@ -95,7 +95,7 @@ contract LendingPool is ILendingPool, RewardsPoolController {
         address _sender,
         uint256 _value,
         bytes calldata _calldata
-    ) external {
+    ) external override {
         require(
             msg.sender == address(allowanceToken) ||
                 poolRouter.poolsByToken(msg.sender).length > 0 ||

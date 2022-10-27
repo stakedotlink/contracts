@@ -8,8 +8,8 @@ import {
   getAccounts,
   setupToken,
   fromEther,
-} from './utils/helpers'
-import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../typechain-types'
+} from '../utils/helpers'
+import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../typechain-types'
 
 describe('WrappedSDToken', () => {
   let token: ERC677
