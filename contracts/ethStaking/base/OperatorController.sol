@@ -47,6 +47,9 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     event AddOperator(address indexed owner, string name);
     event OperatorOwnerChange(uint indexed operatorId, address indexed from, address indexed to);
     event AddKeyPairs(uint indexed operatorId, uint quantity);
+    event SetKeyValidationOracle(address oracle);
+    event SetBeaconOracle(address oracle);
+    event SetRewardsPool(address pool);
 
     modifier operatorExists(uint _id) {
         require(_id < operators.length, "Operator does not exist");
@@ -79,7 +82,8 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     /**
      * @notice returns an account's stake balance for use by reward pools
      * controlled by this contract
-     * @return account's balance
+     * @dev stake balance in this case is an account's # of active validators
+     * @return activeValidators account's # of active validators
      */
     function staked(address _account) public view returns (uint) {
         return activeValidators[_account];
@@ -88,7 +92,8 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     /**
      * @notice returns the total staked amount for use by reward pools
      * controlled by this contract
-     * @return total staked amount
+     * @dev total staked amount in this case is the total # of active validators
+     * @return totalActiveValidators total # of active validators
      */
     function totalStaked() public view returns (uint) {
         return totalActiveValidators;
@@ -247,6 +252,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint unusedKeys = operators[_operatorId].validatorLimit - operators[_operatorId].usedKeyPairs;
         if (unusedKeys > 0) {
             queueLength -= unusedKeys;
+            operators[_operatorId].validatorLimit -= uint64(unusedKeys);
             currentStateHash = keccak256(abi.encodePacked(currentStateHash, "disableOperator", _operatorId));
         }
 
@@ -265,6 +271,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      */
     function setKeyValidationOracle(address _keyValidationOracle) external onlyOwner {
         keyValidationOracle = _keyValidationOracle;
+        emit SetKeyValidationOracle(_keyValidationOracle);
     }
 
     /**
@@ -273,6 +280,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      */
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
         beaconOracle = _beaconOracle;
+        emit SetBeaconOracle(_beaconOracle);
     }
 
     /**
@@ -281,6 +289,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      */
     function setRewardsPool(address _rewardsPool) external onlyOwner {
         rewardsPool = IRewardsPool(_rewardsPool);
+        emit SetRewardsPool(_rewardsPool);
     }
 
     /**

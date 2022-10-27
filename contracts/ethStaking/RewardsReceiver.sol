@@ -14,6 +14,7 @@ contract RewardsReceiver is Ownable {
 
     event RewardsReceived(uint amount);
     event RewardsWithdrawn(uint amount);
+    event SetWithdrawalLimits(uint min, uint max);
 
     constructor(
         address _ethStakingStrategy,
@@ -64,5 +65,6 @@ contract RewardsReceiver is Ownable {
         require(_minWithdrawalAmount <= _maxWithdrawalAmount, "min must be less than or equal to max");
         minWithdrawalAmount = _minWithdrawalAmount;
         maxWithdrawalAmount = _maxWithdrawalAmount;
+        emit SetWithdrawalLimits(_minWithdrawalAmount, _maxWithdrawalAmount);
     }
 }

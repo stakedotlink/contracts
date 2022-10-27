@@ -26,6 +26,8 @@ contract EthStakingStrategy is Strategy {
     uint public constant DEPOSIT_AMOUNT = 32 ether;
     uint internal constant DEPOSIT_AMOUNT_UNIT = 1 gwei;
 
+    uint internal constant BASIS_POINTS = 10000;
+
     IDepositContract public depositContract;
     IWLOperatorController public wlOperatorController;
     INWLOperatorController public nwlOperatorController;
@@ -50,6 +52,14 @@ contract EthStakingStrategy is Strategy {
     uint private depositMin;
 
     event DepositEther(uint nwlValidatorCount, uint wlValidatorCount);
+    event ReportBeaconState(uint beaconValidators, uint beaconBalance, uint nwlLostOperatorStakes);
+    event SetDepositMax(uint max);
+    event SetDepositMin(uint min);
+    event SetDepositController(address controller);
+    event SetRewardsReceiver(address rewardsReceiver);
+    event SetBeaconOracle(address oracle);
+    event SetWLOperatorController(address controller);
+    event SetNWLOperatorController(address controller);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -110,6 +120,7 @@ contract EthStakingStrategy is Strategy {
         }
 
         depositChange += change;
+        emit ReportBeaconState(_beaconValidators, _beaconBalance, _nwlLostOperatorStakes);
     }
 
     /**
@@ -139,17 +150,23 @@ contract EthStakingStrategy is Strategy {
         if (_nwlTotalValidatorCount > 0) {
             (nwlPubkeys, nwlSignatures) = nwlOperatorController.assignNextValidators(_nwlTotalValidatorCount);
 
-            require(nwlPubkeys.length / PUBKEY_LENGTH == _nwlTotalValidatorCount, "Incorrect pubkeys length");
-            require(nwlSignatures.length / SIGNATURE_LENGTH == _nwlTotalValidatorCount, "Incorrect signatures length");
-            require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
-            require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
+            require(
+                nwlPubkeys.length / PUBKEY_LENGTH == _nwlTotalValidatorCount,
+                "Incorrect non-whitelisted pubkeys length"
+            );
+            require(
+                nwlSignatures.length / SIGNATURE_LENGTH == _nwlTotalValidatorCount,
+                "Incorrect non-whitelisted signatures length"
+            );
+            require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid non-whitelisted pubkeys");
+            require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid non-whitelisted signatures");
         }
 
         bytes memory wlPubkeys;
         bytes memory wlSignatures;
 
         if (_wlTotalValidatorCount > 0) {
-            require(nwlOperatorController.queueLength() == 0, "Non-whitelisted queue must be empty to assign whitlisted");
+            require(nwlOperatorController.queueLength() == 0, "Non-whitelisted queue must be empty to assign whitelisted");
 
             (wlPubkeys, wlSignatures) = wlOperatorController.assignNextValidators(
                 _wlOperatorIds,
@@ -157,10 +174,13 @@ contract EthStakingStrategy is Strategy {
                 _wlTotalValidatorCount
             );
 
-            require(wlPubkeys.length / PUBKEY_LENGTH == _wlTotalValidatorCount, "Incorrect pubkeys length");
-            require(wlSignatures.length / SIGNATURE_LENGTH == _wlTotalValidatorCount, "Incorrect signatures length");
-            require(wlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
-            require(wlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
+            require(wlPubkeys.length / PUBKEY_LENGTH == _wlTotalValidatorCount, "Incorrect whitelisted pubkeys length");
+            require(
+                wlSignatures.length / SIGNATURE_LENGTH == _wlTotalValidatorCount,
+                "Incorrect whitelisted signatures length"
+            );
+            require(wlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid whitelisted pubkeys");
+            require(wlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid whitelisted signatures");
         }
 
         IWrappedETH(address(token)).unwrap(totalDepositAmount);
@@ -221,14 +241,14 @@ contract EthStakingStrategy is Strategy {
             uint rewards = uint(depositChange);
 
             uint nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
-            uint nwlOperatorRewardsBasisPoints = (10000 * nwlOperatorDeposits) / (depositTotal + nwlOperatorDeposits);
+            uint nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) / (depositTotal + nwlOperatorDeposits);
 
             uint activeWLValidators = wlOperatorController.totalActiveValidators();
             uint activeNWLValidators = nwlOperatorController.totalActiveValidators();
 
-            uint operatorFee = (rewards * operatorFeeBasisPoints) / 10000;
+            uint operatorFee = (rewards * operatorFeeBasisPoints) / BASIS_POINTS;
             uint wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
-            uint nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / 10000;
+            uint nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / BASIS_POINTS;
 
             receivers = new address[](2);
             amounts = new uint[](2);
@@ -248,6 +268,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setWLOperatorController(address _wlOperatorController) external onlyOwner {
         wlOperatorController = IWLOperatorController(_wlOperatorController);
+        emit SetWLOperatorController(_wlOperatorController);
     }
 
     /**
@@ -256,6 +277,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setNWLOperatorController(address _nwlOperatorController) external onlyOwner {
         nwlOperatorController = INWLOperatorController(_nwlOperatorController);
+        emit SetNWLOperatorController(_nwlOperatorController);
     }
 
     /**
@@ -264,6 +286,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
         beaconOracle = _beaconOracle;
+        emit SetBeaconOracle(_beaconOracle);
     }
 
     /**
@@ -296,6 +319,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositMax(uint256 _depositMax) external onlyOwner {
         depositMax = _depositMax;
+        emit SetDepositMax(_depositMax);
     }
 
     /**
@@ -304,6 +328,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositMin(uint256 _depositMin) external onlyOwner {
         depositMin = _depositMin;
+        emit SetDepositMin(_depositMin);
     }
 
     /**
@@ -312,6 +337,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setDepositController(address _depositController) external onlyOwner {
         depositController = _depositController;
+        emit SetDepositController(_depositController);
     }
 
     /**
@@ -320,6 +346,7 @@ contract EthStakingStrategy is Strategy {
      */
     function setRewardsReceiver(address _rewardsReceiver) external onlyOwner {
         rewardsReceiver = IRewardsReceiver(_rewardsReceiver);
+        emit SetRewardsReceiver(_rewardsReceiver);
     }
 
     /**

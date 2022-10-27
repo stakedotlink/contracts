@@ -102,7 +102,9 @@ contract DepositController is Ownable {
         wlStateHash = wlOperatorController.currentStateHash();
 
         nwlTotalValidatorCount = nwlQueueLength >= _totalValidatorCount ? _totalValidatorCount : nwlQueueLength;
-        nwlKeys = nwlOperatorController.getNextValidators(nwlTotalValidatorCount);
+        if (nwlTotalValidatorCount > 0) {
+            nwlKeys = nwlOperatorController.getNextValidators(nwlTotalValidatorCount);
+        }
 
         if (nwlTotalValidatorCount < _totalValidatorCount) {
             (wlOperatorIds, wlValidatorCounts, wlTotalValidatorCount, wlKeys) = wlOperatorController.getNextValidators(
