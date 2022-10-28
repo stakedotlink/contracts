@@ -192,7 +192,7 @@ describe('MerkleDistributor', () => {
 
       it('can withdraw unclaimed tokens', async () => {
         await expect(
-          distributor.withdrawUnclaimedTokens(token.address, tree.getHexRoot())
+          distributor.withdrawUnclaimedTokens(token.address, tree.getHexRoot(), 0)
         ).to.be.revertedWith('MerkleDistributor: Distribution is not paused.')
         await distributor.claimDistribution(
           token.address,
@@ -204,8 +204,11 @@ describe('MerkleDistributor', () => {
         await distributor.setTimeLimitEnabled(token.address, true)
         await time.increase(91 * 86400)
         await distributor.pauseForWithdrawal(token.address)
-        await distributor.withdrawUnclaimedTokens(token.address, tree.getHexRoot())
-        expect((await distributor.distributions(token.address))[2]).to.eq(false)
+        await distributor.withdrawUnclaimedTokens(token.address, tree.getHexRoot(), 101)
+        let distribution = await distributor.distributions(token.address)
+        expect(distribution[2]).to.eq(false)
+        expect(distribution[4]).to.eq(tree.getHexRoot())
+        expect(distribution[5]).to.eq(101)
         expect(await token.balanceOf(distributor.address)).to.eq(BigNumber.from(0))
       })
     })
@@ -319,6 +322,7 @@ describe('MerkleDistributor', () => {
 
         let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
         expect((await distributor.distributions(token.address))[3]).to.eq(ts)
+        expect((await distributor.distributions(token.address))[5]).to.eq(401)
 
         proof0 = newTree.getProof(0, wallet0, BigNumber.from(200))
         let proof1 = newTree.getProof(1, wallet1, BigNumber.from(201))
