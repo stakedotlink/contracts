@@ -24,12 +24,12 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     })
     const poolOwners = await ethers.getContract('PoolOwnersV1')
 
-    await deploy('RewardsPoolV1', {
+    await deploy('OwnersRewardsPoolV1', {
       from: deployer,
       log: true,
       args: [poolOwners.address, linkToken.address, 'LinkPool Owners LINK', 'lpoLINK'],
     })
-    const rewardsPool = await ethers.getContract('RewardsPoolV1')
+    const rewardsPool = await ethers.getContract('OwnersRewardsPoolV1')
 
     await deploy('PoolAllowanceV1', {
       from: deployer,
