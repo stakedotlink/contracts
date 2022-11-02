@@ -98,18 +98,8 @@ contract StrategyMock is Strategy {
         depositMin = _depositMin;
     }
 
-    function createRewardsPool(
-        address _token,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol
-    ) public {
-        RewardsPool rewardsPool = new RewardsPool(
-            address(stakingPool),
-            _token,
-            _derivativeTokenName,
-            _derivativeTokenSymbol
-        );
-
+    function createRewardsPool(address _token) public {
+        RewardsPool rewardsPool = new RewardsPool(address(stakingPool), _token);
         IRewardsPoolController rewardsPoolController = IRewardsPoolController(address(stakingPool));
         rewardsPoolController.addToken(_token, address(rewardsPool));
     }

@@ -7,14 +7,8 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const {
-    LINK_StakingPool,
-    LINK_WrappedSDToken,
-    wstLINK_OwnersRewardsPool,
-    LINK_BorrowingPool,
-    LINK_WrappedBorrowedSDToken,
-    wbstLINK_LendingRewardsPool,
-  } = config
+  const { LINK_StakingPool, LINK_WrappedSDToken, LINK_BorrowingPool, LINK_WrappedBorrowedSDToken } =
+    config
 
   const linkToken = await ethers.getContract('LinkToken')
   const poolRouter = await ethers.getContract('PoolRouter')
@@ -47,12 +41,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     contract: 'RewardsPool',
     from: deployer,
     log: true,
-    args: [
-      poolOwners.address,
-      wsdToken.address,
-      wstLINK_OwnersRewardsPool.derivativeTokenName,
-      wstLINK_OwnersRewardsPool.derivativeTokenSymbol,
-    ],
+    args: [poolOwners.address, wsdToken.address],
   })
 
   let tx = await stakingPool.setWSDToken(wsdToken.address)
@@ -95,12 +84,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     contract: 'RewardsPool',
     from: deployer,
     log: true,
-    args: [
-      lendingPool.address,
-      wbsdToken.address,
-      wbstLINK_LendingRewardsPool.derivativeTokenName,
-      wbstLINK_LendingRewardsPool.derivativeTokenSymbol,
-    ],
+    args: [lendingPool.address, wbsdToken.address],
   })
 
   tx = await borrowingPool.init(wbsdToken.address)

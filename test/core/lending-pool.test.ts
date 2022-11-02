@@ -119,8 +119,6 @@ describe('LendingPool', () => {
     rewardsPool = (await deploy('RewardsPool', [
       lendingPool.address,
       wbstToken.address,
-      'Reward Wrapped Borrowed Staked LINK',
-      'rwbstLINK',
     ])) as RewardsPool
     await lendingPool.addToken(wbstToken.address, rewardsPool.address)
 
@@ -327,7 +325,9 @@ describe('LendingPool', () => {
     await distributeRewards(1000)
 
     assert.equal(
-      fromEther(await wbstToken.getUnderlyingByWrapped(await rewardsPool.balanceOf(accounts[0]))),
+      fromEther(
+        await wbstToken.getUnderlyingByWrapped(await rewardsPool.withdrawableRewards(accounts[0]))
+      ),
       830.97,
       'lenders fee amount does not match'
     )
@@ -341,7 +341,7 @@ describe('LendingPool', () => {
     assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance does not match')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
       491.6109566349169,
       'lenders fee amount does not match'
     )
@@ -349,12 +349,14 @@ describe('LendingPool', () => {
     await distributeRewards(1000)
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
       491.6109566349169,
       'lenders fee amount does not match'
     )
     assert.equal(
-      fromEther(await wbstToken.getUnderlyingByWrapped(await rewardsPool.balanceOf(accounts[1]))),
+      fromEther(
+        await wbstToken.getUnderlyingByWrapped(await rewardsPool.withdrawableRewards(accounts[1]))
+      ),
       755.4272727272727,
       'lenders fee amount does not match'
     )
@@ -596,12 +598,16 @@ describe('LendingPool', () => {
       'reward amount does not match'
     )
     assert.equal(
-      fromEther(await wbstToken.getUnderlyingByWrapped(await rewardsPool.balanceOf(accounts[0]))),
+      fromEther(
+        await wbstToken.getUnderlyingByWrapped(await rewardsPool.withdrawableRewards(accounts[0]))
+      ),
       415.485,
       'lenders fee amount does not match'
     )
     assert.equal(
-      fromEther(await wbstToken.getUnderlyingByWrapped(await rewardsPool.balanceOf(accounts[1]))),
+      fromEther(
+        await wbstToken.getUnderlyingByWrapped(await rewardsPool.withdrawableRewards(accounts[1]))
+      ),
       415.485,
       'lenders fee amount does not match'
     )

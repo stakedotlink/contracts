@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./tokens/base/VirtualERC677.sol";
 import "./interfaces/IRewardsPoolController.sol";
 
 /**
@@ -11,46 +10,42 @@ import "./interfaces/IRewardsPoolController.sol";
  * @notice Handles reward distribution for a single asset
  * @dev rewards can only be positive (user balances can only increase)
  */
-contract RewardsPool is VirtualERC677 {
+contract RewardsPool {
     using SafeERC20 for IERC677;
 
     IERC677 public immutable token;
     IRewardsPoolController public immutable controller;
 
-    uint public withdrawableRewards;
     uint public rewardPerToken;
+    uint public totalRewards;
     mapping(address => uint) public userRewardPerTokenPaid;
+    mapping(address => uint) public userRewards;
 
     event Withdraw(address indexed account, uint amount);
     event DistributeRewards(address indexed sender, uint256 amountStaked, uint256 amount);
 
-    constructor(
-        address _controller,
-        address _token,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol
-    ) VirtualERC677(_derivativeTokenName, _derivativeTokenSymbol) {
+    constructor(address _controller, address _token) {
         controller = IRewardsPoolController(_controller);
         token = IERC677(_token);
     }
 
     /**
-     * @notice returns an account's total unclaimed rewards (principal balance + newly earned rewards)
+     * @notice returns an account's total withdrawable rewards (principal balance + newly earned rewards)
      * @param _account account to return rewards for
      * @return account's total unclaimed rewards
      **/
-    function balanceOf(address _account) public view virtual override(IERC20, VirtualERC20) returns (uint) {
+    function withdrawableRewards(address _account) public view returns (uint) {
         return
             (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
-            super.balanceOf(_account);
+            userRewards[_account];
     }
 
     /**
      * @notice withdraws an account's earned rewards
      **/
     function withdraw() external {
-        uint256 toWithdraw = balanceOf(msg.sender);
+        uint256 toWithdraw = withdrawableRewards(msg.sender);
         require(toWithdraw > 0, "No rewards to withdraw");
 
         _withdraw(msg.sender, toWithdraw);
@@ -64,7 +59,7 @@ contract RewardsPool is VirtualERC677 {
     function withdraw(address _account) external {
         require(msg.sender == address(controller), "Controller only");
 
-        uint256 toWithdraw = balanceOf(_account);
+        uint256 toWithdraw = withdrawableRewards(_account);
 
         if (toWithdraw > 0) {
             _withdraw(_account, toWithdraw);
@@ -88,8 +83,8 @@ contract RewardsPool is VirtualERC677 {
      **/
     function distributeRewards() public {
         require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
-        uint256 toDistribute = token.balanceOf(address(this)) - withdrawableRewards;
-        withdrawableRewards += toDistribute;
+        uint256 toDistribute = token.balanceOf(address(this)) - totalRewards;
+        totalRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
         emit DistributeRewards(msg.sender, controller.totalStaked(), toDistribute);
     }
@@ -99,9 +94,9 @@ contract RewardsPool is VirtualERC677 {
      * @param _account account to update for
      **/
     function updateReward(address _account) public virtual {
-        uint toMint = balanceOf(_account) - super.balanceOf(_account);
-        if (toMint > 0) {
-            _mint(_account, toMint);
+        uint newRewards = withdrawableRewards(_account) - userRewards[_account];
+        if (newRewards > 0) {
+            userRewards[_account] += newRewards;
         }
         userRewardPerTokenPaid[_account] = rewardPerToken;
     }
@@ -113,8 +108,8 @@ contract RewardsPool is VirtualERC677 {
      **/
     function _withdraw(address _account, uint _amount) internal {
         updateReward(_account);
-        _burn(_account, _amount);
-        withdrawableRewards -= _amount;
+        userRewards[_account] -= _amount;
+        totalRewards -= _amount;
         token.safeTransfer(_account, _amount);
         emit Withdraw(_account, _amount);
     }
@@ -127,20 +122,5 @@ contract RewardsPool is VirtualERC677 {
         uint totalStaked = controller.totalStaked();
         require(totalStaked > 0, "Staked amount must be > 0");
         rewardPerToken += ((_reward * 1e18) / totalStaked);
-    }
-
-    /**
-     * @notice transfers unclaimed rewards from one account to another
-     * @param _from account to transfer from
-     * @param _to account to transfer to
-     * @param _amount amount to transfer
-     **/
-    function _transfer(
-        address _from,
-        address _to,
-        uint _amount
-    ) internal override {
-        updateReward(_from);
-        super._transfer(_from, _to, _amount);
     }
 }

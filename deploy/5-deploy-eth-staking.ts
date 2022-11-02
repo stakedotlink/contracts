@@ -7,7 +7,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { ETH_StakingPool, ETH_WrappedSDToken, wstETH_OwnersRewardsPool } = config
+  const { ETH_StakingPool, ETH_WrappedSDToken } = config
 
   const poolRouter = await ethers.getContract('PoolRouter')
   const poolOwners = await ethers.getContract('PoolOwners')
@@ -40,12 +40,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     contract: 'RewardsPool',
     from: deployer,
     log: true,
-    args: [
-      poolOwners.address,
-      wsdToken.address,
-      wstETH_OwnersRewardsPool.derivativeTokenName,
-      wstETH_OwnersRewardsPool.derivativeTokenSymbol,
-    ],
+    args: [poolOwners.address, wsdToken.address],
   })
 
   let tx = await stakingPool.setWSDToken(wsdToken.address)

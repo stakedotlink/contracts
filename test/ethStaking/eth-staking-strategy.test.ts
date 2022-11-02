@@ -116,14 +116,10 @@ describe('EthStakingStrategy', () => {
     nwlRewardsPool = (await deploy('RewardsPool', [
       nwlOperatorController.address,
       wsdToken.address,
-      'test',
-      'test',
     ])) as RewardsPool
     wlRewardsPool = (await deploy('RewardsPool', [
       wlOperatorController.address,
       wsdToken.address,
-      'test',
-      'test',
     ])) as RewardsPool
 
     await nwlOperatorController.setRewardsPool(nwlRewardsPool.address)

@@ -44,12 +44,7 @@ describe('PoolOwners', () => {
       'Staked LinkPool',
     ])) as PoolOwners
 
-    rewardsPool = (await deploy('RewardsPool', [
-      poolOwners.address,
-      token.address,
-      '1',
-      '1',
-    ])) as RewardsPool
+    rewardsPool = (await deploy('RewardsPool', [poolOwners.address, token.address])) as RewardsPool
 
     await poolOwners.addToken(token.address, rewardsPool.address)
   })
@@ -173,19 +168,19 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       1000,
       'reward balance incorrect'
     )
     await poolOwners.connect(signers[1]).transfer(accounts[2], toEther(1000))
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       1000,
       'reward balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       500,
       'reward balance incorrect'
     )
@@ -195,12 +190,12 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       500,
       'reward balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       1500,
       'reward balance incorrect'
     )
@@ -221,12 +216,12 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       1000,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       500,
       'reward token balance incorrect'
     )
@@ -263,48 +258,48 @@ describe('PoolOwners', () => {
     )
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       500,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       500,
       'reward token balance incorrect'
     )
 
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       500,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       1500,
       'reward token balance incorrect'
     )
 
     await poolOwners.connect(signers[1]).redirectRewards(accounts[3])
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       1000,
       'reward token balance incorrect'
     )
 
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       1000,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       500,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       3000,
       'reward token balance incorrect'
     )
@@ -314,17 +309,17 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       1000,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       1500,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       3500,
       'reward token balance incorrect'
     )
@@ -339,17 +334,17 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       0,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       1000,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       500,
       'reward token balance incorrect'
     )
@@ -358,17 +353,17 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       0,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       1500,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       1500,
       'reward token balance incorrect'
     )
@@ -384,17 +379,17 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       0,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       1000,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       500,
       'reward token balance incorrect'
     )
@@ -403,17 +398,17 @@ describe('PoolOwners', () => {
     await token.transferAndCall(poolOwners.address, toEther(1500), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[1])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[1])),
       0,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       2250,
       'reward token balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[3])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[3])),
       750,
       'reward token balance incorrect'
     )
