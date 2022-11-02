@@ -35,6 +35,10 @@ const config: HardhatUserConfig = {
       url: 'https://main-light.eth.linkpool.io/',
       accounts,
     },
+    testnet: {
+      url: 'https://staking-metrics-monitor-beta.staging.linkpool.io/dev',
+      accounts,
+    },
     hardhat: {
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
     },
