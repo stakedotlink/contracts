@@ -27,4 +27,6 @@ interface IStakingPool is IStakingRewardsPool {
     function reorderStrategies(uint[] calldata _newOrder) external;
 
     function getStrategies() external view returns (address[] memory);
+
+    function setPoolIndex(uint16 _poolIndex) external;
 }

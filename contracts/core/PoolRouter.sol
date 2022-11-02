@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "./interfaces/IERC677.sol";
 import "./interfaces/IStakingPool.sol";
+import "./interfaces/ILendingPool.sol";
 import "../ethStaking/interfaces/IWrappedETH.sol";
 
 /**
@@ -23,16 +24,16 @@ contract PoolRouter is Ownable {
         CLOSED
     }
 
-    IERC677 public immutable allowanceToken;
-    mapping(address => uint) public allowanceStakes;
-
     struct Pool {
         IERC677 token;
         IStakingPool stakingPool;
         bool allowanceRequired;
         PoolStatus status;
-        mapping(address => uint) stakedAmounts;
+        uint totalStaked;
     }
+
+    IERC677 public immutable allowanceToken;
+    ILendingPool public immutable lendingPool;
 
     mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
@@ -41,8 +42,6 @@ contract PoolRouter is Ownable {
     address[] public tokens;
     address public wrappedETH;
 
-    event StakeAllowance(address indexed account, uint amount);
-    event WithdrawAllowance(address indexed account, uint amount);
     event StakeToken(address indexed token, address indexed pool, address indexed account, uint amount);
     event WithdrawToken(address indexed token, address indexed pool, address indexed account, uint amount);
     event AddPool(address indexed token, address indexed pool);
@@ -53,14 +52,15 @@ contract PoolRouter is Ownable {
         _;
     }
 
-    constructor(address _allowanceToken) {
+    constructor(address _allowanceToken, address _lendingPool) {
         allowanceToken = IERC677(_allowanceToken);
+        lendingPool = ILendingPool(_lendingPool);
     }
 
     receive() external payable {}
 
     /**
-     * @dev Returns a list of all supported tokens
+     * @notice Returns a list of all supported tokens
      * @return list of tokens
      **/
     function supportedTokens() external view returns (address[] memory) {
@@ -68,77 +68,35 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev Returns the token stake balance for an account
-     * @param _token token to return balance for
-     * @param _index index of pool to return balance for
-     * @param _account account to return balance for
-     * @return account token stake balance
-     **/
-    function stakedAmount(
-        address _token,
-        uint16 _index,
-        address _account
-    ) external view poolExists(_token, _index) returns (uint) {
-        return pools[_poolKey(_token, _index)].stakedAmounts[_account];
-    }
-
-    /**
-     * @dev Returns a list of Pool objects by the token address
-     * @param _token token address
-     * @return list of pools
-     **/
-    function poolsByToken(address _token) external view returns (address[] memory) {
-        address[] memory stakingPools = new address[](poolCountByToken[_token]);
-
-        for (uint16 i = 0; i < poolCountByToken[_token]; i++) {
-            stakingPools[i] = address(pools[_poolKey(_token, i)].stakingPool);
-        }
-
-        return stakingPools;
-    }
-
-    /**
      * @notice Returns a pool
      * @param _token pool token
      * @param _index pool index
      */
-    function getPool(address _token, uint16 _index)
-        external
-        view
-        returns (
-            address,
-            address,
-            bool,
-            PoolStatus
-        )
-    {
-        Pool storage pool = pools[_poolKey(_token, _index)];
-        return (address(pool.token), address(pool.stakingPool), pool.allowanceRequired, pool.status);
+    function getPool(address _token, uint16 _index) external view returns (Pool memory) {
+        return pools[_poolKey(_token, _index)];
     }
 
     /**
-     * @dev Fetch a list of all pools
-     * @return an array of tokens and an array of staking pools
+     * @notice Fetch a list of all pools
+     * @return poolList list of all pools
      **/
-    function allPools() external view returns (address[] memory, address[] memory) {
-        address[] memory poolTokens = new address[](poolCount);
-        address[] memory stakingPools = new address[](poolCount);
+    function allPools() external view returns (Pool[] memory poolList) {
+        poolList = new Pool[](poolCount);
 
         uint index = 0;
         for (uint i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             for (uint16 j = 0; j < poolCountByToken[token]; j++) {
-                poolTokens[index] = token;
-                stakingPools[index] = address(pools[_poolKey(token, j)].stakingPool);
+                poolList[index] = pools[_poolKey(token, j)];
                 index++;
             }
         }
-
-        return (poolTokens, stakingPools);
     }
 
     /**
-     * @dev ERC677 implementation to receive a token or allowance stake
+     * @notice ERC677 implementation to receive a token stake
+     * @dev token and allowance can be staked simultaneously to ensure sender is able to fill
+     * newly created deposit room
      * @param _sender of the token transfer
      * @param _value of the token transfer
      **/
@@ -152,19 +110,21 @@ contract PoolRouter is Ownable {
             "Only callable by supported tokens"
         );
 
+        (address token, uint tokenAmount, uint16 index) = abi.decode(_calldata, (address, uint, uint16));
+
         if (msg.sender == address(allowanceToken)) {
-            allowanceStakes[_sender] += _value;
-            emit StakeAllowance(_sender, _value);
-            return;
+            require(poolCountByToken[token] > index, "Pool does not exist");
+            lendingPool.stakeAllowance(_sender, _value);
+            IERC677(token).safeTransferFrom(msg.sender, address(this), tokenAmount);
+            _stake(token, index, _sender, tokenAmount);
+        } else {
+            require(poolCountByToken[msg.sender] > index, "Pool does not exist");
+            _stake(msg.sender, index, _sender, _value);
         }
-
-        uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
-
-        _stake(msg.sender, index, _sender, _value);
     }
 
     /**
-     * @dev stakes tokens in a staking pool
+     * @notice stakes tokens in a staking pool
      * @param _token token to stake
      * @param _index index of pool to stake in
      * @param _amount amount to stake
@@ -179,7 +139,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev withdraws tokens from a staking pool
+     * @notice withdraws tokens from a staking pool
      * @param _token token to withdraw
      * @param _index pool index
      * @param _amount amount to withdraw
@@ -193,7 +153,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev wraps ETH and stakes wrapped ETH in a staking pool
+     * @notice wraps ETH and stakes wrapped ETH in a staking pool
      * @param _index index of pool to stake in
      **/
     function stakeETH(uint16 _index) external payable poolExists(wrappedETH, _index) {
@@ -202,7 +162,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev withdraws wrapped ETH from a staking pool and unwraps
+     * @notice withdraws wrapped ETH from a staking pool and unwraps
      * @param _index pool index
      * @param _amount amount to withdraw
      **/
@@ -214,33 +174,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev stakes allowance tokens
-     * @param _amount amount to stake
-     **/
-    function stakeAllowance(uint _amount) external {
-        IERC677(allowanceToken).safeTransferFrom(msg.sender, address(this), _amount);
-        allowanceStakes[msg.sender] += _amount;
-        emit StakeAllowance(msg.sender, _amount);
-    }
-
-    /**
-     * @dev withdraws allowance
-     * @param _amount amount to withdraw
-     **/
-    function withdrawAllowance(uint _amount) external {
-        require(_amount <= allowanceStakes[msg.sender], "Cannot withdraw more than staked allowance balance");
-
-        uint allowanceToRemain = allowanceStakes[msg.sender] - _amount;
-        require(maxAllowanceInUse(msg.sender) <= allowanceToRemain, "Cannot withdraw allowance that is in use");
-
-        allowanceStakes[msg.sender] = allowanceToRemain;
-        allowanceToken.safeTransfer(msg.sender, _amount);
-
-        emit WithdrawAllowance(msg.sender, _amount);
-    }
-
-    /**
-     * @dev adds a new token and staking config
+     * @notice adds a new token and staking config
      * @param _token staking token to add
      * @param _stakingPool token staking pool
      * @param _allowanceRequired whether the pool requires allowance to stake
@@ -269,11 +203,13 @@ contract PoolRouter is Ownable {
             IERC677(_token).safeApprove(_stakingPool, type(uint).max);
         }
 
+        IStakingPool(_stakingPool).setPoolIndex(tokenPoolCount);
+
         emit AddPool(_token, _stakingPool);
     }
 
     /**
-     * @dev removes an existing pool
+     * @notice removes an existing pool
      * @param _token staking token
      * @param _index index of pool to remove
      **/
@@ -283,7 +219,14 @@ contract PoolRouter is Ownable {
 
         emit RemovePool(_token, address(pool.stakingPool));
 
-        delete pools[_poolKey(_token, _index)];
+        uint16 lastPoolIndex = poolCountByToken[_token] - 1;
+
+        if (_index != lastPoolIndex) {
+            pools[_poolKey(_token, _index)] = pools[_poolKey(_token, lastPoolIndex)];
+            pools[_poolKey(_token, _index)].stakingPool.setPoolIndex(_index);
+        }
+
+        delete pools[_poolKey(_token, lastPoolIndex)];
         poolCountByToken[_token]--;
         poolCount--;
 
@@ -299,7 +242,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev updates a given pool to whether allowance is needed or not
+     * @notice updates a given pool to whether allowance is needed or not
      * @param _token token address for the staking pool
      * @param _index pool index
      * @param _allowanceRequired bool whether allowance is required
@@ -313,64 +256,55 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev calculates the maximum allowance in use across all pools
-     * @param _account the account to check how much allowance in use
+     * @notice calculates the amount of stake that can be deposited based on allowance staked
+     * @param _token the token address used by the staking pool
+     * @param _index pool index
      * @return the amount of allowance tokens in use
      **/
-    function maxAllowanceInUse(address _account) public view returns (uint256) {
+    function canStake(address _token, uint16 _index) public view poolExists(_token, _index) returns (uint) {
+        Pool memory pool = pools[_poolKey(_token, _index)];
+        if (!pool.allowanceRequired) {
+            return type(uint).max;
+        }
+        uint availableAllowance = lendingPool.totalSupply() - allowanceInUse(_token, _index);
+        if (availableAllowance == 0) {
+            return 0;
+        }
+        return (1e18 * pool.stakingPool.maxDeposits()) / ((allowanceToken.totalSupply() * 1e18) / availableAllowance);
+    }
+
+    /**
+     * @notice calculates the maximum allowance in use across all pools
+     * @return the amount of allowance tokens in use
+     **/
+    function maxAllowanceInUse() public view returns (uint) {
         uint usedAllowance;
         for (uint i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             for (uint16 j = 0; j < poolCountByToken[token]; j++) {
-                usedAllowance = Math.max(allowanceInUse(token, j, _account), usedAllowance);
+                usedAllowance = Math.max(allowanceInUse(token, j), usedAllowance);
             }
         }
         return usedAllowance;
     }
 
     /**
-     * @dev returns the amount of allowance available for a given account
+     * @notice calculates the amount of allowance tokens in use for a given staking pool
      * @param _token the token address used by the staking pool
      * @param _index pool index
-     * @param _account the account to check how much allowance in use
-     * @return allowance available
-     **/
-    function availableAllowance(
-        address _token,
-        uint16 _index,
-        address _account
-    ) public view returns (uint256) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
-        if (!pool.allowanceRequired) {
-            return 0;
-        }
-
-        return allowanceStakes[_account] - allowanceInUse(_token, _index, _account);
-    }
-
-    /**
-     * @dev calculates the amount of allowance tokens in use for a given staking pool
-     * @param _token the token address used by the staking pool
-     * @param _index pool index
-     * @param _account the account to check how much allowance in use
      * @return the amount of allowance tokens in use
      **/
-    function allowanceInUse(
-        address _token,
-        uint16 _index,
-        address _account
-    ) public view returns (uint256) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
+    function allowanceInUse(address _token, uint16 _index) public view returns (uint) {
+        Pool memory pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
             return 0;
         }
 
-        return
-            (1e18 * pool.stakedAmounts[_account]) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+        return (1e18 * pool.totalStaked) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
     }
 
     /**
-     * @dev calculates the amount of allowance tokens required for a given staking amount
+     * @notice calculates the amount of allowance tokens required for a given staking amount
      * @param _token the token address used by the staking pool
      * @param _index pool index
      * @param _amount the amount to query how much allowance is required
@@ -379,9 +313,9 @@ contract PoolRouter is Ownable {
     function allowanceRequired(
         address _token,
         uint16 _index,
-        uint256 _amount
-    ) public view poolExists(_token, _index) returns (uint256) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
+        uint _amount
+    ) public view poolExists(_token, _index) returns (uint) {
+        Pool memory pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
             return 0;
         }
@@ -389,38 +323,15 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev calculates the amount of stake that can be deposited based on allowance staked
-     * @param _token the token address used by the staking pool
-     * @param _index pool index
-     * @param _account the account to query available stake
-     * @return the amount of allowance tokens in use
-     **/
-    function availableStake(
-        address _token,
-        uint16 _index,
-        address _account
-    ) external view poolExists(_token, _index) returns (uint256) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
-        if (!pool.allowanceRequired) {
-            return type(uint256).max;
-        }
-        uint availableAllowance = allowanceStakes[_account] - allowanceInUse(_token, _index, _account);
-        if (availableAllowance == 0) {
-            return 0;
-        }
-        return (1e18 * pool.stakingPool.maxDeposits()) / ((allowanceToken.totalSupply() * 1e18) / availableAllowance);
-    }
-
-    /**
-     * @dev calculates the amount of stake per a single allowance
+     * @notice calculates the amount of stake per a single allowance
      * @param _token the token address used by the staking pool
      * @param _index pool index
      * @return the amount of tokens that can be staked per one allowance
      **/
-    function stakePerAllowance(address _token, uint16 _index) external view poolExists(_token, _index) returns (uint256) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
+    function stakePerAllowance(address _token, uint16 _index) external view poolExists(_token, _index) returns (uint) {
+        Pool memory pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
-            return type(uint256).max;
+            return type(uint).max;
         }
         return (1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply();
     }
@@ -444,15 +355,15 @@ contract PoolRouter is Ownable {
      * @notice sets a pool's status to CLOSED
      * @param _token pool token
      * @param _index pool index
-\     */
+     */
     function setPoolStatusClosed(address _token, uint16 _index) external poolExists(_token, _index) onlyOwner {
         pools[_poolKey(_token, _index)].status = PoolStatus.CLOSED;
     }
 
     /**
      * @notice sets the wrapped ETH token
-     * @param _wrappedETH wrapped ETH token to set
      * @dev must be set for ETH staking to work, can only be set once
+     * @param _wrappedETH wrapped ETH token to set
      **/
     function setWrappedETH(address _wrappedETH) external onlyOwner {
         require(wrappedETH == address(0), "wrappedETH already set");
@@ -461,7 +372,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev stakes tokens in a staking pool
+     * @notice stakes tokens in a staking pool
      * @param _token token to stake
      * @param _index index of pool to stake in
      * @param _account account to stake for
@@ -474,20 +385,18 @@ contract PoolRouter is Ownable {
         uint _amount
     ) private {
         Pool storage pool = pools[_poolKey(_token, _index)];
+
         require(pool.status == PoolStatus.OPEN, "Pool is not open");
+        require(_amount <= canStake(_token, _index), "Not enough allowance staked");
 
-        uint requiredAllowance = allowanceRequired(_token, _index, _amount);
-        uint usedAllowance = allowanceInUse(_token, _index, _account);
-        require((usedAllowance + requiredAllowance) <= allowanceStakes[_account], "Not enough allowance staked");
-
-        pool.stakedAmounts[_account] += _amount;
+        pool.totalStaked += _amount;
         pool.stakingPool.stake(_account, _amount);
 
         emit StakeToken(_token, address(pool.stakingPool), _account, _amount);
     }
 
     /**
-     * @dev withdraws tokens from a staking pool
+     * @notice withdraws tokens from a staking pool
      * @param _token token to withdraw
      * @param _index pool index
      * @param _amount amount to withdraw
@@ -500,19 +409,13 @@ contract PoolRouter is Ownable {
         address _receiver
     ) private poolExists(_token, _index) {
         Pool storage pool = pools[_poolKey(_token, _index)];
-        uint poolBalance = pool.stakingPool.balanceOf(msg.sender);
         require(pool.status != PoolStatus.CLOSED, "Pool is closed");
+        require(pool.stakingPool.balanceOf(msg.sender) >= _amount, "Amount exceeds staked balance");
 
-        require(poolBalance >= _amount, "Amount exceeds staked balance");
-
-        if (_amount > pool.stakedAmounts[msg.sender]) {
-            uint newStakedAmount = poolBalance - _amount;
-            if (newStakedAmount >= pool.stakedAmounts[msg.sender]) {
-                newStakedAmount = pool.stakedAmounts[msg.sender];
-            }
-            pool.stakedAmounts[msg.sender] = newStakedAmount;
+        if (_amount > pool.totalStaked) {
+            pool.totalStaked = 0;
         } else {
-            pool.stakedAmounts[msg.sender] -= _amount;
+            pool.totalStaked -= _amount;
         }
         pool.stakingPool.withdraw(msg.sender, _receiver, _amount);
 
@@ -520,25 +423,12 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @dev returns the pool key hash by token and index
+     * @notice returns the pool key hash by token and index
      * @param _token token
      * @param _index pool index
      * @return the hashed pool key
      */
     function _poolKey(address _token, uint16 _index) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(_token, _index));
-    }
-
-    /**
-     * @dev converts bytes to uint
-     * @param _bytes to convert
-     * @return uint256 result
-     */
-    function _bytesToUint(bytes memory _bytes) private pure returns (uint256) {
-        uint256 number;
-        for (uint i = 0; i < _bytes.length; i++) {
-            number = number + uint(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
-        }
-        return number;
     }
 }
