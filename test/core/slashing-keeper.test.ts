@@ -7,7 +7,7 @@ import {
   getAccounts,
   setupToken,
   fromEther,
-} from './utils/helpers'
+} from '../utils/helpers'
 import {
   ERC677,
   StrategyMock,
@@ -15,7 +15,7 @@ import {
   WrappedSDToken,
   SlashingKeeper,
   BorrowingPool,
-} from '../typechain-types'
+} from '../../typechain-types'
 
 describe('SlashingKeeper', () => {
   let token: ERC677

@@ -1,8 +1,8 @@
 import { ethers } from 'hardhat'
 import { Interface } from 'ethers/lib/utils'
 import { Signer } from 'ethers'
-import { toEther, deploy, deployUpgradeable, getAccounts } from './utils/helpers'
-import { StrategyMock, GovernanceController } from '../typechain-types'
+import { toEther, deploy, deployUpgradeable, getAccounts } from '../utils/helpers'
+import { StrategyMock, GovernanceController } from '../../typechain-types'
 import { assert, expect } from 'chai'
 
 describe('GovernanceController', () => {
