@@ -195,7 +195,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
 
      **/
     function withdrawableRewards(address _account) external view returns (uint) {
-        return rewardsPool.balanceOf(_account);
+        return rewardsPool.withdrawableRewards(_account);
     }
 
     /**

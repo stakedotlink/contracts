@@ -50,14 +50,10 @@ describe('RewardsPoolController', () => {
     rewardsPool1 = (await deploy('RewardsPool', [
       controller.address,
       token1.address,
-      '1',
-      '1',
     ])) as RewardsPool
     rewardsPool2 = (await deploy('RewardsPool', [
       controller.address,
       token2.address,
-      '2',
-      '2',
     ])) as RewardsPool
 
     await controller.addToken(token1.address, rewardsPool1.address)
@@ -69,8 +65,6 @@ describe('RewardsPoolController', () => {
     const rewardsPool3 = (await deploy('RewardsPool', [
       controller.address,
       token3.address,
-      '3',
-      '3',
     ])) as RewardsPool
     await controller.addToken(token3.address, rewardsPool3.address)
     assert.equal(

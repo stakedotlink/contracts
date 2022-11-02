@@ -50,8 +50,6 @@ describe('WLOperatorController', () => {
     rewardsPool = (await deploy('RewardsPool', [
       controller.address,
       wsdToken.address,
-      'test',
-      'test',
     ])) as RewardsPool
 
     await controller.setRewardsPool(rewardsPool.address)
@@ -470,17 +468,17 @@ describe('WLOperatorController', () => {
     await wsdToken.transferAndCall(rewardsPool.address, toEther(100), '0x00')
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
       37.5,
       'rewards pool account balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       37.5,
       'rewards pool account balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[4])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[4])),
       25,
       'rewards pool account balance incorrect'
     )
@@ -488,17 +486,17 @@ describe('WLOperatorController', () => {
     await controller.reportStoppedValidators([0, 4], [1, 2])
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
       37.5,
       'rewards pool account balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       37.5,
       'rewards pool account balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[4])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[4])),
       25,
       'rewards pool account balance incorrect'
     )
@@ -506,17 +504,17 @@ describe('WLOperatorController', () => {
     await controller.assignNextValidators([4], [1], 1)
 
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[0])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
       37.5,
       'rewards pool account balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[2])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[2])),
       37.5,
       'rewards pool account balance incorrect'
     )
     assert.equal(
-      fromEther(await rewardsPool.balanceOf(accounts[4])),
+      fromEther(await rewardsPool.withdrawableRewards(accounts[4])),
       25,
       'rewards pool account balance incorrect'
     )

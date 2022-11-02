@@ -35,18 +35,6 @@ export const config = {
     derivativeTokenName: 'Borrowed stLINK',
     derivativeTokenSymbol: 'bstLINK',
   },
-  LINK_OwnersRewardsPool: {
-    derivativeTokenName: 'Owners LINK',
-    derivativeTokenSymbol: 'oLINK',
-  },
-  wstLINK_OwnersRewardsPool: {
-    derivativeTokenName: 'Owners wstLINK',
-    derivativeTokenSymbol: 'owstLINK',
-  },
-  wbstLINK_LendingRewardsPool: {
-    derivativeTokenName: 'Reward wbstLINK',
-    derivativeTokenSymbol: 'rwbstLINK',
-  },
 
   ETH_WrappedSDToken: {
     name: 'Wrapped stETH',
@@ -57,13 +45,5 @@ export const config = {
     derivativeTokenSymbol: 'stETH',
     fees: [],
     ownersFeeBasisPoints: 1000,
-  },
-  ETH_OwnersRewardsPool: {
-    derivativeTokenName: 'Owners ETH',
-    derivativeTokenSymbol: 'oETH',
-  },
-  wstETH_OwnersRewardsPool: {
-    derivativeTokenName: 'Owners wstLINK',
-    derivativeTokenSymbol: 'owstLINK',
   },
 }

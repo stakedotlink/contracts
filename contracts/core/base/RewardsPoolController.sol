@@ -209,7 +209,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         uint[] memory withdrawable = new uint[](tokens.length);
 
         for (uint i = 0; i < tokens.length; i++) {
-            withdrawable[i] = tokenPools[tokens[i]].balanceOf(_account);
+            withdrawable[i] = tokenPools[tokens[i]].withdrawableRewards(_account);
         }
 
         return withdrawable;

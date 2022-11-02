@@ -45,8 +45,6 @@ describe('OperatorController', () => {
     rewardsPool = (await deploy('RewardsPool', [
       controller.address,
       wsdToken.address,
-      'test',
-      'test',
     ])) as RewardsPool
 
     await controller.setRewardsPool(rewardsPool.address)

@@ -7,7 +7,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { PoolOwners, LINK_OwnersRewardsPool } = config
+  const { PoolOwners } = config
 
   let lplToken: any = await ethers.getContractOrNull('OwnersToken')
   if (!lplToken) {
@@ -42,12 +42,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     contract: 'RewardsPool',
     from: deployer,
     log: true,
-    args: [
-      poolOwners.address,
-      linkToken.address,
-      LINK_OwnersRewardsPool.derivativeTokenName,
-      LINK_OwnersRewardsPool.derivativeTokenSymbol,
-    ],
+    args: [poolOwners.address, linkToken.address],
   })
 
   const tx = await poolOwners.addToken(linkToken.address, linkOwnersRewardsPool.address)
