@@ -79,7 +79,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        _depositLiquidity();
+        depositLiquidity();
 
         _mint(_account, _amount);
         totalStaked += _amount;
@@ -370,25 +370,10 @@ contract StakingPool is StakingRewardsPool, Ownable {
     }
 
     /**
-     * @notice returns the total amount of assets staked in the pool
-     * @return the total staked amount
-     */
-    function _totalStaked() internal view override returns (uint) {
-        return totalStaked;
-    }
-
-    /**
-     * @notice owner only external call to be able to deposit any available liquidity into the strategies
-     **/
-    function depositLiquidity() external onlyOwner {
-        _depositLiquidity();
-    }
-
-    /**
      * @notice deposits available liquidity into strategies by order of priority
      * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
      **/
-    function _depositLiquidity() private {
+    function depositLiquidity() public {
         uint toDeposit = token.balanceOf(address(this));
         if (toDeposit > 0) {
             for (uint i = 0; i < strategies.length; i++) {
@@ -403,6 +388,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
                 }
             }
         }
+    }
+
+    /**
+     * @notice returns the total amount of assets staked in the pool
+     * @return the total staked amount
+     */
+    function _totalStaked() internal view override returns (uint) {
+        return totalStaked;
     }
 
     /**
