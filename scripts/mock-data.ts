@@ -7,8 +7,8 @@ Accounts:
 0 - main account that holds most of the tokens. Do not test ui with this account.
 1 - account with no tokens.
 2 - account with STA/LINK/LPL and with no staked assets
-3 -  account with staked STA/LINK/LPL
-4 -  account with without STA
+3 - account with staked STA/LINK/LPL
+4 - account with without STA + rewards
 */
 
 async function main() {
@@ -21,6 +21,9 @@ async function main() {
   const poolOwners = (await ethers.getContract('PoolOwners')) as PoolOwners
   const poolRouter = (await ethers.getContract('PoolRouter')) as PoolRouter
   const lendingPool = (await ethers.getContract('LendingPool')) as LendingPool
+  const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
+  const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
+  const LINK_WrappedSDToken = (await ethers.getContract('LINK_WrappedSDToken')) as any
 
   const poolMin = 10
   const poolMax = 1000000
@@ -38,6 +41,9 @@ async function main() {
   await linkToken.transfer(accounts[2], toEther(10000))
   await ownersToken.transfer(accounts[2], toEther(10000))
   await stakingAllowance.transfer(accounts[2], toEther(10000))
+  await ownersToken.connect(signers[2]).transferAndCall(poolOwnersV1.address, toEther(1), '0x00')
+  await linkToken.transfer(ownersRewardsPoolV1.address, toEther(10))
+  await ownersRewardsPoolV1.distributeRewards()
 
   // account 3
 
@@ -64,6 +70,23 @@ async function main() {
 
   await linkToken.transfer(accounts[4], toEther(10000))
   await ownersToken.transfer(accounts[4], toEther(10000))
+
+  // account 4
+
+  await linkToken.transfer(accounts[4], toEther(10000))
+  await ownersToken.transfer(accounts[4], toEther(10000))
+  await stakingAllowance.transfer(accounts[4], toEther(100000))
+
+  await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
+  await stakingAllowance
+    .connect(signers[4])
+    .transferAndCall(poolRouter.address, toEther(100000), '0x00')
+  await linkToken.connect(signers[4]).transferAndCall(poolRouter.address, toEther(1000), '0x00')
+  // send LINK rewards to owners pool
+  await linkToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100),'0x00')
+  // send stLINK rewards to owners pool
+  await stakingPool.connect(signers[4]).transferAndCall(LINK_WrappedSDToken.address, toEther(100), '0x00')
+  await LINK_WrappedSDToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100), '0x00')
 }
 
 main()
