@@ -342,9 +342,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
         }
 
         if (totalRewards > 0) {
-            receivers[receivers.length - 1] = new address[](fees.length + 1);
-            feeAmounts[feeAmounts.length - 1] = new uint[](fees.length + 1);
-            totalFeeCount += fees.length + 1;
+            uint currentRate = ILendingPool(lendingPool).currentRate(address(token), poolIndex);
+            uint feesLength = currentRate > 0 ? fees.length + 1 : fees.length;
+
+            receivers[receivers.length - 1] = new address[](feesLength);
+            feeAmounts[feeAmounts.length - 1] = new uint[](feesLength);
+            totalFeeCount += feesLength;
 
             for (uint i = 0; i < fees.length; i++) {
                 receivers[receivers.length - 1][i] = fees[i].receiver;
@@ -352,7 +355,6 @@ contract StakingPool is StakingRewardsPool, Ownable {
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
 
-            uint currentRate = ILendingPool(lendingPool).currentRate(address(token), poolIndex);
             if (currentRate > 0) {
                 receivers[receivers.length - 1][fees.length] = lendingPool;
                 feeAmounts[feeAmounts.length - 1][fees.length] = (uint(totalRewards) * currentRate) / 10000;
@@ -400,6 +402,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
                 }
             }
         }
+    }
+
+    /**
+     * @notice sets the index of this pool as stored in the pool router
+     * @param _poolIndex index of pool
+     */
+    function setPoolIndex(uint16 _poolIndex) external onlyRouter {
+        poolIndex = _poolIndex;
     }
 
     /**

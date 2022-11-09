@@ -21,6 +21,7 @@ import {
   OperatorWhitelistMock,
   RewardsPool,
   RewardsReceiver,
+  LendingPoolMock,
 } from '../../typechain-types'
 import { Signer } from 'ethers'
 
@@ -66,12 +67,15 @@ describe('EthStakingStrategy', () => {
   beforeEach(async () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
 
+    let lendingPool = (await deploy('LendingPoolMock', [wETH.address, 0, 2000])) as LendingPoolMock
+
     stakingPool = (await deploy('StakingPool', [
       wETH.address,
       'LinkPool ETH',
       'lplETH',
       [[ownersRewards, '1000']],
       accounts[0],
+      lendingPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [

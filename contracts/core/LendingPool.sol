@@ -176,7 +176,7 @@ contract LendingPool is RewardsPoolController {
      * @dev Equation: y = (A*x/B)^C + x/D + E
      * @return current rate
      **/
-    function _currentRate(uint _percentageBorrowed) internal view returns (uint) {
+    function _currentRate(uint _percentageBorrowed) private view returns (uint) {
         if (_percentageBorrowed == 0) {
             return rateConstantE * 100;
         }

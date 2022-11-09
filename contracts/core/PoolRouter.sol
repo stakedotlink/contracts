@@ -11,6 +11,8 @@ import "./interfaces/IStakingPool.sol";
 import "./interfaces/ILendingPool.sol";
 import "../ethStaking/interfaces/IWrappedETH.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title PoolRouter
  * @dev Handles staking allowances and acts as a proxy for staking pools
@@ -33,7 +35,7 @@ contract PoolRouter is Ownable {
     }
 
     IERC677 public immutable allowanceToken;
-    ILendingPool public immutable lendingPool;
+    ILendingPool public lendingPool;
 
     mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
@@ -52,9 +54,8 @@ contract PoolRouter is Ownable {
         _;
     }
 
-    constructor(address _allowanceToken, address _lendingPool) {
+    constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
-        lendingPool = ILendingPool(_lendingPool);
     }
 
     receive() external payable {}
@@ -110,14 +111,14 @@ contract PoolRouter is Ownable {
             "Only callable by supported tokens"
         );
 
-        (address token, uint tokenAmount, uint16 index) = abi.decode(_calldata, (address, uint, uint16));
-
         if (msg.sender == address(allowanceToken)) {
+            (address token, uint tokenAmount, uint16 index) = abi.decode(_calldata, (address, uint, uint16));
             require(poolCountByToken[token] > index, "Pool does not exist");
             lendingPool.stakeAllowance(_sender, _value);
-            IERC677(token).safeTransferFrom(msg.sender, address(this), tokenAmount);
+            IERC677(token).safeTransferFrom(_sender, address(this), tokenAmount);
             _stake(token, index, _sender, tokenAmount);
         } else {
+            uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
             require(poolCountByToken[msg.sender] > index, "Pool does not exist");
             _stake(msg.sender, index, _sender, _value);
         }
@@ -368,7 +369,18 @@ contract PoolRouter is Ownable {
     function setWrappedETH(address _wrappedETH) external onlyOwner {
         require(wrappedETH == address(0), "wrappedETH already set");
         wrappedETH = _wrappedETH;
-        IWrappedETH(_wrappedETH).approve(_wrappedETH, type(uint).max);
+        IERC677(_wrappedETH).safeApprove(_wrappedETH, type(uint).max);
+    }
+
+    /**
+     * @notice sets the lending pool address
+     * @dev must be set for pool router to work
+     * @param _lendingPool lending pool address
+     **/
+    function setLendingPool(address _lendingPool) external onlyOwner {
+        require(address(lendingPool) == address(0), "lendingPool already set");
+        lendingPool = ILendingPool(_lendingPool);
+        allowanceToken.safeApprove(_lendingPool, type(uint).max);
     }
 
     /**
@@ -430,5 +442,18 @@ contract PoolRouter is Ownable {
      */
     function _poolKey(address _token, uint16 _index) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(_token, _index));
+    }
+
+    /**
+     * @notice converts bytes to uint
+     * @param _bytes to convert
+     * @return uint256 result
+     */
+    function _bytesToUint(bytes memory _bytes) private pure returns (uint256) {
+        uint256 number;
+        for (uint i = 0; i < _bytes.length; i++) {
+            number = number + uint(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
+        }
+        return number;
     }
 }
