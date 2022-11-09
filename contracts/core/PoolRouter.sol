@@ -100,6 +100,8 @@ contract PoolRouter is Ownable {
      * newly created deposit room
      * @param _sender of the token transfer
      * @param _value of the token transfer
+     * @param _calldata abi encoded token address, token amount, and pool index for simultaneous staking
+     * or pool index for single token staking
      **/
     function onTokenTransfer(
         address _sender,
@@ -175,7 +177,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @notice adds a new token and staking config
+     * @notice adds a new pool
      * @param _token staking token to add
      * @param _stakingPool token staking pool
      * @param _allowanceRequired whether the pool requires allowance to stake
