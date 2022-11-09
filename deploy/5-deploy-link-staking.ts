@@ -7,8 +7,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { LINK_StakingPool, LINK_WrappedSDToken, LINK_BorrowingPool, LINK_WrappedBorrowedSDToken } =
-    config
+  const { LINK_StakingPool, LINK_WrappedSDToken } = config
 
   const linkToken = await ethers.getContract('LinkToken')
   const poolRouter = await ethers.getContract('PoolRouter')
@@ -25,6 +24,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
       LINK_StakingPool.derivativeTokenSymbol,
       [[poolOwners.address, LINK_StakingPool.ownersFeeBasisPoints], ...LINK_StakingPool.fees],
       poolRouter.address,
+      lendingPool.address,
     ],
   })
   const stakingPool = await ethers.getContract('LINK_StakingPool')
@@ -53,47 +53,14 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   tx = await poolOwners.addToken(wsdToken.address, wstLinkOwnersRewardsPool.address)
   await tx.wait()
 
-  await deploy('LINK_BorrowingPool', {
-    contract: 'BorrowingPool',
-    from: deployer,
-    log: true,
-    args: [
-      linkToken.address,
-      0,
-      lendingPool.address,
-      stakingPool.address,
-      LINK_BorrowingPool.derivativeTokenName,
-      LINK_BorrowingPool.derivativeTokenSymbol,
-    ],
-  })
-  const borrowingPool = await ethers.getContract('LINK_BorrowingPool')
-
-  await deploy('LINK_WrappedBorrowedSDToken', {
-    contract: 'WrappedSDToken',
-    from: deployer,
-    log: true,
-    args: [
-      borrowingPool.address,
-      LINK_WrappedBorrowedSDToken.name,
-      LINK_WrappedBorrowedSDToken.symbol,
-    ],
-  })
-  const wbsdToken = await ethers.getContract('LINK_WrappedBorrowedSDToken')
-
-  const linkLendingRewardsPool = await deploy('wbstLINK_LendingRewardsPool', {
+  const linkLendingRewardsPool = await deploy('wstLINK_LendingRewardsPool', {
     contract: 'RewardsPool',
     from: deployer,
     log: true,
-    args: [lendingPool.address, wbsdToken.address],
+    args: [lendingPool.address, wsdToken.address],
   })
 
-  tx = await borrowingPool.init(wbsdToken.address)
-  await tx.wait()
-
-  tx = await lendingPool.addToken(wbsdToken.address, linkLendingRewardsPool.address)
-  await tx.wait()
-
-  tx = await lendingPool.addPool(linkToken.address, 0, borrowingPool.address)
+  tx = await lendingPool.addToken(wsdToken.address, linkLendingRewardsPool.address)
   await tx.wait()
 
   console.log('deploy-status-ready')

@@ -10,11 +10,18 @@ import {
   setupToken,
   fromEther,
 } from '../utils/helpers'
-import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../typechain-types'
+import {
+  ERC677,
+  StrategyMock,
+  StakingPool,
+  WrappedSDToken,
+  LendingPoolMock,
+} from '../../typechain-types'
 
 describe('StakingPool', () => {
   let token: ERC677
   let wsdToken: WrappedSDToken
+  let lendingPool: LendingPoolMock
   let stakingPool: StakingPool
   let strategy1: StrategyMock
   let strategy2: StrategyMock
@@ -41,12 +48,15 @@ describe('StakingPool', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
+    lendingPool = (await deploy('LendingPoolMock', [token.address, 0, 2000])) as LendingPoolMock
+
     stakingPool = (await deploy('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',
       [[ownersRewards, 1000]],
       accounts[0],
+      lendingPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
@@ -346,23 +356,33 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
-      2432,
+      2336,
       'Account-1 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[2])),
-      1216,
+      1168,
       'Account-2 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[3])),
-      2432,
+      2336,
       'Account-3 balance incorrect'
     )
     assert.equal(
       Number(fromEther(await wsdToken.balanceOf(ownersRewards)).toFixed(2)),
-      98.68,
+      102.74,
       'Owners rewards balance incorrect'
+    )
+    assert.equal(
+      Number(fromEther(await wsdToken.balanceOf(lendingPool.address)).toFixed(2)),
+      205.48,
+      'Lending pool balance incorrect'
+    )
+    assert.equal(
+      Number(fromEther(await lendingPool.totalRewards()).toFixed(2)),
+      205.48,
+      'Lending pool rewards incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6200, 'totalSupply incorrect')
   })
@@ -382,17 +402,17 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
-      2300,
+      2196,
       'Account-1 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[2])),
-      1150,
+      1098,
       'Account-2 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[3])),
-      2300,
+      2196,
       'Account-3 balance incorrect'
     )
 
@@ -422,6 +442,15 @@ describe('StakingPool', () => {
       ),
       160,
       'Strategy fee balance incorrect'
+    )
+    assert.equal(
+      Number(
+        fromEther(
+          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(lendingPool.address))
+        ).toFixed(2)
+      ),
+      260,
+      'Lending fee balance incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6300, 'totalSupply incorrect')
   })
@@ -477,11 +506,11 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await stakingPool.getStakeByShares(toEther(10))),
-      14.5,
+      13.5,
       'getStakeByShares incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.getSharesByStake(toEther(14.5))),
+      fromEther(await stakingPool.getSharesByStake(toEther(13.5))),
       10,
       'getSharesByStake incorrect'
     )
@@ -491,11 +520,11 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await stakingPool.getStakeByShares(toEther(10))),
-      7.25,
+      6.75,
       'getStakeByShares incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.getSharesByStake(toEther(7.25))),
+      fromEther(await stakingPool.getSharesByStake(toEther(6.75))),
       10,
       'getSharesByStake incorrect'
     )
@@ -513,12 +542,12 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
-      1350,
+      1250,
       'account-1 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[2])),
-      1450,
+      1350,
       'account-2 balance incorrect'
     )
     assert.equal(

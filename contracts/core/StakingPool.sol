@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IWrappedSDToken.sol";
+import "./interfaces/ILendingPool.sol";
 
 /**
  * @title Staking Pool
@@ -31,6 +32,8 @@ contract StakingPool is StakingRewardsPool, Ownable {
     IWrappedSDToken public wsdToken;
 
     address public immutable poolRouter;
+    address public immutable lendingPool;
+    uint16 public poolIndex;
 
     event Stake(address indexed account, uint amount);
     event Withdraw(address indexed account, uint amount);
@@ -41,12 +44,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
         Fee[] memory _fees,
-        address _poolRouter
+        address _poolRouter,
+        address _lendingPool
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
         for (uint i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         poolRouter = _poolRouter;
+        lendingPool = _lendingPool;
     }
 
     modifier onlyRouter() {
@@ -337,14 +342,23 @@ contract StakingPool is StakingRewardsPool, Ownable {
         }
 
         if (totalRewards > 0) {
-            receivers[receivers.length - 1] = new address[](fees.length);
-            feeAmounts[feeAmounts.length - 1] = new uint[](fees.length);
-            totalFeeCount += fees.length;
+            uint currentRate = ILendingPool(lendingPool).currentRate(address(token), poolIndex);
+            uint feesLength = currentRate > 0 ? fees.length + 1 : fees.length;
+
+            receivers[receivers.length - 1] = new address[](feesLength);
+            feeAmounts[feeAmounts.length - 1] = new uint[](feesLength);
+            totalFeeCount += feesLength;
 
             for (uint i = 0; i < fees.length; i++) {
                 receivers[receivers.length - 1][i] = fees[i].receiver;
                 feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
+            }
+
+            if (currentRate > 0) {
+                receivers[receivers.length - 1][fees.length] = lendingPool;
+                feeAmounts[feeAmounts.length - 1][fees.length] = (uint(totalRewards) * currentRate) / 10000;
+                totalFeeAmounts += feeAmounts[feeAmounts.length - 1][fees.length];
             }
         }
 
@@ -388,6 +402,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
                 }
             }
         }
+    }
+
+    /**
+     * @notice sets the index of this pool as stored in the pool router
+     * @param _poolIndex index of pool
+     */
+    function setPoolIndex(uint16 _poolIndex) external onlyRouter {
+        poolIndex = _poolIndex;
     }
 
     /**

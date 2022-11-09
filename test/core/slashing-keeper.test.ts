@@ -14,7 +14,7 @@ import {
   StakingPool,
   WrappedSDToken,
   SlashingKeeper,
-  BorrowingPool,
+  LendingPoolMock,
 } from '../../typechain-types'
 
 describe('SlashingKeeper', () => {
@@ -40,27 +40,18 @@ describe('SlashingKeeper', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
+    let lendingPool = (await deploy('LendingPoolMock', [token.address, 0, 0])) as LendingPoolMock
+
     stakingPool = (await deploy('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',
       [[ownersRewards, 1000]],
       accounts[0],
+      lendingPool.address,
     ])) as StakingPool
 
-    let borrowingPool = (await deploy('BorrowingPool', [
-      token.address,
-      0,
-      accounts[4],
-      stakingPool.address,
-      'test',
-      'test',
-    ])) as BorrowingPool
-
-    slashingKeeper = (await deploy('SlashingKeeper', [
-      stakingPool.address,
-      borrowingPool.address,
-    ])) as SlashingKeeper
+    slashingKeeper = (await deploy('SlashingKeeper', [stakingPool.address])) as SlashingKeeper
 
     wsdToken = (await deploy('WrappedSDToken', [
       stakingPool.address,

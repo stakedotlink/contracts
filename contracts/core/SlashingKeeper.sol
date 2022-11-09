@@ -5,7 +5,6 @@ import "@chainlink/contracts/src/v0.8/KeeperCompatible.sol";
 
 import "./interfaces/IStakingPool.sol";
 import "./interfaces/IStrategy.sol";
-import "./interfaces/IBorrowingPool.sol";
 
 /**
  * @title Slashing Keeper
@@ -13,11 +12,9 @@ import "./interfaces/IBorrowingPool.sol";
  */
 contract SlashingKeeper is KeeperCompatibleInterface {
     IStakingPool public stakingPool;
-    IBorrowingPool public borrowingPool;
 
-    constructor(address _stakingPool, address _borrowingPool) {
+    constructor(address _stakingPool) {
         stakingPool = IStakingPool(_stakingPool);
-        borrowingPool = IBorrowingPool(_borrowingPool);
     }
 
     /**
@@ -68,6 +65,5 @@ contract SlashingKeeper is KeeperCompatibleInterface {
             require(IStrategy(strategies[strategiesToUpdate[i]]).depositChange() < 0, "Deposit change is >= 0");
         }
         stakingPool.updateStrategyRewards(strategiesToUpdate);
-        borrowingPool.updateRewards();
     }
 }
