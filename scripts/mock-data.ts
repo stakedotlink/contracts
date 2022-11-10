@@ -54,36 +54,43 @@ async function main() {
   await ownersToken.connect(signers[3]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
 
   // stake STA and LINK
-  await linkToken
-    .connect(signers[3]).approve(poolRouter.address, toEther(10))
-  
+  await linkToken.connect(signers[3]).approve(poolRouter.address, toEther(10))
+
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(poolRouter.address, toEther(1000), 
-    ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint', 'uint16'],
-      [linkToken.address, toEther(10), 0]
-    ))
+    .transferAndCall(
+      poolRouter.address,
+      toEther(1000),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(10), 0]
+      )
+    )
 
   // lend STA
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(poolRouter.address, toEther(10000), 
-    ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint', 'uint16'],
-      [linkToken.address, toEther(0), 0]
-    ))
+    .transferAndCall(
+      poolRouter.address,
+      toEther(10000),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(0), 0]
+      )
+    )
 
   // borrow
-  await linkToken
-    .connect(signers[3]).approve(poolRouter.address, toEther(10))
+  await linkToken.connect(signers[3]).approve(poolRouter.address, toEther(10))
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(poolRouter.address, toEther(0), 
-    ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint', 'uint16'],
-      [linkToken.address, toEther(10), 0]
-    ))
+    .transferAndCall(
+      poolRouter.address,
+      toEther(0),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(10), 0]
+      )
+    )
 
   // account 4
 
@@ -95,15 +102,17 @@ async function main() {
   await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
 
   // stake STA and LINK
-  await linkToken
-    .connect(signers[4]).approve(poolRouter.address, toEther(1000))
+  await linkToken.connect(signers[4]).approve(poolRouter.address, toEther(1000))
   await stakingAllowance
     .connect(signers[4])
-    .transferAndCall(poolRouter.address, toEther(100000), 
-    ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint', 'uint16'],
-      [linkToken.address, toEther(1000), 0]
-    ))
+    .transferAndCall(
+      poolRouter.address,
+      toEther(100000),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(1000), 0]
+      )
+    )
 
   // send LINK rewards to owners pool
   await linkToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100), '0x00')

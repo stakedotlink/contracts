@@ -100,7 +100,9 @@ async function main() {
       value: toEther(2),
     })
     await ownersToken.transfer(wallets[i].address, toEther(1000000))
-    await ownersToken.connect(getSigner({ privateKey: wallets[i].privateKey })).transferAndCall(poolOwnersV1.address, toEther(10), '0x00')
+    await ownersToken
+      .connect(getSigner({ privateKey: wallets[i].privateKey }))
+      .transferAndCall(poolOwnersV1.address, toEther(10), '0x00')
   }
 }
 
