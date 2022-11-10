@@ -20,7 +20,6 @@ async function main() {
   const stakingPool = (await ethers.getContract('LINK_StakingPool')) as StakingPool
   const poolOwners = (await ethers.getContract('PoolOwners')) as PoolOwners
   const poolRouter = (await ethers.getContract('PoolRouter')) as PoolRouter
-  const lendingPool = (await ethers.getContract('LendingPool')) as LendingPool
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
   const LINK_WrappedSDToken = (await ethers.getContract('LINK_WrappedSDToken')) as any
@@ -53,23 +52,45 @@ async function main() {
 
   // stake LPL
   await ownersToken.connect(signers[3]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
-  // stake STA
+
+  // stake STA and LINK
+  await linkToken.connect(signers[3]).approve(poolRouter.address, toEther(10))
+
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(poolRouter.address, toEther(1000), '0x00')
-  // stake LINK
-  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(10), '0x00')
+    .transferAndCall(
+      poolRouter.address,
+      toEther(1000),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(10), 0]
+      )
+    )
+
   // lend STA
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(lendingPool.address, toEther(10000), '0x00')
+    .transferAndCall(
+      poolRouter.address,
+      toEther(10000),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(0), 0]
+      )
+    )
+
   // borrow
-  await linkToken.connect(signers[3]).transferAndCall(lendingPool.address, toEther(10), '0x00')
-
-  // account 4
-
-  await linkToken.transfer(accounts[4], toEther(10000))
-  await ownersToken.transfer(accounts[4], toEther(10000))
+  await linkToken.connect(signers[3]).approve(poolRouter.address, toEther(10))
+  await stakingAllowance
+    .connect(signers[3])
+    .transferAndCall(
+      poolRouter.address,
+      toEther(0),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(10), 0]
+      )
+    )
 
   // account 4
 
@@ -77,11 +98,22 @@ async function main() {
   await ownersToken.transfer(accounts[4], toEther(10000))
   await stakingAllowance.transfer(accounts[4], toEther(100000))
 
+  // stake LPL
   await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
+
+  // stake STA and LINK
+  await linkToken.connect(signers[4]).approve(poolRouter.address, toEther(1000))
   await stakingAllowance
     .connect(signers[4])
-    .transferAndCall(poolRouter.address, toEther(100000), '0x00')
-  await linkToken.connect(signers[4]).transferAndCall(poolRouter.address, toEther(1000), '0x00')
+    .transferAndCall(
+      poolRouter.address,
+      toEther(100000),
+      ethers.utils.defaultAbiCoder.encode(
+        ['address', 'uint', 'uint16'],
+        [linkToken.address, toEther(1000), 0]
+      )
+    )
+
   // send LINK rewards to owners pool
   await linkToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100), '0x00')
   // send stLINK rewards to owners pool
