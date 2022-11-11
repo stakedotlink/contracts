@@ -9,6 +9,8 @@ import {
   RampUpCurve,
 } from '../../typechain-types'
 import { assert, expect } from 'chai'
+import { defaultAbiCoder } from 'ethers/lib/utils'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('LendingPool', () => {
   let token: ERC677
@@ -346,5 +348,170 @@ describe('LendingPool', () => {
       2516,
       'current rate is wrong'
     )
+  })
+
+  describe.only('token vesting', async () => {
+    let cliff: number
+    let duration: number
+
+    beforeEach(async () => {
+      cliff = (await time.latest()) + 3600
+      duration = 3600
+      await allowanceToken.transferAndCall(
+        lendingPool.address,
+        toEther(1000),
+        defaultAbiCoder.encode(['uint64', 'uint64'], [cliff, duration])
+      )
+    })
+
+    it('should see token vest', async () => {
+      assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
+    })
+
+    it('should not be able to transfer vested tokens', async () => {
+      await expect(lendingPool.transfer(accounts[1], toEther(500))).to.be.revertedWith(
+        'ERC20: transfer amount exceeds balance'
+      )
+    })
+
+    it('should not be able to withdraw vested tokens', async () => {
+      await expect(lendingPool.withdrawAllowance(toEther(1000))).to.be.revertedWith(
+        'Withdrawal amount exceeds balance'
+      )
+    })
+
+    it('should see amount staked include vesting', async () => {
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        1000,
+        'staked balance incorrect'
+      )
+    })
+
+    it('should see able to stake and transfer more tokens without vest', async () => {
+      await allowanceToken.transferAndCall(lendingPool.address, toEther(1000), '0x00')
+      assert.equal(
+        fromEther(await lendingPool.balanceOf(accounts[0])),
+        1000,
+        'balance does not match'
+      )
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        2000,
+        'staked balance incorrect'
+      )
+      await lendingPool.transfer(accounts[1], toEther(1000))
+      assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance does not match')
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        1000,
+        'staked balance incorrect'
+      )
+    })
+
+    it('should see zero balance after cliff ends', async () => {
+      await time.increaseTo(cliff)
+      assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
+    })
+
+    it('should be able to get 50% of balance during vest', async () => {
+      await time.increaseTo(cliff + 1800)
+      assert.equal(
+        fromEther(await lendingPool.balanceOf(accounts[0])),
+        500,
+        'balance should be zero'
+      )
+    })
+
+    it('should be able transfer 50% of vested balance', async () => {
+      await time.setNextBlockTimestamp(cliff + 1800)
+
+      await lendingPool.transfer(accounts[1], toEther(500))
+      assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        500,
+        'staked balance incorrect'
+      )
+    })
+
+    it('should be able transfer 50% and then 75% of vested balance', async () => {
+      await time.setNextBlockTimestamp(cliff + 1800)
+      await lendingPool.transfer(accounts[1], toEther(500))
+
+      await time.setNextBlockTimestamp(cliff + 2700)
+      await lendingPool.transfer(accounts[1], toEther(250))
+      assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        250,
+        'staked balance incorrect'
+      )
+    })
+
+    it('should be able to transfer all once vested', async () => {
+      await time.setNextBlockTimestamp(cliff + 3600)
+      await lendingPool.transfer(accounts[1], toEther(1000))
+
+      assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
+      assert.equal(fromEther(await lendingPool.staked(accounts[0])), 0, 'staked balance incorrect')
+    })
+
+    it('should be able to vest more tokens on a new schedule', async () => {
+      await time.setNextBlockTimestamp(cliff + 1800)
+
+      let cliff2 = (await time.latest()) + 7200
+      await allowanceToken.transferAndCall(
+        lendingPool.address,
+        toEther(1000),
+        defaultAbiCoder.encode(['uint64', 'uint64'], [cliff2, duration])
+      )
+
+      assert.equal(
+        fromEther(await lendingPool.balanceOf(accounts[0])),
+        500,
+        'balance does not match'
+      )
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        2000,
+        'staked balance incorrect'
+      )
+
+      await time.increaseTo(cliff2 + 1800)
+      assert.equal(
+        fromEther(await lendingPool.balanceOf(accounts[0])),
+        1250,
+        'balance does not match'
+      )
+    })
+
+    it('should be able to vest more tokens on the same schedule', async () => {
+      await time.setNextBlockTimestamp(cliff + 1800)
+
+      await allowanceToken.transferAndCall(
+        lendingPool.address,
+        toEther(1000),
+        defaultAbiCoder.encode(['uint64', 'uint64'], [cliff, duration])
+      )
+
+      assert.equal(
+        fromEther(await lendingPool.balanceOf(accounts[0])),
+        1000,
+        'balance does not match'
+      )
+      assert.equal(
+        fromEther(await lendingPool.staked(accounts[0])),
+        2000,
+        'staked balance incorrect'
+      )
+
+      await time.increaseTo(cliff + 3600)
+      assert.equal(
+        fromEther(await lendingPool.balanceOf(accounts[0])),
+        2000,
+        'balance does not match'
+      )
+    })
   })
 })
