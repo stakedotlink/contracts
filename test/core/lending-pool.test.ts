@@ -388,6 +388,15 @@ describe('LendingPool', () => {
       )
     })
 
+    it('should receive rewards including those from vesting tokens', async () => {
+      await token.transferAndCall(lendingPool.address, toEther(1000), '0x00')
+      assert.equal(
+        fromEther(await rewardsPool.totalRewards()),
+        1000,
+        'rewards balance does not match'
+      )
+    })
+
     it('should see able to stake and transfer more tokens without vest', async () => {
       await allowanceToken.transferAndCall(lendingPool.address, toEther(1000), '0x00')
       assert.equal(
