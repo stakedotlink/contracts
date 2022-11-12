@@ -30,6 +30,7 @@ contract PoolRouter is Ownable {
         IERC677 token;
         IStakingPool stakingPool;
         bool allowanceRequired;
+        bool isReserved;
         PoolStatus status;
         uint totalStaked;
     }
@@ -44,6 +45,8 @@ contract PoolRouter is Ownable {
     address[] public tokens;
     address public wrappedETH;
 
+    uint public reservedMultiplier;
+
     event StakeToken(address indexed token, address indexed pool, address indexed account, uint amount);
     event WithdrawToken(address indexed token, address indexed pool, address indexed account, uint amount);
     event AddPool(address indexed token, address indexed pool);
@@ -56,6 +59,7 @@ contract PoolRouter is Ownable {
 
     constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
+        reservedMultiplier = 1e4;
     }
 
     receive() external payable {}
@@ -186,6 +190,7 @@ contract PoolRouter is Ownable {
         address _token,
         address _stakingPool,
         bool _allowanceRequired,
+        bool _isReserved,
         PoolStatus _status
     ) external onlyOwner {
         poolCount++;
@@ -201,6 +206,7 @@ contract PoolRouter is Ownable {
         pool.stakingPool = IStakingPool(_stakingPool);
         pool.allowanceRequired = _allowanceRequired;
         pool.status = _status;
+        pool.isReserved = _isReserved;
 
         if (IERC677(_token).allowance(address(this), _stakingPool) == 0) {
             IERC677(_token).safeApprove(_stakingPool, type(uint).max);
@@ -264,16 +270,26 @@ contract PoolRouter is Ownable {
      * @param _index pool index
      * @return the amount of allowance tokens in use
      **/
-    function canStake(address _token, uint16 _index) public view poolExists(_token, _index) returns (uint) {
+    function canStake(
+        address _account,
+        address _token,
+        uint16 _index
+    ) public view poolExists(_token, _index) returns (uint) {
         Pool memory pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
             return type(uint).max;
         }
+
+        uint maximumStake;
         uint availableAllowance = lendingPool.totalSupply() - allowanceInUse(_token, _index);
         if (availableAllowance == 0) {
-            return 0;
+            maximumStake = 0;
+        } else {
+            maximumStake =
+                (1e18 * pool.stakingPool.maxDeposits()) /
+                ((lendingPool.totalSupply() * 1e18) / availableAllowance);
         }
-        return (1e18 * pool.stakingPool.maxDeposits()) / ((lendingPool.totalSupply() * 1e18) / availableAllowance);
+        return (pool.isReserved) ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
     }
 
     /**
@@ -331,7 +347,7 @@ contract PoolRouter is Ownable {
      * @param _index pool index
      * @return the amount of tokens that can be staked per one allowance
      **/
-    function stakePerAllowance(address _token, uint16 _index) external view poolExists(_token, _index) returns (uint) {
+    function stakePerAllowance(address _token, uint16 _index) public view poolExists(_token, _index) returns (uint) {
         Pool memory pool = pools[_poolKey(_token, _index)];
         if (!pool.allowanceRequired) {
             return type(uint).max;
@@ -386,6 +402,27 @@ contract PoolRouter is Ownable {
     }
 
     /**
+     * @notice sets whether a pool is reserved by only the allowance stakers
+     * @param _reserved whether it is reserved only
+     **/
+    function setPoolReserved(
+        address _token,
+        uint16 _index,
+        bool _reserved
+    ) external onlyOwner {
+        pools[_poolKey(_token, _index)].isReserved = _reserved;
+    }
+
+    /**
+     * @notice sets the multiplier for stake per allowance when the pool has reserved space for allowance stakers
+     * @param _reservedMultiplier multiplier
+     **/
+    function setReservedSpaceMultiplier(uint _reservedMultiplier) external onlyOwner {
+        require(_reservedMultiplier >= 1e4, "Invalid reserved space multiplier");
+        reservedMultiplier = _reservedMultiplier;
+    }
+
+    /**
      * @notice stakes tokens in a staking pool
      * @param _token token to stake
      * @param _index index of pool to stake in
@@ -401,7 +438,7 @@ contract PoolRouter is Ownable {
         Pool storage pool = pools[_poolKey(_token, _index)];
 
         require(pool.status == PoolStatus.OPEN, "Pool is not open");
-        require(_amount <= canStake(_token, _index), "Not enough allowance staked");
+        require(_amount <= canStake(_account, _token, _index), "Not enough allowance staked");
 
         pool.totalStaked += _amount;
         pool.stakingPool.stake(_account, _amount);
@@ -434,6 +471,31 @@ contract PoolRouter is Ownable {
         pool.stakingPool.withdraw(msg.sender, _receiver, _amount);
 
         emit WithdrawToken(_token, address(pool.stakingPool), msg.sender, _amount);
+    }
+
+    /**
+     * @notice returns the reserved allocation for the user based on their amount of allocation staked in the lending pool.
+     * If the user has no allowance staked, the public allocation is returned. The public allocation reduces the more allowance
+     * stakers reserve their space.
+     */
+    function _reservedAllocation(
+        address _account,
+        address _token,
+        uint16 _index,
+        uint _maximumStake
+    ) private view returns (uint) {
+        Pool memory pool = pools[_poolKey(_token, _index)];
+
+        if (lendingPool.balanceOf(_account) == 0) {
+            return 0;
+        }
+        uint accountMaxStake = (((((1e18 * lendingPool.balanceOf(_account)) / lendingPool.totalSupply()) *
+            pool.stakingPool.maxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
+
+        if (pool.stakingPool.balanceOf(_account) >= accountMaxStake) {
+            return 0;
+        }
+        return (accountMaxStake > _maximumStake) ? _maximumStake : accountMaxStake - pool.stakingPool.balanceOf(_account);
     }
 
     /**
