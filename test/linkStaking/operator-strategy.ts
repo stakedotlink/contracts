@@ -8,6 +8,7 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  padBytes,
 } from '../utils/helpers'
 import { ERC677, OperatorStrategy, StakingMock } from '../../typechain-types'
 
@@ -117,5 +118,21 @@ describe('OperatorStrategy', () => {
     await strategy.deposit(toEther(100))
     assert.equal(fromEther(await token.balanceOf(staking2.address)), 200, 'balance does not match')
     assert.equal(fromEther(await strategy.totalDeposits()), 200, 'balance does not match')
+  })
+
+  it('should be able to change staking pool address if deployed empty', async () => {
+    let newStrategy = (await deployUpgradeable('OperatorStrategy', [
+      token.address,
+      padBytes('0x0', 20),
+      staking.address,
+    ])) as OperatorStrategy
+    await newStrategy.setStakingPool(accounts[0])
+    assert.equal(await strategy.stakingPool(), accounts[0], 'staking pool address does not match')
+  })
+
+  it('should not be able to change staking pool address if already set', async () => {
+    await expect(strategy.setStakingPool(accounts[1])).to.be.revertedWith(
+      'Staking pool cannot be empty/pool is already set'
+    )
   })
 })

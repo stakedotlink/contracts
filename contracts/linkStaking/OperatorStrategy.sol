@@ -122,6 +122,19 @@ contract OperatorStrategy is Strategy {
     }
 
     /**
+     * @notice allows the staking pool to be changed after deployment, only if the staking pool was set as an empty
+     * address on deploy
+     * @param _stakingPool new staking pool address
+     */
+    function setStakingPool(address _stakingPool) external onlyOwner {
+        require(
+            _stakingPool != address(0) && address(stakingPool) == address(0),
+            "Staking pool cannot be empty/pool is already set"
+        );
+        stakingPool = IStakingPool(_stakingPool);
+    }
+
+    /**
      * @notice returns the deposit change by calculating total rewards earned/total slashed
      * @return int change in deposits
      */
