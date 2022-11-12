@@ -69,7 +69,7 @@ describe('PoolRouter', () => {
     let strategy3 = (await deployUpgradeable('StrategyMock', [
       token,
       stakingPool.address,
-      toEther(10000),
+      toEther(3000),
       toEther(0),
     ])) as StrategyMock
 
@@ -178,11 +178,11 @@ describe('PoolRouter', () => {
   })
 
   it('should correctly calculate allowance required', async () => {
-    let allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(1.3))
+    let allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(100))
     assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
 
-    await allowanceToken.mint(accounts[0], toEther(10000))
-    allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(0.65))
+    await allowanceToken.transferAndCall(lendingPool.address, toEther(60), '0x')
+    allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(50))
     assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
 
     await poolRouter.setAllowanceRequired(token1.address, 0, false)
@@ -192,7 +192,7 @@ describe('PoolRouter', () => {
 
   it('should correctly calculate stakePerAllowance', async () => {
     let stakePerAllowance = await poolRouter.stakePerAllowance(token1.address, 0)
-    assert.equal(fromEther(stakePerAllowance), 1.3, 'stake per allowance does not match')
+    assert.equal(fromEther(stakePerAllowance), 100, 'stake per allowance does not match')
   })
 
   it('should be able to stake allowance/asset tokens simultaneously via transferAndCall', async () => {

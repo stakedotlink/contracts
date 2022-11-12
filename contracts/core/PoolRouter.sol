@@ -273,7 +273,7 @@ contract PoolRouter is Ownable {
         if (availableAllowance == 0) {
             return 0;
         }
-        return (1e18 * pool.stakingPool.maxDeposits()) / ((allowanceToken.totalSupply() * 1e18) / availableAllowance);
+        return (1e18 * pool.stakingPool.maxDeposits()) / ((lendingPool.totalSupply() * 1e18) / availableAllowance);
     }
 
     /**
@@ -303,7 +303,7 @@ contract PoolRouter is Ownable {
             return 0;
         }
 
-        return (1e18 * pool.totalStaked) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+        return (1e18 * pool.totalStaked) / ((1e18 * pool.stakingPool.maxDeposits()) / lendingPool.totalSupply());
     }
 
     /**
@@ -322,7 +322,7 @@ contract PoolRouter is Ownable {
         if (!pool.allowanceRequired) {
             return 0;
         }
-        return (1e18 * _amount) / ((1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply());
+        return (1e18 * _amount) / ((1e18 * pool.stakingPool.maxDeposits()) / lendingPool.totalSupply());
     }
 
     /**
@@ -336,7 +336,7 @@ contract PoolRouter is Ownable {
         if (!pool.allowanceRequired) {
             return type(uint).max;
         }
-        return (1e18 * pool.stakingPool.maxDeposits()) / allowanceToken.totalSupply();
+        return (1e18 * pool.stakingPool.maxDeposits()) / lendingPool.totalSupply();
     }
 
     /**
