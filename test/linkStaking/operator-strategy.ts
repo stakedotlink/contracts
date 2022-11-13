@@ -106,7 +106,7 @@ describe('OperatorStrategy', () => {
   })
 
   it('should be able to get min deposits', async () => {
-    assert.equal(fromEther(await strategy.minDeposits()), 10, 'max deposit amount does not match')
+    assert.equal(fromEther(await strategy.minDeposits()), 100, 'max deposit amount does not match')
   })
 
   it('should be able to migrate and then deposit', async () => {
