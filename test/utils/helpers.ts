@@ -29,6 +29,11 @@ export const deploy = async (contractName: string, args: any[] = []) => {
   return Contract.deploy(...args)
 }
 
+export const attach = async (contractName: string, contractAddress: string) => {
+  const Contract = await ethers.getContractFactory(contractName)
+  return Contract.attach(contractAddress)
+}
+
 export const deployUpgradeable = async (contractName: string, args: any[] = []) => {
   const Contract = await ethers.getContractFactory(contractName)
   return upgrades.deployProxy(Contract, args, { kind: 'uups' })

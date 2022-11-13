@@ -5,20 +5,26 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../core/interfaces/IERC677.sol";
-import "./interfaces/IStaking.sol";
 
 import "../core/base/Strategy.sol";
+import "./OperatorStrategy.sol";
 
 /**
- * @title Operator Strategy
- * @notice Implemented strategy for depositing LINK collateral into the Chainlink staking controller as an operator
+ * @title Operator Controller Strategy
+ * @notice Implemented strategy for managing multiple operators depositing collateral into the Chainlink staking controller.
  */
-contract OperatorStrategy is Strategy {
+contract OperatorControllerStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    IStaking public stakeController;
+    address public stakeController;
 
+    OperatorStrategy[] private operatorStrategies;
     uint public totalDeposited;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address _token,
@@ -26,7 +32,29 @@ contract OperatorStrategy is Strategy {
         address _stakeController
     ) public initializer {
         __Strategy_init(_token, _stakingPool);
-        stakeController = IStaking(_stakeController);
+        stakeController = _stakeController;
+    }
+
+    /**
+     * @notice deploys a new operator strategy to provide a unique address for the staking controller. Unique addresses needed
+     * as the staking controller is strict in regards to one address one maximum limit.
+     */
+    function deployOperatorStrategy() external onlyOwner returns (address) {
+        OperatorStrategy operatorStrategy = new OperatorStrategy();
+        operatorStrategy.initialize(address(token), address(this), stakeController);
+        operatorStrategy.transferOwnership(owner());
+        operatorStrategies.push(operatorStrategy);
+        token.approve(address(operatorStrategy), type(uint256).max);
+        return address(operatorStrategy);
+    }
+
+    /**
+     * @notice get a deployed operator strategy at index
+     * @param _idx index
+     * @return operatorStrategy address
+     */
+    function getOperatorStrategy(uint _idx) external view returns (OperatorStrategy) {
+        return operatorStrategies[_idx];
     }
 
     /**
@@ -34,12 +62,11 @@ contract OperatorStrategy is Strategy {
      * @return int deposit change
      */
     function depositChange() public view returns (int) {
-        return
-            int(
-                stakeController.getStake(address(this)) +
-                    stakeController.getBaseReward(address(this)) +
-                    stakeController.getDelegationReward(address(this))
-            ) - int(totalDeposited);
+        int totalDepositChange = 0;
+        for (uint i = 0; i < operatorStrategies.length; i++) {
+            totalDepositChange += operatorStrategies[i].depositChange();
+        }
+        return totalDepositChange;
     }
 
     /**
@@ -48,8 +75,27 @@ contract OperatorStrategy is Strategy {
      */
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x00");
         totalDeposited += _amount;
+
+        uint depositAmount = _amount;
+        uint i = operatorStrategies.length - 1;
+        while (depositAmount > 0) {
+            OperatorStrategy operatorStrategy = operatorStrategies[i];
+            uint canDeposit = operatorStrategy.canDeposit();
+
+            if (depositAmount > canDeposit) {
+                operatorStrategy.deposit(canDeposit);
+                depositAmount -= canDeposit;
+            } else {
+                operatorStrategy.deposit(depositAmount);
+                depositAmount = 0;
+            }
+
+            if (i == 0) {
+                break;
+            }
+            i--;
+        }
     }
 
     /**
@@ -74,6 +120,10 @@ contract OperatorStrategy is Strategy {
         } else if (balanceChange < 0) {
             totalDeposited -= uint(balanceChange * -1);
         }
+
+        for (uint i = 0; i < operatorStrategies.length; i++) {
+            operatorStrategies[i].updateDeposits();
+        }
     }
 
     /**
@@ -97,11 +147,10 @@ contract OperatorStrategy is Strategy {
      * @return uint max deposits
      */
     function maxDeposits() public view override returns (uint) {
-        if (!stakeController.isActive() || stakeController.isPaused() || !stakeController.isOperator(address(this))) {
+        if (operatorStrategies.length == 0) {
             return 0;
         }
-        (, uint max) = stakeController.getOperatorLimits();
-        return max;
+        return operatorStrategies[0].maxDeposits() * operatorStrategies.length;
     }
 
     /**
@@ -109,19 +158,11 @@ contract OperatorStrategy is Strategy {
      * @return uint min deposits
      */
     function minDeposits() public view override returns (uint) {
-        (uint min, ) = stakeController.getOperatorLimits();
-        if (totalDeposited > min) {
-            return totalDeposited;
+        uint totalMinDeposits = 0;
+        for (uint i = 0; i < operatorStrategies.length; i++) {
+            totalMinDeposits += operatorStrategies[i].minDeposits();
         }
-        return min;
-    }
-
-    /**
-     * @notice migrates the tokens deposited into a new stake controller,
-     */
-    function migrate(bytes calldata data) external onlyOwner {
-        stakeController.migrate(data);
-        stakeController = IStaking(stakeController.getMigrationTarget());
+        return totalMinDeposits;
     }
 
     /**
