@@ -6,6 +6,7 @@ import {
   StakingAllowance,
   LendingPool,
   RewardsPool,
+  RampUpCurve,
 } from '../../typechain-types'
 import { assert, expect } from 'chai'
 
@@ -15,6 +16,7 @@ describe('LendingPool', () => {
   let lendingPool: LendingPool
   let poolRouter: PoolRouterMock
   let rewardsPool: RewardsPool
+  let feeCurve: RampUpCurve
   let signers: Signer[]
   let accounts: string[]
 
@@ -41,17 +43,14 @@ describe('LendingPool', () => {
       0,
     ])) as PoolRouterMock
 
+    feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
+
     lendingPool = (await deploy('LendingPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
       poolRouter.address,
-      // Borrower Rate Constants
-      10,
-      500,
-      6,
-      12,
-      20,
+      feeCurve.address,
     ])) as LendingPool
     await poolRouter.setLendingPool(lendingPool.address)
 
@@ -127,25 +126,13 @@ describe('LendingPool', () => {
     )
   })
 
-  it('availableAllowance should return correct amount', async () => {
-    await allowanceToken
-      .connect(signers[1])
-      .transferAndCall(lendingPool.address, toEther(1000), '0x00')
-
-    assert.equal(
-      fromEther(await lendingPool.availableAllowance()),
-      980,
-      'available allowance incorrect'
-    )
-  })
-
   it('should not be able to withdraw more allowance than what is available', async () => {
     await allowanceToken
       .connect(signers[1])
       .transferAndCall(lendingPool.address, toEther(1000), '0x00')
 
     await expect(lendingPool.withdrawAllowance(toEther(1000))).to.be.revertedWith(
-      'Insufficient allowance available for withdrawal'
+      'ERC20: burn amount exceeds balance'
     )
   })
 
@@ -173,7 +160,7 @@ describe('LendingPool', () => {
   // https://www.desmos.com/calculator
   describe('should be able to correctly calculate current rate', async () => {
     it('0% borrowed (rate: 10%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
+      await poolRouter.setPoolUtilisation(toEther(0))
       assert.equal(
         (await lendingPool.currentRate(accounts[0], 0)).toNumber(),
         2000,
@@ -182,8 +169,7 @@ describe('LendingPool', () => {
     })
 
     it('20% borrowed (rate: 21.67%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.2))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         2167,
@@ -192,8 +178,7 @@ describe('LendingPool', () => {
     })
 
     it('50% borrowed (rate: 25.16%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(20), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.5))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         2516,
@@ -202,8 +187,7 @@ describe('LendingPool', () => {
     })
 
     it('75% borrowed (rate: 37.64%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(13.33333333), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.75))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         3764,
@@ -212,8 +196,7 @@ describe('LendingPool', () => {
     })
 
     it('90% borrowed (rate: 61.51%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(11.111111111), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.9))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         6151,
@@ -222,8 +205,7 @@ describe('LendingPool', () => {
     })
 
     it('100% borrowed (rate: 92.33%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(10), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(1))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         9233,
@@ -234,11 +216,11 @@ describe('LendingPool', () => {
 
   describe('should be able to correctly calculate current rate with a linear rate increase', async () => {
     beforeEach(async () => {
-      await lendingPool.setRateConstants(1, 2, 1, 0, 0)
+      await feeCurve.setRateConstants(1, 2, 1, 0, 0)
     })
 
     it('0% borrowed (rate: 0%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
+      await poolRouter.setPoolUtilisation(toEther(0))
       assert.equal(
         (await lendingPool.currentRate(accounts[0], 0)).toNumber(),
         0,
@@ -247,8 +229,7 @@ describe('LendingPool', () => {
     })
 
     it('20% borrowed (rate: 10%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.2))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         1000,
@@ -257,8 +238,7 @@ describe('LendingPool', () => {
     })
 
     it('50% borrowed (rate: 25%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(20), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.5))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         2500,
@@ -267,8 +247,7 @@ describe('LendingPool', () => {
     })
 
     it('75% borrowed (rate: 37.5%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(13.3333333), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.75))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         3750,
@@ -277,8 +256,7 @@ describe('LendingPool', () => {
     })
 
     it('100% borrowed (rate: 50%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(10), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(1))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         5000,
@@ -289,11 +267,11 @@ describe('LendingPool', () => {
 
   describe('should be able to correctly calculate current rate with a small curve', async () => {
     beforeEach(async () => {
-      await lendingPool.setRateConstants(1, 50, 2, 2, 20)
+      await feeCurve.setRateConstants(1, 50, 2, 2, 20)
     })
 
     it('0% borrowed (rate: 20%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
+      await poolRouter.setPoolUtilisation(toEther(0))
       assert.equal(
         (await lendingPool.currentRate(accounts[0], 0)).toNumber(),
         2000,
@@ -302,8 +280,7 @@ describe('LendingPool', () => {
     })
 
     it('20% borrowed (rate: 30.16%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.2))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         3016,
@@ -312,8 +289,7 @@ describe('LendingPool', () => {
     })
 
     it('50% borrowed (rate: 46%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(20), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.5))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         4600,
@@ -322,8 +298,7 @@ describe('LendingPool', () => {
     })
 
     it('75% borrowed (rate: 59.75%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(13.3333333), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.75))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         5975,
@@ -332,8 +307,7 @@ describe('LendingPool', () => {
     })
 
     it('100% borrowed (rate: 74%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(10), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(1))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         7400,
@@ -344,12 +318,11 @@ describe('LendingPool', () => {
 
   describe('should be able to correctly calculate current rate with a fee cap', async () => {
     beforeEach(async () => {
-      await lendingPool.setRateConstants(10, 500, 20, 12, 20)
+      await feeCurve.setRateConstants(10, 500, 20, 12, 20)
     })
 
     it('20% borrowed (rate: 21.66%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(50), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.2))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         2166,
@@ -358,8 +331,7 @@ describe('LendingPool', () => {
     })
 
     it('92% borrowed (rate: 95%)', async () => {
-      await allowanceToken.transferAndCall(lendingPool.address, toEther(10.52631), '0x00')
-
+      await poolRouter.setPoolUtilisation(toEther(0.92))
       assert.equal(
         (await lendingPool.currentRate(token.address, 0)).toNumber(),
         9500,
