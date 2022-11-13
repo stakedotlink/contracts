@@ -108,6 +108,14 @@ describe('LendingPool', () => {
     )
   })
 
+  it('should not be able to withdraw allowance when pools are in reserved mode', async () => {
+    await poolRouter.setReservedMode(true)
+
+    await expect(lendingPool.withdrawAllowance(toEther(500))).to.be.revertedWith(
+      'Allowance cannot be withdrawn when pools are reserved'
+    )
+  })
+
   it('should not be able to withdraw more allowance than what is staked', async () => {
     await allowanceToken.transferAndCall(lendingPool.address, toEther(1000), '0x00')
     await allowanceToken

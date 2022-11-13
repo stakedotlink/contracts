@@ -62,7 +62,7 @@ contract LendingPool is RewardsPoolController {
     function onTokenTransfer(
         address _sender,
         uint _value,
-        bytes calldata _calldata
+        bytes calldata
     ) external override {
         require(
             msg.sender == address(allowanceToken) || isTokenSupported(msg.sender),
@@ -110,6 +110,8 @@ contract LendingPool is RewardsPoolController {
      * @param _amount amount to withdraw
      **/
     function withdrawAllowance(uint _amount) external updateRewards(msg.sender) {
+        require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
+
         uint toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(msg.sender);

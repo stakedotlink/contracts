@@ -77,7 +77,7 @@ describe('PoolRouter', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
 
-    await poolRouter.addPool(token, stakingPool.address, true, false, 0)
+    await poolRouter.addPool(token, stakingPool.address, true, 0)
     await token1.approve(stakingPool.address, ethers.constants.MaxUint256)
     await token2.approve(stakingPool.address, ethers.constants.MaxUint256)
 
@@ -105,7 +105,7 @@ describe('PoolRouter', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    poolRouter = (await deploy('PoolRouter', [allowanceToken.address])) as PoolRouter
+    poolRouter = (await deploy('PoolRouter', [allowanceToken.address, false])) as PoolRouter
 
     lendingPool = (await deploy('LendingPool', [
       allowanceToken.address,
@@ -148,9 +148,9 @@ describe('PoolRouter', () => {
     assert.deepEqual(
       pools,
       [
-        [token1.address, stakingPool1.address, true, false, 0, BigNumber.from(0)],
-        [token1.address, stakingPool2.address, true, false, 0, BigNumber.from(0)],
-        [token2.address, stakingPool3.address, true, false, 0, BigNumber.from(0)],
+        [token1.address, stakingPool1.address, true, 0, BigNumber.from(0)],
+        [token1.address, stakingPool2.address, true, 0, BigNumber.from(0)],
+        [token2.address, stakingPool3.address, true, 0, BigNumber.from(0)],
       ],
       'pools do not match'
     )
@@ -177,24 +177,6 @@ describe('PoolRouter', () => {
     ).to.be.revertedWith('Pool does not exist')
   })
 
-  it('should correctly calculate allowance required', async () => {
-    let allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(100))
-    assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
-
-    await allowanceToken.transferAndCall(lendingPool.address, toEther(100), '0x')
-    allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(50))
-    assert.equal(fromEther(allowanceRequired), 1, 'allowance required does not match')
-
-    await poolRouter.setAllowanceRequired(token1.address, 0, false)
-    allowanceRequired = await poolRouter.allowanceRequired(token1.address, 0, toEther(0.65))
-    assert.equal(fromEther(allowanceRequired), 0, 'allowance required does not match')
-  })
-
-  it('should correctly calculate stakePerAllowance', async () => {
-    let stakePerAllowance = await poolRouter.stakePerAllowance(token1.address, 0)
-    assert.equal(fromEther(stakePerAllowance), 100, 'stake per allowance does not match')
-  })
-
   it('should be able to stake allowance/asset tokens simultaneously via transferAndCall', async () => {
     await token1.approve(poolRouter.address, toEther(100))
     await allowanceToken.transferAndCall(
@@ -216,7 +198,7 @@ describe('PoolRouter', () => {
       'staked balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 1))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 1))[4]),
       100,
       'total staked does not match'
     )
@@ -228,7 +210,7 @@ describe('PoolRouter', () => {
     let stakedAmount = await stakingPool1.balanceOf(accounts[0])
     assert.equal(fromEther(stakedAmount), 13, 'staked amount does not match')
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       13,
       'total staked does not match'
     )
@@ -240,7 +222,7 @@ describe('PoolRouter', () => {
     let stakedAmount = await stakingPool2.balanceOf(accounts[0])
     assert.equal(fromEther(stakedAmount), 13, 'staked amount does not match')
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 1))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 1))[4]),
       13,
       'total staked does not match'
     )
@@ -252,7 +234,7 @@ describe('PoolRouter', () => {
     let stakedAmount = await stakingPool3.balanceOf(accounts[0])
     assert.equal(fromEther(stakedAmount), 13, 'staked amount does not match')
     assert.equal(
-      fromEther((await poolRouter.getPool(token2.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token2.address, 0))[4]),
       13,
       'total staked does not match'
     )
@@ -281,7 +263,7 @@ describe('PoolRouter', () => {
       'staked balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       13,
       'total staked does not match'
     )
@@ -311,7 +293,7 @@ describe('PoolRouter', () => {
       'staked balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       13,
       'total staked does not match'
     )
@@ -334,7 +316,7 @@ describe('PoolRouter', () => {
       'staked balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       13,
       'total staked does not match'
     )
@@ -347,7 +329,7 @@ describe('PoolRouter', () => {
       'staked balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 1))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 1))[4]),
       13,
       'total staked does not match'
     )
@@ -369,7 +351,7 @@ describe('PoolRouter', () => {
       'account balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       6.5,
       'total staked does not match'
     )
@@ -411,7 +393,7 @@ describe('PoolRouter', () => {
       'staked balances do not match'
     )
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       0,
       'total staked does not match'
     )
@@ -425,14 +407,14 @@ describe('PoolRouter', () => {
 
     await poolRouter.withdraw(token1.address, 0, toEther(10))
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       3,
       'total staked does not match'
     )
 
     await poolRouter.withdraw(token1.address, 0, toEther(30))
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       0,
       'total staked does not match'
     )
@@ -454,14 +436,14 @@ describe('PoolRouter', () => {
 
     await token1.transferAndCall(poolRouter.address, toEther(5000), padBytes('0x0', 32))
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       5000,
       'total staked does not match'
     )
 
     await poolRouter.withdraw(token1.address, 0, toEther(5000))
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       0,
       'total staked does not match'
     )
@@ -474,8 +456,8 @@ describe('PoolRouter', () => {
     assert.deepEqual(
       pools,
       [
-        [token1.address, stakingPool2.address, true, false, 0, BigNumber.from(0)],
-        [token2.address, stakingPool3.address, true, false, 0, BigNumber.from(0)],
+        [token1.address, stakingPool2.address, true, 0, BigNumber.from(0)],
+        [token2.address, stakingPool3.address, true, 0, BigNumber.from(0)],
       ],
       'pools do not match'
     )
@@ -495,8 +477,8 @@ describe('PoolRouter', () => {
     assert.deepEqual(
       pools,
       [
-        [token1.address, stakingPool1.address, true, false, 0, BigNumber.from(0)],
-        [token1.address, stakingPool2.address, true, false, 0, BigNumber.from(0)],
+        [token1.address, stakingPool1.address, true, 0, BigNumber.from(0)],
+        [token1.address, stakingPool2.address, true, 0, BigNumber.from(0)],
       ],
       'pools do not match'
     )
@@ -531,10 +513,10 @@ describe('PoolRouter', () => {
     await token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     await poolRouter.setPoolStatus(token1.address, 0, 1)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 1, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 1, 'pool status does not match')
     await poolRouter.withdraw(token1.address, 0, toEther(6.5))
     assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 0))[5]),
+      fromEther((await poolRouter.getPool(token1.address, 0))[4]),
       0,
       'total staked does not match'
     )
@@ -543,7 +525,7 @@ describe('PoolRouter', () => {
   it('should not be able to deposit when pool status is draining', async () => {
     await poolRouter.setPoolStatus(token1.address, 0, 1)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 1, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 1, 'pool status does not match')
     await expect(
       token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     ).to.be.revertedWith('Pool is not open')
@@ -552,7 +534,7 @@ describe('PoolRouter', () => {
   it('should not be able to deposit when pool status is closed', async () => {
     await poolRouter.setPoolStatusClosed(token1.address, 0)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 2, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 2, 'pool status does not match')
     await expect(
       token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     ).to.be.revertedWith('Pool is not open')
@@ -562,7 +544,7 @@ describe('PoolRouter', () => {
     await token1.transferAndCall(poolRouter.address, toEther(6.5), padBytes('0x0', 32))
     await poolRouter.setPoolStatusClosed(token1.address, 0)
 
-    assert.equal((await poolRouter.getPool(token1.address, 0))[4], 2, 'pool status does not match')
+    assert.equal((await poolRouter.getPool(token1.address, 0))[3], 2, 'pool status does not match')
     await expect(poolRouter.withdraw(token1.address, 0, toEther(6.5))).to.be.revertedWith(
       'Pool is closed'
     )
@@ -612,7 +594,7 @@ describe('PoolRouter', () => {
 
   describe('reserved allocation', async () => {
     beforeEach(async () => {
-      await poolRouter.setPoolReserved(token1.address, 0, true)
+      await poolRouter.setReservedMode(true)
     })
 
     it('should be able to calculate maximum stake when reserved space is 50%', async () => {

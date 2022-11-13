@@ -20,6 +20,8 @@ contract PoolRouterMock {
     uint16 public index;
     uint public totalRewards;
 
+    bool public reservedMode;
+
     constructor(
         address _allowanceToken,
         address _token,
@@ -40,6 +42,18 @@ contract PoolRouterMock {
         }
 
         return 10 ether;
+    }
+
+    function setReservedMode(bool _reservedMode) external {
+        reservedMode = _reservedMode;
+    }
+
+    function isReservedMode() external view returns (bool) {
+        return reservedMode;
+    }
+
+    function getReservedMultiplier() external view returns (uint) {
+        return 10000;
     }
 
     function onTokenTransfer(
