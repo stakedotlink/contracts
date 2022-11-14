@@ -76,8 +76,7 @@ contract OperatorControllerStrategy is Strategy {
         uint depositAmount = token.balanceOf(address(this));
         totalDeposited += _amount;
 
-        uint i = operatorVaults.length - 1;
-        while (depositAmount > 0) {
+        for (uint i = operatorVaults.length - 1; i >= 0; i--) {
             IOperatorVault operatorVault = operatorVaults[i];
             uint totalDeposit = operatorVault.totalDeposits();
             uint canDeposit = maxDeposit - totalDeposit;
@@ -89,13 +88,8 @@ contract OperatorControllerStrategy is Strategy {
                 depositAmount -= canDeposit;
             } else {
                 operatorVault.deposit(depositAmount);
-                depositAmount = 0;
-            }
-
-            if (i == 0) {
                 break;
             }
-            i--;
         }
     }
 
@@ -149,12 +143,6 @@ contract OperatorControllerStrategy is Strategy {
      * @return uint min deposits
      */
     function minDeposits() public view override returns (uint) {
-        (uint min, ) = stakeController.getOperatorLimits();
-        uint totalMinDeposits = min * operatorVaults.length;
-
-        if (totalDeposited > totalMinDeposits) {
-            return totalDeposited;
-        }
-        return totalMinDeposits;
+        return maxDeposits();
     }
 }

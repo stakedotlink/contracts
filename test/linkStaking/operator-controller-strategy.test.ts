@@ -92,12 +92,20 @@ describe('OperatorControllerStrategy', () => {
       0,
       'strategy balance incorrect'
     )
+
+    await strategy.deposit(toEther(5))
+    assert.equal(fromEther(await strategy.totalDeposits()), 50015, 'total deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opVaults[1])), 15, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opVaults[2])), 50000, 'deposits incorrect')
+    assert.equal(
+      fromEther(await token.balanceOf(strategy.address)),
+      0,
+      'strategy balance incorrect'
+    )
   })
 
   it('should be able to calculate min deposit', async () => {
-    assert.equal(fromEther(await strategy.minDeposits()), 30, 'min deposit incorrect')
-    await strategy.deposit(toEther(75000))
-    assert.equal(fromEther(await strategy.minDeposits()), 75000, 'min deposit incorrect')
+    assert.equal(fromEther(await strategy.minDeposits()), 150000, 'min deposit incorrect')
   })
 
   it('should be able to calculate deposit change', async () => {

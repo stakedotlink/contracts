@@ -72,7 +72,7 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.totalDeposits()), 100, 'balance does not match') // balance decrease due to mock not transferring staked balances
   })
 
-  it('should be able to change staking pool address if deployed empty', async () => {
+  it('should be able to change vault controller address if deployed empty', async () => {
     let newVault = (await deployUpgradeable('OperatorVault', [
       token.address,
       padBytes('0x0', 20),
@@ -86,7 +86,7 @@ describe('OperatorVault', () => {
     )
   })
 
-  it('should not be able to change staking pool address if already set', async () => {
+  it('should not be able to change vault controller address if already set', async () => {
     await expect(vault.setVaultController(accounts[1])).to.be.revertedWith(
       'Vault controller cannot be empty/controller is already set'
     )
