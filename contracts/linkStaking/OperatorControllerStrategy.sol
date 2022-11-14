@@ -5,9 +5,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../core/interfaces/IERC677.sol";
-
+import "../core/interfaces/IStrategy.sol";
 import "../core/base/Strategy.sol";
-import "./OperatorStrategy.sol";
 
 /**
  * @title Operator Controller Strategy
@@ -18,7 +17,7 @@ contract OperatorControllerStrategy is Strategy {
 
     address public stakeController;
 
-    OperatorStrategy[] private operatorStrategies;
+    IStrategy[] private operatorStrategies;
     uint public totalDeposited;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -36,25 +35,21 @@ contract OperatorControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deploys a new operator strategy to provide a unique address for the staking controller. Unique addresses needed
+     * @notice adds a new operator strategy to provide a unique address for the staking controller. Unique addresses needed
      * as the staking controller is strict in regards to one address one maximum limit.
+     * @param _operatorStrategy address of strategy
      */
-    function deployOperatorStrategy() external onlyOwner returns (address) {
-        OperatorStrategy operatorStrategy = new OperatorStrategy();
-        operatorStrategy.initialize(address(token), address(this), stakeController);
-        operatorStrategy.transferOwnership(owner());
-        operatorStrategies.push(operatorStrategy);
-        token.approve(address(operatorStrategy), type(uint256).max);
-        return address(operatorStrategy);
+    function addOperatorStrategy(address _operatorStrategy) external onlyOwner {
+        operatorStrategies.push(IStrategy(_operatorStrategy));
+        token.approve(_operatorStrategy, type(uint256).max);
     }
 
     /**
-     * @notice get a deployed operator strategy at index
-     * @param _idx index
-     * @return operatorStrategy address
+     * @notice get a list of all operator strategies
+     * @return operatorStrategies list of strategy addresses
      */
-    function getOperatorStrategy(uint _idx) external view returns (OperatorStrategy) {
-        return operatorStrategies[_idx];
+    function getOperatorStrategies() external view returns (IStrategy[] memory) {
+        return operatorStrategies;
     }
 
     /**
@@ -80,7 +75,7 @@ contract OperatorControllerStrategy is Strategy {
         uint depositAmount = _amount;
         uint i = operatorStrategies.length - 1;
         while (depositAmount > 0) {
-            OperatorStrategy operatorStrategy = operatorStrategies[i];
+            IStrategy operatorStrategy = operatorStrategies[i];
             uint canDeposit = operatorStrategy.canDeposit();
 
             if (depositAmount > canDeposit) {

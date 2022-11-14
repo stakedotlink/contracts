@@ -20,6 +20,11 @@ contract OperatorStrategy is Strategy {
 
     uint public totalDeposited;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address _token,
         address _stakingPool,

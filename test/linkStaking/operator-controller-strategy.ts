@@ -1,8 +1,7 @@
 import { ethers } from 'hardhat'
-import { assert, expect } from 'chai'
+import { assert } from 'chai'
 import { Signer } from 'ethers'
 import {
-  attach,
   deploy,
   deployUpgradeable,
   fromEther,
@@ -43,40 +42,14 @@ describe('OperatorControllerStrategy', () => {
     await token.approve(strategy.address, ethers.constants.MaxUint256)
     await token.connect(signers[1]).approve(strategy.address, ethers.constants.MaxUint256)
 
-    await strategy.deployOperatorStrategy()
-    await strategy.deployOperatorStrategy()
-    await strategy.deployOperatorStrategy()
-  })
-
-  it('should have correct parameters in deployed strategy', async () => {
-    let deployedStrategy = (await attach(
-      'OperatorStrategy',
-      await strategy.getOperatorStrategy(0)
-    )) as OperatorStrategy
-
-    assert.equal(await deployedStrategy.owner(), accounts[0], 'contract owner does not match')
-    assert.equal(await deployedStrategy.token(), token.address, 'token does not match')
-    assert.equal(
-      await deployedStrategy.stakingPool(),
-      strategy.address,
-      'staking pool does not match'
-    )
-    assert.equal(
-      await deployedStrategy.stakeController(),
-      staking.address,
-      'staking controller does not match'
-    )
-  })
-
-  it('should not be able to initialize deployed operator strategy twice', async () => {
-    let deployedStrategy = (await attach(
-      'OperatorStrategy',
-      await strategy.getOperatorStrategy(0)
-    )) as OperatorStrategy
-
-    await expect(
-      deployedStrategy.initialize(token.address, accounts[0], strategy.address)
-    ).to.be.revertedWith('Initializable: contract is already initialized')
+    for (let i = 0; i < 3; i++) {
+      let opStrategy = (await deployUpgradeable('OperatorStrategy', [
+        token.address,
+        strategy.address,
+        staking.address,
+      ])) as OperatorStrategy
+      await strategy.addOperatorStrategy(opStrategy.address)
+    }
   })
 
   it('should be able to calculate max deposits', async () => {
@@ -85,35 +58,17 @@ describe('OperatorControllerStrategy', () => {
 
   it('should be able to deposit across all deployed strategies', async () => {
     await strategy.deposit(toEther(150000))
-    assert.equal(
-      fromEther(await staking.getStake(await strategy.getOperatorStrategy(0))),
-      50000,
-      'deposits incorrect'
-    )
-    assert.equal(
-      fromEther(await staking.getStake(await strategy.getOperatorStrategy(1))),
-      50000,
-      'deposits incorrect'
-    )
-    assert.equal(
-      fromEther(await staking.getStake(await strategy.getOperatorStrategy(2))),
-      50000,
-      'deposits incorrect'
-    )
+    let opStrategies = await strategy.getOperatorStrategies()
+    assert.equal(fromEther(await staking.getStake(opStrategies[0])), 50000, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opStrategies[1])), 50000, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opStrategies[2])), 50000, 'deposits incorrect')
   })
 
   it('should be able to deposit partial amounts', async () => {
     await strategy.deposit(toEther(75000))
-    assert.equal(
-      fromEther(await staking.getStake(await strategy.getOperatorStrategy(1))),
-      25000,
-      'deposits incorrect'
-    )
-    assert.equal(
-      fromEther(await staking.getStake(await strategy.getOperatorStrategy(2))),
-      50000,
-      'deposits incorrect'
-    )
+    let opStrategies = await strategy.getOperatorStrategies()
+    assert.equal(fromEther(await staking.getStake(opStrategies[1])), 25000, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opStrategies[2])), 50000, 'deposits incorrect')
   })
 
   it('should be able to calculate min deposit', async () => {
