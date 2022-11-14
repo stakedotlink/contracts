@@ -79,9 +79,10 @@ contract OperatorControllerStrategy is Strategy {
         uint i = operatorVaults.length - 1;
         while (depositAmount > 0) {
             IOperatorVault operatorVault = operatorVaults[i];
-            uint canDeposit = maxDeposit - operatorVault.totalDeposits();
+            uint totalDeposit = operatorVault.totalDeposits();
+            uint canDeposit = maxDeposit - totalDeposit;
 
-            if (minDeposit > depositAmount) {
+            if (totalDeposit < minDeposit && depositAmount < (minDeposit - totalDeposit)) {
                 break;
             } else if (depositAmount > canDeposit) {
                 operatorVault.deposit(canDeposit);

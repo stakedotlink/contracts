@@ -14,9 +14,9 @@ import "./interfaces/IStaking.sol";
  * @notice Vault contract for depositing LINK collateral into the Chainlink staking controller as an operator
  */
 contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
-    using SafeERC20Upgradeable for IERC677;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    IERC677 public token;
+    address public token;
     address public vaultController;
     IStaking public stakeController;
 
@@ -32,7 +32,7 @@ contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     ) public initializer {
         __Ownable_init();
         __UUPSUpgradeable_init();
-        token = IERC677(_token);
+        token = _token;
         vaultController = _vaultController;
         stakeController = IStaking(_stakeController);
     }
@@ -47,8 +47,8 @@ contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyVaultController {
-        token.transferFrom(msg.sender, address(this), _amount);
-        token.transferAndCall(address(stakeController), _amount, "0x00");
+        IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC677(token).transferAndCall(address(stakeController), _amount, "0x00");
     }
 
     /**
