@@ -12,7 +12,7 @@ import {
 import {
   ERC677,
   OperatorControllerStrategy,
-  OperatorStrategy,
+  OperatorVault,
   StakingMock,
 } from '../../typechain-types'
 
@@ -43,12 +43,12 @@ describe('OperatorControllerStrategy', () => {
     await token.connect(signers[1]).approve(strategy.address, ethers.constants.MaxUint256)
 
     for (let i = 0; i < 3; i++) {
-      let opStrategy = (await deployUpgradeable('OperatorStrategy', [
+      let opVault = (await deployUpgradeable('OperatorVault', [
         token.address,
         strategy.address,
         staking.address,
-      ])) as OperatorStrategy
-      await strategy.addOperatorStrategy(opStrategy.address)
+      ])) as OperatorVault
+      await strategy.addOperatorVault(opVault.address)
     }
   })
 
@@ -58,23 +58,23 @@ describe('OperatorControllerStrategy', () => {
 
   it('should be able to deposit across all deployed strategies', async () => {
     await strategy.deposit(toEther(150000))
-    let opStrategies = await strategy.getOperatorStrategies()
-    assert.equal(fromEther(await staking.getStake(opStrategies[0])), 50000, 'deposits incorrect')
-    assert.equal(fromEther(await staking.getStake(opStrategies[1])), 50000, 'deposits incorrect')
-    assert.equal(fromEther(await staking.getStake(opStrategies[2])), 50000, 'deposits incorrect')
+    let opVaults = await strategy.getOperatorVaults()
+    assert.equal(fromEther(await staking.getStake(opVaults[0])), 50000, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opVaults[1])), 50000, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opVaults[2])), 50000, 'deposits incorrect')
   })
 
   it('should be able to deposit partial amounts', async () => {
     await strategy.deposit(toEther(75000))
-    let opStrategies = await strategy.getOperatorStrategies()
-    assert.equal(fromEther(await staking.getStake(opStrategies[1])), 25000, 'deposits incorrect')
-    assert.equal(fromEther(await staking.getStake(opStrategies[2])), 50000, 'deposits incorrect')
+    let opVaults = await strategy.getOperatorVaults()
+    assert.equal(fromEther(await staking.getStake(opVaults[1])), 25000, 'deposits incorrect')
+    assert.equal(fromEther(await staking.getStake(opVaults[2])), 50000, 'deposits incorrect')
   })
 
   it('should be able to calculate min deposit', async () => {
     assert.equal(fromEther(await strategy.minDeposits()), 30, 'min deposit incorrect')
     await strategy.deposit(toEther(75000))
-    assert.equal(fromEther(await strategy.minDeposits()), 75010, 'min deposit incorrect')
+    assert.equal(fromEther(await strategy.minDeposits()), 75030, 'min deposit incorrect')
   })
 
   it('should be able to calculate deposit change', async () => {

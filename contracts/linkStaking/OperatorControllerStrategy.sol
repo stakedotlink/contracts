@@ -150,7 +150,7 @@ contract OperatorControllerStrategy is Strategy {
         uint totalMinDeposits = min * operatorVaults.length;
 
         if (totalDeposited > totalMinDeposits) {
-            return totalDeposited;
+            return totalDeposited + totalMinDeposits;
         }
         return totalMinDeposits;
     }

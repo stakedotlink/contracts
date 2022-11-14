@@ -2,9 +2,9 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IStaking.sol";
+import "../../core/interfaces/IERC677.sol";
 import "../../core/interfaces/IERC677Receiver.sol";
 
 /**
@@ -12,9 +12,7 @@ import "../../core/interfaces/IERC677Receiver.sol";
  * @dev Mocks contract for testing
  */
 contract StakingMock is IStaking, IERC677Receiver {
-    using SafeERC20 for IERC20;
-
-    IERC20 public token;
+    IERC677 public token;
 
     mapping(address => uint) public stakedBalances;
     address public migration;
@@ -26,7 +24,7 @@ contract StakingMock is IStaking, IERC677Receiver {
     bool public paused;
 
     constructor(address _token) {
-        token = IERC20(_token);
+        token = IERC677(_token);
         active = true;
     }
 
@@ -76,7 +74,7 @@ contract StakingMock is IStaking, IERC677Receiver {
     }
 
     function migrate(bytes calldata) external {
-        token.transfer(migration, token.balanceOf(address(this)));
+        token.transferAndCall(migration, stakedBalances[msg.sender], "0x0");
     }
 
     function setBaseReward(uint _amount) external {
