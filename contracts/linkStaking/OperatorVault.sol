@@ -86,7 +86,7 @@ contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice allows the vault controller to be set after deployment  only if it was set as an empty
+     * @notice allows the vault controller to be set after deployment only if it was set as an empty
      * address on deploy
      * @param _vaultController new vault controller address
      */
@@ -96,6 +96,19 @@ contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             "Vault controller cannot be empty/controller is already set"
         );
         vaultController = _vaultController;
+    }
+
+    /**
+     * @notice allows the stake controller to be set after deployment only if it was set as an empty
+     * address on deploy
+     * @param _stakeController new stake controller address
+     */
+    function setStakeController(address _stakeController) external onlyOwner {
+        require(
+            _stakeController != address(0) && address(stakeController) == address(0),
+            "Stake controller cannot be empty/controller is already set"
+        );
+        stakeController = IStaking(_stakeController);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

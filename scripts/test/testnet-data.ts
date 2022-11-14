@@ -1,4 +1,4 @@
-import { toEther, getAccounts } from './utils/helpers' //deployUpgradeable, getAccounts,
+import { toEther, getAccounts } from '../utils/helpers' //deployUpgradeable, getAccounts,
 import { ethers } from 'hardhat'
 
 // Testnet LPL filler
