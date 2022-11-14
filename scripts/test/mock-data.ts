@@ -1,5 +1,5 @@
-import { deployUpgradeable, getAccounts, toEther } from './utils/helpers'
-import { ERC677, PoolOwners, PoolRouter, StakingPool, LendingPool } from '../typechain-types'
+import { deployUpgradeable, getAccounts, toEther } from '../utils/helpers'
+import { ERC677, PoolOwners, PoolRouter, StakingPool, LendingPool } from '../../typechain-types'
 import { ethers } from 'hardhat'
 
 /*

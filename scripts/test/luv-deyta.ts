@@ -1,4 +1,4 @@
-import { deployUpgradeable, getAccounts, toEther } from './utils/helpers'
+import { deployUpgradeable, getAccounts, toEther } from '../utils/helpers'
 import {
   BorrowingPool,
   ERC677,
@@ -6,7 +6,7 @@ import {
   PoolOwners,
   PoolRouter,
   StakingPool,
-} from '../typechain-types'
+} from '../../typechain-types'
 import { ethers } from 'hardhat'
 
 async function main() {

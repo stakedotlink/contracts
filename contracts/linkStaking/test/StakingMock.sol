@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.15;
+
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "../interfaces/IStaking.sol";
+import "../../core/interfaces/IERC677.sol";
+import "../../core/interfaces/IERC677Receiver.sol";
+
+/**
+ * @title Staking Mock
+ * @dev Mocks contract for testing
+ */
+contract StakingMock is IStaking, IERC677Receiver {
+    IERC677 public token;
+
+    mapping(address => uint) public stakedBalances;
+    address public migration;
+
+    uint public baseReward;
+    uint public delegationReward;
+
+    bool public active;
+    bool public paused;
+
+    constructor(address _token) {
+        token = IERC677(_token);
+        active = true;
+    }
+
+    function onTokenTransfer(
+        address _sender,
+        uint256 _value,
+        bytes calldata
+    ) external {
+        require(msg.sender == address(token), "has to be token");
+        stakedBalances[_sender] += _value;
+    }
+
+    function getCommunityStakerLimits() external pure returns (uint256, uint256) {
+        return (10 ether, 7000 ether);
+    }
+
+    function getOperatorLimits() external pure returns (uint256, uint256) {
+        return (10 ether, 50000 ether);
+    }
+
+    function getMaxPoolSize() external pure returns (uint256) {
+        return 25000000 ether;
+    }
+
+    function getTotalStakedAmount() external view returns (uint256) {
+        return token.balanceOf(address(this));
+    }
+
+    function setActive(bool _active) external {
+        active = _active;
+    }
+
+    function isActive() external view returns (bool) {
+        return active;
+    }
+
+    function isOperator(address) external pure returns (bool) {
+        return true;
+    }
+
+    function getStake(address staker) external view returns (uint256) {
+        return stakedBalances[staker];
+    }
+
+    function setMigration(address _migration) external {
+        migration = _migration;
+    }
+
+    function migrate(bytes calldata) external {
+        token.transferAndCall(migration, stakedBalances[msg.sender], "0x0");
+    }
+
+    function setBaseReward(uint _amount) external {
+        baseReward = _amount;
+    }
+
+    function getBaseReward(address) external view returns (uint256) {
+        return baseReward;
+    }
+
+    function setDelegationReward(uint _amount) external {
+        delegationReward = _amount;
+    }
+
+    function getDelegationReward(address) external view returns (uint256) {
+        return delegationReward;
+    }
+
+    function getMigrationTarget() external view returns (address) {
+        return migration;
+    }
+
+    function setPaused(bool _paused) external {
+        paused = _paused;
+    }
+
+    function isPaused() external view returns (bool) {
+        return paused;
+    }
+}
