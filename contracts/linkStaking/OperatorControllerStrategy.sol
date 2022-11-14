@@ -5,8 +5,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../core/interfaces/IERC677.sol";
-import "../core/interfaces/IStrategy.sol";
 import "../core/base/Strategy.sol";
+import "./interfaces/IOperatorVault.sol";
+import "./interfaces/IStaking.sol";
 
 /**
  * @title Operator Controller Strategy
@@ -15,9 +16,9 @@ import "../core/base/Strategy.sol";
 contract OperatorControllerStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address public stakeController;
+    IStaking public stakeController;
 
-    IStrategy[] private operatorStrategies;
+    IOperatorVault[] private operatorVaults;
     uint public totalDeposited;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -31,25 +32,25 @@ contract OperatorControllerStrategy is Strategy {
         address _stakeController
     ) public initializer {
         __Strategy_init(_token, _stakingPool);
-        stakeController = _stakeController;
+        stakeController = IStaking(_stakeController);
     }
 
     /**
-     * @notice adds a new operator strategy to provide a unique address for the staking controller. Unique addresses needed
+     * @notice adds a new operator vault to provide a unique address for the staking controller. Unique addresses needed
      * as the staking controller is strict in regards to one address one maximum limit.
-     * @param _operatorStrategy address of strategy
+     * @param _operatorVault address of vault
      */
-    function addOperatorStrategy(address _operatorStrategy) external onlyOwner {
-        operatorStrategies.push(IStrategy(_operatorStrategy));
-        token.approve(_operatorStrategy, type(uint256).max);
+    function addOperatorVault(address _operatorVault) external onlyOwner {
+        operatorVaults.push(IOperatorVault(_operatorVault));
+        token.approve(_operatorVault, type(uint256).max);
     }
 
     /**
-     * @notice get a list of all operator strategies
-     * @return operatorStrategies list of strategy addresses
+     * @notice returns a list of all operator vaults
+     * @return operatorVaults list of vault addresses
      */
-    function getOperatorStrategies() external view returns (IStrategy[] memory) {
-        return operatorStrategies;
+    function getOperatorVaults() external view returns (IOperatorVault[] memory) {
+        return operatorVaults;
     }
 
     /**
@@ -57,11 +58,11 @@ contract OperatorControllerStrategy is Strategy {
      * @return int deposit change
      */
     function depositChange() public view returns (int) {
-        int totalDepositChange = 0;
-        for (uint i = 0; i < operatorStrategies.length; i++) {
-            totalDepositChange += operatorStrategies[i].depositChange();
+        uint totalBalance = 0;
+        for (uint i = 0; i < operatorVaults.length; i++) {
+            totalBalance += operatorVaults[i].totalBalance();
         }
-        return totalDepositChange;
+        return int(totalBalance) - int(totalDeposited);
     }
 
     /**
@@ -72,17 +73,19 @@ contract OperatorControllerStrategy is Strategy {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalDeposited += _amount;
 
+        (, uint maxDeposit) = stakeController.getOperatorLimits();
         uint depositAmount = _amount;
-        uint i = operatorStrategies.length - 1;
+        uint i = operatorVaults.length - 1;
+
         while (depositAmount > 0) {
-            IStrategy operatorStrategy = operatorStrategies[i];
-            uint canDeposit = operatorStrategy.canDeposit();
+            IOperatorVault operatorVault = operatorVaults[i];
+            uint canDeposit = maxDeposit - operatorVault.totalDeposits();
 
             if (depositAmount > canDeposit) {
-                operatorStrategy.deposit(canDeposit);
+                operatorVault.deposit(canDeposit);
                 depositAmount -= canDeposit;
             } else {
-                operatorStrategy.deposit(depositAmount);
+                operatorVault.deposit(depositAmount);
                 depositAmount = 0;
             }
 
@@ -115,18 +118,6 @@ contract OperatorControllerStrategy is Strategy {
         } else if (balanceChange < 0) {
             totalDeposited -= uint(balanceChange * -1);
         }
-
-        for (uint i = 0; i < operatorStrategies.length; i++) {
-            operatorStrategies[i].updateDeposits();
-        }
-    }
-
-    /**
-     * @notice returns the available amount to be withdrawn, always zero as withdrawals disabled
-     * @return uint available withdrawal room
-     */
-    function canWithdraw() public pure override returns (uint) {
-        return 0;
     }
 
     /**
@@ -142,10 +133,12 @@ contract OperatorControllerStrategy is Strategy {
      * @return uint max deposits
      */
     function maxDeposits() public view override returns (uint) {
-        if (operatorStrategies.length == 0) {
+        if (operatorVaults.length == 0 || !stakeController.isActive() || stakeController.isPaused()) {
             return 0;
         }
-        return operatorStrategies[0].maxDeposits() * operatorStrategies.length;
+
+        (, uint max) = stakeController.getOperatorLimits();
+        return max * operatorVaults.length;
     }
 
     /**
@@ -153,23 +146,12 @@ contract OperatorControllerStrategy is Strategy {
      * @return uint min deposits
      */
     function minDeposits() public view override returns (uint) {
-        uint totalMinDeposits = 0;
-        for (uint i = 0; i < operatorStrategies.length; i++) {
-            totalMinDeposits += operatorStrategies[i].minDeposits();
+        (uint min, ) = stakeController.getOperatorLimits();
+        uint totalMinDeposits = min * operatorVaults.length;
+
+        if (totalDeposited > totalMinDeposits) {
+            return totalDeposited;
         }
         return totalMinDeposits;
-    }
-
-    /**
-     * @notice allows the staking pool to be changed after deployment, only if the staking pool was set as an empty
-     * address on deploy
-     * @param _stakingPool new staking pool address
-     */
-    function setStakingPool(address _stakingPool) external onlyOwner {
-        require(
-            _stakingPool != address(0) && address(stakingPool) == address(0),
-            "Staking pool cannot be empty/pool is already set"
-        );
-        stakingPool = IStakingPool(_stakingPool);
     }
 }
