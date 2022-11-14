@@ -71,17 +71,19 @@ contract OperatorControllerStrategy is Strategy {
      */
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
+
+        (uint minDeposit, uint maxDeposit) = stakeController.getOperatorLimits();
+        uint depositAmount = token.balanceOf(address(this));
         totalDeposited += _amount;
 
-        (, uint maxDeposit) = stakeController.getOperatorLimits();
-        uint depositAmount = _amount;
         uint i = operatorVaults.length - 1;
-
         while (depositAmount > 0) {
             IOperatorVault operatorVault = operatorVaults[i];
             uint canDeposit = maxDeposit - operatorVault.totalDeposits();
 
-            if (depositAmount > canDeposit) {
+            if (minDeposit > depositAmount) {
+                break;
+            } else if (depositAmount > canDeposit) {
                 operatorVault.deposit(canDeposit);
                 depositAmount -= canDeposit;
             } else {
@@ -150,7 +152,7 @@ contract OperatorControllerStrategy is Strategy {
         uint totalMinDeposits = min * operatorVaults.length;
 
         if (totalDeposited > totalMinDeposits) {
-            return totalDeposited + totalMinDeposits;
+            return totalDeposited;
         }
         return totalMinDeposits;
     }
