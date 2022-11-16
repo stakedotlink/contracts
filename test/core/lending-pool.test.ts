@@ -124,7 +124,7 @@ describe('LendingPool', () => {
       .transferAndCall(lendingPool.address, toEther(1000), '0x00')
 
     await expect(lendingPool.withdrawAllowance(toEther(1001))).to.be.revertedWith(
-      'ERC20: burn amount exceeds balance'
+      'Withdrawal amount exceeds balance'
     )
   })
 
@@ -134,26 +134,7 @@ describe('LendingPool', () => {
       .transferAndCall(lendingPool.address, toEther(1000), '0x00')
 
     await expect(lendingPool.withdrawAllowance(toEther(1000))).to.be.revertedWith(
-      'ERC20: burn amount exceeds balance'
-    )
-  })
-
-  it('should be able to transfer allowance derivative and withdraw allowance', async () => {
-    await allowanceToken.transferAndCall(lendingPool.address, toEther(1000), '0x00')
-    await lendingPool.transfer(accounts[1], toEther(500))
-
-    assert.equal(
-      fromEther(await lendingPool.balanceOf(accounts[1])),
-      500,
-      'balance of does not match'
-    )
-
-    await lendingPool.connect(signers[1]).withdrawAllowance(toEther(500))
-
-    assert.equal(
-      fromEther(await allowanceToken.balanceOf(accounts[1])),
-      2500,
-      'allowance token balance does not match'
+      'Withdrawal amount exceeds balance'
     )
   })
 
@@ -350,7 +331,7 @@ describe('LendingPool', () => {
     )
   })
 
-  describe.only('token vesting', async () => {
+  describe('token vesting', async () => {
     let cliff: number
     let duration: number
 
@@ -366,12 +347,6 @@ describe('LendingPool', () => {
 
     it('should see token vest', async () => {
       assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
-    })
-
-    it('should not be able to transfer vested tokens', async () => {
-      await expect(lendingPool.transfer(accounts[1], toEther(500))).to.be.revertedWith(
-        'ERC20: transfer amount exceeds balance'
-      )
     })
 
     it('should not be able to withdraw vested tokens', async () => {
@@ -397,7 +372,7 @@ describe('LendingPool', () => {
       )
     })
 
-    it('should see able to stake and transfer more tokens without vest', async () => {
+    it('should see able to stake and withdraw tokens without vest', async () => {
       await allowanceToken.transferAndCall(lendingPool.address, toEther(1000), '0x00')
       assert.equal(
         fromEther(await lendingPool.balanceOf(accounts[0])),
@@ -409,11 +384,12 @@ describe('LendingPool', () => {
         2000,
         'staked balance incorrect'
       )
-      await lendingPool.transfer(accounts[1], toEther(1000))
+      let balance = fromEther(await allowanceToken.balanceOf(accounts[0]))
+      await lendingPool.withdrawAllowance(toEther(1000))
       assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance does not match')
       assert.equal(
-        fromEther(await lendingPool.staked(accounts[0])),
-        1000,
+        fromEther(await allowanceToken.balanceOf(accounts[0])),
+        balance + 1000,
         'staked balance incorrect'
       )
     })
@@ -432,10 +408,10 @@ describe('LendingPool', () => {
       )
     })
 
-    it('should be able transfer 50% of vested balance', async () => {
+    it('should be able withdraw 50% of vested balance', async () => {
       await time.setNextBlockTimestamp(cliff + 1800)
 
-      await lendingPool.transfer(accounts[1], toEther(500))
+      await lendingPool.withdrawAllowance(toEther(500))
       assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
       assert.equal(
         fromEther(await lendingPool.staked(accounts[0])),
@@ -444,12 +420,12 @@ describe('LendingPool', () => {
       )
     })
 
-    it('should be able transfer 50% and then 75% of vested balance', async () => {
+    it('should be able withdraw 50% and then 75% of vested balance', async () => {
       await time.setNextBlockTimestamp(cliff + 1800)
-      await lendingPool.transfer(accounts[1], toEther(500))
+      await lendingPool.withdrawAllowance(toEther(500))
 
       await time.setNextBlockTimestamp(cliff + 2700)
-      await lendingPool.transfer(accounts[1], toEther(250))
+      await lendingPool.withdrawAllowance(toEther(250))
       assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
       assert.equal(
         fromEther(await lendingPool.staked(accounts[0])),
@@ -458,9 +434,9 @@ describe('LendingPool', () => {
       )
     })
 
-    it('should be able to transfer all once vested', async () => {
+    it('should be able to withdraw all once vested', async () => {
       await time.setNextBlockTimestamp(cliff + 3600)
-      await lendingPool.transfer(accounts[1], toEther(1000))
+      await lendingPool.withdrawAllowance(toEther(1000))
 
       assert.equal(fromEther(await lendingPool.balanceOf(accounts[0])), 0, 'balance should be zero')
       assert.equal(fromEther(await lendingPool.staked(accounts[0])), 0, 'staked balance incorrect')

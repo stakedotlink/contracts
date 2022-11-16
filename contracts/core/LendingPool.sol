@@ -50,7 +50,7 @@ contract LendingPool is RewardsPoolController {
     function onTokenTransfer(
         address _sender,
         uint _value,
-        bytes calldata
+        bytes calldata _calldata
     ) external override {
         require(
             msg.sender == address(allowanceToken) || isTokenSupported(msg.sender),
@@ -79,24 +79,14 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice deletes the vesting schedule if the transfer occurs after vesting ends
-     * @param _from account sending from
-     * @param _to account sending to
-     * @param _amount amount being sent
+     * @notice receipt tokens within the lending pool cannot be transferred
      */
     function _transfer(
-        address _from,
-        address _to,
-        uint256 _amount
+        address,
+        address,
+        uint256
     ) internal virtual override {
-        require(balanceOf(_from) >= _amount, "ERC20: transfer amount exceeds balance");
-
-        VestingSchedule storage vestingSchedule = vestingSchedules[_from];
-        if (block.timestamp > vestingSchedule.startTimestamp + vestingSchedule.durationSeconds) {
-            delete vestingSchedules[_from];
-        }
-
-        super._transfer(_from, _to, _amount);
+        revert("Token cannot be transferred");
     }
 
     /**
@@ -140,6 +130,14 @@ contract LendingPool is RewardsPoolController {
         uint toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(msg.sender);
+        }
+
+        VestingSchedule memory vestingSchedule = vestingSchedules[msg.sender];
+        if (
+            vestingSchedule.startTimestamp != 0 &&
+            block.timestamp > vestingSchedule.startTimestamp + vestingSchedule.durationSeconds
+        ) {
+            delete vestingSchedules[msg.sender];
         }
 
         _burn(msg.sender, toWithdraw);
