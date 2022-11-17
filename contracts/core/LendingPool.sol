@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@prb/math/contracts/PRBMathUD60x18.sol";
 
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IPoolRouter.sol";
+import "./interfaces/IFeeCurve.sol";
 
 /**
  * @title Lending Pool
@@ -17,41 +15,31 @@ import "./interfaces/IPoolRouter.sol";
  */
 contract LendingPool is RewardsPoolController {
     using SafeERC20 for IERC20;
-    using PRBMathUD60x18 for uint;
 
     IERC20 public immutable allowanceToken;
     IPoolRouter public immutable poolRouter;
-
-    uint public rateConstantA;
-    uint public rateConstantB;
-    uint public rateConstantC;
-    uint public rateConstantD;
-    uint public rateConstantE;
+    IFeeCurve public feeCurve;
 
     event AllowanceStaked(address indexed user, uint amount);
     event AllowanceWithdrawn(address indexed user, uint amount);
-    event RateConstantsSet(
-        uint _rateConstantA,
-        uint _rateConstantB,
-        uint _rateConstantC,
-        uint _rateConstantD,
-        uint _rateConstantE
-    );
+
+    struct VestingSchedule {
+        uint totalAmount;
+        uint64 startTimestamp;
+        uint64 durationSeconds;
+    }
+    mapping(address => VestingSchedule) private vestingSchedules;
 
     constructor(
         address _allowanceToken,
         string memory _dTokenName,
         string memory _dTokenSymbol,
         address _poolRouter,
-        uint _rateConstantA,
-        uint _rateConstantB,
-        uint _rateConstantC,
-        uint _rateConstantD,
-        uint _rateConstantE
+        address _feeCurve
     ) RewardsPoolController(_dTokenName, _dTokenSymbol) {
         allowanceToken = IERC20(_allowanceToken);
         poolRouter = IPoolRouter(_poolRouter);
-        setRateConstants(_rateConstantA, _rateConstantB, _rateConstantC, _rateConstantD, _rateConstantE);
+        feeCurve = IFeeCurve(_feeCurve);
     }
 
     /**
@@ -71,9 +59,44 @@ contract LendingPool is RewardsPoolController {
 
         if (msg.sender == address(allowanceToken)) {
             _stakeAllowance(_sender, _value);
+
+            if (_calldata.length > 1) {
+                (uint64 startTimestamp, uint64 durationSeconds) = abi.decode(_calldata, (uint64, uint64));
+                _setVestingSchedule(_sender, _value, startTimestamp, durationSeconds);
+            }
         } else {
             distributeToken(msg.sender);
         }
+    }
+
+    /**
+     * @notice returns an accounts balance minus the amount of tokens that are currently vesting
+     * @param _account account
+     * @return balance accounts balance
+     */
+    function balanceOf(address _account) public view virtual override(ERC20, IERC20) returns (uint256) {
+        return super.balanceOf(_account) - (vestingSchedules[_account].totalAmount - _vestedTokens(_account));
+    }
+
+    /**
+     * @notice receipt tokens within the lending pool cannot be transferred
+     */
+    function _transfer(
+        address,
+        address,
+        uint256
+    ) internal virtual override {
+        revert("Token cannot be transferred");
+    }
+
+    /**
+     * @notice returns an account's staked amount for use by reward pools
+     * controlled by this contract. Overridden as the the staked amount needs to include any vesting tokens.
+     * @dev required by RewardsPoolController
+     * @return account's staked amount
+     */
+    function staked(address _account) external view override returns (uint) {
+        return (rewardRedirects[_account] == address(0) ? super.balanceOf(_account) : 0) + redirectedStakes[_account];
     }
 
     /**
@@ -83,8 +106,7 @@ contract LendingPool is RewardsPoolController {
      * @return current rate
      **/
     function currentRate(address _token, uint16 _index) public view returns (uint) {
-        uint allowanceInUse = poolRouter.allowanceInUse(_token, _index);
-        return _currentRate(allowanceInUse.div(totalSupply()));
+        return feeCurve.currentRate(poolRouter.poolUtilisation(_token, _index));
     }
 
     /**
@@ -94,15 +116,7 @@ contract LendingPool is RewardsPoolController {
      * @return current rate
      **/
     function currentRateAt(uint _percentageBorrowed) public view returns (uint) {
-        return _currentRate(_percentageBorrowed);
-    }
-
-    /**
-     * @notice calculates the amount of allowance tokens available for withdrawal
-     * @return available allowance tokens
-     **/
-    function availableAllowance() public view returns (uint) {
-        return totalSupply() - poolRouter.maxAllowanceInUse();
+        return feeCurve.currentRate(_percentageBorrowed);
     }
 
     /**
@@ -110,17 +124,44 @@ contract LendingPool is RewardsPoolController {
      * @param _amount amount to withdraw
      **/
     function withdrawAllowance(uint _amount) external updateRewards(msg.sender) {
+        require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
+        require(balanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds balance");
+
         uint toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(msg.sender);
         }
 
-        require(toWithdraw <= availableAllowance(), "Insufficient allowance available for withdrawal");
+        VestingSchedule memory vestingSchedule = vestingSchedules[msg.sender];
+        if (
+            vestingSchedule.startTimestamp != 0 &&
+            block.timestamp > vestingSchedule.startTimestamp + vestingSchedule.durationSeconds
+        ) {
+            delete vestingSchedules[msg.sender];
+        }
 
         _burn(msg.sender, toWithdraw);
         allowanceToken.safeTransfer(msg.sender, toWithdraw);
 
         emit AllowanceWithdrawn(msg.sender, toWithdraw);
+    }
+
+    /**
+     * @notice returns the vesting schedule of a given account
+     * @param _account account
+     * @return vestingSchedule accounts vesting schedule
+     */
+    function getVestingSchedule(address _account) external view returns (VestingSchedule memory) {
+        return vestingSchedules[_account];
+    }
+
+    /**
+     * @notice sets the fee curve interface
+     * @param _feeCurve interface
+     */
+    function setFeeCurve(address _feeCurve) external onlyOwner {
+        require(_feeCurve != address(0), "Invalid fee curve address");
+        feeCurve = IFeeCurve(_feeCurve);
     }
 
     /**
@@ -136,32 +177,6 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice sets the constants used for calculating current rate
-     * @param _rateConstantA value to set for rateA
-     * @param _rateConstantB value to set for rateB
-     * @param _rateConstantC value to set for rateC
-     * @param _rateConstantD value to set for rateD
-     * @param _rateConstantE value to set for rateE
-     **/
-    function setRateConstants(
-        uint _rateConstantA,
-        uint _rateConstantB,
-        uint _rateConstantC,
-        uint _rateConstantD,
-        uint _rateConstantE
-    ) public onlyOwner {
-        require(_rateConstantA > 0 && _rateConstantB > 0 && _rateConstantC > 0, "Rate constants A, B and C cannot be zero");
-
-        rateConstantA = _rateConstantA;
-        rateConstantB = _rateConstantB;
-        rateConstantC = _rateConstantC;
-        rateConstantD = _rateConstantD;
-        rateConstantE = _rateConstantE;
-
-        emit RateConstantsSet(_rateConstantA, _rateConstantB, _rateConstantC, _rateConstantD, _rateConstantE);
-    }
-
-    /**
      * @notice stakes allowance tokens for lending
      * @param _amount amount to stake
      **/
@@ -171,25 +186,46 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice calculates the current percentage of rewards that lenders
-     * receive and borrowers pay. Fee cap of 95% hardcoded.
-     * @dev Equation: y = (A*x/B)^C + x/D + E
-     * @return current rate
-     **/
-    function _currentRate(uint _percentageBorrowed) private view returns (uint) {
-        if (_percentageBorrowed == 0) {
-            return rateConstantE * 100;
-        }
-        uint x = _percentageBorrowed;
-        uint y = x.div(rateConstantB).mul(rateConstantA * 100).powu(rateConstantC);
-        if (rateConstantD > 1) {
-            y = y + (x * 100).div(rateConstantD).toUint();
-        }
-        y = y / 1e16 + rateConstantE * 100;
+     * @notice sets an accounts derivative token vesting schedule. If a schedule already exists:
+     * - If the new start timestamp is after the previous schedule, the schedule is overwritten and any remaining vesting tokens go into the new schedule
+     * - Will release any tokens that have vested but not transferred
+     * - If the start timestamp is before the current schedule, the current schedule is used
+     */
+    function _setVestingSchedule(
+        address _account,
+        uint _amount,
+        uint64 _startTimestamp,
+        uint64 _durationSeconds
+    ) internal {
+        require(_startTimestamp > 0, "Start timestamp cannot be 0");
+        require(_durationSeconds > 0, "Seconds duration cannot be 0");
 
-        if (y > 9500) {
-            return 9500;
+        VestingSchedule storage vestingSchedule = vestingSchedules[_account];
+        if (_startTimestamp > vestingSchedule.startTimestamp) {
+            if (vestingSchedule.startTimestamp != 0) {
+                vestingSchedule.totalAmount -= _vestedTokens(_account);
+            }
+            vestingSchedule.startTimestamp = _startTimestamp;
+            vestingSchedule.durationSeconds = _durationSeconds;
         }
-        return y;
+        vestingSchedule.totalAmount += _amount;
+    }
+
+    /**
+     * @notice Returns the amount of tokens that are currently locked within vesting
+     */
+    function _vestedTokens(address _account) internal view virtual returns (uint256) {
+        VestingSchedule memory vestingSchedule = vestingSchedules[_account];
+        uint totalVested = vestingSchedule.totalAmount;
+        uint64 startTimestamp = vestingSchedule.startTimestamp;
+        uint64 timestamp = uint64(block.timestamp);
+
+        if (totalVested == 0 || timestamp < startTimestamp) {
+            return 0;
+        } else if (timestamp > startTimestamp + vestingSchedule.durationSeconds) {
+            return totalVested;
+        } else {
+            return ((totalVested * (timestamp - startTimestamp)) / vestingSchedule.durationSeconds);
+        }
     }
 }

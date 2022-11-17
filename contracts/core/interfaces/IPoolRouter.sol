@@ -2,7 +2,9 @@
 pragma solidity 0.8.15;
 
 interface IPoolRouter {
-    function allowanceInUse(address _token, uint16 _index) external view returns (uint);
+    function isReservedMode() external view returns (bool);
 
-    function maxAllowanceInUse() external view returns (uint);
+    function getReservedMultiplier() external view returns (uint);
+
+    function poolUtilisation(address _token, uint16 _index) external view returns (uint);
 }
