@@ -19,7 +19,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
     mapping(address => IRewardsPool) public tokenPools;
     address[] private tokens;
 
-    mapping(address => address) private rewardRedirects;
+    mapping(address => address) public rewardRedirects;
     mapping(address => uint) public redirectedStakes;
     mapping(address => address) public redirectApprovals;
 
@@ -72,9 +72,9 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
     }
 
     function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _data
+        address,
+        uint256,
+        bytes calldata
     ) external virtual {
         if (isTokenSupported(msg.sender)) {
             distributeToken(msg.sender);
