@@ -498,5 +498,20 @@ describe('LendingPool', () => {
         'balance does not match'
       )
     })
+
+    it('should be able to mint allowance directly into vesting', async () => {
+      await allowanceToken.mintToContract(
+        lendingPool.address,
+        accounts[1],
+        toEther(600),
+        defaultAbiCoder.encode(['uint64', 'uint64'], [10, 20])
+      )
+
+      let vestingSchedule = await lendingPool.getVestingSchedule(accounts[1])
+
+      assert.equal(fromEther(vestingSchedule[0]), 600, 'total amount does not match')
+      assert.equal(vestingSchedule[1].toNumber(), 10, 'start timestamp does not match')
+      assert.equal(vestingSchedule[2].toNumber(), 20, 'duration does not match')
+    })
   })
 })

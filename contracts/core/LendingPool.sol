@@ -16,19 +16,20 @@ import "./interfaces/IFeeCurve.sol";
 contract LendingPool is RewardsPoolController {
     using SafeERC20 for IERC20;
 
-    IERC20 public immutable allowanceToken;
-    IPoolRouter public immutable poolRouter;
-    IFeeCurve public feeCurve;
-
-    event AllowanceStaked(address indexed user, uint amount);
-    event AllowanceWithdrawn(address indexed user, uint amount);
-
     struct VestingSchedule {
         uint totalAmount;
         uint64 startTimestamp;
         uint64 durationSeconds;
     }
+
+    IERC20 public immutable allowanceToken;
+    IPoolRouter public immutable poolRouter;
+    IFeeCurve public feeCurve;
+
     mapping(address => VestingSchedule) private vestingSchedules;
+
+    event AllowanceStaked(address indexed user, uint amount);
+    event AllowanceWithdrawn(address indexed user, uint amount);
 
     constructor(
         address _allowanceToken,
@@ -149,7 +150,7 @@ contract LendingPool is RewardsPoolController {
     /**
      * @notice returns the vesting schedule of a given account
      * @param _account account
-     * @return vestingSchedule accounts vesting schedule
+     * @return vestingSchedule account's vesting schedule
      */
     function getVestingSchedule(address _account) external view returns (VestingSchedule memory) {
         return vestingSchedules[_account];
@@ -165,18 +166,6 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice stakes allowane tokens for an account
-     * @dev used by pool router
-     * @param _account account to stake for
-     * @param _amount amount to stake
-     **/
-    function stakeAllowance(address _account, uint _amount) external {
-        require(msg.sender == address(poolRouter), "Sender is not pool router");
-        allowanceToken.safeTransferFrom(msg.sender, address(this), _amount);
-        _stakeAllowance(_account, _amount);
-    }
-
-    /**
      * @notice stakes allowance tokens for lending
      * @param _amount amount to stake
      **/
@@ -186,7 +175,7 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice sets an accounts derivative token vesting schedule. If a schedule already exists:
+     * @notice sets an account's derivative token vesting schedule. If a schedule already exists:
      * - If the new start timestamp is after the previous schedule, the schedule is overwritten and any remaining vesting tokens go into the new schedule
      * - Will release any tokens that have vested but not transferred
      * - If the start timestamp is before the current schedule, the current schedule is used
@@ -212,20 +201,20 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice Returns the amount of tokens that are currently locked within vesting
+     * @notice Returns the amount of tokens that are currently vested for an account
      */
     function _vestedTokens(address _account) internal view virtual returns (uint256) {
         VestingSchedule memory vestingSchedule = vestingSchedules[_account];
-        uint totalVested = vestingSchedule.totalAmount;
+        uint totalAmount = vestingSchedule.totalAmount;
         uint64 startTimestamp = vestingSchedule.startTimestamp;
         uint64 timestamp = uint64(block.timestamp);
 
-        if (totalVested == 0 || timestamp < startTimestamp) {
+        if (totalAmount == 0 || timestamp < startTimestamp) {
             return 0;
         } else if (timestamp > startTimestamp + vestingSchedule.durationSeconds) {
-            return totalVested;
+            return totalAmount;
         } else {
-            return ((totalVested * (timestamp - startTimestamp)) / vestingSchedule.durationSeconds);
+            return ((totalAmount * (timestamp - startTimestamp)) / vestingSchedule.durationSeconds);
         }
     }
 }

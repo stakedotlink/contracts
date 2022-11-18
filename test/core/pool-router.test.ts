@@ -169,43 +169,6 @@ describe('PoolRouter', () => {
     await expect(
       token1.transferAndCall(poolRouter.address, toEther(10), '0x02')
     ).to.be.revertedWith('Pool does not exist')
-    await expect(
-      allowanceToken.transferAndCall(
-        poolRouter.address,
-        toEther(350),
-        ethers.utils.defaultAbiCoder.encode(
-          ['address', 'uint', 'uint16'],
-          [token1.address, toEther(100), 2]
-        )
-      )
-    ).to.be.revertedWith('Pool does not exist')
-  })
-
-  it('should be able to stake allowance/asset tokens simultaneously via transferAndCall', async () => {
-    await token1.approve(poolRouter.address, toEther(100))
-    await allowanceToken.transferAndCall(
-      poolRouter.address,
-      toEther(350),
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint', 'uint16'],
-        [token1.address, toEther(100), 1]
-      )
-    )
-    assert.equal(
-      fromEther(await lendingPool.balanceOf(accounts[0])),
-      370,
-      'staked balances do not match'
-    )
-    assert.equal(
-      fromEther(await stakingPool2.balanceOf(accounts[0])),
-      100,
-      'staked balances do not match'
-    )
-    assert.equal(
-      fromEther((await poolRouter.getPool(token1.address, 1))[3]),
-      100,
-      'total staked does not match'
-    )
   })
 
   it('should be able to stake via transferAndCall', async () => {
@@ -578,7 +541,7 @@ describe('PoolRouter', () => {
     )
   })
 
-  describe.only('reserved allocation', async () => {
+  describe('reserved allocation', async () => {
     beforeEach(async () => {
       await poolRouter.setReservedMode(true)
     })

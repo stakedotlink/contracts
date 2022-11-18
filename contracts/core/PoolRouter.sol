@@ -121,42 +121,29 @@ contract PoolRouter is Ownable {
      * @return poolUtilisation percentage full (0-10000)
      */
     function poolUtilisation(address _token, uint16 _index) external view returns (uint) {
-        Pool memory pool = pools[_poolKey(_token, _index)];
-        uint totalSupply = pool.stakingPool.totalSupply();
-        uint maxDeposits = pool.stakingPool.maxDeposits();
+        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        uint totalSupply = stakingPool.totalSupply();
+        uint maxDeposits = stakingPool.maxDeposits();
         return (maxDeposits > totalSupply) ? (1e18 * totalSupply) / maxDeposits : 1 ether;
     }
 
     /**
      * @notice ERC677 implementation to receive a token stake
-     * @dev token and allowance can be staked simultaneously to ensure sender is able to fill
-     * newly created deposit room
      * @param _sender of the token transfer
      * @param _value of the token transfer
-     * @param _calldata abi encoded token address, token amount, and pool index for simultaneous staking
-     * or pool index for single token staking
+     * @param _calldata pool index
      **/
     function onTokenTransfer(
         address _sender,
         uint _value,
         bytes calldata _calldata
     ) external {
-        require(
-            msg.sender == address(allowanceToken) || poolCountByToken[msg.sender] > 0,
-            "Only callable by supported tokens"
-        );
+        require(poolCountByToken[msg.sender] > 0, "Only callable by supported tokens");
 
-        if (msg.sender == address(allowanceToken)) {
-            (address token, uint tokenAmount, uint16 index) = abi.decode(_calldata, (address, uint, uint16));
-            require(poolCountByToken[token] > index, "Pool does not exist");
-            lendingPool.stakeAllowance(_sender, _value);
-            IERC677(token).safeTransferFrom(_sender, address(this), tokenAmount);
-            _stake(token, index, _sender, tokenAmount);
-        } else {
-            uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
-            require(poolCountByToken[msg.sender] > index, "Pool does not exist");
-            _stake(msg.sender, index, _sender, _value);
-        }
+        uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
+        require(poolCountByToken[msg.sender] > index, "Pool does not exist");
+
+        _stake(msg.sender, index, _sender, _value);
     }
 
     /**
@@ -275,7 +262,8 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @notice calculates the amount of stake that can be deposited based on allowance staked
+     * @notice calculates the amount of stake an account can deposit based on it's allowance staked
+     * @param _account account address
      * @param _token the token address used by the staking pool
      * @param _index pool index
      * @return the amount of allowance tokens in use
@@ -285,8 +273,8 @@ contract PoolRouter is Ownable {
         address _token,
         uint16 _index
     ) public view poolExists(_token, _index) returns (uint) {
-        Pool memory pool = pools[_poolKey(_token, _index)];
-        uint maximumStake = pool.stakingPool.canDeposit();
+        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        uint maximumStake = stakingPool.canDeposit();
         return reservedMode ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
     }
 
@@ -333,7 +321,6 @@ contract PoolRouter is Ownable {
     function setLendingPool(address _lendingPool) external onlyOwner {
         require(address(lendingPool) == address(0), "lendingPool already set");
         lendingPool = ILendingPool(_lendingPool);
-        allowanceToken.safeApprove(_lendingPool, type(uint).max);
     }
 
     /**
@@ -415,18 +402,18 @@ contract PoolRouter is Ownable {
         uint16 _index,
         uint _maximumStake
     ) private view returns (uint) {
-        Pool memory pool = pools[_poolKey(_token, _index)];
+        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
 
         if (lendingPool.balanceOf(_account) == 0) {
             return 0;
         }
         uint accountMaxStake = (((((1e18 * lendingPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
-            pool.stakingPool.maxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
+            stakingPool.maxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
 
-        if (pool.stakingPool.balanceOf(_account) >= accountMaxStake) {
+        if (stakingPool.balanceOf(_account) >= accountMaxStake) {
             return 0;
         }
-        return (accountMaxStake > _maximumStake) ? _maximumStake : accountMaxStake - pool.stakingPool.balanceOf(_account);
+        return (accountMaxStake > _maximumStake) ? _maximumStake : accountMaxStake - stakingPool.balanceOf(_account);
     }
 
     /**
