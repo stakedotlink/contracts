@@ -266,9 +266,9 @@ contract PoolRouter is Ownable {
      * @param _account account address
      * @param _token the token address used by the staking pool
      * @param _index pool index
-     * @return the amount of allowance tokens in use
+     * @return amount that can be deposited
      **/
-    function canStake(
+    function canDeposit(
         address _account,
         address _token,
         uint16 _index
@@ -276,6 +276,27 @@ contract PoolRouter is Ownable {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         uint maximumStake = stakingPool.canDeposit();
         return reservedMode ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
+    }
+
+    /**
+     * @notice calculates the amount of stake that can be deposited for an amount of allowance
+     * @param _token the token address used by the staking pool
+     * @param _index pool index
+     * @param _amount amount of allowance
+     * @return amount that can be deposited
+     **/
+    function canDeposit(
+        address _token,
+        uint16 _index,
+        uint _amount
+    ) public view poolExists(_token, _index) returns (uint) {
+        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        uint maximumStake = stakingPool.canDeposit();
+
+        uint accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.maxDeposits()) / 1e18) /
+            1e4) * reservedMultiplier;
+
+        return (!reservedMode || accountMaxStake > maximumStake) ? maximumStake : accountMaxStake;
     }
 
     /**
@@ -356,7 +377,7 @@ contract PoolRouter is Ownable {
         Pool storage pool = pools[_poolKey(_token, _index)];
 
         require(pool.status == PoolStatus.OPEN, "Pool is not open");
-        require(_amount <= canStake(_account, _token, _index), "Not enough allowance staked");
+        require(_amount <= canDeposit(_account, _token, _index), "Not enough allowance staked");
 
         pool.totalStaked += _amount;
         pool.stakingPool.stake(_account, _amount);
