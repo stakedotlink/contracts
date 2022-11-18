@@ -29,4 +29,6 @@ interface IStakingPool is IStakingRewardsPool {
     function getStrategies() external view returns (address[] memory);
 
     function setPoolIndex(uint16 _poolIndex) external;
+
+    function canDeposit() external view returns (uint256);
 }
