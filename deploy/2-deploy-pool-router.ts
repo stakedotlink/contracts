@@ -19,7 +19,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('PoolRouter', {
     from: deployer,
     log: true,
-    args: [stakingAllowance.address],
+    args: [stakingAllowance.address, true],
   })
 
   const tx = await stakingAllowance.mint(deployer, ethers.utils.parseEther('100000000'))
