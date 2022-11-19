@@ -41,6 +41,10 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
+      mining: {
+        auto: true,
+        interval: 5000,
+      },
     },
   },
   namedAccounts: {

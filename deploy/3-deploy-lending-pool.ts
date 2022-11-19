@@ -12,6 +12,19 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const stakingAllowance = await ethers.getContract('StakingAllowance')
   const poolRouter = await ethers.getContract('PoolRouter')
 
+  await deploy('RampUpCurve', {
+    from: deployer,
+    log: true,
+    args: [
+      LendingPool.rateConstantA,
+      LendingPool.rateConstantB,
+      LendingPool.rateConstantC,
+      LendingPool.rateConstantD,
+      LendingPool.rateConstantE,
+    ],
+  })
+  const feeCurve = await ethers.getContract('RampUpCurve')
+
   await deploy('LendingPool', {
     from: deployer,
     log: true,
@@ -20,11 +33,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
       LendingPool.derivativeTokenName,
       LendingPool.derivativeTokenSymbol,
       poolRouter.address,
-      LendingPool.rateConstantA,
-      LendingPool.rateConstantB,
-      LendingPool.rateConstantC,
-      LendingPool.rateConstantD,
-      LendingPool.rateConstantE,
+      feeCurve.address,
     ],
   })
   const lendingPool = await ethers.getContract('LendingPool')

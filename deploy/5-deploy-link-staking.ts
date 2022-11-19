@@ -47,7 +47,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   let tx = await stakingPool.setWSDToken(wsdToken.address)
   await tx.wait()
 
-  tx = await poolRouter.addPool(linkToken.address, stakingPool.address, true, 0)
+  tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0)
   await tx.wait()
 
   tx = await poolOwners.addToken(wsdToken.address, wstLinkOwnersRewardsPool.address)
