@@ -72,10 +72,10 @@ async function main() {
   await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
 
   await stakingAllowance
-    .connect(signers[3])
+    .connect(signers[4])
     .transferAndCall(lendingPool.address, toEther(100000), '0x00')
 
-  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(1000), '0x00')
+  await linkToken.connect(signers[4]).transferAndCall(poolRouter.address, toEther(1000), '0x00')
 
   // send LINK rewards to owners pool
   await linkToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100), '0x00')
