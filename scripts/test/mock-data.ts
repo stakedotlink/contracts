@@ -23,6 +23,7 @@ async function main() {
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
   const LINK_WrappedSDToken = (await ethers.getContract('LINK_WrappedSDToken')) as any
+  const lendingPool = await ethers.getContract('LendingPool') as any
 
   const poolMin = 10
   const poolMax = 1000000
@@ -54,43 +55,23 @@ async function main() {
   await ownersToken.connect(signers[3]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
 
   // stake STA and LINK
-  await linkToken.connect(signers[3]).approve(poolRouter.address, toEther(10))
 
   await stakingAllowance
     .connect(signers[3])
     .transferAndCall(
-      poolRouter.address,
+      lendingPool.address,
       toEther(1000),
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint', 'uint16'],
-        [linkToken.address, toEther(10), 0]
-      )
+     '0x00'
     )
 
-  // lend STA
-  await stakingAllowance
+  await linkToken
     .connect(signers[3])
     .transferAndCall(
       poolRouter.address,
-      toEther(10000),
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint', 'uint16'],
-        [linkToken.address, toEther(0), 0]
-      )
+      toEther(10),
+     '0x00'
     )
 
-  // borrow
-  await linkToken.connect(signers[3]).approve(poolRouter.address, toEther(10))
-  await stakingAllowance
-    .connect(signers[3])
-    .transferAndCall(
-      poolRouter.address,
-      toEther(0),
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint', 'uint16'],
-        [linkToken.address, toEther(10), 0]
-      )
-    )
 
   // account 4
 
@@ -101,17 +82,21 @@ async function main() {
   // stake LPL
   await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
 
-  // stake STA and LINK
-  await linkToken.connect(signers[4]).approve(poolRouter.address, toEther(1000))
+
   await stakingAllowance
-    .connect(signers[4])
+    .connect(signers[3])
+    .transferAndCall(
+      lendingPool.address,
+      toEther(100000),
+     '0x00'
+    )
+
+  await linkToken
+    .connect(signers[3])
     .transferAndCall(
       poolRouter.address,
-      toEther(100000),
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint', 'uint16'],
-        [linkToken.address, toEther(1000), 0]
-      )
+      toEther(1000),
+     '0x00'
     )
 
   // send LINK rewards to owners pool
