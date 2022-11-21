@@ -23,7 +23,7 @@ async function main() {
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
   const LINK_WrappedSDToken = (await ethers.getContract('LINK_WrappedSDToken')) as any
-  const lendingPool = await ethers.getContract('LendingPool') as any
+  const lendingPool = (await ethers.getContract('LendingPool')) as any
 
   const poolMin = 10
   const poolMax = 1000000
@@ -58,20 +58,9 @@ async function main() {
 
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(
-      lendingPool.address,
-      toEther(1000),
-     '0x00'
-    )
+    .transferAndCall(lendingPool.address, toEther(1000), '0x00')
 
-  await linkToken
-    .connect(signers[3])
-    .transferAndCall(
-      poolRouter.address,
-      toEther(10),
-     '0x00'
-    )
-
+  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(10), '0x00')
 
   // account 4
 
@@ -82,22 +71,11 @@ async function main() {
   // stake LPL
   await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
 
-
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(
-      lendingPool.address,
-      toEther(100000),
-     '0x00'
-    )
+    .transferAndCall(lendingPool.address, toEther(100000), '0x00')
 
-  await linkToken
-    .connect(signers[3])
-    .transferAndCall(
-      poolRouter.address,
-      toEther(1000),
-     '0x00'
-    )
+  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(1000), '0x00')
 
   // send LINK rewards to owners pool
   await linkToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100), '0x00')
