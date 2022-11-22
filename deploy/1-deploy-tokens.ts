@@ -7,7 +7,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { PoolOwners } = config
+  const { StakingAllowance } = config
 
   let lplToken: any = await ethers.getContractOrNull('OwnersToken')
   if (!lplToken) {
@@ -31,22 +31,18 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     linkToken = await ethers.getContract('LinkToken')
   }
 
-  await deploy('PoolOwners', {
+  await deploy('StakingAllowance', {
     from: deployer,
     log: true,
-    args: [lplToken.address, PoolOwners.derivativeTokenName, PoolOwners.derivativeTokenSymbol],
+    args: [StakingAllowance.name, StakingAllowance.symbol],
   })
-  const poolOwners = await ethers.getContract('PoolOwners')
+  const stakingAllowance = await ethers.getContract('StakingAllowance')
 
-  const linkOwnersRewardsPool = await deploy('LINK_OwnersRewardsPool', {
-    contract: 'RewardsPool',
-    from: deployer,
-    log: true,
-    args: [poolOwners.address, linkToken.address],
-  })
-
-  const tx = await poolOwners.addToken(linkToken.address, linkOwnersRewardsPool.address)
+  const tx = await stakingAllowance.mint(
+    deployer,
+    ethers.utils.parseEther(StakingAllowance.initialSupply.toString())
+  )
   await tx.wait()
 }
 
-module.exports.tags = ['PoolOwners']
+module.exports.tags = ['Tokens']
