@@ -15,18 +15,32 @@ contract VirtualERC677 is IERC677, VirtualERC20 {
     ) public override returns (bool success) {
         super.transfer(_to, _value);
         if (isContract(_to)) {
-            contractFallback(_to, _value, _data);
+            contractFallback(msg.sender, _to, _value, _data);
+        }
+        return true;
+    }
+
+    function transferAndCallFrom(
+        address _sender,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) internal returns (bool) {
+        _transfer(_sender, _to, _value);
+        if (isContract(_to)) {
+            contractFallback(_sender, _to, _value, _data);
         }
         return true;
     }
 
     function contractFallback(
+        address _sender,
         address _to,
         uint256 _value,
-        bytes calldata _data
+        bytes memory _data
     ) private {
         IERC677Receiver receiver = IERC677Receiver(_to);
-        receiver.onTokenTransfer(msg.sender, _value, _data);
+        receiver.onTokenTransfer(_sender, _value, _data);
     }
 
     function isContract(address _addr) private view returns (bool hasCode) {

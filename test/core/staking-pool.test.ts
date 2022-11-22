@@ -64,7 +64,6 @@ describe('StakingPool', () => {
       'Wrapped LinkPool LINK',
       'wlplLINK',
     ])) as WrappedSDToken
-    await stakingPool.setWSDToken(wsdToken.address)
 
     strategy1 = (await deployUpgradeable('StrategyMock', [
       token.address,
@@ -370,25 +369,25 @@ describe('StakingPool', () => {
       'Account-3 balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await wsdToken.balanceOf(ownersRewards)).toFixed(2)),
-      102.74,
+      Number(fromEther(await stakingPool.balanceOf(ownersRewards))),
+      120,
       'Owners rewards balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await wsdToken.balanceOf(lendingPool.address)).toFixed(2)),
-      205.48,
+      Number(fromEther(await stakingPool.balanceOf(lendingPool.address))),
+      240,
       'Lending pool balance incorrect'
     )
     assert.equal(
       Number(fromEther(await lendingPool.totalRewards()).toFixed(2)),
-      205.48,
+      240,
       'Lending pool rewards incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6200, 'totalSupply incorrect')
   })
 
   it('fee splitting should work correctly', async () => {
-    await stakingPool.addFee(accounts[3], 2000)
+    await stakingPool.addFee(accounts[0], 2000)
     await strategy1.setFeeBasisPoints(1000)
     await strategy3.setFeeBasisPoints(1000)
 
@@ -417,38 +416,17 @@ describe('StakingPool', () => {
     )
 
     assert.equal(
-      Number(
-        fromEther(
-          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(ownersRewards))
-        ).toFixed(2)
-      ),
+      fromEther(await stakingPool.balanceOf(ownersRewards)),
       130,
       'Owners rewards balance incorrect'
     )
     assert.equal(
-      Number(
-        fromEther(
-          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(accounts[3]))
-        ).toFixed(2)
-      ),
-      260,
-      'Second fee balance incorrect'
-    )
-    assert.equal(
-      Number(
-        fromEther(
-          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(accounts[0]))
-        ).toFixed(2)
-      ),
-      160,
+      fromEther(await stakingPool.balanceOf(accounts[0])),
+      160 + 260,
       'Strategy fee balance incorrect'
     )
     assert.equal(
-      Number(
-        fromEther(
-          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(lendingPool.address))
-        ).toFixed(2)
-      ),
+      fromEther(await stakingPool.balanceOf(lendingPool.address)),
       260,
       'Lending fee balance incorrect'
     )
@@ -538,7 +516,7 @@ describe('StakingPool', () => {
     await stakingPool.updateStrategyRewards([0])
 
     await stakingPool.connect(signers[1]).transfer(accounts[3], toEther(100))
-    await stakingPool.connect(signers[3]).transfer(accounts[4], toEther(25))
+    await stakingPool.connect(signers[3]).transfer(accounts[0], toEther(25))
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
@@ -556,9 +534,9 @@ describe('StakingPool', () => {
       'account-3 balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(accounts[4])),
+      fromEther(await stakingPool.balanceOf(accounts[0])),
       25,
-      'account-4 balance incorrect'
+      'account-0 balance incorrect'
     )
   })
 
