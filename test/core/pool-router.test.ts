@@ -18,7 +18,7 @@ import {
   PoolRouter,
   StakingAllowance,
   WrappedETH,
-  LendingPool,
+  DelegatorPool,
   RampUpCurve,
 } from '../../typechain-types'
 
@@ -27,7 +27,7 @@ describe('PoolRouter', () => {
   let token2: ERC677
   let allowanceToken: StakingAllowance
   let poolRouter: PoolRouter
-  let lendingPool: LendingPool
+  let delegatorPool: DelegatorPool
   let stakingPool1: StakingPool
   let stakingPool2: StakingPool
   let stakingPool3: StakingPool
@@ -46,7 +46,7 @@ describe('PoolRouter', () => {
       'lpLINK',
       [[accounts[4], 1000]],
       poolRouter.address,
-      lendingPool.address,
+      delegatorPool.address,
     ])) as StakingPool
 
     let strategy1 = (await deployUpgradeable('StrategyMock', [
@@ -80,13 +80,13 @@ describe('PoolRouter', () => {
   }
 
   async function stakeAllowances() {
-    await allowanceToken.transferAndCall(lendingPool.address, toEther(200), '0x')
+    await allowanceToken.transferAndCall(delegatorPool.address, toEther(200), '0x')
     await allowanceToken
       .connect(signers[1])
-      .transferAndCall(lendingPool.address, toEther(300), '0x')
+      .transferAndCall(delegatorPool.address, toEther(300), '0x')
     await allowanceToken
       .connect(signers[2])
-      .transferAndCall(lendingPool.address, toEther(500), '0x')
+      .transferAndCall(delegatorPool.address, toEther(500), '0x')
   }
 
   beforeEach(async () => {
@@ -108,15 +108,15 @@ describe('PoolRouter', () => {
 
     feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
 
-    lendingPool = (await deploy('LendingPool', [
+    delegatorPool = (await deploy('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
       poolRouter.address,
       feeCurve.address,
-    ])) as LendingPool
+    ])) as DelegatorPool
 
-    await poolRouter.setLendingPool(lendingPool.address)
+    await poolRouter.setDelegatorPool(delegatorPool.address)
 
     stakingPool1 = await createPool(poolRouter, token1.address)
     stakingPool2 = await createPool(poolRouter, token1.address)
@@ -129,11 +129,11 @@ describe('PoolRouter', () => {
     ])) as WrappedSDToken
 
     let rewardsPool = await deploy('RewardsPoolWSD', [
-      lendingPool.address,
+      delegatorPool.address,
       stakingPool1.address,
       wsdToken.address,
     ])
-    await lendingPool.addToken(stakingPool1.address, rewardsPool.address)
+    await delegatorPool.addToken(stakingPool1.address, rewardsPool.address)
 
     await stakeAllowances()
   })

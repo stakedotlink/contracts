@@ -14,7 +14,7 @@ import {
   StrategyMock,
   StakingPool,
   WrappedSDToken,
-  LendingPoolMock,
+  DelegatorPoolMock,
 } from '../../typechain-types'
 
 describe('WrappedSDToken', () => {
@@ -40,7 +40,11 @@ describe('WrappedSDToken', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    let lendingPool = (await deploy('LendingPoolMock', [token.address, 0, 0])) as LendingPoolMock
+    let delegatorPool = (await deploy('DelegatorPoolMock', [
+      token.address,
+      0,
+      0,
+    ])) as DelegatorPoolMock
 
     stakingPool = (await deploy('StakingPool', [
       token.address,
@@ -48,7 +52,7 @@ describe('WrappedSDToken', () => {
       'lplLINK',
       [[ownersRewards, 0]],
       accounts[0],
-      lendingPool.address,
+      delegatorPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
