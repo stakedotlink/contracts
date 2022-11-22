@@ -5,7 +5,7 @@ import "./base/ERC677.sol";
 import "../interfaces/IStakingRewardsPool.sol";
 
 /**
- * @title Wrapper for staking pool derivative tokens
+ * @title Wrapped Staking Derivative Token
  * @notice Wraps rebasing derivative tokens with a normal ERC20 token
  */
 contract WrappedSDToken is ERC677 {

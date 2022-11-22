@@ -56,7 +56,6 @@ describe('WrappedSDToken', () => {
       'Wrapped LinkPool LINK',
       'wlplLINK',
     ])) as WrappedSDToken
-    await stakingPool.setWSDToken(wsdToken.address)
 
     strategy1 = (await deployUpgradeable('StrategyMock', [
       token.address,

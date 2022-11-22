@@ -83,7 +83,6 @@ describe('EthStakingStrategy', () => {
       'Wrapped LinkPool ETH',
       'wlplETH',
     ])) as WrappedSDToken
-    await stakingPool.setWSDToken(wsdToken.address)
 
     depositContract = (await deploy('DepositContract')) as DepositContract
 
@@ -100,7 +99,7 @@ describe('EthStakingStrategy', () => {
 
     nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
       strategy.address,
-      wsdToken.address,
+      stakingPool.address,
     ])) as NWLOperatorController
     await nwlOperatorController.setKeyValidationOracle(accounts[0])
     await nwlOperatorController.setBeaconOracle(accounts[0])
@@ -110,19 +109,21 @@ describe('EthStakingStrategy', () => {
     ])) as OperatorWhitelistMock
     wlOperatorController = (await deployUpgradeable('WLOperatorController', [
       strategy.address,
-      wsdToken.address,
+      stakingPool.address,
       operatorWhitelist.address,
       2,
     ])) as WLOperatorController
     await wlOperatorController.setKeyValidationOracle(accounts[0])
     await wlOperatorController.setBeaconOracle(accounts[0])
 
-    nwlRewardsPool = (await deploy('RewardsPool', [
+    nwlRewardsPool = (await deploy('RewardsPoolWSD', [
       nwlOperatorController.address,
+      stakingPool.address,
       wsdToken.address,
     ])) as RewardsPool
-    wlRewardsPool = (await deploy('RewardsPool', [
+    wlRewardsPool = (await deploy('RewardsPoolWSD', [
       wlOperatorController.address,
+      stakingPool.address,
       wsdToken.address,
     ])) as RewardsPool
 
@@ -404,7 +405,7 @@ describe('EthStakingStrategy', () => {
       'wl operator rewards incorrect'
     )
     assert.equal(
-      fromEther(await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(ownersRewards))),
+      fromEther(await stakingPool.balanceOf(ownersRewards)),
       10.5,
       'owners rewards incorrect'
     )

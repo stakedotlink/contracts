@@ -32,7 +32,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     address public keyValidationOracle;
     address public beaconOracle;
 
-    IERC677 public wsdToken;
+    IERC677 public sdToken;
     IRewardsPool public rewardsPool;
 
     Operator[] internal operators;
@@ -71,11 +71,11 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         _;
     }
 
-    function __OperatorController_init(address _ethStakingStrategy, address _wsdToken) public onlyInitializing {
+    function __OperatorController_init(address _ethStakingStrategy, address _sdToken) public onlyInitializing {
         __UUPSUpgradeable_init();
         __Ownable_init();
         ethStakingStrategy = _ethStakingStrategy;
-        wsdToken = IERC677(_wsdToken);
+        sdToken = IERC677(_sdToken);
         currentStateHash = keccak256("initialized");
     }
 
@@ -179,8 +179,8 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint256 _value,
         bytes calldata _data
     ) external {
-        require(msg.sender == address(wsdToken), "Sender is not wsdToken");
-        wsdToken.transferAndCall(address(rewardsPool), _value, "0x00");
+        require(msg.sender == address(sdToken), "Sender is not sdToken");
+        sdToken.transferAndCall(address(rewardsPool), _value, "0x00");
     }
 
     /**

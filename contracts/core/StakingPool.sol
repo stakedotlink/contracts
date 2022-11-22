@@ -29,7 +29,6 @@ contract StakingPool is StakingRewardsPool, Ownable {
     uint public liquidityBuffer;
 
     Fee[] private fees;
-    IWrappedSDToken public wsdToken;
 
     address public immutable poolRouter;
     address public immutable lendingPool;
@@ -288,17 +287,6 @@ contract StakingPool is StakingRewardsPool, Ownable {
     }
 
     /**
-     * @notice sets the wrapped staking derivative token for this pool
-     * @param _wsdToken wsd token to set
-     * @dev must be set for contract to work, can only be set once
-     **/
-    function setWSDToken(address _wsdToken) external onlyOwner {
-        require(address(wsdToken) == address(0), "wsdToken already set");
-        wsdToken = IWrappedSDToken(_wsdToken);
-        _approve(address(this), _wsdToken, type(uint).max);
-    }
-
-    /**
      * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
      * of the pool by always keeping a % of the staked token as liquid within the pool. The buffer
      * has the effect of diluting yield, but promotes pool liquidity with any lock-in that would prevent
@@ -365,15 +353,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
         if (totalFeeAmounts > 0) {
             uint sharesToMint = (totalFeeAmounts * totalShares) / (totalStaked - totalFeeAmounts);
             _mintShares(address(this), sharesToMint);
-            wsdToken.wrap(balanceOf(address(this)));
 
             uint feesPaidCount;
             for (uint i = 0; i < receivers.length; i++) {
                 for (uint j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        wsdToken.transferAndCall(receivers[i][j], wsdToken.balanceOf(address(this)), "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x00");
                     } else {
-                        wsdToken.transferAndCall(receivers[i][j], getSharesByStake(feeAmounts[i][j]), "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x00");
                         feesPaidCount++;
                     }
                 }

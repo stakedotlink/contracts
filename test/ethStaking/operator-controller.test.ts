@@ -27,7 +27,7 @@ const keyPairs = {
 
 describe('OperatorController', () => {
   let controller: OperatorControllerMock
-  let wsdToken: ERC677
+  let sdToken: ERC677
   let rewardsPool: RewardsPool
   let signers: Signer[]
   let accounts: string[]
@@ -37,14 +37,14 @@ describe('OperatorController', () => {
   })
 
   beforeEach(async () => {
-    wsdToken = (await deploy('ERC677', ['test', 'test', 50])) as ERC677
+    sdToken = (await deploy('ERC677', ['test', 'test', 50])) as ERC677
     controller = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
-      wsdToken.address,
+      sdToken.address,
     ])) as OperatorControllerMock
     rewardsPool = (await deploy('RewardsPool', [
       controller.address,
-      wsdToken.address,
+      sdToken.address,
     ])) as RewardsPool
 
     await controller.setRewardsPool(rewardsPool.address)
@@ -123,10 +123,10 @@ describe('OperatorController', () => {
 
   it('rewards distribution should work correctly', async () => {
     await controller.assignNextValidators([0], [1], 1)
-    await wsdToken.transferAndCall(controller.address, toEther(50), '0x00')
+    await sdToken.transferAndCall(controller.address, toEther(50), '0x00')
 
     assert.equal(
-      fromEther(await wsdToken.balanceOf(rewardsPool.address)),
+      fromEther(await sdToken.balanceOf(rewardsPool.address)),
       50,
       'rewards pool balance incorrect'
     )
@@ -145,13 +145,13 @@ describe('OperatorController', () => {
     await controller.withdrawRewards()
 
     assert.equal(
-      fromEther(await wsdToken.balanceOf(accounts[0])),
+      fromEther(await sdToken.balanceOf(accounts[0])),
       50,
-      'account wsdToken balance incorrect'
+      'account sdToken balance incorrect'
     )
 
     await expect(controller.onTokenTransfer(accounts[0], 10, '0x00')).to.be.revertedWith(
-      'Sender is not wsdToken'
+      'Sender is not sdToken'
     )
   })
 
