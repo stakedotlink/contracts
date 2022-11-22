@@ -30,6 +30,7 @@ contract PoolRouter is Ownable {
         IERC677 token;
         IStakingPool stakingPool;
         PoolStatus status;
+        bool reservedModeActive;
         uint totalStaked;
     }
 
@@ -43,7 +44,6 @@ contract PoolRouter is Ownable {
     address[] public tokens;
     address public wrappedETH;
 
-    bool private reservedMode;
     uint private reservedMultiplier;
 
     event StakeToken(address indexed token, address indexed pool, address indexed account, uint amount);
@@ -56,10 +56,9 @@ contract PoolRouter is Ownable {
         _;
     }
 
-    constructor(address _allowanceToken, bool _reservedMode) {
+    constructor(address _allowanceToken) {
         allowanceToken = IERC677(_allowanceToken);
         reservedMultiplier = 1e4;
-        reservedMode = _reservedMode;
     }
 
     receive() external payable {}
@@ -99,11 +98,19 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @notice returns whether the pools are in reserved mode
-     * @return reservedMode true/false
+     * @notice returns whether any pool is in reserved mode
+     * @return reservedModeActive true/false
      */
     function isReservedMode() external view returns (bool) {
-        return reservedMode;
+        for (uint i = 0; i < tokens.length; i++) {
+            address token = tokens[i];
+            for (uint16 j = 0; j < poolCountByToken[token]; j++) {
+                if (pools[_poolKey(token, j)].reservedModeActive) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -204,7 +211,8 @@ contract PoolRouter is Ownable {
     function addPool(
         address _token,
         address _stakingPool,
-        PoolStatus _status
+        PoolStatus _status,
+        bool _reservedModeActive
     ) external onlyOwner {
         poolCount++;
         uint16 tokenPoolCount = poolCountByToken[_token];
@@ -218,6 +226,7 @@ contract PoolRouter is Ownable {
         pool.token = IERC677(_token);
         pool.stakingPool = IStakingPool(_stakingPool);
         pool.status = _status;
+        pool.reservedModeActive = _reservedModeActive;
 
         if (IERC677(_token).allowance(address(this), _stakingPool) == 0) {
             IERC677(_token).safeApprove(_stakingPool, type(uint).max);
@@ -274,8 +283,10 @@ contract PoolRouter is Ownable {
         uint16 _index
     ) public view poolExists(_token, _index) returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
         uint maximumStake = stakingPool.canDeposit();
-        return reservedMode ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
+
+        return reservedModeActive ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
     }
 
     /**
@@ -291,12 +302,13 @@ contract PoolRouter is Ownable {
         uint _amount
     ) public view poolExists(_token, _index) returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
         uint maximumStake = stakingPool.canDeposit();
 
         uint accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.maxDeposits()) / 1e18) /
             1e4) * reservedMultiplier;
 
-        return (!reservedMode || accountMaxStake > maximumStake) ? maximumStake : accountMaxStake;
+        return (!reservedModeActive || accountMaxStake > maximumStake) ? maximumStake : accountMaxStake;
     }
 
     /**
@@ -346,10 +358,16 @@ contract PoolRouter is Ownable {
 
     /**
      * @notice sets whether a pool is reserved by only the allowance stakers
-     * @param _reservedMode whether it is reserved only
+     * @param _token pool token
+     * @param _index pool index
+     * @param _reservedModeActive whether it is reserved only
      **/
-    function setReservedMode(bool _reservedMode) external onlyOwner {
-        reservedMode = _reservedMode;
+    function setReservedModeActive(
+        address _token,
+        uint16 _index,
+        bool _reservedModeActive
+    ) external onlyOwner {
+        pools[_poolKey(_token, _index)].reservedModeActive = _reservedModeActive;
     }
 
     /**
