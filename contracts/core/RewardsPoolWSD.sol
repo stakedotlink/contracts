@@ -31,12 +31,7 @@ contract RewardsPoolWSD is RewardsPool {
      * @return account's total unclaimed rewards
      **/
     function withdrawableRewards(address _account) public view override returns (uint) {
-        return
-            wsdToken.getUnderlyingByWrapped(
-                (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
-                    1e18 +
-                    userRewards[_account]
-            );
+        return wsdToken.getUnderlyingByWrapped(super.withdrawableRewards(_account));
     }
 
     /**
@@ -45,10 +40,7 @@ contract RewardsPoolWSD is RewardsPool {
      * @return account's total unclaimed rewards
      **/
     function withdrawableRewardsWrapped(address _account) public view returns (uint) {
-        return
-            (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
-            1e18 +
-            userRewards[_account];
+        return super.withdrawableRewards(_account);
     }
 
     /**
