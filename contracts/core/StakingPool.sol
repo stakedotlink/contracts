@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IWrappedSDToken.sol";
-import "./interfaces/ILendingPool.sol";
+import "./interfaces/IDelegatorPool.sol";
 
 /**
  * @title Staking Pool
@@ -31,7 +31,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
     Fee[] private fees;
 
     address public immutable poolRouter;
-    address public immutable lendingPool;
+    address public immutable delegatorPool;
     uint16 public poolIndex;
 
     event Stake(address indexed account, uint amount);
@@ -44,13 +44,13 @@ contract StakingPool is StakingRewardsPool, Ownable {
         string memory _derivativeTokenSymbol,
         Fee[] memory _fees,
         address _poolRouter,
-        address _lendingPool
+        address _delegatorPool
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
         for (uint i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         poolRouter = _poolRouter;
-        lendingPool = _lendingPool;
+        delegatorPool = _delegatorPool;
     }
 
     modifier onlyRouter() {
@@ -330,7 +330,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
         }
 
         if (totalRewards > 0) {
-            uint currentRate = ILendingPool(lendingPool).currentRate(address(token), poolIndex);
+            uint currentRate = IDelegatorPool(delegatorPool).currentRate(address(token), poolIndex);
             uint feesLength = currentRate > 0 ? fees.length + 1 : fees.length;
 
             receivers[receivers.length - 1] = new address[](feesLength);
@@ -344,7 +344,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
             }
 
             if (currentRate > 0) {
-                receivers[receivers.length - 1][fees.length] = lendingPool;
+                receivers[receivers.length - 1][fees.length] = delegatorPool;
                 feeAmounts[feeAmounts.length - 1][fees.length] = (uint(totalRewards) * currentRate) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][fees.length];
             }

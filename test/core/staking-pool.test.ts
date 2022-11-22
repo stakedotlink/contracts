@@ -15,13 +15,13 @@ import {
   StrategyMock,
   StakingPool,
   WrappedSDToken,
-  LendingPoolMock,
+  DelegatorPoolMock,
 } from '../../typechain-types'
 
 describe('StakingPool', () => {
   let token: ERC677
   let wsdToken: WrappedSDToken
-  let lendingPool: LendingPoolMock
+  let delegatorPool: DelegatorPoolMock
   let stakingPool: StakingPool
   let strategy1: StrategyMock
   let strategy2: StrategyMock
@@ -48,7 +48,11 @@ describe('StakingPool', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    lendingPool = (await deploy('LendingPoolMock', [token.address, 0, 2000])) as LendingPoolMock
+    delegatorPool = (await deploy('DelegatorPoolMock', [
+      token.address,
+      0,
+      2000,
+    ])) as DelegatorPoolMock
 
     stakingPool = (await deploy('StakingPool', [
       token.address,
@@ -56,7 +60,7 @@ describe('StakingPool', () => {
       'lpLINK',
       [[ownersRewards, 1000]],
       accounts[0],
-      lendingPool.address,
+      delegatorPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
@@ -374,14 +378,14 @@ describe('StakingPool', () => {
       'Owners rewards balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await stakingPool.balanceOf(lendingPool.address))),
+      Number(fromEther(await stakingPool.balanceOf(delegatorPool.address))),
       240,
-      'Lending pool balance incorrect'
+      'Delegator pool balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await lendingPool.totalRewards()).toFixed(2)),
+      Number(fromEther(await delegatorPool.totalRewards()).toFixed(2)),
       240,
-      'Lending pool rewards incorrect'
+      'Delegator pool rewards incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6200, 'totalSupply incorrect')
   })
@@ -426,9 +430,9 @@ describe('StakingPool', () => {
       'Strategy fee balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(lendingPool.address)),
+      fromEther(await stakingPool.balanceOf(delegatorPool.address)),
       260,
-      'Lending fee balance incorrect'
+      'Delegation fee balance incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 6300, 'totalSupply incorrect')
   })

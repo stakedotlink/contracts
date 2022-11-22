@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../interfaces/ILendingPool.sol";
+import "../interfaces/IDelegatorPool.sol";
 
 /**
  * @title Pool Router Mock
@@ -13,7 +13,7 @@ import "../interfaces/ILendingPool.sol";
 contract PoolRouterMock {
     using SafeERC20 for IERC20;
 
-    address public lendingPool;
+    address public delegatorPool;
     address public allowanceToken;
     address public token;
 
@@ -72,11 +72,11 @@ contract PoolRouterMock {
         bytes calldata _calldata
     ) external {
         require(msg.sender == allowanceToken, "Unauthorized");
-        ILendingPool(lendingPool).stakeAllowance(_sender, _value);
+        IDelegatorPool(delegatorPool).stakeAllowance(_sender, _value);
     }
 
-    function setLendingPool(address _lendingPool) external {
-        lendingPool = _lendingPool;
-        IERC20(allowanceToken).safeApprove(_lendingPool, type(uint).max);
+    function setDelegatorPool(address _delegatorPool) external {
+        delegatorPool = _delegatorPool;
+        IERC20(allowanceToken).safeApprove(_delegatorPool, type(uint).max);
     }
 }

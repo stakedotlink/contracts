@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "./interfaces/IERC677.sol";
 import "./interfaces/IStakingPool.sol";
-import "./interfaces/ILendingPool.sol";
+import "./interfaces/IDelegatorPool.sol";
 import "../ethStaking/interfaces/IWrappedETH.sol";
 
 import "hardhat/console.sol";
@@ -34,7 +34,7 @@ contract PoolRouter is Ownable {
     }
 
     IERC677 public immutable allowanceToken;
-    ILendingPool public lendingPool;
+    IDelegatorPool public delegatorPool;
 
     mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
@@ -335,13 +335,13 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @notice sets the lending pool address
+     * @notice sets the delegator pool address
      * @dev must be set for pool router to work
-     * @param _lendingPool lending pool address
+     * @param _delegatorPool delegator pool address
      **/
-    function setLendingPool(address _lendingPool) external onlyOwner {
-        require(address(lendingPool) == address(0), "lendingPool already set");
-        lendingPool = ILendingPool(_lendingPool);
+    function setDelegatorPool(address _delegatorPool) external onlyOwner {
+        require(address(delegatorPool) == address(0), "delegatorPool already set");
+        delegatorPool = IDelegatorPool(_delegatorPool);
     }
 
     /**
@@ -413,7 +413,7 @@ contract PoolRouter is Ownable {
     }
 
     /**
-     * @notice returns the reserved allocation for the user based on their amount of allocation staked in the lending pool.
+     * @notice returns the reserved allocation for the user based on their amount of allocation staked in the delegator pool.
      * If the user has no allowance staked, the public allocation is returned. The public allocation reduces the more allowance
      * stakers reserve their space.
      */
@@ -425,10 +425,10 @@ contract PoolRouter is Ownable {
     ) private view returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
 
-        if (lendingPool.balanceOf(_account) == 0) {
+        if (delegatorPool.balanceOf(_account) == 0) {
             return 0;
         }
-        uint accountMaxStake = (((((1e18 * lendingPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
+        uint accountMaxStake = (((((1e18 * delegatorPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
             stakingPool.maxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
 
         if (stakingPool.balanceOf(_account) >= accountMaxStake) {

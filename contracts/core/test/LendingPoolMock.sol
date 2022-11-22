@@ -2,10 +2,10 @@
 pragma solidity 0.8.15;
 
 /**
- * @title Lending Pool Mock
+ * @title Delegator Pool Mock
  * @notice Mocks contract for testing
  */
-contract LendingPoolMock {
+contract DelegatorPoolMock {
     address public token;
     uint16 public index;
     uint public totalRewards;

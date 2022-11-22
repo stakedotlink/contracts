@@ -10,10 +10,10 @@ import "./interfaces/IPoolRouter.sol";
 import "./interfaces/IFeeCurve.sol";
 
 /**
- * @title Lending Pool
+ * @title Delegator Pool
  * @notice Allows users to stake allowance tokens, stakers receive a percentage of earned rewards
  */
-contract LendingPool is RewardsPoolController {
+contract DelegatorPool is RewardsPoolController {
     using SafeERC20 for IERC20;
 
     struct VestingSchedule {
@@ -80,7 +80,7 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice receipt tokens within the lending pool cannot be transferred
+     * @notice receipt tokens within the delegator pool cannot be transferred
      */
     function _transfer(
         address,
@@ -166,7 +166,7 @@ contract LendingPool is RewardsPoolController {
     }
 
     /**
-     * @notice stakes allowance tokens for lending
+     * @notice stakes allowance tokens
      * @param _amount amount to stake
      **/
     function _stakeAllowance(address _sender, uint _amount) private updateRewards(_sender) {
