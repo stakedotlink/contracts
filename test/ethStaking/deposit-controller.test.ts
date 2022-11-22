@@ -71,7 +71,6 @@ describe('DepositController', () => {
       'Wrapped LinkPool ETH',
       'wlplETH',
     ])) as WrappedSDToken
-    await stakingPool.setWSDToken(wsdToken.address)
 
     depositContract = (await deploy('DepositContract')) as DepositContract
 

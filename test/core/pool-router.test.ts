@@ -47,13 +47,6 @@ describe('PoolRouter', () => {
       lendingPool.address,
     ])) as StakingPool
 
-    let wsdToken = (await deploy('WrappedSDToken', [
-      stakingPool.address,
-      'Wrapped LinkPool LINK',
-      'wlplLINK',
-    ])) as WrappedSDToken
-    await stakingPool.setWSDToken(wsdToken.address)
-
     let strategy1 = (await deployUpgradeable('StrategyMock', [
       token,
       stakingPool.address,
@@ -125,11 +118,18 @@ describe('PoolRouter', () => {
     stakingPool2 = await createPool(poolRouter, token1.address)
     stakingPool3 = await createPool(poolRouter, token2.address)
 
-    let rewardsPool = await deploy('RewardsPool', [
+    let wsdToken = (await deploy('WrappedSDToken', [
+      stakingPool1.address,
+      'Wrapped LinkPool LINK',
+      'wlplLINK',
+    ])) as WrappedSDToken
+
+    let rewardsPool = await deploy('RewardsPoolWSD', [
       lendingPool.address,
-      await stakingPool1.wsdToken(),
+      stakingPool1.address,
+      wsdToken.address,
     ])
-    await lendingPool.addToken(await stakingPool1.wsdToken(), rewardsPool.address)
+    await lendingPool.addToken(stakingPool1.address, rewardsPool.address)
 
     await stakeAllowances()
   })
