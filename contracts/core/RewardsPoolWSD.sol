@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.15;
+
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "./interfaces/IRewardsPoolController.sol";
+import "./interfaces/IWrappedSDToken.sol";
+import "./RewardsPool.sol";
+
+/**
+ * @title RewardsPoolWSD
+ * @notice Handles reward distribution for a single wrapped staking derivative token
+ * @dev rewards can only be positive (user balances can only increase)
+ */
+contract RewardsPoolWSD is RewardsPool {
+    using SafeERC20 for IERC677;
+
+    IWrappedSDToken public wsdToken;
+
+    constructor(
+        address _controller,
+        address _token,
+        address _wsdToken
+    ) RewardsPool(_controller, _token) {
+        wsdToken = IWrappedSDToken(_wsdToken);
+    }
+
+    /**
+     * @notice returns an account's total unwrapped withdrawable rewards (principal balance + newly earned rewards)
+     * @param _account account to return rewards for
+     * @return account's total unclaimed rewards
+     **/
+    function withdrawableRewards(address _account) public view override returns (uint) {
+        return
+            wsdToken.getUnderlyingByWrapped(
+                (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+                    1e18 +
+                    userRewards[_account]
+            );
+    }
+
+    /**
+     * @notice returns an account's total wrapped withdrawable rewards (principal balance + newly earned rewards)
+     * @param _account account to return rewards for
+     * @return account's total unclaimed rewards
+     **/
+    function withdrawableRewardsWrapped(address _account) public view returns (uint) {
+        return
+            (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            1e18 +
+            userRewards[_account];
+    }
+
+    /**
+     * @notice distributes new rewards that have been deposited
+     **/
+    function distributeRewards() public override {
+        require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
+
+        uint balance = token.balanceOf(address(this));
+        token.transferAndCall(address(wsdToken), balance, "0x00");
+
+        uint256 toDistribute = wsdToken.balanceOf(address(this)) - totalRewards;
+        totalRewards += toDistribute;
+        _updateRewardPerToken(toDistribute);
+
+        emit DistributeRewards(msg.sender, controller.totalStaked(), balance);
+    }
+
+    /**
+     * @notice updates an account's principal reward balance
+     * @param _account account to update for
+     **/
+    function updateReward(address _account) public override {
+        uint newRewards = withdrawableRewardsWrapped(_account) - userRewards[_account];
+        if (newRewards > 0) {
+            userRewards[_account] += newRewards;
+        }
+        userRewardPerTokenPaid[_account] = rewardPerToken;
+    }
+
+    /**
+     * @notice withdraws rewards for an account
+     * @param _account account to withdraw for
+     **/
+    function _withdraw(address _account) internal override {
+        uint256 toWithdraw = withdrawableRewardsWrapped(_account);
+        uint toWithdrawUnwrapped = wsdToken.getUnderlyingByWrapped(toWithdraw);
+
+        if (toWithdraw > 0) {
+            updateReward(_account);
+            userRewards[_account] -= toWithdraw;
+            totalRewards -= toWithdraw;
+
+            wsdToken.unwrap(toWithdraw);
+            token.safeTransfer(_account, toWithdrawUnwrapped);
+
+            emit Withdraw(_account, toWithdrawUnwrapped);
+        }
+    }
+}

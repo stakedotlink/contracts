@@ -34,7 +34,7 @@ contract RewardsPool {
      * @param _account account to return rewards for
      * @return account's total unclaimed rewards
      **/
-    function withdrawableRewards(address _account) public view returns (uint) {
+    function withdrawableRewards(address _account) public view virtual returns (uint) {
         return
             (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
@@ -45,10 +45,7 @@ contract RewardsPool {
      * @notice withdraws an account's earned rewards
      **/
     function withdraw() external {
-        uint256 toWithdraw = withdrawableRewards(msg.sender);
-        require(toWithdraw > 0, "No rewards to withdraw");
-
-        _withdraw(msg.sender, toWithdraw);
+        _withdraw(msg.sender);
     }
 
     /**
@@ -58,12 +55,7 @@ contract RewardsPool {
      **/
     function withdraw(address _account) external {
         require(msg.sender == address(controller), "Controller only");
-
-        uint256 toWithdraw = withdrawableRewards(_account);
-
-        if (toWithdraw > 0) {
-            _withdraw(_account, toWithdraw);
-        }
+        _withdraw(_account);
     }
 
     /**
@@ -81,7 +73,7 @@ contract RewardsPool {
     /**
      * @notice distributes new rewards that have been deposited
      **/
-    function distributeRewards() public {
+    function distributeRewards() public virtual {
         require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
         uint256 toDistribute = token.balanceOf(address(this)) - totalRewards;
         totalRewards += toDistribute;
@@ -104,14 +96,16 @@ contract RewardsPool {
     /**
      * @notice withdraws rewards for an account
      * @param _account account to withdraw for
-     * @param _amount amount to withdraw
      **/
-    function _withdraw(address _account, uint _amount) internal {
-        updateReward(_account);
-        userRewards[_account] -= _amount;
-        totalRewards -= _amount;
-        token.safeTransfer(_account, _amount);
-        emit Withdraw(_account, _amount);
+    function _withdraw(address _account) internal virtual {
+        uint256 toWithdraw = withdrawableRewards(_account);
+        if (toWithdraw > 0) {
+            updateReward(_account);
+            userRewards[_account] -= toWithdraw;
+            totalRewards -= toWithdraw;
+            token.safeTransfer(_account, toWithdraw);
+            emit Withdraw(_account, toWithdraw);
+        }
     }
 
     /**
