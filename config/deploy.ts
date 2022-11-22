@@ -1,15 +1,14 @@
 export const config = {
-  PoolOwners: {
-    derivativeTokenName: 'Staked LPL',
-    derivativeTokenSymbol: 'stLPL',
-  },
   StakingAllowance: {
     name: 'Staking Allowance',
     symbol: 'STA',
+    initialSupply: 220000000,
   },
-  LendingPool: {
+  DelegatorPool: {
     derivativeTokenName: 'Staked STA',
     derivativeTokenSymbol: 'stSTA',
+  },
+  RampUpCurve: {
     rateConstantA: 10,
     rateConstantB: 500,
     rateConstantC: 6,
@@ -24,8 +23,7 @@ export const config = {
   LINK_StakingPool: {
     derivativeTokenName: 'Staked LINK',
     derivativeTokenSymbol: 'stLINK',
-    fees: [],
-    ownersFeeBasisPoints: 1000,
+    fees: [['0x11187eff852069a33d102476b2E8A9cc9167dAde', 300]],
   },
 
   ETH_WrappedSDToken: {

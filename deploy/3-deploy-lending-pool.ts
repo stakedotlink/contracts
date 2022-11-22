@@ -7,7 +7,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { LendingPool } = config
+  const { DelegatorPool, RampUpCurve } = config
 
   const stakingAllowance = await ethers.getContract('StakingAllowance')
   const poolRouter = await ethers.getContract('PoolRouter')
@@ -16,30 +16,30 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     log: true,
     args: [
-      LendingPool.rateConstantA,
-      LendingPool.rateConstantB,
-      LendingPool.rateConstantC,
-      LendingPool.rateConstantD,
-      LendingPool.rateConstantE,
+      RampUpCurve.rateConstantA,
+      RampUpCurve.rateConstantB,
+      RampUpCurve.rateConstantC,
+      RampUpCurve.rateConstantD,
+      RampUpCurve.rateConstantE,
     ],
   })
   const feeCurve = await ethers.getContract('RampUpCurve')
 
-  await deploy('LendingPool', {
+  await deploy('DelegatorPool', {
     from: deployer,
     log: true,
     args: [
       stakingAllowance.address,
-      LendingPool.derivativeTokenName,
-      LendingPool.derivativeTokenSymbol,
+      DelegatorPool.derivativeTokenName,
+      DelegatorPool.derivativeTokenSymbol,
       poolRouter.address,
       feeCurve.address,
     ],
   })
-  const lendingPool = await ethers.getContract('LendingPool')
+  const delegatorPool = await ethers.getContract('DelegatorPool')
 
-  const tx = await poolRouter.setLendingPool(lendingPool.address)
+  const tx = await poolRouter.setDelegatorPool(delegatorPool.address)
   await tx.wait()
 }
 
-module.exports.tags = ['LendingPool']
+module.exports.tags = ['DelegatorPool']

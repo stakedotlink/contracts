@@ -11,8 +11,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
 
   const linkToken = await ethers.getContract('LinkToken')
   const poolRouter = await ethers.getContract('PoolRouter')
-  const lendingPool = await ethers.getContract('LendingPool')
-  const poolOwners = await ethers.getContract('PoolOwners')
+  const delegatorPool = await ethers.getContract('DelegatorPool')
 
   await deploy('LINK_StakingPool', {
     contract: 'StakingPool',
@@ -22,9 +21,9 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
       linkToken.address,
       LINK_StakingPool.derivativeTokenName,
       LINK_StakingPool.derivativeTokenSymbol,
-      [[poolOwners.address, LINK_StakingPool.ownersFeeBasisPoints], ...LINK_StakingPool.fees],
+      LINK_StakingPool.fees,
       poolRouter.address,
-      lendingPool.address,
+      delegatorPool.address,
     ],
   })
   const stakingPool = await ethers.getContract('LINK_StakingPool')
@@ -37,30 +36,17 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   })
   const wsdToken = await ethers.getContract('LINK_WrappedSDToken')
 
-  const wstLinkOwnersRewardsPool = await deploy('wstLINK_OwnersRewardsPool', {
-    contract: 'RewardsPool',
+  const wstLinkDelegatorRewardsPool = await deploy('wstLINK_DelegatorRewardsPool', {
+    contract: 'RewardsPoolWSD',
     from: deployer,
     log: true,
-    args: [poolOwners.address, wsdToken.address],
+    args: [delegatorPool.address, stakingPool.address, wsdToken.address],
   })
 
-  let tx = await stakingPool.setWSDToken(wsdToken.address)
+  let tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0)
   await tx.wait()
 
-  tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0)
-  await tx.wait()
-
-  tx = await poolOwners.addToken(wsdToken.address, wstLinkOwnersRewardsPool.address)
-  await tx.wait()
-
-  const linkLendingRewardsPool = await deploy('wstLINK_LendingRewardsPool', {
-    contract: 'RewardsPool',
-    from: deployer,
-    log: true,
-    args: [lendingPool.address, wsdToken.address],
-  })
-
-  tx = await lendingPool.addToken(wsdToken.address, linkLendingRewardsPool.address)
+  tx = await delegatorPool.addToken(linkToken.address, wstLinkDelegatorRewardsPool.address)
   await tx.wait()
 
   console.log('deploy-status-ready')
