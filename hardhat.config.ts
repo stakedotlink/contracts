@@ -32,8 +32,8 @@ const config: HardhatUserConfig = {
       accounts,
     },
     mainnet: {
-      url: 'https://main-light.eth.linkpool.io/',
-      accounts,
+      url: 'http://localhost:1248',
+      accounts: "remote",
     },
     testnet: {
       url: 'https://staking-metrics-monitor-beta.staging.linkpool.io/dev',
