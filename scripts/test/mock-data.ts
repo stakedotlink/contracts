@@ -1,5 +1,5 @@
-import { deployUpgradeable, getAccounts, toEther } from '../utils/helpers'
-import { ERC677, PoolOwners, PoolRouter, StakingPool, LendingPool } from '../../typechain-types'
+import { deployUpgradeable, getAccounts, toEther, fromEther } from '../utils/helpers'
+// import { ERC677,  PoolRouter, StakingPool } from '../../typechain-types'
 import { ethers } from 'hardhat'
 
 /*
@@ -14,16 +14,14 @@ Accounts:
 async function main() {
   const { signers, accounts } = await getAccounts()
 
-  const linkToken = (await ethers.getContract('LinkToken')) as ERC677
-  const ownersToken = (await ethers.getContract('OwnersToken')) as ERC677
-  const stakingAllowance = (await ethers.getContract('StakingAllowance')) as ERC677
-  const stakingPool = (await ethers.getContract('LINK_StakingPool')) as StakingPool
-  const poolOwners = (await ethers.getContract('PoolOwners')) as PoolOwners
-  const poolRouter = (await ethers.getContract('PoolRouter')) as PoolRouter
+  const linkToken = (await ethers.getContract('LinkToken')) as any
+  const ownersToken = (await ethers.getContract('OwnersToken')) as any
+  const stakingAllowance = (await ethers.getContract('StakingAllowance')) as any
+  const stakingPool = (await ethers.getContract('LINK_StakingPool')) as any
+  const poolRouter = (await ethers.getContract('PoolRouter')) as any
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
-  const LINK_WrappedSDToken = (await ethers.getContract('LINK_WrappedSDToken')) as any
-  const lendingPool = (await ethers.getContract('LendingPool')) as any
+  const delegatorPool = (await ethers.getContract('DelegatorPool')) as any
 
   const poolMin = 10
   const poolMax = 1000000
@@ -51,16 +49,27 @@ async function main() {
   await ownersToken.transfer(accounts[3], toEther(10000))
   await stakingAllowance.transfer(accounts[3], toEther(40000))
 
-  // stake LPL
-  await ownersToken.connect(signers[3]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
-
-  // stake STA and LINK
+  // stake SDL
 
   await stakingAllowance
     .connect(signers[3])
-    .transferAndCall(lendingPool.address, toEther(1000), '0x00')
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
 
-  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(10), '0x00')
+  const canDepositAddress3 = await poolRouter['canDeposit(address,address,uint16)'](
+    accounts[3],
+    linkToken.address,
+    '0x00'
+  )
+
+  // const canDeposit2 = await poolRouter['canDeposit(address,uint16,uint256)'](linkToken.address, '0x00', toEther(1000))
+  // console.log('canDeposit', fromEther(canDeposit)) /// canDeposit 4.545454545454
+  // console.log('canDeposit2', fromEther(canDeposit2)) /// canDeposit 4.545454545454
+
+  // stake LINK
+
+  await linkToken
+    .connect(signers[3])
+    .transferAndCall(poolRouter.address, canDepositAddress3, '0x00')
 
   // account 4
 
@@ -68,26 +77,28 @@ async function main() {
   await ownersToken.transfer(accounts[4], toEther(10000))
   await stakingAllowance.transfer(accounts[4], toEther(100000))
 
-  // stake LPL
-  await ownersToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(1000), '0x00')
+  // stake SDL
 
   await stakingAllowance
     .connect(signers[4])
-    .transferAndCall(lendingPool.address, toEther(100000), '0x00')
+    .transferAndCall(delegatorPool.address, toEther(100000), '0x00')
 
-  await linkToken.connect(signers[4]).transferAndCall(poolRouter.address, toEther(1000), '0x00')
-
-  // send LINK rewards to owners pool
-  await linkToken.connect(signers[4]).transferAndCall(poolOwners.address, toEther(100), '0x00')
-  // send stLINK rewards to owners pool
-  await stakingPool
-    .connect(signers[4])
-    .transferAndCall(LINK_WrappedSDToken.address, toEther(100), '0x00')
-  await LINK_WrappedSDToken.connect(signers[4]).transferAndCall(
-    poolOwners.address,
-    toEther(100),
+  const canDepositAddress4 = await poolRouter['canDeposit(address,address,uint16)'](
+    accounts[4],
+    linkToken.address,
     '0x00'
   )
+
+  // stake LINK
+
+  await linkToken
+    .connect(signers[4])
+    .transferAndCall(poolRouter.address, canDepositAddress4, '0x00')
+
+  // send stLINK rewards to owners pool
+  // await stakingPool
+  //   .connect(signers[4])
+  //   .transferAndCall(LINK_WrappedSDToken.address, toEther(100), '0x00')
 }
 
 main()

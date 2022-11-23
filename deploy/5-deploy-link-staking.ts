@@ -43,7 +43,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     args: [delegatorPool.address, stakingPool.address, wsdToken.address],
   })
 
-  let tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0)
+  let tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0, true)
   await tx.wait()
 
   tx = await delegatorPool.addToken(linkToken.address, wstLinkDelegatorRewardsPool.address)

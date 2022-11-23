@@ -11,7 +11,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('PoolRouter', {
     from: deployer,
     log: true,
-    args: [stakingAllowance.address, true],
+    args: [stakingAllowance.address],
   })
 }
 
