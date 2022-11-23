@@ -482,16 +482,12 @@ describe('PoolRouter', () => {
 
     it('maximum stake for unreserved pools should be unaffected', async () => {
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,uint16,uint256)'](token1.address, 1, toEther(1))
-        ),
+        fromEther(await poolRouter.canDepositByAllowance(token1.address, 1, toEther(1))),
         10000,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[4], token1.address, 1)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[4], token1.address, 1)),
         10000,
         'incorrect maximum stake'
       )
@@ -507,18 +503,14 @@ describe('PoolRouter', () => {
 
     it('should be able to calculate maximum stake for an arbitrary amount of allowance', async () => {
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,uint16,uint256)'](token1.address, 0, toEther(600))
-        ),
+        fromEther(await poolRouter.canDepositByAllowance(token1.address, 0, toEther(600))),
         600,
         'incorrect maximum stake'
       )
       await poolRouter.setReservedModeActive(token1.address, 0, false)
 
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,uint16,uint256)'](token1.address, 0, toEther(60))
-        ),
+        fromEther(await poolRouter.canDepositByAllowance(token1.address, 0, toEther(60))),
         10000,
         'incorrect maximum stake'
       )
@@ -526,30 +518,22 @@ describe('PoolRouter', () => {
 
     it('should be able to calculate maximum stake when reserved space is 50%', async () => {
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[3], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[3], token1.address, 0)),
         0,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[2], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[2], token1.address, 0)),
         500,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[1], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[1], token1.address, 0)),
         300,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[0], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[0], token1.address, 0)),
         200,
         'incorrect maximum stake'
       )
@@ -559,23 +543,17 @@ describe('PoolRouter', () => {
       await poolRouter.setReservedSpaceMultiplier(15000)
 
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[2], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[2], token1.address, 0)),
         750,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[1], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[1], token1.address, 0)),
         450,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[0], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[0], token1.address, 0)),
         300,
         'incorrect maximum stake'
       )
@@ -591,9 +569,7 @@ describe('PoolRouter', () => {
         'incorrect staked balance'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[2], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[2], token1.address, 0)),
         350,
         'incorrect maximum stake'
       )
@@ -612,16 +588,12 @@ describe('PoolRouter', () => {
         .connect(signers[2])
         .transferAndCall(poolRouter.address, toEther(250), padBytes('0x0', 32))
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[2], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[2], token1.address, 0)),
         250,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[1], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[1], token1.address, 0)),
         300,
         'incorrect maximum stake'
       )
@@ -686,23 +658,17 @@ describe('PoolRouter', () => {
         'incorrect pool utilisation'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[2], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[2], token1.address, 0)),
         500,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[1], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[1], token1.address, 0)),
         300,
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[0], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[0], token1.address, 0)),
         200,
         'incorrect maximum stake'
       )
@@ -721,9 +687,7 @@ describe('PoolRouter', () => {
         'incorrect maximum stake'
       )
       assert.equal(
-        fromEther(
-          await poolRouter['canDeposit(address,address,uint16)'](accounts[0], token1.address, 0)
-        ),
+        fromEther(await poolRouter.canDeposit(accounts[0], token1.address, 0)),
         0,
         'incorrect maximum stake'
       )
