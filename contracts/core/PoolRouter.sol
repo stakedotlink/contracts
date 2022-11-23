@@ -31,7 +31,6 @@ contract PoolRouter is Ownable {
         IStakingPool stakingPool;
         PoolStatus status;
         bool reservedModeActive;
-        uint totalStaked;
     }
 
     IERC677 public immutable allowanceToken;
@@ -397,7 +396,6 @@ contract PoolRouter is Ownable {
         require(pool.status == PoolStatus.OPEN, "Pool is not open");
         require(_amount <= canDeposit(_account, _token, _index), "Not enough allowance staked");
 
-        pool.totalStaked += _amount;
         pool.stakingPool.stake(_account, _amount);
 
         emit StakeToken(_token, address(pool.stakingPool), _account, _amount);
@@ -420,11 +418,6 @@ contract PoolRouter is Ownable {
         require(pool.status != PoolStatus.CLOSED, "Pool is closed");
         require(pool.stakingPool.balanceOf(msg.sender) >= _amount, "Amount exceeds staked balance");
 
-        if (_amount > pool.totalStaked) {
-            pool.totalStaked = 0;
-        } else {
-            pool.totalStaked -= _amount;
-        }
         pool.stakingPool.withdraw(msg.sender, _receiver, _amount);
 
         emit WithdrawToken(_token, address(pool.stakingPool), msg.sender, _amount);
