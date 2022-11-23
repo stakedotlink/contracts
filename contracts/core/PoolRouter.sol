@@ -295,7 +295,7 @@ contract PoolRouter is Ownable {
      * @param _amount amount of allowance
      * @return amount that can be deposited
      **/
-    function canDeposit(
+    function canDepositByAllowance(
         address _token,
         uint16 _index,
         uint _amount
