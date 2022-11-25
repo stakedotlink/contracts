@@ -145,12 +145,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice returns the maximum amount that can be staked via the pool
      * @return the overall staking limit
      **/
-    function maxDeposits() public view returns (uint256) {
+    function getMaxDeposits() public view returns (uint256) {
         uint256 max;
 
         for (uint i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            max += strategy.maxDeposits();
+            max += strategy.getMaxDeposits();
         }
         if (liquidityBuffer > 0) {
             max += (max * liquidityBuffer) / 10000;
@@ -162,12 +162,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice returns the minimum amount that must remain the pool
      * @return min deposit
      */
-    function minDeposits() public view returns (uint256) {
+    function getMinDeposits() public view returns (uint256) {
         uint256 min;
 
         for (uint i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            min += strategy.minDeposits();
+            min += strategy.getMinDeposits();
         }
 
         return min;
@@ -178,7 +178,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @return available deposit room
      */
     function canDeposit() external view returns (uint256) {
-        uint max = maxDeposits();
+        uint max = getMaxDeposits();
 
         if (max <= totalStaked) {
             return 0;
@@ -192,7 +192,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @return available withdrawal room
      */
     function canWithdraw() external view returns (uint256) {
-        uint min = minDeposits();
+        uint min = getMinDeposits();
 
         if (min >= totalStaked) {
             return 0;
@@ -223,7 +223,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
         updateStrategyRewards(idxs);
 
         IStrategy strategy = IStrategy(strategies[_index]);
-        uint totalStrategyDeposits = strategy.totalDeposits();
+        uint totalStrategyDeposits = strategy.getTotalDeposits();
         if (totalStrategyDeposits > 0) {
             require(strategy.canWithdraw() == totalStrategyDeposits, "Strategy contains deposits that cannot be withdrawn");
             strategy.withdraw(totalStrategyDeposits);
