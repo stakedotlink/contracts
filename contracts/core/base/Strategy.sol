@@ -17,9 +17,6 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
     IERC20Upgradeable public token;
     IStakingPool public stakingPool;
 
-    uint public depositsMin;
-    uint public depositsMax;
-
     function __Strategy_init(address _token, address _stakingPool) public onlyInitializing {
         token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
@@ -37,11 +34,11 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @return available deposit room
      */
     function canDeposit() public view virtual returns (uint) {
-        uint deposits = totalDeposits();
-        if (deposits >= maxDeposits()) {
+        uint deposits = getTotalDeposits();
+        if (deposits >= getMaxDeposits()) {
             return 0;
         } else {
-            return maxDeposits() - deposits;
+            return getMaxDeposits() - deposits;
         }
     }
 
@@ -50,11 +47,11 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @return available withdrawal room
      */
     function canWithdraw() public view virtual returns (uint) {
-        uint deposits = totalDeposits();
-        if (deposits <= minDeposits()) {
+        uint deposits = getTotalDeposits();
+        if (deposits <= getMinDeposits()) {
             return 0;
         } else {
-            return deposits - minDeposits();
+            return deposits - getMinDeposits();
         }
     }
 
@@ -62,19 +59,19 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @notice returns the total amount of deposits in this strategy
      * @return total deposits
      */
-    function totalDeposits() public view virtual returns (uint);
+    function getTotalDeposits() public view virtual returns (uint);
 
     /**
      * @notice returns the maximum that can be deposited into the strategy
      * @return max deposit
      */
-    function maxDeposits() public view virtual returns (uint);
+    function getMaxDeposits() public view virtual returns (uint);
 
     /**
      * @notice returns the minimum that must remain the strategy
      * @return min deposit
      */
-    function minDeposits() public view virtual returns (uint);
+    function getMinDeposits() public view virtual returns (uint);
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }

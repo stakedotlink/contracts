@@ -129,7 +129,7 @@ contract PoolRouter is Ownable {
     function poolUtilisation(address _token, uint16 _index) external view returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         uint totalSupply = stakingPool.totalSupply();
-        uint maxDeposits = stakingPool.maxDeposits();
+        uint maxDeposits = stakingPool.getMaxDeposits();
         return (maxDeposits > totalSupply) ? (1e18 * totalSupply) / maxDeposits : 1 ether;
     }
 
@@ -304,7 +304,7 @@ contract PoolRouter is Ownable {
         bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
         uint maximumStake = stakingPool.canDeposit();
 
-        uint accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.maxDeposits()) / 1e18) /
+        uint accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.getMaxDeposits()) / 1e18) /
             1e4) * reservedMultiplier;
 
         return (!reservedModeActive || accountMaxStake > maximumStake) ? maximumStake : accountMaxStake;
@@ -440,7 +440,7 @@ contract PoolRouter is Ownable {
             return 0;
         }
         uint accountMaxStake = (((((1e18 * delegatorPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
-            stakingPool.maxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
+            stakingPool.getMaxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
 
         if (stakingPool.balanceOf(_account) >= accountMaxStake) {
             return 0;

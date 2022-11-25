@@ -49,8 +49,8 @@ describe('GovernanceController', () => {
       [accounts[0], accounts[1]],
       [strategy.address, strategy2.address],
       [
-        [getSigHash('setDepositMin(uint)'), getSigHash('setDepositMax(uint)')],
-        [getSigHash('setDepositMin(uint)')],
+        [getSigHash('setMinDeposits(uint)'), getSigHash('setMaxDeposits(uint)')],
+        [getSigHash('setMinDeposits(uint)')],
       ]
     )
   })
@@ -61,8 +61,8 @@ describe('GovernanceController', () => {
       [accounts[0], accounts[1]],
       [strategy.address, strategy2.address],
       [
-        [getSigHash('setDepositMin(uint)')],
-        [getSigHash('setDepositMin(uint)'), getSigHash('setDepositMax(uint)')],
+        [getSigHash('setMinDeposits(uint)')],
+        [getSigHash('setMinDeposits(uint)'), getSigHash('setMaxDeposits(uint)')],
       ]
     )
 
@@ -71,19 +71,19 @@ describe('GovernanceController', () => {
     assert.equal(await govController.hasRole(1, accounts[1]), true)
     assert.equal(await govController.hasRole(1, accounts[2]), false)
     assert.equal(
-      await govController.hasFunction(1, strategy.address, getSigHash('setDepositMin(uint)')),
+      await govController.hasFunction(1, strategy.address, getSigHash('setMinDeposits(uint)')),
       true
     )
     assert.equal(
-      await govController.hasFunction(1, strategy.address, getSigHash('setDepositMax(uint)')),
+      await govController.hasFunction(1, strategy.address, getSigHash('setMaxDeposits(uint)')),
       false
     )
     assert.equal(
-      await govController.hasFunction(1, strategy2.address, getSigHash('setDepositMin(uint)')),
+      await govController.hasFunction(1, strategy2.address, getSigHash('setMinDeposits(uint)')),
       true
     )
     assert.equal(
-      await govController.hasFunction(1, strategy2.address, getSigHash('setDepositMax(uint)')),
+      await govController.hasFunction(1, strategy2.address, getSigHash('setMaxDeposits(uint)')),
       true
     )
   })
@@ -129,7 +129,7 @@ describe('GovernanceController', () => {
       govController.addRoleFunctions(
         0,
         [strategy.address],
-        [[getSigHash('setFeeBasisPoints(uint)'), getSigHash('setDepositMin(uint)')]]
+        [[getSigHash('setFeeBasisPoints(uint)'), getSigHash('setMinDeposits(uint)')]]
       )
     ).to.be.revertedWith('Function is already part of role')
 
@@ -137,13 +137,13 @@ describe('GovernanceController', () => {
       0,
       [strategy2.address, strategy.address],
       [
-        [getSigHash('setFeeBasisPoints(uint)'), getSigHash('setDepositMax(uint)')],
+        [getSigHash('setFeeBasisPoints(uint)'), getSigHash('setMaxDeposits(uint)')],
         [getSigHash('simulateSlash(uint)')],
       ]
     )
 
     assert.equal(
-      await govController.hasFunction(0, strategy2.address, getSigHash('setDepositMax(uint)')),
+      await govController.hasFunction(0, strategy2.address, getSigHash('setMaxDeposits(uint)')),
       true
     )
     assert.equal(
@@ -165,7 +165,7 @@ describe('GovernanceController', () => {
       govController.removeRoleFunctions(
         0,
         [strategy.address],
-        [[getSigHash('setFeeBasisPoints(uint)'), getSigHash('setDepositMin(uint)')]]
+        [[getSigHash('setFeeBasisPoints(uint)'), getSigHash('setMinDeposits(uint)')]]
       )
     ).to.be.revertedWith('Function is not part of role')
 
@@ -173,21 +173,21 @@ describe('GovernanceController', () => {
       0,
       [strategy2.address, strategy.address],
       [
-        [getSigHash('setDepositMin(uint)')],
-        [getSigHash('setDepositMax(uint)'), getSigHash('setDepositMin(uint)')],
+        [getSigHash('setMinDeposits(uint)')],
+        [getSigHash('setMaxDeposits(uint)'), getSigHash('setMinDeposits(uint)')],
       ]
     )
 
     assert.equal(
-      await govController.hasFunction(0, strategy2.address, getSigHash('setDepositMin(uint)')),
+      await govController.hasFunction(0, strategy2.address, getSigHash('setMinDeposits(uint)')),
       false
     )
     assert.equal(
-      await govController.hasFunction(0, strategy.address, getSigHash('setDepositMax(uint)')),
+      await govController.hasFunction(0, strategy.address, getSigHash('setMaxDeposits(uint)')),
       false
     )
     assert.equal(
-      await govController.hasFunction(0, strategy.address, getSigHash('setDepositMin(uint)')),
+      await govController.hasFunction(0, strategy.address, getSigHash('setMinDeposits(uint)')),
       false
     )
   })
@@ -196,7 +196,7 @@ describe('GovernanceController', () => {
     await expect(
       govController
         .connect(signers[2])
-        .callFunction(0, strategy.address, encodeFunctionData('setDepositMin', ['0']))
+        .callFunction(0, strategy.address, encodeFunctionData('setMinDeposits', ['0']))
     ).to.be.revertedWith('Sender does not hold specified role')
     await expect(
       govController.callFunction(
@@ -215,13 +215,13 @@ describe('GovernanceController', () => {
     await govController.callFunction(
       0,
       strategy.address,
-      encodeFunctionData('setDepositMin', ['0'])
+      encodeFunctionData('setMinDeposits', ['0'])
     )
-    assert.equal((await strategy.minDeposits()).toNumber(), 0)
+    assert.equal((await strategy.getMinDeposits()).toNumber(), 0)
 
     await govController
       .connect(signers[1])
-      .callFunction(0, strategy.address, encodeFunctionData('setDepositMin', ['1']))
-    assert.equal((await strategy.minDeposits()).toNumber(), 1)
+      .callFunction(0, strategy.address, encodeFunctionData('setMinDeposits', ['1']))
+    assert.equal((await strategy.getMinDeposits()).toNumber(), 1)
   })
 })

@@ -8,11 +8,11 @@ interface IStrategy {
 
     function updateDeposits() external returns (address[] memory receivers, uint[] memory amounts);
 
-    function totalDeposits() external view returns (uint256);
+    function getTotalDeposits() external view returns (uint256);
 
-    function maxDeposits() external view returns (uint256);
+    function getMaxDeposits() external view returns (uint256);
 
-    function minDeposits() external view returns (uint256);
+    function getMinDeposits() external view returns (uint256);
 
     function canDeposit() external view returns (uint256);
 

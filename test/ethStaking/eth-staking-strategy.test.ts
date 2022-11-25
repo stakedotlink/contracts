@@ -178,7 +178,7 @@ describe('EthStakingStrategy', () => {
   it('should be able to deposit into strategy', async () => {
     await stake(2)
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 2, 'strategy balance incorrect')
-    assert.equal(fromEther(await strategy.totalDeposits()), 2, 'totalDeposits incorrect')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 2, 'getTotalDeposits incorrect')
     assert.equal(fromEther(await strategy.bufferedETH()), 2)
   })
 
@@ -414,7 +414,7 @@ describe('EthStakingStrategy', () => {
       'owners rewards incorrect'
     )
     assert.equal(fromEther(await strategy.depositChange()), 0, 'depositChange incorrect')
-    assert.equal(fromEther(await strategy.totalDeposits()), 1105, 'totalDeposits incorrect')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1105, 'getTotalDeposits incorrect')
     assert.equal(fromEther(await stakingPool.totalSupply()), 1105, 'totalSupply incorrect')
   })
 
@@ -446,7 +446,7 @@ describe('EthStakingStrategy', () => {
       'owners rewards incorrect'
     )
     assert.equal(fromEther(await strategy.depositChange()), 0, 'depositChange incorrect')
-    assert.equal(fromEther(await strategy.totalDeposits()), 999, 'totalDeposits incorrect')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 999, 'getTotalDeposits incorrect')
     assert.equal(fromEther(await stakingPool.totalSupply()), 999, 'totalSupply incorrect')
   })
 
@@ -547,17 +547,17 @@ describe('EthStakingStrategy', () => {
     ).to.be.revertedWith('Not implemented yet')
   })
 
-  it('setDepositMax and setDepositMin should work correctly', async () => {
-    await strategy.setDepositMax(toEther(33))
-    await strategy.setDepositMin(toEther(44))
+  it('setMaxDeposits and setMinDeposits should work correctly', async () => {
+    await strategy.setMaxDeposits(toEther(33))
+    await strategy.setMinDeposits(toEther(44))
 
-    assert.equal(fromEther(await strategy.maxDeposits()), 33, 'maxDeposits incorrect')
-    assert.equal(fromEther(await strategy.minDeposits()), 44, 'minDeposits incorrect')
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 33, 'maxDeposits incorrect')
+    assert.equal(fromEther(await strategy.getMinDeposits()), 44, 'minDeposits incorrect')
 
-    await expect(strategy.connect(signers[1]).setDepositMax(toEther(1))).to.be.revertedWith(
+    await expect(strategy.connect(signers[1]).setMaxDeposits(toEther(1))).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
-    await expect(strategy.connect(signers[1]).setDepositMin(toEther(1))).to.be.revertedWith(
+    await expect(strategy.connect(signers[1]).setMinDeposits(toEther(1))).to.be.revertedWith(
       'Ownable: caller is not the owner'
     )
   })

@@ -45,16 +45,16 @@ contract EthStakingStrategy is Strategy {
     uint public nwlLostOperatorStakes;
 
     int public depositChange;
-    uint public depositTotal;
+    uint public totalDeposits;
     uint public bufferedETH;
 
-    uint private depositMax;
-    uint private depositMin;
+    uint private maxDeposits;
+    uint private minDeposits;
 
     event DepositEther(uint nwlValidatorCount, uint wlValidatorCount);
     event ReportBeaconState(uint beaconValidators, uint beaconBalance, uint nwlLostOperatorStakes);
-    event SetDepositMax(uint max);
-    event SetDepositMin(uint min);
+    event SetMaxDeposits(uint max);
+    event SetMinDeposits(uint min);
     event SetDepositController(address controller);
     event SetRewardsReceiver(address rewardsReceiver);
     event SetBeaconOracle(address oracle);
@@ -69,8 +69,8 @@ contract EthStakingStrategy is Strategy {
     function initialize(
         address _wETH,
         address _stakingPool,
-        uint _depositMax,
-        uint _depositMin,
+        uint _maxDeposits,
+        uint _minDeposits,
         address _depositContract,
         bytes32 _withdrawalCredentials,
         uint _operatorFeeBasisPoints
@@ -79,8 +79,8 @@ contract EthStakingStrategy is Strategy {
         depositContract = IDepositContract(_depositContract);
         withdrawalCredentials = _withdrawalCredentials;
         operatorFeeBasisPoints = _operatorFeeBasisPoints;
-        depositMax = _depositMax;
-        depositMin = _depositMin;
+        maxDeposits = _maxDeposits;
+        minDeposits = _minDeposits;
     }
 
     receive() external payable {}
@@ -209,7 +209,7 @@ contract EthStakingStrategy is Strategy {
     function deposit(uint _amount) external onlyStakingPool {
         require(_amount <= canDeposit(), "Insufficient deposit room");
         token.transferFrom(address(stakingPool), address(this), _amount);
-        depositTotal += _amount;
+        totalDeposits += _amount;
         bufferedETH += _amount;
     }
 
@@ -241,7 +241,8 @@ contract EthStakingStrategy is Strategy {
             uint rewards = uint(depositChange);
 
             uint nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
-            uint nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) / (depositTotal + nwlOperatorDeposits);
+            uint nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) /
+                (totalDeposits + nwlOperatorDeposits);
 
             uint activeWLValidators = wlOperatorController.totalActiveValidators();
             uint activeNWLValidators = nwlOperatorController.totalActiveValidators();
@@ -258,7 +259,7 @@ contract EthStakingStrategy is Strategy {
             amounts[0] = wlOperatorFee;
             amounts[1] = nwlOperatorFee;
         }
-        depositTotal = uint(int(depositTotal) + depositChange);
+        totalDeposits = uint(int(totalDeposits) + depositChange);
         depositChange = 0;
     }
 
@@ -293,42 +294,42 @@ contract EthStakingStrategy is Strategy {
      * @notice returns the total amount of deposits in this strategy
      * @return total deposits
      */
-    function totalDeposits() public view override returns (uint) {
-        return depositTotal;
+    function getTotalDeposits() public view override returns (uint) {
+        return totalDeposits;
     }
 
     /**
      * @notice returns the maximum that can be deposited into the strategy
      * @return max deposit
      */
-    function maxDeposits() public view override returns (uint) {
-        return depositMax;
+    function getMaxDeposits() public view override returns (uint) {
+        return maxDeposits;
     }
 
     /**
      * @notice returns the minimum that must remain the strategy
      * @return min deposit
      */
-    function minDeposits() public view override returns (uint) {
-        return depositMin;
+    function getMinDeposits() public view override returns (uint) {
+        return minDeposits;
     }
 
     /**
      * @notice sets the maximum that can be deposited into the strategy
-     * @param _depositMax maximum deposits
+     * @param _maxDeposits maximum deposits
      */
-    function setDepositMax(uint256 _depositMax) external onlyOwner {
-        depositMax = _depositMax;
-        emit SetDepositMax(_depositMax);
+    function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
+        maxDeposits = _maxDeposits;
+        emit SetMaxDeposits(_maxDeposits);
     }
 
     /**
      * @notice sets the minimum that can be deposited into the strategy
-     * @param _depositMin minimum deposits
+     * @param _minDeposits minimum deposits
      */
-    function setDepositMin(uint256 _depositMin) external onlyOwner {
-        depositMin = _depositMin;
-        emit SetDepositMin(_depositMin);
+    function setMinDeposits(uint256 _minDeposits) external onlyOwner {
+        minDeposits = _minDeposits;
+        emit SetMinDeposits(_minDeposits);
     }
 
     /**

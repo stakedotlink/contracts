@@ -47,7 +47,7 @@ describe('Strategy', () => {
 
     let upgraded = await ethers.getContractAt('StrategyMockV2', strategy.address)
     assert.equal(await upgraded.contractVersion(), 2, 'contract not upgraded')
-    assert.equal(fromEther(await upgraded.totalDeposits()), 1000, 'state not persisted')
+    assert.equal(fromEther(await upgraded.getTotalDeposits()), 1000, 'state not persisted')
     assert.equal(fromEther(await token.balanceOf(upgraded.address)), 1000, 'balance not persisted')
   })
 

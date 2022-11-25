@@ -14,10 +14,10 @@ import "../RewardsPool.sol";
 contract StrategyMock is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint private depositMax;
-    uint private depositMin;
+    uint private maxDeposits;
+    uint private minDeposits;
 
-    uint private totalDeposited;
+    uint private totalDeposits;
     uint public feeBasisPoints;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -28,29 +28,29 @@ contract StrategyMock is Strategy {
     function initialize(
         address _token,
         address _stakingPool,
-        uint _depositMax,
-        uint _depositMin
+        uint _maxDeposits,
+        uint _minDeposits
     ) public initializer {
         __Strategy_init(_token, _stakingPool);
         feeBasisPoints = 0;
-        depositMax = _depositMax;
-        depositMin = _depositMin;
+        maxDeposits = _maxDeposits;
+        minDeposits = _minDeposits;
     }
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
     function depositChange() public view returns (int) {
-        return int(token.balanceOf(address(this))) - int(totalDeposited);
+        return int(token.balanceOf(address(this))) - int(totalDeposits);
     }
 
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        totalDeposited += _amount;
+        totalDeposits += _amount;
         // Deposit into earning protocol/node
     }
 
     function withdraw(uint256 _amount) external onlyStakingPool {
         require(_amount <= canWithdraw(), "Total deposits must remain >= minimum");
-        totalDeposited -= _amount;
+        totalDeposits -= _amount;
         //Withdraw from earning protocol/node
         token.safeTransfer(msg.sender, _amount);
     }
@@ -58,7 +58,7 @@ contract StrategyMock is Strategy {
     function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
         int256 balanceChange = depositChange();
         if (balanceChange > 0) {
-            totalDeposited += uint(balanceChange);
+            totalDeposits += uint(balanceChange);
             if (feeBasisPoints > 0) {
                 receivers = new address[](1);
                 amounts = new uint[](1);
@@ -66,7 +66,7 @@ contract StrategyMock is Strategy {
                 amounts[0] = (feeBasisPoints * uint(balanceChange)) / 10000;
             }
         } else if (balanceChange < 0) {
-            totalDeposited -= uint(balanceChange * -1);
+            totalDeposits -= uint(balanceChange * -1);
         }
     }
 
@@ -78,24 +78,24 @@ contract StrategyMock is Strategy {
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function totalDeposits() public view override returns (uint) {
-        return totalDeposited;
+    function getTotalDeposits() public view override returns (uint) {
+        return totalDeposits;
     }
 
-    function maxDeposits() public view override returns (uint) {
-        return depositMax;
+    function getMaxDeposits() public view override returns (uint) {
+        return maxDeposits;
     }
 
-    function minDeposits() public view override returns (uint) {
-        return depositMin;
+    function getMinDeposits() public view override returns (uint) {
+        return minDeposits;
     }
 
-    function setDepositMax(uint256 _depositMax) external onlyOwner {
-        depositMax = _depositMax;
+    function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
+        maxDeposits = _maxDeposits;
     }
 
-    function setDepositMin(uint256 _depositMin) external onlyOwner {
-        depositMin = _depositMin;
+    function setMinDeposits(uint256 _minDeposits) external onlyOwner {
+        minDeposits = _minDeposits;
     }
 
     function createRewardsPool(address _token) public {
