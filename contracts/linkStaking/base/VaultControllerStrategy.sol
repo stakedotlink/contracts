@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../../core/interfaces/IERC677.sol";
 import "../../core/base/Strategy.sol";
@@ -24,6 +25,8 @@ abstract contract VaultControllerStrategy is Strategy {
     IStaking public stakeController;
     Fee[] internal fees;
 
+    address public vaultImplementation;
+
     IVault[] internal vaults;
     uint internal totalDeposits;
     uint internal bufferedDeposits;
@@ -35,10 +38,15 @@ abstract contract VaultControllerStrategy is Strategy {
         address _token,
         address _stakingPool,
         address _stakeController,
+        address _vaultImplementation,
         uint _minDepositThreshold,
         Fee[] memory _fees
     ) public onlyInitializing {
         __Strategy_init(_token, _stakingPool);
+
+        require(_isContract(_vaultImplementation), "Vault implementation address must belong to a contract");
+        vaultImplementation = _vaultImplementation;
+
         stakeController = IStaking(_stakeController);
         minDepositThreshold = _minDepositThreshold;
         for (uint i = 0; i < _fees.length; i++) {
@@ -155,6 +163,26 @@ abstract contract VaultControllerStrategy is Strategy {
 
     function getVaultDepositLimits() public view virtual returns (uint, uint);
 
+    function migrateVaults(
+        uint _startIndex,
+        uint _numVaults,
+        bytes calldata _data
+    ) external onlyOwner {
+        for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
+            vaults[i].migrate(_data);
+        }
+    }
+
+    function upgradeVaults(
+        uint _startIndex,
+        uint _numVaults,
+        bytes memory _data
+    ) external onlyOwner {
+        for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
+            _upgradeVault(i, _data);
+        }
+    }
+
     /**
      * @notice adds a new fee
      * @param _receiver receiver of fee
@@ -197,14 +225,9 @@ abstract contract VaultControllerStrategy is Strategy {
         minDepositThreshold = _minDepositThreshold;
     }
 
-    function migrateVaults(
-        uint _startIndex,
-        uint _numVaults,
-        bytes calldata _data
-    ) external onlyOwner {
-        for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
-            vaults[i].migrate(_data);
-        }
+    function setVaultImplementation(address _vaultImplementation) external onlyOwner {
+        require(_isContract(_vaultImplementation), "Address must belong to a contract");
+        vaultImplementation = _vaultImplementation;
     }
 
     function _depositBufferedTokens(
@@ -241,5 +264,27 @@ abstract contract VaultControllerStrategy is Strategy {
             }
         }
         return _toDeposit - toDeposit;
+    }
+
+    function _deployVault(bytes memory _data) internal {
+        address vault = address(new ERC1967Proxy(vaultImplementation, _data));
+        vaults.push(IVault(vault));
+    }
+
+    function _upgradeVault(uint _vaultIdx, bytes memory _data) internal {
+        IVault vault = vaults[_vaultIdx];
+        if (_data.length == 0) {
+            vault.upgradeTo(vaultImplementation);
+        } else {
+            vault.upgradeToAndCall(vaultImplementation, _data);
+        }
+    }
+
+    function _isContract(address _addr) private view returns (bool hasCode) {
+        uint256 length;
+        assembly {
+            length := extcodesize(_addr)
+        }
+        return length > 0;
     }
 }

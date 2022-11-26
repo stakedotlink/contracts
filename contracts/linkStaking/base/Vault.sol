@@ -26,7 +26,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _token,
         address _vaultController,
         address _stakeController
-    ) public initializer {
+    ) public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
         token = IERC20Upgradeable(_token);

@@ -20,12 +20,20 @@ contract CommunityVCS is VaultControllerStrategy {
         address _token,
         address _stakingPool,
         address _stakeController,
+        address _vaultImplementation,
         uint _minDepositThreshold,
         Fee[] memory _fees,
         uint _maxDeposits,
         uint _maxVaultDeployments
     ) public initializer {
-        __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _minDepositThreshold, _fees);
+        __VaultControllerStrategy_init(
+            _token,
+            _stakingPool,
+            _stakeController,
+            _vaultImplementation,
+            _minDepositThreshold,
+            _fees
+        );
         maxDeposits = _maxDeposits;
         maxVaultDeployments = _maxVaultDeployments;
     }

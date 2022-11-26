@@ -19,11 +19,19 @@ contract OperatorVCS is VaultControllerStrategy {
         address _token,
         address _stakingPool,
         address _stakeController,
+        address _vaultImplementation,
         uint _minDepositThreshold,
         Fee[] memory _fees,
         address[] calldata _initialVaults
     ) public initializer {
-        __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _minDepositThreshold, _fees);
+        __VaultControllerStrategy_init(
+            _token,
+            _stakingPool,
+            _stakeController,
+            _vaultImplementation,
+            _minDepositThreshold,
+            _fees
+        );
         for (uint i = 0; i < _initialVaults.length; i++) {
             address vault = _initialVaults[i];
             vaults.push(IVault(vault));

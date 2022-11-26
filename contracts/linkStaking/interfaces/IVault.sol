@@ -11,4 +11,8 @@ interface IVault {
     function getPrincipalDeposits() external view returns (uint);
 
     function migrate(bytes calldata _data) external;
+
+    function upgradeToAndCall(address newImplementation, bytes memory data) external;
+
+    function upgradeTo(address newImplementation) external;
 }
