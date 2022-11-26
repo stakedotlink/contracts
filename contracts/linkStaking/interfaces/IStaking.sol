@@ -25,4 +25,6 @@ interface IStaking {
     function getMigrationTarget() external view returns (address);
 
     function isPaused() external view returns (bool);
+
+    function raiseAlert() external;
 }
