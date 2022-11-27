@@ -43,11 +43,18 @@ contract OperatorVault is Vault {
             stakeController.getDelegationReward(address(this));
     }
 
+    /**
+     * @notice raises an alert in the stake controller
+     */
     function raiseAlert() external onlyOperator {
         stakeController.raiseAlert();
         token.safeTransfer(vaultController, token.balanceOf(address(this)));
     }
 
+    /**
+     * @notice sets the operator that this vault represents if not already set
+     * @param _operator address of operator
+     */
     function setOperator(address _operator) external onlyOwner {
         require(operator == address(0), "Operator is already set");
         operator = _operator;

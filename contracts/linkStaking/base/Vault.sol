@@ -70,7 +70,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice migrates the tokens deposited into a new stake controller,
+     * @notice migrates the tokens deposited into a new stake controller
      */
     function migrate(bytes calldata data) external onlyVaultController {
         stakeController.migrate(data);
@@ -80,7 +80,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice allows the vault controller to be set after deployment only if it was set as an empty
      * address on deploy
-     * @param _vaultController new vault controller address
+     * @param _vaultController vault controller address
      */
     function setVaultController(address _vaultController) external onlyOwner {
         require(
@@ -93,7 +93,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice allows the stake controller to be set after deployment only if it was set as an empty
      * address on deploy
-     * @param _stakeController new stake controller address
+     * @param _stakeController stake controller address
      */
     function setStakeController(address _stakeController) external onlyOwner {
         require(

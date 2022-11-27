@@ -40,8 +40,8 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice maximum amount of tokens that can be deposited into this strategy
-     * @return uint max deposits
+     * @notice returns the maximum that can be deposited into this strategy
+     * @return max deposit
      */
     function getMaxDeposits() public view override returns (uint) {
         (, uint vaultMaxDeposits) = getVaultDepositLimits();
@@ -49,17 +49,26 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice minimum amount of tokens that must remain in this strategy
-     * @return uint min deposits
+     * @notice returns the minimum that must remain this strategy
+     * @return min deposit
      */
     function getMinDeposits() public view override returns (uint) {
         return totalDeposits;
     }
 
+    /**
+     * @notice returns the vault deposit limits
+     * @return minimum minimum amount of deposits that a vault can hold
+     * @return maximum maximum amount of deposits that a vault can hold
+     */
     function getVaultDepositLimits() public view override returns (uint, uint) {
         return stakeController.getOperatorLimits();
     }
 
+    /**
+     * @notice deploys a new vault
+     * @param _operator address of operator that the vault represents
+     */
     function addVault(address _operator) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,address,address)",
@@ -71,6 +80,13 @@ contract OperatorVCS is VaultControllerStrategy {
         _deployVault(data);
     }
 
+    /**
+     * @notice deposits buffered tokens into vaults
+     * @param _startIndex index of first vault to deposit into
+     * @param _toDeposit amount to deposit
+     * @param _vaultMinDeposits minimum amount of deposits that a vault can hold
+     * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
+     */
     function _depositBufferedTokens(
         uint _startIndex,
         uint _toDeposit,

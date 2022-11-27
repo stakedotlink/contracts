@@ -63,7 +63,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deposits tokens into strategy
+     * @notice deposits tokens into this strategy
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyStakingPool {
@@ -102,15 +102,26 @@ abstract contract VaultControllerStrategy is Strategy {
         return (true, abi.encode(firstNonFullVault));
     }
 
+    /**
+     * @notice deposits buffered tokens into vaults if buffered balance exceeds minDepositThreshold
+     * @param _performData abi encoded index of first non-full vault
+     */
     function performUpkeep(bytes calldata _performData) external {
         require(bufferedDeposits >= minDepositThreshold, "Minimum deposit threshold has not been met");
         uint startIndex = abi.decode(_performData, (uint));
         depositBufferedTokens(startIndex);
     }
 
+    /**
+     * @notice deposits buffered tokens into vaults
+     * @param _startIndex index of first non-full vault
+     */
     function depositBufferedTokens(uint _startIndex) public {
         (uint vaultMinDeposits, uint vaultMaxDeposits) = getVaultDepositLimits();
-        require(vaults[_startIndex].getPrincipalDeposits() < vaultMaxDeposits, "Cannot deposit into vault that is full");
+        require(
+            _startIndex == vaults.length - 1 || vaults[_startIndex].getPrincipalDeposits() < vaultMaxDeposits,
+            "Cannot deposit into vault that is full"
+        );
         require(
             _startIndex == 0 || vaults[_startIndex - 1].getPrincipalDeposits() >= vaultMaxDeposits,
             "Cannot deposit into vault if lower index vault is not full"
@@ -133,8 +144,8 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice updates the total amount deposited for reward distribution
-     * @return receivers list of fee receivers (always none)
-     * @return amounts list of fee amounts (always none)
+     * @return receivers list of fee receivers
+     * @return amounts list of fee amounts
      */
     function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
         receivers = new address[](fees.length);
@@ -154,15 +165,26 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice the amount of total deposits as tracked in the strategy
+     * @notice the amount of total deposits as tracked in this strategy
      * @return uint total deposited
      */
     function getTotalDeposits() public view override returns (uint) {
         return totalDeposits;
     }
 
+    /**
+     * @notice returns the vault deposit limits
+     * @return minimum minimum amount of deposits that a vault can hold
+     * @return maximum maximum amount of deposits that a vault can hold
+     */
     function getVaultDepositLimits() public view virtual returns (uint, uint);
 
+    /**
+     * @notice migrates vaults to a new stake controller
+     * @param _startIndex index of first vault to migrate
+     * @param _numVaults number of vaults to migrate starting at _startIndex
+     * @param _data migration data
+     */
     function migrateVaults(
         uint _startIndex,
         uint _numVaults,
@@ -173,6 +195,12 @@ abstract contract VaultControllerStrategy is Strategy {
         }
     }
 
+    /**
+     * @notice upgrades vaults to a new implementation contract
+     * @param _startIndex index of first vault to upgrade
+     * @param _numVaults number of vaults to upgrade starting at _startIndex
+     * @param _data optional encoded function call to be executed after upgrade
+     */
     function upgradeVaults(
         uint _startIndex,
         uint _numVaults,
@@ -225,11 +253,22 @@ abstract contract VaultControllerStrategy is Strategy {
         minDepositThreshold = _minDepositThreshold;
     }
 
+    /**
+     * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
+     * @param _vaultImplementation address of implementaion contract
+     */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
         require(_isContract(_vaultImplementation), "Address must belong to a contract");
         vaultImplementation = _vaultImplementation;
     }
 
+    /**
+     * @notice deposits buffered tokens into vaults
+     * @param _startIndex index of first vault to deposit into
+     * @param _toDeposit amount to deposit
+     * @param _vaultMinDeposits minimum amount of deposits that a vault can hold
+     * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
+     */
     function _depositBufferedTokens(
         uint _startIndex,
         uint _toDeposit,
@@ -239,6 +278,10 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice deposits tokens into vaults
+     * @param _startIndex index of first vault to deposit into
+     * @param _toDeposit amount to deposit
+     * @param _minDeposits minimum amount of deposits that a vault can hold
+     * @param _maxDeposits minimum amount of deposits that a vault can hold
      */
     function _depositToVaults(
         uint _startIndex,
@@ -266,12 +309,21 @@ abstract contract VaultControllerStrategy is Strategy {
         return _toDeposit - toDeposit;
     }
 
+    /**
+     * @notice deploys a new vault
+     * @param _data optional encoded function call to be executed after deployment
+     */
     function _deployVault(bytes memory _data) internal {
         address vault = address(new ERC1967Proxy(vaultImplementation, _data));
         token.safeApprove(vault, type(uint).max);
         vaults.push(IVault(vault));
     }
 
+    /**
+     * @notice upgrades a vault
+     * @param _vaultIdx index of vault to upgrade
+     * @param _data optional encoded function call to be executed after upgrade
+     */
     function _upgradeVault(uint _vaultIdx, bytes memory _data) internal {
         IVault vault = vaults[_vaultIdx];
         if (_data.length == 0) {
@@ -281,10 +333,15 @@ abstract contract VaultControllerStrategy is Strategy {
         }
     }
 
-    function _isContract(address _addr) private view returns (bool hasCode) {
+    /**
+     * @notice returns whether an address belongs to a contract
+     * @param _address address to check
+     * @return isContract true if address is contract
+     */
+    function _isContract(address _address) private view returns (bool) {
         uint256 length;
         assembly {
-            length := extcodesize(_addr)
+            length := extcodesize(_address)
         }
         return length > 0;
     }
