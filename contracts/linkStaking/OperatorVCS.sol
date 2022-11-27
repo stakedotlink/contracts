@@ -60,6 +60,17 @@ contract OperatorVCS is VaultControllerStrategy {
         return stakeController.getOperatorLimits();
     }
 
+    function addVault(address _operator) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,address,address)",
+            address(token),
+            address(this),
+            address(stakeController),
+            _operator
+        );
+        _deployVault(data);
+    }
+
     function _depositBufferedTokens(
         uint _startIndex,
         uint _toDeposit,

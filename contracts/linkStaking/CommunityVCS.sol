@@ -36,6 +36,7 @@ contract CommunityVCS is VaultControllerStrategy {
         );
         maxDeposits = _maxDeposits;
         maxVaultDeployments = _maxVaultDeployments;
+        _deployVaults(1);
     }
 
     /**
@@ -101,6 +102,14 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     function _deployVaults(uint _numVaults) internal {
-        //TODO: implement
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,address)",
+            address(token),
+            address(this),
+            address(stakeController)
+        );
+        for (uint i = 0; i < _numVaults; i++) {
+            _deployVault(data);
+        }
     }
 }

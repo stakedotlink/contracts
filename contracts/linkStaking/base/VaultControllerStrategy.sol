@@ -268,6 +268,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     function _deployVault(bytes memory _data) internal {
         address vault = address(new ERC1967Proxy(vaultImplementation, _data));
+        token.safeApprove(vault, type(uint).max);
         vaults.push(IVault(vault));
     }
 
