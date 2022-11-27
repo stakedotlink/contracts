@@ -39,6 +39,11 @@ export const deployUpgradeable = async (contractName: string, args: any[] = []) 
   return upgrades.deployProxy(Contract, args, { kind: 'uups' })
 }
 
+export const deployImplementation = async (contractName: string) => {
+  const Contract = await ethers.getContractFactory(contractName)
+  return upgrades.deployImplementation(Contract, { kind: 'uups' })
+}
+
 export const getAccounts = async () => {
   const signers = await ethers.getSigners()
   const accounts = await Promise.all(signers.map(async (signer) => signer.getAddress()))
