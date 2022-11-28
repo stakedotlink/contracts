@@ -22,10 +22,12 @@ async function main() {
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
   const delegatorPool = (await ethers.getContract('DelegatorPool')) as any
-  const wstLINK_DelegatorRewardsPool = (await ethers.getContract('wstLINK_DelegatorRewardsPool')) as any
+  const wstLINK_DelegatorRewardsPool = (await ethers.getContract(
+    'wstLINK_DelegatorRewardsPool'
+  )) as any
   const poolMin = 10
   const poolMax = 1000000
-  
+
   const strategyMock = await deployUpgradeable('StrategyMock', [
     linkToken.address,
     stakingPool.address,
@@ -66,7 +68,6 @@ async function main() {
   await linkToken
     .connect(signers[3])
     .transferAndCall(poolRouter.address, canDepositAddress3, '0x00')
-
 
   // send stLINK rewards to rewards pool
 
