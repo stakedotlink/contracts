@@ -28,13 +28,12 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   })
   const stakingPool = await ethers.getContract('LINK_StakingPool')
 
-  await deploy('LINK_WrappedSDToken', {
+  const wsdToken = await deploy('LINK_WrappedSDToken', {
     contract: 'WrappedSDToken',
     from: deployer,
     log: true,
     args: [stakingPool.address, LINK_WrappedSDToken.name, LINK_WrappedSDToken.symbol],
   })
-  const wsdToken = await ethers.getContract('LINK_WrappedSDToken')
 
   const wstLinkDelegatorRewardsPool = await deploy('wstLINK_DelegatorRewardsPool', {
     contract: 'RewardsPoolWSD',
@@ -48,8 +47,6 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
 
   tx = await delegatorPool.addToken(stakingPool.address, wstLinkDelegatorRewardsPool.address)
   await tx.wait()
-
-  console.log('deploy-status-ready')
 }
 
 module.exports.tags = ['Link-Staking']

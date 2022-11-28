@@ -7,23 +7,17 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  const { DelegatorPool, RampUpCurve } = config
+  const { DelegatorPool, FlatFee } = config
 
   const stakingAllowance = await ethers.getContract('StakingAllowance')
   const poolRouter = await ethers.getContract('PoolRouter')
 
-  await deploy('RampUpCurve', {
+  await deploy('FlatFee', {
     from: deployer,
     log: true,
-    args: [
-      RampUpCurve.rateConstantA,
-      RampUpCurve.rateConstantB,
-      RampUpCurve.rateConstantC,
-      RampUpCurve.rateConstantD,
-      RampUpCurve.rateConstantE,
-    ],
+    args: [FlatFee.feeBasisPoints],
   })
-  const feeCurve = await ethers.getContract('RampUpCurve')
+  const feeCurve = await ethers.getContract('FlatFee')
 
   await deploy('DelegatorPool', {
     from: deployer,
