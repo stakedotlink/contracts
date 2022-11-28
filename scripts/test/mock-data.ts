@@ -22,7 +22,9 @@ async function main() {
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
   const delegatorPool = (await ethers.getContract('DelegatorPool')) as any
-
+  const wstLINK_DelegatorRewardsPool = (await ethers.getContract(
+    'wstLINK_DelegatorRewardsPool'
+  )) as any
   const poolMin = 10
   const poolMax = 1000000
 
@@ -61,15 +63,17 @@ async function main() {
     '0x00'
   )
 
-  // const canDeposit2 = await poolRouter['canDeposit(address,uint16,uint256)'](linkToken.address, '0x00', toEther(1000))
-  // console.log('canDeposit', fromEther(canDeposit)) /// canDeposit 4.545454545454
-  // console.log('canDeposit2', fromEther(canDeposit2)) /// canDeposit 4.545454545454
-
   // stake LINK
 
   await linkToken
     .connect(signers[3])
     .transferAndCall(poolRouter.address, canDepositAddress3, '0x00')
+
+  // send stLINK rewards to rewards pool
+
+  await stakingPool
+    .connect(signers[3])
+    .transferAndCall(wstLINK_DelegatorRewardsPool.address, toEther(1), '0x00')
 
   // account 4
 
@@ -94,11 +98,6 @@ async function main() {
   await linkToken
     .connect(signers[4])
     .transferAndCall(poolRouter.address, canDepositAddress4, '0x00')
-
-  // send stLINK rewards to owners pool
-  // await stakingPool
-  //   .connect(signers[4])
-  //   .transferAndCall(LINK_WrappedSDToken.address, toEther(100), '0x00')
 }
 
 main()
