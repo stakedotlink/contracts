@@ -31,64 +31,40 @@ describe('OperatorVault', () => {
 
     vault = (await deployUpgradeable('OperatorVault', [
       token.address,
-      accounts[0],
+      accounts[1],
       staking.address,
+      accounts[2],
     ])) as OperatorVault
 
-    await token.approve(vault.address, ethers.constants.MaxUint256)
     await token.connect(signers[1]).approve(vault.address, ethers.constants.MaxUint256)
-
-    await vault.deposit(toEther(100))
+    await vault.connect(signers[1]).deposit(toEther(10000))
+    await token.transfer(staking.address, toEther(1000))
   })
 
-  it('should be able to deposit', async () => {
-    assert.equal(fromEther(await token.balanceOf(staking.address)), 100, 'balance does not match')
-    assert.equal(fromEther(await vault.totalDeposits()), 100, 'balance does not match')
-
-    await vault.deposit(toEther(1000))
-    assert.equal(fromEther(await token.balanceOf(staking.address)), 1100, 'balance does not match')
-    assert.equal(fromEther(await vault.totalDeposits()), 1100, 'balance does not match')
+  it('raiseAlert should work correctly', async () => {
+    await vault.connect(signers[2]).raiseAlert()
+    assert.equal(fromEther(await token.balanceOf(accounts[1])), 100)
+    await expect(vault.raiseAlert()).to.be.revertedWith('Operator only')
   })
 
-  it('total balance should reflect rewards', async () => {
-    await staking.setBaseReward(toEther(100))
-    await staking.setDelegationReward(toEther(200))
-
-    assert.equal(fromEther(await vault.totalBalance()), 400, 'deposit change does not match')
+  it('getTotalDeposits should work correctly', async () => {
+    assert.equal(fromEther(await vault.getTotalDeposits()), 10000)
+    await staking.setBaseReward(toEther(10))
+    assert.equal(fromEther(await vault.getTotalDeposits()), 10010)
+    await staking.setDelegationReward(toEther(5))
+    assert.equal(fromEther(await vault.getTotalDeposits()), 10015)
   })
 
-  it('withdrawing should revert', async () => {
-    await expect(vault.withdraw(toEther(10))).to.be.revertedWith('withdrawals not yet implemented')
-  })
+  it('setOperator should work correctly', async () => {
+    await expect(vault.setOperator(accounts[1])).to.be.revertedWith('Operator is already set')
 
-  it('should be able to migrate and then deposit', async () => {
-    let staking2 = (await deploy('StakingMock', [token.address])) as StakingMock
-
-    await staking.setMigration(staking2.address)
-    await vault.migrate('0x00')
-
-    await vault.deposit(toEther(100))
-    assert.equal(fromEther(await token.balanceOf(staking2.address)), 200, 'balance does not match')
-    assert.equal(fromEther(await vault.totalDeposits()), 100, 'balance does not match') // balance decrease due to mock not transferring staked balances
-  })
-
-  it('should be able to change vault controller address if deployed empty', async () => {
     let newVault = (await deployUpgradeable('OperatorVault', [
       token.address,
       padBytes('0x0', 20),
       staking.address,
+      ethers.constants.AddressZero,
     ])) as OperatorVault
-    await newVault.setVaultController(accounts[0])
-    assert.equal(
-      await vault.vaultController(),
-      accounts[0],
-      'vault controller address does not match'
-    )
-  })
-
-  it('should not be able to change vault controller address if already set', async () => {
-    await expect(vault.setVaultController(accounts[1])).to.be.revertedWith(
-      'Vault controller cannot be empty/controller is already set'
-    )
+    await newVault.setOperator(accounts[1])
+    assert.equal(await newVault.operator(), accounts[1], 'operator address does not match')
   })
 })

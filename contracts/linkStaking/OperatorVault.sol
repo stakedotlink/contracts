@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-
-import "../core/interfaces/IERC677.sol";
-import "./interfaces/IStaking.sol";
+import "./base/Vault.sol";
 
 /**
  * @title Operator Vault
  * @notice Vault contract for depositing LINK collateral into the Chainlink staking controller as an operator
  */
-contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract OperatorVault is Vault {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address public token;
-    address public vaultController;
-    IStaking public stakeController;
+    address public operator;
+
+    event AlertRaised();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -28,41 +22,23 @@ contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function initialize(
         address _token,
         address _vaultController,
-        address _stakeController
+        address _stakeController,
+        address _operator
     ) public initializer {
-        __Ownable_init();
-        __UUPSUpgradeable_init();
-        token = _token;
-        vaultController = _vaultController;
-        stakeController = IStaking(_stakeController);
+        __Vault_init(_token, _vaultController, _stakeController);
+        operator = _operator;
     }
 
-    modifier onlyVaultController() {
-        require(vaultController == msg.sender, "Vault controller only");
+    modifier onlyOperator() {
+        require(operator == msg.sender, "Operator only");
         _;
-    }
-
-    /**
-     * @notice deposits the amount of token into the Chainlink staking contract
-     * @param _amount amount to deposit
-     */
-    function deposit(uint256 _amount) external onlyVaultController {
-        IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
-        IERC677(token).transferAndCall(address(stakeController), _amount, "0x00");
-    }
-
-    /**
-     * @notice withdrawals are not yet implemented in this iteration of Chainlink staking
-     */
-    function withdraw(uint256) external view onlyVaultController {
-        revert("withdrawals not yet implemented");
     }
 
     /**
      * @notice returns the total balance of this contract in the Chainlink staking contract
      * @return balance total balance
      */
-    function totalBalance() public view returns (uint) {
+    function getTotalDeposits() public view override returns (uint) {
         return
             stakeController.getStake(address(this)) +
             stakeController.getBaseReward(address(this)) +
@@ -70,46 +46,20 @@ contract OperatorVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the principal balance of this contract in the Chainlink staking contract
-     * @return balance principal balance
+     * @notice raises an alert in the stake controller
      */
-    function totalDeposits() public view returns (uint) {
-        return stakeController.getStake(address(this));
+    function raiseAlert() external onlyOperator {
+        stakeController.raiseAlert();
+        token.safeTransfer(vaultController, token.balanceOf(address(this)));
+        emit AlertRaised();
     }
 
     /**
-     * @notice migrates the tokens deposited into a new stake controller,
+     * @notice sets the operator that this vault represents if not already set
+     * @param _operator address of operator
      */
-    function migrate(bytes calldata data) external onlyOwner {
-        stakeController.migrate(data);
-        stakeController = IStaking(stakeController.getMigrationTarget());
+    function setOperator(address _operator) external onlyOwner {
+        require(operator == address(0), "Operator is already set");
+        operator = _operator;
     }
-
-    /**
-     * @notice allows the vault controller to be set after deployment only if it was set as an empty
-     * address on deploy
-     * @param _vaultController new vault controller address
-     */
-    function setVaultController(address _vaultController) external onlyOwner {
-        require(
-            _vaultController != address(0) && vaultController == address(0),
-            "Vault controller cannot be empty/controller is already set"
-        );
-        vaultController = _vaultController;
-    }
-
-    /**
-     * @notice allows the stake controller to be set after deployment only if it was set as an empty
-     * address on deploy
-     * @param _stakeController new stake controller address
-     */
-    function setStakeController(address _stakeController) external onlyOwner {
-        require(
-            _stakeController != address(0) && address(stakeController) == address(0),
-            "Stake controller cannot be empty/controller is already set"
-        );
-        stakeController = IStaking(_stakeController);
-    }
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

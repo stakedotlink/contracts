@@ -104,4 +104,8 @@ contract StakingMock is IStaking, IERC677Receiver {
     function isPaused() external view returns (bool) {
         return paused;
     }
+
+    function raiseAlert() external {
+        token.transfer(msg.sender, 100 ether);
+    }
 }
