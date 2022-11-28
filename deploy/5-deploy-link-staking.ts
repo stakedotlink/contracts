@@ -46,7 +46,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   let tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0, true)
   await tx.wait()
 
-  tx = await delegatorPool.addToken(linkToken.address, wstLinkDelegatorRewardsPool.address)
+  tx = await delegatorPool.addToken(stakingPool.address, wstLinkDelegatorRewardsPool.address)
   await tx.wait()
 
   console.log('deploy-status-ready')
