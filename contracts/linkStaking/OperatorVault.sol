@@ -12,6 +12,8 @@ contract OperatorVault is Vault {
 
     address public operator;
 
+    event AlertRaised();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -49,6 +51,7 @@ contract OperatorVault is Vault {
     function raiseAlert() external onlyOperator {
         stakeController.raiseAlert();
         token.safeTransfer(vaultController, token.balanceOf(address(this)));
+        emit AlertRaised();
     }
 
     /**

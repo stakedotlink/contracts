@@ -10,6 +10,9 @@ import "./base/VaultControllerStrategy.sol";
 contract OperatorVCS is VaultControllerStrategy {
     uint private totalPrincipalDeposits;
 
+    event VaultAdded(address indexed operator);
+    event DepositBufferedTokens(uint depositedAmount);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -78,6 +81,7 @@ contract OperatorVCS is VaultControllerStrategy {
             _operator
         );
         _deployVault(data);
+        emit VaultAdded(_operator);
     }
 
     /**
@@ -96,5 +100,6 @@ contract OperatorVCS is VaultControllerStrategy {
         uint deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
         totalPrincipalDeposits += deposited;
         bufferedDeposits -= deposited;
+        emit DepositBufferedTokens(deposited);
     }
 }

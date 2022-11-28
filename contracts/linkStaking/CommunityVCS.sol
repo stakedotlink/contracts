@@ -11,6 +11,10 @@ contract CommunityVCS is VaultControllerStrategy {
     uint private maxDeposits;
     uint public maxVaultDeployments;
 
+    event SetMaxDeposits(uint maxDeposits);
+    event SetMaxVaultDeployments(uint maxVaultDeployments);
+    event DepositBufferedTokens(uint amountDeposited, uint vaultsDeployed);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -70,6 +74,7 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function setMaxDeposits(uint _maxDeposits) external onlyOwner {
         maxDeposits = _maxDeposits;
+        emit SetMaxDeposits(_maxDeposits);
     }
 
     /**
@@ -78,6 +83,7 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function setMaxVaultDeployments(uint _maxVaultDeployments) external onlyOwner {
         maxVaultDeployments = _maxVaultDeployments;
+        emit SetMaxVaultDeployments(_maxVaultDeployments);
     }
 
     /**
@@ -119,6 +125,7 @@ contract CommunityVCS is VaultControllerStrategy {
         }
 
         bufferedDeposits -= deposited;
+        emit DepositBufferedTokens(deposited, vaultsToDeploy);
     }
 
     /**

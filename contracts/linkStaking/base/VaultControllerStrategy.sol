@@ -34,6 +34,11 @@ abstract contract VaultControllerStrategy is Strategy {
 
     uint[10] private __gap;
 
+    event MigratedVaults(uint startIndex, uint numVaults, bytes data);
+    event UpgradedVaults(uint startIndex, uint numVaults, bytes data);
+    event SetMinDepositThreshold(uint minDepositThreshold);
+    event SetVaultImplementation(address vaultImplementation);
+
     function __VaultControllerStrategy_init(
         address _token,
         address _stakingPool,
@@ -193,6 +198,7 @@ abstract contract VaultControllerStrategy is Strategy {
         for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
             vaults[i].migrate(_data);
         }
+        emit MigratedVaults(_startIndex, _numVaults, _data);
     }
 
     /**
@@ -209,6 +215,7 @@ abstract contract VaultControllerStrategy is Strategy {
         for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
             _upgradeVault(i, _data);
         }
+        emit UpgradedVaults(_startIndex, _numVaults, _data);
     }
 
     /**
@@ -251,6 +258,7 @@ abstract contract VaultControllerStrategy is Strategy {
         (uint vaultMinDeposits, ) = getVaultDepositLimits();
         require(_minDepositThreshold >= vaultMinDeposits, "Must be >= to minimum vault deposit limit");
         minDepositThreshold = _minDepositThreshold;
+        emit SetMinDepositThreshold(_minDepositThreshold);
     }
 
     /**
@@ -260,6 +268,7 @@ abstract contract VaultControllerStrategy is Strategy {
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
         require(_isContract(_vaultImplementation), "Address must belong to a contract");
         vaultImplementation = _vaultImplementation;
+        emit SetVaultImplementation(_vaultImplementation);
     }
 
     /**
