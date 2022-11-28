@@ -1,19 +1,19 @@
 export const config = {
+  LPLMigration: {
+    depositAmount: 50000000,
+  },
+
   StakingAllowance: {
-    name: 'Staking Allowance',
-    symbol: 'STA',
+    name: 'Stake Dot Link',
+    symbol: 'SDL',
     initialSupply: 220000000,
   },
   DelegatorPool: {
-    derivativeTokenName: 'Staked STA',
-    derivativeTokenSymbol: 'stSTA',
+    derivativeTokenName: 'Staked SDL',
+    derivativeTokenSymbol: 'stSDL',
   },
-  RampUpCurve: {
-    rateConstantA: 10,
-    rateConstantB: 500,
-    rateConstantC: 6,
-    rateConstantD: 12,
-    rateConstantE: 20,
+  FlatFee: {
+    feeBasisPoints: 0,
   },
 
   LINK_WrappedSDToken: {
