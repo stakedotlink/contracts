@@ -48,7 +48,6 @@ async function main() {
   // account 3
 
   await linkToken.transfer(accounts[3], toEther(10000))
-  await ownersToken.transfer(accounts[3], toEther(10000))
   await stakingAllowance.transfer(accounts[3], toEther(40000))
 
   // stake SDL
