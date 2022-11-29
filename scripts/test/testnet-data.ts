@@ -93,17 +93,21 @@ async function main() {
 
   const ownersToken = (await ethers.getContract('OwnersToken')) as any
   const poolOwnersV1 = (await ethers.getContract('PoolOwnersV1')) as any
+  const linkToken = (await ethers.getContract('LinkToken')) as any
+  const ownersRewardsPoolV1 = (await ethers.getContract('OwnersRewardsPoolV1')) as any
 
   for (let i = 0; i < wallets.length; i++) {
     await signers[0].sendTransaction({
       to: wallets[i].address,
-      value: toEther(2),
+      value: toEther(1),
     })
-    await ownersToken.transfer(wallets[i].address, toEther(1000000))
+    await ownersToken.transfer(wallets[i].address, toEther(100000))
     await ownersToken
       .connect(getSigner({ privateKey: wallets[i].privateKey }))
-      .transferAndCall(poolOwnersV1.address, toEther(10), '0x00')
+      .transferAndCall(poolOwnersV1.address, toEther(10000), '0x00')
   }
+  await linkToken.transfer(ownersRewardsPoolV1.address, toEther(10000))
+  await ownersRewardsPoolV1.distributeRewards()
 }
 
 main()
