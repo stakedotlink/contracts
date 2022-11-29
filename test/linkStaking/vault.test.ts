@@ -7,7 +7,6 @@ import {
   getAccounts,
   setupToken,
   fromEther,
-  padBytes,
 } from '../utils/helpers'
 import { ERC677, OperatorVault, StakingMock } from '../../typechain-types'
 
@@ -64,43 +63,5 @@ describe('Vault', () => {
     await vault.deposit(toEther(100))
     assert.equal(fromEther(await token.balanceOf(staking2.address)), 200, 'balance does not match')
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100, 'balance does not match')
-  })
-
-  it('setVaultController should work correctly', async () => {
-    await expect(vault.setVaultController(accounts[1])).to.be.revertedWith(
-      'Vault controller cannot be empty/controller is already set'
-    )
-
-    let newVault = (await deployUpgradeable('OperatorVault', [
-      token.address,
-      padBytes('0x0', 20),
-      staking.address,
-      accounts[0],
-    ])) as OperatorVault
-    await newVault.setVaultController(accounts[1])
-    assert.equal(
-      await newVault.vaultController(),
-      accounts[1],
-      'vault controller address does not match'
-    )
-  })
-
-  it('setStakeController should work correctly', async () => {
-    await expect(vault.setStakeController(accounts[1])).to.be.revertedWith(
-      'Stake controller cannot be empty/controller is already set'
-    )
-
-    let newVault = (await deployUpgradeable('OperatorVault', [
-      token.address,
-      accounts[0],
-      padBytes('0x0', 20),
-      accounts[0],
-    ])) as OperatorVault
-    await newVault.setStakeController(accounts[1])
-    assert.equal(
-      await newVault.stakeController(),
-      accounts[1],
-      'stake controller address does not match'
-    )
   })
 })

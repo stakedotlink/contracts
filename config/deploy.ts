@@ -37,6 +37,32 @@ export const config = {
     derivativeTokenSymbol: 'stLINK', // LINK staking derivative token symbol
     fees: [['0x11187eff852069a33d102476b2E8A9cc9167dAde', 300]], // fee receivers & percentage amounts in basis points
   },
+  // Operator Vault Controller Strategy
+  OperatorVCS: {
+    stakeController: '0x11187eff852069a33d102476b2E8A9cc9167dAde', // address of Chainlink staking contract
+    minDepositThreshold: 1000, // minimum deposits required to initiate a deposit
+    fees: [], // fee receivers & percentage amounts in basis points
+    vaultOperatorAddresses: [
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+      '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    ],
+  },
+  // Community Vault Controller Strategy
+  CommunityVCS: {
+    stakeController: '0x11187eff852069a33d102476b2E8A9cc9167dAde', // address of Chainlink staking contract
+    minDepositThreshold: 1000, // minimum deposits required to initiate a deposit
+    fees: [], // fee receivers & percentage amounts in basis points
+    maxDeposits: 5000000, // maximum amount of deposits that can be deposited into this contract
+    maxVaultDeployments: 10, // maximum number of vaults that can be deployed at once
+  },
 
   /** ETH Staking **/
 

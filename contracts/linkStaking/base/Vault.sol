@@ -77,31 +77,5 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         stakeController = IStaking(stakeController.getMigrationTarget());
     }
 
-    /**
-     * @notice allows the vault controller to be set after deployment only if it was set as an empty
-     * address on deploy
-     * @param _vaultController vault controller address
-     */
-    function setVaultController(address _vaultController) external onlyOwner {
-        require(
-            _vaultController != address(0) && vaultController == address(0),
-            "Vault controller cannot be empty/controller is already set"
-        );
-        vaultController = _vaultController;
-    }
-
-    /**
-     * @notice allows the stake controller to be set after deployment only if it was set as an empty
-     * address on deploy
-     * @param _stakeController stake controller address
-     */
-    function setStakeController(address _stakeController) external onlyOwner {
-        require(
-            _stakeController != address(0) && address(stakeController) == address(0),
-            "Stake controller cannot be empty/controller is already set"
-        );
-        stakeController = IStaking(_stakeController);
-    }
-
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }
