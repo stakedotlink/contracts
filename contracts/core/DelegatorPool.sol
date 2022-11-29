@@ -23,7 +23,7 @@ contract DelegatorPool is RewardsPoolController {
     }
 
     IERC20 public immutable allowanceToken;
-    IPoolRouter public immutable poolRouter;
+    IPoolRouter public poolRouter;
     IFeeCurve public feeCurve;
 
     mapping(address => VestingSchedule) private vestingSchedules;
@@ -35,11 +35,9 @@ contract DelegatorPool is RewardsPoolController {
         address _allowanceToken,
         string memory _dTokenName,
         string memory _dTokenSymbol,
-        address _poolRouter,
         address _feeCurve
     ) RewardsPoolController(_dTokenName, _dTokenSymbol) {
         allowanceToken = IERC20(_allowanceToken);
-        poolRouter = IPoolRouter(_poolRouter);
         feeCurve = IFeeCurve(_feeCurve);
     }
 
@@ -163,6 +161,15 @@ contract DelegatorPool is RewardsPoolController {
     function setFeeCurve(address _feeCurve) external onlyOwner {
         require(_feeCurve != address(0), "Invalid fee curve address");
         feeCurve = IFeeCurve(_feeCurve);
+    }
+
+    /**
+     * @notice sets the pool router address
+     * @param _poolRouter pool router address
+     **/
+    function setPoolRouter(address _poolRouter) external onlyOwner {
+        require(address(poolRouter) == address(0), "pool router already set");
+        poolRouter = IPoolRouter(_poolRouter);
     }
 
     /**

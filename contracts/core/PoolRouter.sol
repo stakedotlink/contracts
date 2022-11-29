@@ -34,7 +34,7 @@ contract PoolRouter is Ownable {
     }
 
     IERC677 public immutable allowanceToken;
-    IDelegatorPool public delegatorPool;
+    IDelegatorPool public immutable delegatorPool;
 
     mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
@@ -55,8 +55,9 @@ contract PoolRouter is Ownable {
         _;
     }
 
-    constructor(address _allowanceToken) {
+    constructor(address _allowanceToken, address _delegatorPool) {
         allowanceToken = IERC677(_allowanceToken);
+        delegatorPool = IDelegatorPool(_delegatorPool);
         reservedMultiplier = 1e4;
     }
 
@@ -343,16 +344,6 @@ contract PoolRouter is Ownable {
         require(wrappedETH == address(0), "wrappedETH already set");
         wrappedETH = _wrappedETH;
         IERC677(_wrappedETH).safeApprove(_wrappedETH, type(uint).max);
-    }
-
-    /**
-     * @notice sets the delegator pool address
-     * @dev must be set for pool router to work
-     * @param _delegatorPool delegator pool address
-     **/
-    function setDelegatorPool(address _delegatorPool) external onlyOwner {
-        require(address(delegatorPool) == address(0), "delegatorPool already set");
-        delegatorPool = IDelegatorPool(_delegatorPool);
     }
 
     /**

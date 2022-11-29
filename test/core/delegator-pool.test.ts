@@ -39,22 +39,23 @@ describe('DelegatorPool', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    poolRouter = (await deploy('PoolRouterMock', [
-      allowanceToken.address,
-      token.address,
-      0,
-    ])) as PoolRouterMock
-
     feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
 
     delegatorPool = (await deploy('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
-      poolRouter.address,
       feeCurve.address,
     ])) as DelegatorPool
-    await poolRouter.setDelegatorPool(delegatorPool.address)
+
+    poolRouter = (await deploy('PoolRouterMock', [
+      allowanceToken.address,
+      token.address,
+      0,
+      delegatorPool.address,
+    ])) as PoolRouterMock
+
+    await delegatorPool.setPoolRouter(poolRouter.address)
 
     rewardsPool = (await deploy('RewardsPool', [
       delegatorPool.address,
@@ -139,6 +140,24 @@ describe('DelegatorPool', () => {
     await expect(delegatorPool.withdrawAllowance(toEther(1000))).to.be.revertedWith(
       'Withdrawal amount exceeds balance'
     )
+  })
+
+  it('should work without pool router set', async () => {
+    let pool = (await deploy('DelegatorPool', [
+      allowanceToken.address,
+      'Staked Staking Allowance',
+      'stSTA',
+      feeCurve.address,
+    ])) as DelegatorPool
+
+    await allowanceToken.transferAndCall(pool.address, toEther(1000), '0x00')
+    assert.equal(
+      fromEther(await pool.balanceOf(accounts[0])),
+      1000,
+      'balance of account does not match'
+    )
+
+    await expect(pool.withdrawAllowance(toEther(500))).to.be.reverted
   })
 
   // Rate set in tests (candidate for production)

@@ -27,11 +27,13 @@ contract PoolRouterMock {
     constructor(
         address _allowanceToken,
         address _token,
-        uint16 _index
+        uint16 _index,
+        address _delegatorPool
     ) {
         allowanceToken = _allowanceToken;
         token = _token;
         index = _index;
+        delegatorPool = _delegatorPool;
     }
 
     function maxAllowanceInUse() public view returns (uint) {
@@ -73,10 +75,5 @@ contract PoolRouterMock {
     ) external {
         require(msg.sender == allowanceToken, "Unauthorized");
         IDelegatorPool(delegatorPool).stakeAllowance(_sender, _value);
-    }
-
-    function setDelegatorPool(address _delegatorPool) external {
-        delegatorPool = _delegatorPool;
-        IERC20(allowanceToken).safeApprove(_delegatorPool, type(uint).max);
     }
 }
