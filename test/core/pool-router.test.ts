@@ -104,19 +104,21 @@ describe('PoolRouter', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    poolRouter = (await deploy('PoolRouter', [allowanceToken.address])) as PoolRouter
-
     feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
 
     delegatorPool = (await deploy('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
-      poolRouter.address,
       feeCurve.address,
     ])) as DelegatorPool
 
-    await poolRouter.setDelegatorPool(delegatorPool.address)
+    poolRouter = (await deploy('PoolRouter', [
+      allowanceToken.address,
+      delegatorPool.address,
+    ])) as PoolRouter
+
+    await delegatorPool.setPoolRouter(poolRouter.address)
 
     stakingPool1 = await createPool(poolRouter, token1.address)
     stakingPool2 = await createPool(poolRouter, token1.address)

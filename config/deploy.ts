@@ -1,30 +1,44 @@
 export const config = {
+  /** LPL Migration **/
+
+  // LPL -> SDL migration contract
   LPLMigration: {
-    depositAmount: 50000000,
+    depositAmount: 50000000, // amount of SDL to be deposited into contract
   },
 
+  /** Core Staking **/
+
+  // SDL Token
   StakingAllowance: {
-    name: 'Stake Dot Link',
-    symbol: 'SDL',
-    initialSupply: 220000000,
+    name: 'Stake Dot Link', // SDL token name
+    symbol: 'SDL', // SDL token symbol
+    initialSupply: 220000000, // initial SDL supply to mint
   },
+  // Delegator Pool (SDL staking)
   DelegatorPool: {
-    derivativeTokenName: 'Staked SDL',
-    derivativeTokenSymbol: 'stSDL',
+    derivativeTokenName: 'Staked SDL', // SDL staking derivative token name
+    derivativeTokenSymbol: 'stSDL', // SDL staking derivative token symbol
   },
+  // Fee curve to be used by Delegator Pool
   FlatFee: {
-    feeBasisPoints: 0,
+    feeBasisPoints: 0, // constant percentage fee in basis points
   },
 
+  /** LINK Staking **/
+
+  // LINK Wrapped Staking Derivative Token
   LINK_WrappedSDToken: {
-    name: 'Wrapped stLINK',
-    symbol: 'wstLINK',
+    name: 'Wrapped stLINK', // wrapped staking derivative token name
+    symbol: 'wstLINK', // wrapped staking derivative token symbol
   },
+  // LINK Staking Pool
   LINK_StakingPool: {
-    derivativeTokenName: 'Staked LINK',
-    derivativeTokenSymbol: 'stLINK',
-    fees: [['0x11187eff852069a33d102476b2E8A9cc9167dAde', 300]],
+    derivativeTokenName: 'Staked LINK', // LINK staking derivative token name
+    derivativeTokenSymbol: 'stLINK', // LINK staking derivative token symbol
+    fees: [['0x11187eff852069a33d102476b2E8A9cc9167dAde', 300]], // fee receivers & percentage amounts in basis points
   },
+
+  /** ETH Staking **/
 
   ETH_WrappedSDToken: {
     name: 'Wrapped stETH',
