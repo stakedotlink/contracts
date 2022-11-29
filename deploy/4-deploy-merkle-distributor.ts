@@ -9,6 +9,8 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     from: deployer,
     log: true,
   })
+
+  console.log('deploy-status-ready')
 }
 
 module.exports.tags = ['MerkleDistributor']

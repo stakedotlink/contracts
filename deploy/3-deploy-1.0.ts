@@ -10,8 +10,15 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { LINK_StakingPool, LINK_WrappedSDToken } = config
 
   const linkToken = await ethers.getContract('LinkToken')
-  const poolRouter = await ethers.getContract('PoolRouter')
+  const stakingAllowance = await ethers.getContract('StakingAllowance')
   const delegatorPool = await ethers.getContract('DelegatorPool')
+
+  await deploy('PoolRouter', {
+    from: deployer,
+    log: true,
+    args: [stakingAllowance.address, delegatorPool.address],
+  })
+  const poolRouter = await ethers.getContract('PoolRouter')
 
   await deploy('LINK_StakingPool', {
     contract: 'StakingPool',
@@ -49,4 +56,4 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   await tx.wait()
 }
 
-module.exports.tags = ['Link-Staking']
+module.exports.tags = ['1.0']

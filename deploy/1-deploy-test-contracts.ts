@@ -6,7 +6,20 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
+  await deploy('OwnersToken', {
+    contract: 'ERC677',
+    from: deployer,
+    log: true,
+    args: ['LinkPool', 'LPL', 100000000],
+  })
   const lplToken = await ethers.getContract('OwnersToken')
+
+  await deploy('LinkToken', {
+    contract: 'ERC677',
+    from: deployer,
+    log: true,
+    args: ['Chainlink', 'LINK', 1000000000],
+  })
   const linkToken = await ethers.getContract('LinkToken')
 
   await deploy('Multicall3', {
@@ -38,4 +51,4 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   await poolOwners.addRewardToken(linkToken.address, poolAllowance.address, rewardsPool.address)
 }
 
-module.exports.tags = ['Local-Deployments']
+module.exports.tags = ['Test-Contracts']
