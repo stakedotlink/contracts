@@ -108,7 +108,6 @@ async function main() {
   }
   await linkToken.transfer(ownersRewardsPoolV1.address, toEther(10000))
   await ownersRewardsPoolV1.distributeRewards()
-
 }
 
 main()
