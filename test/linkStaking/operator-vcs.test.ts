@@ -31,19 +31,6 @@ describe('OperatorVCS', () => {
     staking = (await deploy('StakingMock', [token.address])) as StakingMock
     let vaultImplementation = await deployImplementation('OperatorVault')
 
-    vaults = []
-    let vaultContracts = []
-    for (let i = 0; i < 10; i++) {
-      let vault = (await deployUpgradeable('OperatorVault', [
-        token.address,
-        ethers.constants.AddressZero,
-        staking.address,
-        accounts[0],
-      ])) as OperatorVault
-      vaultContracts.push(vault)
-      vaults.push(vault.address)
-    }
-
     strategy = (await deployUpgradeable('OperatorVCS', [
       token.address,
       accounts[0],
@@ -51,12 +38,14 @@ describe('OperatorVCS', () => {
       vaultImplementation,
       toEther(1000),
       [[accounts[4], 500]],
-      vaults,
+      [],
     ])) as OperatorVCS
 
     for (let i = 0; i < 10; i++) {
-      vaultContracts[i].setVaultController(strategy.address)
+      await strategy.addVault(accounts[0])
     }
+
+    vaults = await strategy.getVaults()
 
     await token.approve(strategy.address, ethers.constants.MaxUint256)
   })
