@@ -42,7 +42,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
     args: [stakingPool.address, LINK_WrappedSDToken.name, LINK_WrappedSDToken.symbol],
   })
 
-  const wstLinkDelegatorRewardsPool = await deploy('wstLINK_DelegatorRewardsPool', {
+  const stLinkDelegatorRewardsPool = await deploy('stLINK_DelegatorRewardsPool', {
     contract: 'RewardsPoolWSD',
     from: deployer,
     log: true,
@@ -52,7 +52,7 @@ module.exports = async function (hre: HardhatRuntimeEnvironment) {
   let tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0, true)
   await tx.wait()
 
-  tx = await delegatorPool.addToken(stakingPool.address, wstLinkDelegatorRewardsPool.address)
+  tx = await delegatorPool.addToken(stakingPool.address, stLinkDelegatorRewardsPool.address)
   await tx.wait()
 }
 

@@ -56,7 +56,7 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getTotalDeposits()), 10015)
   })
 
-  it.only('should be able to upgrade from V0 of vault', async () => {
+  it('should be able to upgrade from V0 of vault', async () => {
     let vault = (await deployUpgradeable('OperatorVaultV0', [
       token.address,
       accounts[1],

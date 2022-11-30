@@ -53,7 +53,7 @@ export const config = {
       '0x11187eff852069a33d102476b2E8A9cc9167dAde',
       '0x11187eff852069a33d102476b2E8A9cc9167dAde',
       '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    ],
+    ], // list of operator addresses that correspond to each vault
   },
   // Community Vault Controller Strategy
   CommunityVCS: {
