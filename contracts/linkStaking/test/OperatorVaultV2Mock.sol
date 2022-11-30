@@ -10,7 +10,7 @@ import "../OperatorVault.sol";
 contract OperatorVaultV2Mock is OperatorVault {
     uint public version;
 
-    function initializeV2(uint _version) public reinitializer(2) {
+    function initializeV2(uint _version) public reinitializer(3) {
         version = _version;
     }
 

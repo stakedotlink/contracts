@@ -8,9 +8,10 @@ import {
   getAccounts,
   setupToken,
   fromEther,
-  padBytes,
+  deployImplementation,
 } from '../utils/helpers'
-import { ERC677, OperatorVault, StakingMock } from '../../typechain-types'
+import { ERC677, OperatorVault, OperatorVaultV0, StakingMock } from '../../typechain-types'
+import { Interface } from 'ethers/lib/utils'
 
 describe('OperatorVault', () => {
   let token: ERC677
@@ -55,16 +56,37 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getTotalDeposits()), 10015)
   })
 
-  it('setOperator should work correctly', async () => {
-    await expect(vault.setOperator(accounts[1])).to.be.revertedWith('Operator is already set')
-
-    let newVault = (await deployUpgradeable('OperatorVault', [
+  it('should be able to upgrade from V0 of vault', async () => {
+    let vault = (await deployUpgradeable('OperatorVaultV0', [
       token.address,
-      padBytes('0x0', 20),
-      staking.address,
-      ethers.constants.AddressZero,
-    ])) as OperatorVault
-    await newVault.setOperator(accounts[1])
-    assert.equal(await newVault.operator(), accounts[1], 'operator address does not match')
+      accounts[1],
+      accounts[2],
+    ])) as OperatorVaultV0
+
+    assert.equal(await vault.token(), token.address)
+    assert.equal(await vault.vaultController(), accounts[1])
+    assert.equal(await vault.stakeController(), accounts[2])
+
+    let vaultImp = (await deployImplementation('OperatorVault')) as string
+    const vaultInterface = (await ethers.getContractFactory('OperatorVault')).interface as Interface
+
+    await vault.upgradeToAndCall(
+      vaultImp,
+      vaultInterface.encodeFunctionData('initialize(address,address,address,address)', [
+        token.address,
+        accounts[3],
+        accounts[4],
+        accounts[0],
+      ])
+    )
+    let vaultUpgraded = (await ethers.getContractAt(
+      'OperatorVault',
+      vault.address
+    )) as OperatorVault
+
+    assert.equal(await vaultUpgraded.token(), token.address)
+    assert.equal(await vaultUpgraded.vaultController(), accounts[3])
+    assert.equal(await vaultUpgraded.stakeController(), accounts[4])
+    assert.equal(await vaultUpgraded.operator(), accounts[0])
   })
 })

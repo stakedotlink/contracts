@@ -24,7 +24,7 @@ contract OperatorVault is Vault {
         address _vaultController,
         address _stakeController,
         address _operator
-    ) public initializer {
+    ) public reinitializer(2) {
         __Vault_init(_token, _vaultController, _stakeController);
         operator = _operator;
     }
@@ -52,14 +52,5 @@ contract OperatorVault is Vault {
         stakeController.raiseAlert();
         token.safeTransfer(vaultController, token.balanceOf(address(this)));
         emit AlertRaised();
-    }
-
-    /**
-     * @notice sets the operator that this vault represents if not already set
-     * @param _operator address of operator
-     */
-    function setOperator(address _operator) external onlyOwner {
-        require(operator == address(0), "Operator is already set");
-        operator = _operator;
     }
 }
