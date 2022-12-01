@@ -54,7 +54,7 @@ describe('StakingPool', () => {
       2000,
     ])) as DelegatorPoolMock
 
-    stakingPool = (await deploy('StakingPool', [
+    stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',

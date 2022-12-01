@@ -46,7 +46,7 @@ describe('SlashingKeeper', () => {
       0,
     ])) as DelegatorPoolMock
 
-    stakingPool = (await deploy('StakingPool', [
+    stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',

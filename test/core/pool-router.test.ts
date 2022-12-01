@@ -40,7 +40,7 @@ describe('PoolRouter', () => {
   })
 
   async function createPool(poolRouter: PoolRouter, token: string): Promise<StakingPool> {
-    let stakingPool = (await deploy('StakingPool', [
+    let stakingPool = (await deployUpgradeable('StakingPool', [
       token,
       'LinkPool LINK',
       'lpLINK',
@@ -106,14 +106,14 @@ describe('PoolRouter', () => {
 
     feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
 
-    delegatorPool = (await deploy('DelegatorPool', [
+    delegatorPool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
       feeCurve.address,
     ])) as DelegatorPool
 
-    poolRouter = (await deploy('PoolRouter', [
+    poolRouter = (await deployUpgradeable('PoolRouter', [
       allowanceToken.address,
       delegatorPool.address,
     ])) as PoolRouter

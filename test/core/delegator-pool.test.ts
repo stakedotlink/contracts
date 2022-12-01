@@ -1,5 +1,12 @@
 import { Signer } from 'ethers'
-import { toEther, deploy, getAccounts, setupToken, fromEther } from '../utils/helpers'
+import {
+  toEther,
+  deploy,
+  getAccounts,
+  setupToken,
+  fromEther,
+  deployUpgradeable,
+} from '../utils/helpers'
 import {
   ERC677,
   PoolRouterMock,
@@ -34,14 +41,13 @@ describe('DelegatorPool', () => {
       'Staking Allowance',
       'STA',
     ])) as StakingAllowance
-    await allowanceToken.connect(signers[0])
     await allowanceToken.mint(accounts[0], toEther(10000))
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
     feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
 
-    delegatorPool = (await deploy('DelegatorPool', [
+    delegatorPool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
@@ -143,7 +149,7 @@ describe('DelegatorPool', () => {
   })
 
   it('should work without pool router set', async () => {
-    let pool = (await deploy('DelegatorPool', [
+    let pool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
