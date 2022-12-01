@@ -41,7 +41,7 @@ async function main() {
     .connect(signers[3])
     .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
 
-    // account 4
+  // account 4
 
   await linkToken.transfer(accounts[4], toEther(10000))
   await ownersToken.transfer(accounts[4], toEther(10000))
