@@ -8,11 +8,11 @@ contract EthStakingStrategyMock {
 
     receive() external payable {}
 
-    function depositEther(uint _totalValidatorCount) external {
+    function depositEther(uint256 _totalValidatorCount) external {
         INWLOperatorController(nwlOperatorController).assignNextValidators(_totalValidatorCount);
     }
 
-    function nwlWithdraw(address _receiver, uint _amount) external {
+    function nwlWithdraw(address _receiver, uint256 _amount) external {
         require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
     }
 

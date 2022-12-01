@@ -16,7 +16,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
     IERC677 public immutable token;
 
     mapping(address => uint) private shares;
-    uint public totalShares;
+    uint256 public totalShares;
 
     constructor(
         address _token,
@@ -40,7 +40,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @return account's stake balance
      **/
     function balanceOf(address _account) public view override(IERC20, VirtualERC20) returns (uint) {
-        uint balance = getStakeByShares(shares[_account]);
+        uint256 balance = getStakeByShares(shares[_account]);
         if (balance < 100) {
             return 0;
         } else {
@@ -63,7 +63,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @return amount of shares
      **/
     function getSharesByStake(uint256 _amount) public view returns (uint256) {
-        uint totalStaked = _totalStaked();
+        uint256 totalStaked = _totalStaked();
         if (totalStaked == 0) {
             return 0;
         } else {
@@ -99,9 +99,9 @@ abstract contract StakingRewardsPool is VirtualERC677 {
     function _transfer(
         address _sender,
         address _recipient,
-        uint _amount
+        uint256 _amount
     ) internal override {
-        uint sharesToTransfer = getSharesByStake(_amount);
+        uint256 sharesToTransfer = getSharesByStake(_amount);
 
         require(_sender != address(0), "Transfer from the zero address");
         require(_recipient != address(0), "Transfer to the zero address");
@@ -119,8 +119,8 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _recipient account to mint shares for
      * @param _amount stake amount
      **/
-    function _mint(address _recipient, uint _amount) internal override {
-        uint sharesToMint = getSharesByStake(_amount);
+    function _mint(address _recipient, uint256 _amount) internal override {
+        uint256 sharesToMint = getSharesByStake(_amount);
         if (sharesToMint == 0) {
             sharesToMint = _amount;
         }
@@ -133,7 +133,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _recipient account to mint shares for
      * @param _amount shares amount
      **/
-    function _mintShares(address _recipient, uint _amount) internal {
+    function _mintShares(address _recipient, uint256 _amount) internal {
         require(_recipient != address(0), "Mint to the zero address");
 
         totalShares += _amount;
@@ -146,8 +146,8 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _account account to burn shares for
      * @param _amount stake amount
      **/
-    function _burn(address _account, uint _amount) internal override {
-        uint sharesToBurn = getSharesByStake(_amount);
+    function _burn(address _account, uint256 _amount) internal override {
+        uint256 sharesToBurn = getSharesByStake(_amount);
 
         require(_account != address(0), "Burn from the zero address");
         require(shares[_account] >= sharesToBurn, "Burn amount exceeds balance");

@@ -17,7 +17,7 @@ contract DelegatorPool is RewardsPoolController {
     using SafeERC20 for IERC20;
 
     struct VestingSchedule {
-        uint totalAmount;
+        uint256 totalAmount;
         uint64 startTimestamp;
         uint64 durationSeconds;
     }
@@ -28,8 +28,8 @@ contract DelegatorPool is RewardsPoolController {
 
     mapping(address => VestingSchedule) private vestingSchedules;
 
-    event AllowanceStaked(address indexed user, uint amount);
-    event AllowanceWithdrawn(address indexed user, uint amount);
+    event AllowanceStaked(address indexed user, uint256 amount);
+    event AllowanceWithdrawn(address indexed user, uint256 amount);
 
     constructor(
         address _allowanceToken,
@@ -48,7 +48,7 @@ contract DelegatorPool is RewardsPoolController {
      **/
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata _calldata
     ) external override {
         require(
@@ -114,7 +114,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _percentageBorrowed the percentage borrowed for fee calculation
      * @return current rate
      **/
-    function currentRateAt(uint _percentageBorrowed) public view returns (uint) {
+    function currentRateAt(uint256 _percentageBorrowed) public view returns (uint) {
         return feeCurve.currentRate(_percentageBorrowed);
     }
 
@@ -122,11 +122,11 @@ contract DelegatorPool is RewardsPoolController {
      * @notice withdraws lent allowance tokens if there are enough available
      * @param _amount amount to withdraw
      **/
-    function withdrawAllowance(uint _amount) external updateRewards(msg.sender) {
+    function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
         require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
         require(balanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds balance");
 
-        uint toWithdraw = _amount;
+        uint256 toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(msg.sender);
         }
@@ -176,7 +176,7 @@ contract DelegatorPool is RewardsPoolController {
      * @notice stakes allowance tokens
      * @param _amount amount to stake
      **/
-    function _stakeAllowance(address _sender, uint _amount) private updateRewards(_sender) {
+    function _stakeAllowance(address _sender, uint256 _amount) private updateRewards(_sender) {
         _mint(_sender, _amount);
         emit AllowanceStaked(_sender, _amount);
     }
@@ -189,7 +189,7 @@ contract DelegatorPool is RewardsPoolController {
      */
     function _setVestingSchedule(
         address _account,
-        uint _amount,
+        uint256 _amount,
         uint64 _startTimestamp,
         uint64 _durationSeconds
     ) internal {
@@ -212,7 +212,7 @@ contract DelegatorPool is RewardsPoolController {
      */
     function _vestedTokens(address _account) internal view virtual returns (uint256) {
         VestingSchedule memory vestingSchedule = vestingSchedules[_account];
-        uint totalAmount = vestingSchedule.totalAmount;
+        uint256 totalAmount = vestingSchedule.totalAmount;
         uint64 startTimestamp = vestingSchedule.startTimestamp;
         uint64 timestamp = uint64(block.timestamp);
 

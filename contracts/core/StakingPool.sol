@@ -21,12 +21,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
 
     struct Fee {
         address receiver;
-        uint basisPoints;
+        uint256 basisPoints;
     }
 
     address[] private strategies;
-    uint public totalStaked;
-    uint public liquidityBuffer;
+    uint256 public totalStaked;
+    uint256 public liquidityBuffer;
 
     Fee[] private fees;
 
@@ -34,9 +34,9 @@ contract StakingPool is StakingRewardsPool, Ownable {
     address public immutable delegatorPool;
     uint16 public poolIndex;
 
-    event Stake(address indexed account, uint amount);
-    event Withdraw(address indexed account, uint amount);
-    event UpdateStrategyRewards(address indexed account, uint totalStaked, int rewardsAmount, uint totalFees);
+    event Stake(address indexed account, uint256 amount);
+    event Withdraw(address indexed account, uint256 amount);
+    event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
 
     constructor(
         address _token,
@@ -46,7 +46,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
         address _poolRouter,
         address _delegatorPool
     ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
-        for (uint i = 0; i < _fees.length; i++) {
+        for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         poolRouter = _poolRouter;
@@ -79,7 +79,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function stake(address _account, uint _amount) external onlyRouter {
+    function stake(address _account, uint256 _amount) external onlyRouter {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -101,14 +101,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
     function withdraw(
         address _account,
         address _receiver,
-        uint _amount
+        uint256 _amount
     ) external onlyRouter {
-        uint toWithdraw = _amount;
+        uint256 toWithdraw = _amount;
         if (_amount == type(uint).max) {
             toWithdraw = balanceOf(_account);
         }
 
-        uint balance = token.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
         if (toWithdraw > balance) {
             _withdrawLiquidity(toWithdraw - balance);
         }
@@ -126,7 +126,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @param _index index of strategy to deposit in
      * @param _amount amount to deposit
      **/
-    function strategyDeposit(uint _index, uint _amount) external onlyOwner {
+    function strategyDeposit(uint256 _index, uint256 _amount) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).deposit(_amount);
     }
@@ -136,7 +136,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @param _index index of strategy to withdraw from
      * @param _amount amount to withdraw
      **/
-    function strategyWithdraw(uint _index, uint _amount) external onlyOwner {
+    function strategyWithdraw(uint256 _index, uint256 _amount) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
         IStrategy(strategies[_index]).withdraw(_amount);
     }
@@ -148,7 +148,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
     function getMaxDeposits() public view returns (uint256) {
         uint256 max;
 
-        for (uint i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             max += strategy.getMaxDeposits();
         }
@@ -165,7 +165,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
     function getMinDeposits() public view returns (uint256) {
         uint256 min;
 
-        for (uint i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             min += strategy.getMinDeposits();
         }
@@ -178,7 +178,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @return available deposit room
      */
     function canDeposit() external view returns (uint256) {
-        uint max = getMaxDeposits();
+        uint256 max = getMaxDeposits();
 
         if (max <= totalStaked) {
             return 0;
@@ -192,7 +192,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @return available withdrawal room
      */
     function canWithdraw() external view returns (uint256) {
-        uint min = getMinDeposits();
+        uint256 min = getMinDeposits();
 
         if (min >= totalStaked) {
             return 0;
@@ -215,21 +215,21 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice removes a strategy
      * @param _index index of strategy to remove
      **/
-    function removeStrategy(uint _index) external onlyOwner {
+    function removeStrategy(uint256 _index) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
 
-        uint[] memory idxs = new uint[](1);
+        uint256[] memory idxs = new uint[](1);
         idxs[0] = _index;
         updateStrategyRewards(idxs);
 
         IStrategy strategy = IStrategy(strategies[_index]);
-        uint totalStrategyDeposits = strategy.getTotalDeposits();
+        uint256 totalStrategyDeposits = strategy.getTotalDeposits();
         if (totalStrategyDeposits > 0) {
             require(strategy.canWithdraw() == totalStrategyDeposits, "Strategy contains deposits that cannot be withdrawn");
             strategy.withdraw(totalStrategyDeposits);
         }
 
-        for (uint i = _index; i < strategies.length - 1; i++) {
+        for (uint256 i = _index; i < strategies.length - 1; i++) {
             strategies[i] = strategies[i + 1];
         }
         strategies.pop();
@@ -240,15 +240,15 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice reorders strategies
      * @param _newOrder array containing strategy indexes in a new order
      **/
-    function reorderStrategies(uint[] calldata _newOrder) external onlyOwner {
+    function reorderStrategies(uint256[] calldata _newOrder) external onlyOwner {
         require(_newOrder.length == strategies.length, "newOrder.length must = strategies.length");
 
         address[] memory strategyAddresses = new address[](strategies.length);
-        for (uint i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             strategyAddresses[i] = strategies[i];
         }
 
-        for (uint i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             require(strategyAddresses[_newOrder[i]] != address(0), "all indices must be valid");
             strategies[i] = strategyAddresses[_newOrder[i]];
             strategyAddresses[_newOrder[i]] = address(0);
@@ -260,7 +260,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
-    function addFee(address _receiver, uint _feeBasisPoints) external onlyOwner {
+    function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
     }
 
@@ -271,9 +271,9 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @param _feeBasisPoints fee in basis points
      **/
     function updateFee(
-        uint _index,
+        uint256 _index,
         address _receiver,
-        uint _feeBasisPoints
+        uint256 _feeBasisPoints
     ) external onlyOwner {
         require(_index < fees.length, "Fee does not exist");
 
@@ -293,7 +293,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * the un-wind of allowance.
      * @param _liquidityBufferBasisPoints basis points to use for the liquidity buffer
      **/
-    function setLiquidityBuffer(uint _liquidityBufferBasisPoints) external onlyOwner {
+    function setLiquidityBuffer(uint256 _liquidityBufferBasisPoints) external onlyOwner {
         liquidityBuffer = _liquidityBufferBasisPoints;
     }
 
@@ -301,24 +301,24 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @notice updates and distributes rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
      **/
-    function updateStrategyRewards(uint[] memory _strategyIdxs) public {
+    function updateStrategyRewards(uint256[] memory _strategyIdxs) public {
         int totalRewards;
-        uint totalFeeAmounts;
-        uint totalFeeCount;
+        uint256 totalFeeAmounts;
+        uint256 totalFeeCount;
         address[][] memory receivers = new address[][](strategies.length + 1);
         uint[][] memory feeAmounts = new uint[][](strategies.length + 1);
 
-        for (uint i = 0; i < _strategyIdxs.length; i++) {
+        for (uint256 i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
             int rewards = strategy.depositChange();
             if (rewards != 0) {
-                (address[] memory strategyReceivers, uint[] memory strategyFeeAmounts) = strategy.updateDeposits();
+                (address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy.updateDeposits();
                 totalRewards += rewards;
                 if (rewards > 0) {
                     receivers[i] = (strategyReceivers);
                     feeAmounts[i] = (strategyFeeAmounts);
                     totalFeeCount += receivers[i].length;
-                    for (uint j = 0; j < strategyReceivers.length; j++) {
+                    for (uint256 j = 0; j < strategyReceivers.length; j++) {
                         totalFeeAmounts += strategyFeeAmounts[j];
                     }
                 }
@@ -330,14 +330,14 @@ contract StakingPool is StakingRewardsPool, Ownable {
         }
 
         if (totalRewards > 0) {
-            uint currentRate = IDelegatorPool(delegatorPool).currentRate(address(token), poolIndex);
-            uint feesLength = currentRate > 0 ? fees.length + 1 : fees.length;
+            uint256 currentRate = IDelegatorPool(delegatorPool).currentRate(address(token), poolIndex);
+            uint256 feesLength = currentRate > 0 ? fees.length + 1 : fees.length;
 
             receivers[receivers.length - 1] = new address[](feesLength);
             feeAmounts[feeAmounts.length - 1] = new uint[](feesLength);
             totalFeeCount += feesLength;
 
-            for (uint i = 0; i < fees.length; i++) {
+            for (uint256 i = 0; i < fees.length; i++) {
                 receivers[receivers.length - 1][i] = fees[i].receiver;
                 feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
@@ -351,12 +351,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
         }
 
         if (totalFeeAmounts > 0) {
-            uint sharesToMint = (totalFeeAmounts * totalShares) / (totalStaked - totalFeeAmounts);
+            uint256 sharesToMint = (totalFeeAmounts * totalShares) / (totalStaked - totalFeeAmounts);
             _mintShares(address(this), sharesToMint);
 
-            uint feesPaidCount;
-            for (uint i = 0; i < receivers.length; i++) {
-                for (uint j = 0; j < receivers[i].length; j++) {
+            uint256 feesPaidCount;
+            for (uint256 i = 0; i < receivers.length; i++) {
+                for (uint256 j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
                         transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x00");
                     } else {
@@ -375,11 +375,11 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
      **/
     function depositLiquidity() public {
-        uint toDeposit = token.balanceOf(address(this));
+        uint256 toDeposit = token.balanceOf(address(this));
         if (toDeposit > 0) {
-            for (uint i = 0; i < strategies.length; i++) {
+            for (uint256 i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
-                uint canDeposit = strategy.canDeposit();
+                uint256 canDeposit = strategy.canDeposit();
                 if (canDeposit >= toDeposit) {
                     strategy.deposit(toDeposit);
                     break;
@@ -413,12 +413,12 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * until withdraw amount is reached
      * @param _amount amount to withdraw
      **/
-    function _withdrawLiquidity(uint _amount) private {
-        uint toWithdraw = _amount;
+    function _withdrawLiquidity(uint256 _amount) private {
+        uint256 toWithdraw = _amount;
 
-        for (uint i = strategies.length; i > 0; i--) {
+        for (uint256 i = strategies.length; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
-            uint canWithdraw = strategy.canWithdraw();
+            uint256 canWithdraw = strategy.canWithdraw();
 
             if (canWithdraw >= toWithdraw) {
                 strategy.withdraw(toWithdraw);
@@ -436,7 +436,7 @@ contract StakingPool is StakingRewardsPool, Ownable {
      * @return true if strategy exists, false otherwise
      **/
     function _strategyExists(address _strategy) private view returns (bool) {
-        for (uint i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             if (strategies[i] == _strategy) {
                 return true;
             }

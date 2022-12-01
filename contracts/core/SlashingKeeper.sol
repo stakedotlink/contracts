@@ -25,9 +25,9 @@ contract SlashingKeeper is KeeperCompatibleInterface {
     function checkUpkeep(bytes calldata _checkData) external view override returns (bool, bytes memory) {
         address[] memory strategies = stakingPool.getStrategies();
         bool[] memory strategiesToUpdate = new bool[](strategies.length);
-        uint totalStrategiesToUpdate;
+        uint256 totalStrategiesToUpdate;
 
-        for (uint i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
             if (strategy.depositChange() < 0) {
                 strategiesToUpdate[i] = true;
@@ -36,10 +36,10 @@ contract SlashingKeeper is KeeperCompatibleInterface {
         }
 
         if (totalStrategiesToUpdate > 0) {
-            uint[] memory strategyIdxs = new uint[](totalStrategiesToUpdate);
-            uint strategiesAdded;
+            uint256[] memory strategyIdxs = new uint[](totalStrategiesToUpdate);
+            uint256 strategiesAdded;
 
-            for (uint i = 0; i < strategiesToUpdate.length; i++) {
+            for (uint256 i = 0; i < strategiesToUpdate.length; i++) {
                 if (strategiesToUpdate[i]) {
                     strategyIdxs[strategiesAdded] = i;
                     strategiesAdded++;
@@ -58,10 +58,10 @@ contract SlashingKeeper is KeeperCompatibleInterface {
      */
     function performUpkeep(bytes calldata _performData) external override {
         address[] memory strategies = stakingPool.getStrategies();
-        uint[] memory strategiesToUpdate = abi.decode(_performData, (uint[]));
+        uint256[] memory strategiesToUpdate = abi.decode(_performData, (uint[]));
         require(strategiesToUpdate.length > 0, "No strategies to update");
 
-        for (uint i = 0; i < strategiesToUpdate.length; i++) {
+        for (uint256 i = 0; i < strategiesToUpdate.length; i++) {
             require(IStrategy(strategies[strategiesToUpdate[i]]).depositChange() < 0, "Deposit change is >= 0");
         }
         stakingPool.updateStrategyRewards(strategiesToUpdate);

@@ -36,8 +36,8 @@ contract OperatorControllerMock is OperatorController {
      * @param _signatures concatenated set of signatures to add
      */
     function addKeyPairs(
-        uint _operatorId,
-        uint _quantity,
+        uint256 _operatorId,
+        uint256 _quantity,
         bytes calldata _pubkeys,
         bytes calldata _signatures
     ) external {
@@ -53,12 +53,12 @@ contract OperatorControllerMock is OperatorController {
      * @return signatures concatenated list of signatures
      */
     function assignNextValidators(
-        uint[] calldata _operatorIds,
-        uint[] calldata _validatorCounts,
-        uint _totalValidatorCount
+        uint256[] calldata _operatorIds,
+        uint256[] calldata _validatorCounts,
+        uint256 _totalValidatorCount
     ) external returns (bytes memory keys, bytes memory signatures) {
-        for (uint i = 0; i < _operatorIds.length; i++) {
-            uint operatorId = _operatorIds[i];
+        for (uint256 i = 0; i < _operatorIds.length; i++) {
+            uint256 operatorId = _operatorIds[i];
 
             operators[operatorId].usedKeyPairs += uint64(_validatorCounts[i]);
             activeValidators[operators[operatorId].owner] += _validatorCounts[i];
@@ -67,7 +67,7 @@ contract OperatorControllerMock is OperatorController {
         }
     }
 
-    function reportKeyPairValidation(uint _operatorId, bool _success) external {
+    function reportKeyPairValidation(uint256 _operatorId, bool _success) external {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
         if (_success) {

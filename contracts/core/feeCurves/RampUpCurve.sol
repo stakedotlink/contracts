@@ -13,26 +13,26 @@ import "@prb/math/contracts/PRBMathUD60x18.sol";
 contract RampUpCurve is Ownable {
     using PRBMathUD60x18 for uint;
 
-    uint public rateConstantA;
-    uint public rateConstantB;
-    uint public rateConstantC;
-    uint public rateConstantD;
-    uint public rateConstantE;
+    uint256 public rateConstantA;
+    uint256 public rateConstantB;
+    uint256 public rateConstantC;
+    uint256 public rateConstantD;
+    uint256 public rateConstantE;
 
     event RateConstantsSet(
-        uint _rateConstantA,
-        uint _rateConstantB,
-        uint _rateConstantC,
-        uint _rateConstantD,
-        uint _rateConstantE
+        uint256 _rateConstantA,
+        uint256 _rateConstantB,
+        uint256 _rateConstantC,
+        uint256 _rateConstantD,
+        uint256 _rateConstantE
     );
 
     constructor(
-        uint _rateConstantA,
-        uint _rateConstantB,
-        uint _rateConstantC,
-        uint _rateConstantD,
-        uint _rateConstantE
+        uint256 _rateConstantA,
+        uint256 _rateConstantB,
+        uint256 _rateConstantC,
+        uint256 _rateConstantD,
+        uint256 _rateConstantE
     ) {
         setRateConstants(_rateConstantA, _rateConstantB, _rateConstantC, _rateConstantD, _rateConstantE);
     }
@@ -46,11 +46,11 @@ contract RampUpCurve is Ownable {
      * @param _rateConstantE value to set for rateE
      **/
     function setRateConstants(
-        uint _rateConstantA,
-        uint _rateConstantB,
-        uint _rateConstantC,
-        uint _rateConstantD,
-        uint _rateConstantE
+        uint256 _rateConstantA,
+        uint256 _rateConstantB,
+        uint256 _rateConstantC,
+        uint256 _rateConstantD,
+        uint256 _rateConstantE
     ) public onlyOwner {
         require(_rateConstantA > 0 && _rateConstantB > 0 && _rateConstantC > 0, "Rate constants A, B and C cannot be zero");
 
@@ -69,12 +69,12 @@ contract RampUpCurve is Ownable {
      * @dev Equation: y = (A*x/B)^C + x/D + E
      * @return current rate
      **/
-    function currentRate(uint _percentage) external view returns (uint) {
+    function currentRate(uint256 _percentage) external view returns (uint) {
         if (_percentage == 0) {
             return rateConstantE * 100;
         }
-        uint x = _percentage;
-        uint y = x.div(rateConstantB).mul(rateConstantA * 100).powu(rateConstantC);
+        uint256 x = _percentage;
+        uint256 y = x.div(rateConstantB).mul(rateConstantA * 100).powu(rateConstantC);
         if (rateConstantD > 1) {
             y = y + (x * 100).div(rateConstantD).toUint();
         }

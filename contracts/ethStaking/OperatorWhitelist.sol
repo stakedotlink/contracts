@@ -19,7 +19,7 @@ contract OperatorWhitelist is Ownable {
     constructor(address _wlOperatorController, address[] memory _whitelist) {
         wlOperatorController = _wlOperatorController;
 
-        for (uint i = 0; i < _whitelist.length; i++) {
+        for (uint256 i = 0; i < _whitelist.length; i++) {
             whitelist[_whitelist[i]] = WhitelistEntry(true, false);
         }
     }
@@ -50,7 +50,7 @@ contract OperatorWhitelist is Ownable {
      * @param _accounts list of accounts to add to whitelist
      */
     function addWhitelistEntries(address[] calldata _accounts) external onlyOwner {
-        for (uint i = 0; i < _accounts.length; i++) {
+        for (uint256 i = 0; i < _accounts.length; i++) {
             address account = _accounts[i];
             require(!whitelist[account].isWhitelisted, "Account already whitelisted");
             whitelist[account] = WhitelistEntry(true, false);
@@ -62,7 +62,7 @@ contract OperatorWhitelist is Ownable {
      * @param _accounts list of accounts to remove from whitelist
      */
     function removeWhitelistEntries(address[] calldata _accounts) external onlyOwner {
-        for (uint i = 0; i < _accounts.length; i++) {
+        for (uint256 i = 0; i < _accounts.length; i++) {
             address account = _accounts[i];
             require(whitelist[account].isWhitelisted, "Account is not whitelisted");
             whitelist[account].isWhitelisted = false;

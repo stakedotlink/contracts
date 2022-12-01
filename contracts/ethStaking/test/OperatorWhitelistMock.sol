@@ -10,7 +10,7 @@ contract OperatorWhitelistMock {
     mapping(address => WhitelistEntry) private whitelist;
 
     constructor(address[] memory _whitelist) {
-        for (uint i = 0; i < _whitelist.length; i++) {
+        for (uint256 i = 0; i < _whitelist.length; i++) {
             whitelist[_whitelist[i]] = WhitelistEntry(true, false);
         }
     }

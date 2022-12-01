@@ -17,10 +17,10 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
     IOperatorController public nwlOperatorController;
     IOperatorController public wlOperatorController;
 
-    uint public fee;
+    uint256 public fee;
     bytes32 public jobId;
 
-    event SetOracleConfig(address oracleAddress, bytes32 jobId, uint fee);
+    event SetOracleConfig(address oracleAddress, bytes32 jobId, uint256 fee);
 
     constructor(
         address _nwlOperatorController,
@@ -28,7 +28,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         address _chainlinkToken,
         address _chainlinkOracle,
         bytes32 _jobId,
-        uint _fee
+        uint256 _fee
     ) {
         nwlOperatorController = IOperatorController(_nwlOperatorController);
         wlOperatorController = IOperatorController(_wlOperatorController);
@@ -47,13 +47,13 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
      */
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata _calldata
     ) external {
         require(msg.sender == chainlinkTokenAddress(), "Sender is not chainlink token");
         require(_value == fee, "Value is not equal to fee");
 
-        (uint operatorId, bool isWhitelisted) = abi.decode(_calldata, (uint, bool));
+        (uint256 operatorId, bool isWhitelisted) = abi.decode(_calldata, (uint, bool));
 
         _initiateKeyPairValidation(_sender, operatorId, isWhitelisted);
     }
@@ -67,7 +67,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
      */
     function reportKeyPairValidation(
         bytes32 _requestId,
-        uint _operatorId,
+        uint256 _operatorId,
         bool _isWhitelisted,
         bool _success
     ) external recordChainlinkFulfillment(_requestId) {
@@ -87,7 +87,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
     function setOracleConfig(
         address _oracleAddress,
         bytes32 _jobId,
-        uint _fee
+        uint256 _fee
     ) external onlyOwner {
         setChainlinkOracle(_oracleAddress);
         jobId = _jobId;
@@ -111,7 +111,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
      */
     function _initiateKeyPairValidation(
         address _sender,
-        uint _operatorId,
+        uint256 _operatorId,
         bool _isWhitelisted
     ) private {
         if (_isWhitelisted) {

@@ -34,7 +34,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @return available deposit room
      */
     function canDeposit() public view virtual returns (uint) {
-        uint deposits = getTotalDeposits();
+        uint256 deposits = getTotalDeposits();
         if (deposits >= getMaxDeposits()) {
             return 0;
         } else {
@@ -47,7 +47,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @return available withdrawal room
      */
     function canWithdraw() public view virtual returns (uint) {
-        uint deposits = getTotalDeposits();
+        uint256 deposits = getTotalDeposits();
         if (deposits <= getMinDeposits()) {
             return 0;
         } else {

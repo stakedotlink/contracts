@@ -18,11 +18,11 @@ contract PoolRouterMock {
     address public token;
 
     uint16 public index;
-    uint public totalRewards;
+    uint256 public totalRewards;
 
     bool public reservedMode;
 
-    uint public poolUtilisationPercentage;
+    uint256 public poolUtilisationPercentage;
 
     constructor(
         address _allowanceToken,
@@ -60,7 +60,7 @@ contract PoolRouterMock {
         return 10000;
     }
 
-    function setPoolUtilisation(uint _poolUtilisationPercentage) external {
+    function setPoolUtilisation(uint256 _poolUtilisationPercentage) external {
         poolUtilisationPercentage = _poolUtilisationPercentage;
     }
 
@@ -70,7 +70,7 @@ contract PoolRouterMock {
 
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata _calldata
     ) external {
         require(msg.sender == allowanceToken, "Unauthorized");

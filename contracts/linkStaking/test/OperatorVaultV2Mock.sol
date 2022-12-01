@@ -8,9 +8,9 @@ import "../OperatorVault.sol";
  * @notice Mocks contract for testing
  */
 contract OperatorVaultV2Mock is OperatorVault {
-    uint public version;
+    uint256 public version;
 
-    function initializeV2(uint _version) public reinitializer(3) {
+    function initializeV2(uint256 _version) public reinitializer(3) {
         version = _version;
     }
 

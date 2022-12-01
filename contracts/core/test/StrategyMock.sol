@@ -14,11 +14,11 @@ import "../RewardsPool.sol";
 contract StrategyMock is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint private maxDeposits;
-    uint private minDeposits;
+    uint256 private maxDeposits;
+    uint256 private minDeposits;
 
-    uint private totalDeposits;
-    uint public feeBasisPoints;
+    uint256 private totalDeposits;
+    uint256 public feeBasisPoints;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -28,8 +28,8 @@ contract StrategyMock is Strategy {
     function initialize(
         address _token,
         address _stakingPool,
-        uint _maxDeposits,
-        uint _minDeposits
+        uint256 _maxDeposits,
+        uint256 _minDeposits
     ) public initializer {
         __Strategy_init(_token, _stakingPool);
         feeBasisPoints = 0;
@@ -55,7 +55,7 @@ contract StrategyMock is Strategy {
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
+    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
         int256 balanceChange = depositChange();
         if (balanceChange > 0) {
             totalDeposits += uint(balanceChange);
@@ -70,11 +70,11 @@ contract StrategyMock is Strategy {
         }
     }
 
-    function setFeeBasisPoints(uint _feeBasisPoints) external {
+    function setFeeBasisPoints(uint256 _feeBasisPoints) external {
         feeBasisPoints = _feeBasisPoints;
     }
 
-    function simulateSlash(uint _amount) external {
+    function simulateSlash(uint256 _amount) external {
         token.safeTransfer(msg.sender, _amount);
     }
 

@@ -49,7 +49,7 @@ contract RewardsPoolWSD is RewardsPool {
     function distributeRewards() public override {
         require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
 
-        uint balance = token.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
         token.transferAndCall(address(wsdToken), balance, "0x00");
 
         uint256 toDistribute = wsdToken.balanceOf(address(this)) - totalRewards;
@@ -64,7 +64,7 @@ contract RewardsPoolWSD is RewardsPool {
      * @param _account account to update for
      **/
     function updateReward(address _account) public override {
-        uint newRewards = withdrawableRewardsWrapped(_account) - userRewards[_account];
+        uint256 newRewards = withdrawableRewardsWrapped(_account) - userRewards[_account];
         if (newRewards > 0) {
             userRewards[_account] += newRewards;
         }
@@ -77,7 +77,7 @@ contract RewardsPoolWSD is RewardsPool {
      **/
     function _withdraw(address _account) internal override {
         uint256 toWithdraw = withdrawableRewardsWrapped(_account);
-        uint toWithdrawUnwrapped = wsdToken.getUnderlyingByWrapped(toWithdraw);
+        uint256 toWithdrawUnwrapped = wsdToken.getUnderlyingByWrapped(toWithdraw);
 
         if (toWithdraw > 0) {
             updateReward(_account);

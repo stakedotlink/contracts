@@ -13,7 +13,7 @@ import "./interfaces/IWLOperatorController.sol";
  * @notice Initiates ETH deposits and handles pre-deposit security checks
  */
 contract DepositController is Ownable {
-    uint public constant PUBKEY_LENGTH = 48;
+    uint256 public constant PUBKEY_LENGTH = 48;
 
     IDepositContract public depositContract;
     IEthStakingStrategy public ethStakingStrategy;
@@ -47,10 +47,10 @@ contract DepositController is Ownable {
         bytes32 _depositRoot,
         bytes32 _nwlStateHash,
         bytes32 _wlStateHash,
-        uint _nwlTotalValidatorCount,
-        uint _wlTotalValidatorCount,
-        uint[] calldata _wlOperatorIds,
-        uint[] calldata _wlValidatorCounts
+        uint256 _nwlTotalValidatorCount,
+        uint256 _wlTotalValidatorCount,
+        uint256[] calldata _wlOperatorIds,
+        uint256[] calldata _wlValidatorCounts
     ) external onlyOwner {
         bytes32 depositRoot = depositContract.get_deposit_root();
         bytes32 nwlStateHash = nwlOperatorController.currentStateHash();
@@ -77,23 +77,23 @@ contract DepositController is Ownable {
      * @return nwlKeys nwl validator keys to be assigned
      * @return wlKeys wl validator keys to be assigned
      */
-    function getNextValidators(uint _totalValidatorCount)
+    function getNextValidators(uint256 _totalValidatorCount)
         external
         view
         returns (
             bytes32 depositRoot,
             bytes32 nwlStateHash,
             bytes32 wlStateHash,
-            uint nwlTotalValidatorCount,
-            uint wlTotalValidatorCount,
-            uint[] memory wlOperatorIds,
-            uint[] memory wlValidatorCounts,
+            uint256 nwlTotalValidatorCount,
+            uint256 wlTotalValidatorCount,
+            uint256[] memory wlOperatorIds,
+            uint256[] memory wlValidatorCounts,
             bytes memory nwlKeys,
             bytes memory wlKeys
         )
     {
-        uint nwlQueueLength = nwlOperatorController.queueLength();
-        uint wlQueueLength = wlOperatorController.queueLength();
+        uint256 nwlQueueLength = nwlOperatorController.queueLength();
+        uint256 wlQueueLength = wlOperatorController.queueLength();
 
         require(_totalValidatorCount <= nwlQueueLength + wlQueueLength, "not enough validators in queue");
 

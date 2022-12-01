@@ -10,7 +10,7 @@ contract ERC677 is IERC677, ERC20 {
     constructor(
         string memory _tokenName,
         string memory _tokenSymbol,
-        uint _totalSupply
+        uint256 _totalSupply
     ) ERC20(_tokenName, _tokenSymbol) {
         _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
     }

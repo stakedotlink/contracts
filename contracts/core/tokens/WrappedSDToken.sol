@@ -26,7 +26,7 @@ contract WrappedSDToken is ERC677 {
      **/
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata
     ) external {
         require(msg.sender == address(sdToken), "Sender must be staking derivative token");
@@ -37,7 +37,7 @@ contract WrappedSDToken is ERC677 {
      * @notice wraps tokens
      * @param _amount amount of unwrapped tokens to wrap
      */
-    function wrap(uint _amount) external {
+    function wrap(uint256 _amount) external {
         sdToken.transferFrom(msg.sender, address(this), _amount);
         _wrap(msg.sender, _amount);
     }
@@ -46,7 +46,7 @@ contract WrappedSDToken is ERC677 {
      * @notice unwraps tokens
      * @param _amount amount of wrapped tokens to unwrap
      */
-    function unwrap(uint _amount) external {
+    function unwrap(uint256 _amount) external {
         require(_amount > 0, "Amount must be > 0");
         uint256 unwrappedAmount = sdToken.getStakeByShares(_amount);
         _burn(msg.sender, _amount);
@@ -58,7 +58,7 @@ contract WrappedSDToken is ERC677 {
      * @param _amount amount of unwrapped tokens
      * @return amount of wrapped tokens
      */
-    function getWrappedByUnderlying(uint _amount) external view returns (uint) {
+    function getWrappedByUnderlying(uint256 _amount) external view returns (uint) {
         return sdToken.getSharesByStake(_amount);
     }
 
@@ -67,7 +67,7 @@ contract WrappedSDToken is ERC677 {
      * @param _amount amount of wrapped tokens
      * @return amount of unwrapped tokens
      */
-    function getUnderlyingByWrapped(uint _amount) external view returns (uint) {
+    function getUnderlyingByWrapped(uint256 _amount) external view returns (uint) {
         return sdToken.getStakeByShares(_amount);
     }
 
@@ -76,7 +76,7 @@ contract WrappedSDToken is ERC677 {
      * @param _account account to wrap tokens for
      * @param _amount amount of unwrapped tokens to wrap
      */
-    function _wrap(address _account, uint _amount) private {
+    function _wrap(address _account, uint256 _amount) private {
         require(_amount > 0, "Amount must be > 0");
         uint256 wrappedAmount = sdToken.getSharesByStake(_amount);
         _mint(_account, wrappedAmount);

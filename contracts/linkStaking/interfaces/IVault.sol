@@ -2,9 +2,9 @@
 pragma solidity 0.8.15;
 
 interface IVault {
-    function deposit(uint _amount) external;
+    function deposit(uint256 _amount) external;
 
-    function withdraw(uint _amount) external view;
+    function withdraw(uint256 _amount) external view;
 
     function getTotalDeposits() external view returns (uint);
 

@@ -2,9 +2,9 @@
 pragma solidity 0.8.15;
 
 interface IOperatorController {
-    function initiateKeyPairValidation(address _sender, uint _operatorId) external;
+    function initiateKeyPairValidation(address _sender, uint256 _operatorId) external;
 
-    function reportKeyPairValidation(uint _operatorId, bool _success) external;
+    function reportKeyPairValidation(uint256 _operatorId, bool _success) external;
 
     function queueLength() external view returns (uint);
 
