@@ -98,7 +98,7 @@ describe('StakingPool', () => {
   it('derivative token metadata should be correct', async () => {
     assert.equal(await stakingPool.name(), 'LinkPool LINK', 'Name incorrect')
     assert.equal(await stakingPool.symbol(), 'lpLINK', 'Symbol incorrect')
-    assert.equal((await stakingPool.decimals()).toNumber(), 18, 'Decimals incorrect')
+    assert.equal(await stakingPool.decimals(), 18, 'Decimals incorrect')
   })
 
   it('should be able to add new fee', async () => {

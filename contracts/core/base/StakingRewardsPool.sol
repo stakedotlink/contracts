@@ -3,14 +3,14 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../tokens/base/VirtualERC677.sol";
+import "../tokens/base/ERC677.sol";
 
 /**
  * @title StakingRewardsPool
  * @notice Handles staking and reward distribution for a single asset
  * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
-abstract contract StakingRewardsPool is VirtualERC677 {
+abstract contract StakingRewardsPool is ERC677 {
     using SafeERC20 for IERC677;
 
     IERC677 public immutable token;
@@ -22,7 +22,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol
-    ) VirtualERC677(_derivativeTokenName, _derivativeTokenSymbol) {
+    ) ERC677(_derivativeTokenName, _derivativeTokenSymbol, 0) {
         token = IERC677(_token);
     }
 
@@ -30,7 +30,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @notice returns the total supply of staking derivative tokens
      * @return total supply
      */
-    function totalSupply() public view override(IERC20, VirtualERC20) returns (uint) {
+    function totalSupply() public view override(IERC20, ERC20) returns (uint) {
         return _totalStaked();
     }
 
@@ -39,7 +39,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _account account to return balance for
      * @return account's stake balance
      **/
-    function balanceOf(address _account) public view override(IERC20, VirtualERC20) returns (uint) {
+    function balanceOf(address _account) public view override(IERC20, ERC20) returns (uint) {
         uint256 balance = getStakeByShares(shares[_account]);
         if (balance < 100) {
             return 0;

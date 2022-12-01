@@ -18,7 +18,7 @@ contract ERC677 is IERC677, ERC20 {
     function transferAndCall(
         address _to,
         uint256 _value,
-        bytes calldata _data
+        bytes memory _data
     ) public override returns (bool) {
         super.transfer(_to, _value);
         if (isContract(_to)) {
@@ -27,11 +27,24 @@ contract ERC677 is IERC677, ERC20 {
         return true;
     }
 
+    function transferAndCallFrom(
+        address _sender,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) internal returns (bool) {
+        _transfer(_sender, _to, _value);
+        if (isContract(_to)) {
+            contractFallback(_sender, _to, _value, _data);
+        }
+        return true;
+    }
+
     function contractFallback(
         address _sender,
         address _to,
         uint256 _value,
-        bytes calldata _data
+        bytes memory _data
     ) internal {
         IERC677Receiver receiver = IERC677Receiver(_to);
         receiver.onTokenTransfer(_sender, _value, _data);
