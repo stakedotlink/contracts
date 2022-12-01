@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "../../tokens/base/ERC677.sol";
+import "../../interfaces/IERC677.sol";
 
 /**
  * @title RewardsPool
@@ -37,7 +38,7 @@ contract RewardsPoolV1 is ERC677, ReentrancyGuard {
      * @param _account user to calculate rewards for
      * @return user's total unclaimed rewards
      **/
-    function balanceOf(address _account) public view virtual override(IERC20, ERC20) returns (uint256) {
+    function balanceOf(address _account) public view virtual override returns (uint256) {
         return
             (stakingDerivative.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +

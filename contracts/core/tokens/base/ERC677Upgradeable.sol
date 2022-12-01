@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "../../interfaces/IERC677Receiver.sol";
 
-contract ERC677 is ERC20 {
-    constructor(
+contract ERC677Upgradeable is ERC20Upgradeable {
+    function __ERC677_init(
         string memory _tokenName,
         string memory _tokenSymbol,
         uint256 _totalSupply
-    ) ERC20(_tokenName, _tokenSymbol) {
+    ) public onlyInitializing {
+        __ERC20_init(_tokenName, _tokenSymbol);
         _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
     }
 

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "../base/RewardsPoolController.sol";
 
 /**
@@ -11,19 +8,25 @@ import "../base/RewardsPoolController.sol";
  * @notice Mocks contract for testing
  */
 contract RewardsPoolControllerMock is RewardsPoolController {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    IERC20 public token;
+    IERC20Upgradeable public token;
 
     uint256 public stakedTotal;
     mapping(address => uint) public stakeBalances;
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _token,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol
-    ) RewardsPoolController(_derivativeTokenName, _derivativeTokenSymbol) {
-        token = IERC20(_token);
+        string memory _dTokenName,
+        string memory _dTokenSymbol
+    ) public initializer {
+        __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
+        token = IERC20Upgradeable(_token);
     }
 
     function staked(address _account) external view override returns (uint) {

@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
-import "./interfaces/IERC677.sol";
 import "./interfaces/IStakingPool.sol";
 import "./interfaces/IDelegatorPool.sol";
 import "../ethStaking/interfaces/IWrappedETH.sol";
-
-import "hardhat/console.sol";
 
 /**
  * @title PoolRouter
  * @dev Handles staking allowances and acts as a proxy for staking pools
  */
-contract PoolRouter is Ownable {
-    using SafeERC20 for IERC677;
+contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum PoolStatus {
         OPEN,
@@ -27,14 +26,14 @@ contract PoolRouter is Ownable {
     }
 
     struct Pool {
-        IERC677 token;
+        IERC20Upgradeable token;
         IStakingPool stakingPool;
         PoolStatus status;
         bool reservedModeActive;
     }
 
-    IERC677 public immutable allowanceToken;
-    IDelegatorPool public immutable delegatorPool;
+    IERC20Upgradeable public allowanceToken;
+    IDelegatorPool public delegatorPool;
 
     mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
@@ -50,15 +49,22 @@ contract PoolRouter is Ownable {
     event AddPool(address indexed token, address indexed pool);
     event RemovePool(address indexed token, address indexed pool);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _allowanceToken, address _delegatorPool) public initializer {
+        allowanceToken = IERC20Upgradeable(_allowanceToken);
+        delegatorPool = IDelegatorPool(_delegatorPool);
+        reservedMultiplier = 1e4;
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+
     modifier poolExists(address _token, uint256 _index) {
         require(poolCountByToken[_token] > _index, "Pool does not exist");
         _;
-    }
-
-    constructor(address _allowanceToken, address _delegatorPool) {
-        allowanceToken = IERC677(_allowanceToken);
-        delegatorPool = IDelegatorPool(_delegatorPool);
-        reservedMultiplier = 1e4;
     }
 
     receive() external payable {}
@@ -147,7 +153,7 @@ contract PoolRouter is Ownable {
     ) external {
         require(poolCountByToken[msg.sender] > 0, "Only callable by supported tokens");
 
-        uint16 index = SafeCast.toUint16(_bytesToUint(_calldata));
+        uint16 index = SafeCastUpgradeable.toUint16(_bytesToUint(_calldata));
         require(poolCountByToken[msg.sender] > index, "Pool does not exist");
 
         _stake(msg.sender, index, _sender, _value);
@@ -164,7 +170,7 @@ contract PoolRouter is Ownable {
         uint16 _index,
         uint256 _amount
     ) external poolExists(_token, _index) {
-        IERC677(_token).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _amount);
         _stake(_token, _index, msg.sender, _amount);
     }
 
@@ -223,13 +229,13 @@ contract PoolRouter is Ownable {
             tokens.push(_token);
         }
 
-        pool.token = IERC677(_token);
+        pool.token = IERC20Upgradeable(_token);
         pool.stakingPool = IStakingPool(_stakingPool);
         pool.status = _status;
         pool.reservedModeActive = _reservedModeActive;
 
-        if (IERC677(_token).allowance(address(this), _stakingPool) == 0) {
-            IERC677(_token).safeApprove(_stakingPool, type(uint).max);
+        if (IERC20Upgradeable(_token).allowance(address(this), _stakingPool) == 0) {
+            IERC20Upgradeable(_token).safeApprove(_stakingPool, type(uint).max);
         }
 
         IStakingPool(_stakingPool).setPoolIndex(tokenPoolCount);
@@ -343,7 +349,7 @@ contract PoolRouter is Ownable {
     function setWrappedETH(address _wrappedETH) external onlyOwner {
         require(wrappedETH == address(0), "wrappedETH already set");
         wrappedETH = _wrappedETH;
-        IERC677(_wrappedETH).safeApprove(_wrappedETH, type(uint).max);
+        IERC20Upgradeable(_wrappedETH).safeApprove(_wrappedETH, type(uint).max);
     }
 
     /**
@@ -438,6 +444,8 @@ contract PoolRouter is Ownable {
         }
         return (accountMaxStake > _maximumStake) ? _maximumStake : accountMaxStake - stakingPool.balanceOf(_account);
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     /**
      * @notice returns the pool key hash by token and index
