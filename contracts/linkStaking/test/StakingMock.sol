@@ -17,8 +17,8 @@ contract StakingMock is IStaking, IERC677Receiver {
     mapping(address => uint) public stakedBalances;
     address public migration;
 
-    uint public baseReward;
-    uint public delegationReward;
+    uint256 public baseReward;
+    uint256 public delegationReward;
 
     bool public active;
     bool public paused;
@@ -77,7 +77,7 @@ contract StakingMock is IStaking, IERC677Receiver {
         token.transferAndCall(migration, stakedBalances[msg.sender], "0x0");
     }
 
-    function setBaseReward(uint _amount) external {
+    function setBaseReward(uint256 _amount) external {
         baseReward = _amount;
     }
 
@@ -85,7 +85,7 @@ contract StakingMock is IStaking, IERC677Receiver {
         return baseReward;
     }
 
-    function setDelegationReward(uint _amount) external {
+    function setDelegationReward(uint256 _amount) external {
         delegationReward = _amount;
     }
 

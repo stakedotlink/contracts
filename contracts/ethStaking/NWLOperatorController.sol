@@ -10,23 +10,23 @@ import "./interfaces/IEthStakingStrategy.sol";
  * @notice Handles non-whitelisted validator keys, operator stakes, and operator rewards distribution
  */
 contract NWLOperatorController is OperatorController {
-    uint public constant DEPOSIT_AMOUNT = 16 ether;
+    uint256 public constant DEPOSIT_AMOUNT = 16 ether;
 
     struct QueueEntry {
-        uint operatorId;
-        uint numKeyPairs;
+        uint256 operatorId;
+        uint256 numKeyPairs;
     }
 
     QueueEntry[] private queue;
-    uint public queueIndex;
+    uint256 public queueIndex;
 
-    mapping(uint => uint) public ethLost;
-    mapping(uint => uint) public ethWithdrawn;
+    mapping(uint256 => uint) public ethLost;
+    mapping(uint256 => uint) public ethWithdrawn;
 
-    event RemoveKeyPairs(uint indexed operatorId, uint quantity);
-    event ReportKeyPairValidation(uint indexed operatorId, bool success);
-    event ReportStoppedValidators(uint indexed operatorId, uint totalStoppedValidators, uint totalEthLost);
-    event WithdrawStake(uint indexed _operatorId, uint amount);
+    event RemoveKeyPairs(uint256 indexed operatorId, uint256 quantity);
+    event ReportKeyPairValidation(uint256 indexed operatorId, bool success);
+    event ReportStoppedValidators(uint256 indexed operatorId, uint256 totalStoppedValidators, uint256 totalEthLost);
+    event WithdrawStake(uint256 indexed _operatorId, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -43,16 +43,16 @@ contract NWLOperatorController is OperatorController {
      * @param _numEntries number of entries to return
      * @return entries list of queue entries
      */
-    function getQueueEntries(uint _startIndex, uint _numEntries) external view returns (QueueEntry[] memory entries) {
+    function getQueueEntries(uint256 _startIndex, uint256 _numEntries) external view returns (QueueEntry[] memory entries) {
         require(_startIndex < queue.length, "startIndex out of range");
 
-        uint endIndex = _startIndex + _numEntries;
+        uint256 endIndex = _startIndex + _numEntries;
         if (endIndex > queue.length) {
             endIndex = queue.length;
         }
 
         entries = new QueueEntry[](endIndex - _startIndex);
-        for (uint i = _startIndex; i < endIndex; i++) {
+        for (uint256 i = _startIndex; i < endIndex; i++) {
             entries[i] = queue[i];
         }
     }
@@ -81,8 +81,8 @@ contract NWLOperatorController is OperatorController {
      * @param _signatures concatenated set of signatures to add
      */
     function addKeyPairs(
-        uint _operatorId,
-        uint _quantity,
+        uint256 _operatorId,
+        uint256 _quantity,
         bytes calldata _pubkeys,
         bytes calldata _signatures
     ) external payable operatorExists(_operatorId) {
@@ -98,9 +98,9 @@ contract NWLOperatorController is OperatorController {
      * @param _queueEntryIndexes indexes of this operator's queue entries to remove
      */
     function removeKeyPairs(
-        uint _operatorId,
-        uint _quantity,
-        uint[] calldata _queueEntryIndexes
+        uint256 _operatorId,
+        uint256 _quantity,
+        uint256[] calldata _queueEntryIndexes
     ) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_quantity > 0, "Quantity must be greater than 0");
@@ -109,13 +109,13 @@ contract NWLOperatorController is OperatorController {
             "Cannot remove used key pairs or more keys than are added"
         );
 
-        uint toRemove = _quantity;
-        uint unverifiedKeys = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
+        uint256 toRemove = _quantity;
+        uint256 unverifiedKeys = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
 
         if (unverifiedKeys < toRemove) {
             toRemove -= unverifiedKeys;
             queueLength -= toRemove;
-            for (uint i = 0; i < _queueEntryIndexes.length; i++) {
+            for (uint256 i = 0; i < _queueEntryIndexes.length; i++) {
                 require(_queueEntryIndexes[i] >= queueIndex, "Cannot remove from queue entry that is already passed by");
                 require(_queueEntryIndexes[i] < queue.length, "Cannot remove from queue entry that does not exist");
 
@@ -152,7 +152,7 @@ contract NWLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @param _success whether the pairs are valid
      */
-    function reportKeyPairValidation(uint _operatorId, bool _success)
+    function reportKeyPairValidation(uint256 _operatorId, bool _success)
         external
         onlyKeyValidationOracle
         operatorExists(_operatorId)
@@ -160,7 +160,7 @@ contract NWLOperatorController is OperatorController {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
         if (_success && operators[_operatorId].active) {
-            uint newKeyPairs = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
+            uint256 newKeyPairs = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
             queue.push(QueueEntry(_operatorId, newKeyPairs));
             queueLength += newKeyPairs;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
@@ -177,7 +177,7 @@ contract NWLOperatorController is OperatorController {
      * @return keys concatenated list of pubkeys
      * @return signatures concatenated list of signatures
      */
-    function assignNextValidators(uint _totalValidatorCount)
+    function assignNextValidators(uint256 _totalValidatorCount)
         external
         onlyEthStakingStrategy
         returns (bytes memory keys, bytes memory signatures)
@@ -186,15 +186,15 @@ contract NWLOperatorController is OperatorController {
         require(_totalValidatorCount <= queueLength, "Cannot assign more than queue length");
 
         bytes32 stateHash = currentStateHash;
-        uint toAssign = _totalValidatorCount;
-        uint index = queueIndex;
+        uint256 toAssign = _totalValidatorCount;
+        uint256 index = queueIndex;
 
         while (index < queue.length) {
-            uint numKeyPairs = queue[index].numKeyPairs;
-            uint operatorId = queue[index].operatorId;
+            uint256 numKeyPairs = queue[index].numKeyPairs;
+            uint256 operatorId = queue[index].operatorId;
 
             if (numKeyPairs > 0 && operators[operatorId].active) {
-                uint assignToOperator;
+                uint256 assignToOperator;
 
                 if (numKeyPairs < toAssign) {
                     assignToOperator = numKeyPairs;
@@ -214,9 +214,9 @@ contract NWLOperatorController is OperatorController {
                 operators[operatorId].usedKeyPairs += uint64(assignToOperator);
                 activeValidators[operators[operatorId].owner] += assignToOperator;
 
-                uint usedKeyPairs = operators[operatorId].usedKeyPairs;
+                uint256 usedKeyPairs = operators[operatorId].usedKeyPairs;
 
-                for (uint j = usedKeyPairs - assignToOperator; j < usedKeyPairs; j++) {
+                for (uint256 j = usedKeyPairs - assignToOperator; j < usedKeyPairs; j++) {
                     (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
                     keys = bytes.concat(keys, key);
                     signatures = bytes.concat(signatures, signature);
@@ -245,20 +245,20 @@ contract NWLOperatorController is OperatorController {
      * @param _validatorCount total number of validators to assign
      * @return keys validator keys to be assigned
      */
-    function getNextValidators(uint _validatorCount) external view returns (bytes memory keys) {
+    function getNextValidators(uint256 _validatorCount) external view returns (bytes memory keys) {
         require(_validatorCount > 0, "Validator count must be greater than 0");
         require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
-        uint[] memory assignedToOperators = new uint[](operators.length);
-        uint toAssign = _validatorCount;
-        uint index = queueIndex;
+        uint256[] memory assignedToOperators = new uint[](operators.length);
+        uint256 toAssign = _validatorCount;
+        uint256 index = queueIndex;
 
         while (index < queue.length) {
-            uint numKeyPairs = queue[index].numKeyPairs;
-            uint operatorId = queue[index].operatorId;
+            uint256 numKeyPairs = queue[index].numKeyPairs;
+            uint256 operatorId = queue[index].operatorId;
 
             if (numKeyPairs > 0 && operators[operatorId].active) {
-                uint assignToOperator;
+                uint256 assignToOperator;
 
                 if (numKeyPairs < toAssign) {
                     assignToOperator = numKeyPairs;
@@ -268,10 +268,10 @@ contract NWLOperatorController is OperatorController {
                     toAssign = 0;
                 }
 
-                uint usedKeyPairs = operators[operatorId].usedKeyPairs + assignedToOperators[operatorId];
+                uint256 usedKeyPairs = operators[operatorId].usedKeyPairs + assignedToOperators[operatorId];
                 assignedToOperators[operatorId] += assignToOperator;
 
-                for (uint j = usedKeyPairs; j < usedKeyPairs + assignToOperator; j++) {
+                for (uint256 j = usedKeyPairs; j < usedKeyPairs + assignToOperator; j++) {
                     (bytes memory key, ) = _loadKeyPair(operatorId, j);
                     keys = bytes.concat(keys, key);
                 }
@@ -291,20 +291,20 @@ contract NWLOperatorController is OperatorController {
      * @param _ethLost list of lifetime lost ETH sum for each operator
      */
     function reportStoppedValidators(
-        uint[] calldata _operatorIds,
-        uint[] calldata _stoppedValidators,
-        uint[] calldata _ethLost
+        uint256[] calldata _operatorIds,
+        uint256[] calldata _stoppedValidators,
+        uint256[] calldata _ethLost
     ) external onlyBeaconOracle {
         require(
             _operatorIds.length == _stoppedValidators.length && _operatorIds.length == _ethLost.length,
             "Inconsistent list lengths"
         );
 
-        uint totalNewlyStoppedValidators;
-        uint totalNewlyLostETH;
+        uint256 totalNewlyStoppedValidators;
+        uint256 totalNewlyLostETH;
 
-        for (uint i = 0; i < _operatorIds.length; i++) {
-            uint operatorId = _operatorIds[i];
+        for (uint256 i = 0; i < _operatorIds.length; i++) {
+            uint256 operatorId = _operatorIds[i];
             require(operatorId < operators.length, "Operator does not exist");
             require(
                 _stoppedValidators[i] > operators[operatorId].stoppedValidators,
@@ -318,8 +318,8 @@ contract NWLOperatorController is OperatorController {
 
             rewardsPool.updateReward(operators[operatorId].owner);
 
-            uint newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
-            uint newlyLostETH = _ethLost[i] - ethLost[operatorId];
+            uint256 newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
+            uint256 newlyLostETH = _ethLost[i] - ethLost[operatorId];
 
             require(
                 newlyLostETH <= newlyStoppedValidators * DEPOSIT_AMOUNT,
@@ -346,7 +346,7 @@ contract NWLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @param _amount amount to withdraw
      */
-    function withdrawStake(uint _operatorId, uint _amount) external operatorExists(_operatorId) {
+    function withdrawStake(uint256 _operatorId, uint256 _amount) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
 
@@ -361,7 +361,7 @@ contract NWLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @return withdrawableStake total withdrawable stake
      */
-    function withdrawableStake(uint _operatorId) public view returns (uint) {
+    function withdrawableStake(uint256 _operatorId) public view returns (uint) {
         return
             operators[_operatorId].stoppedValidators * DEPOSIT_AMOUNT - (ethLost[_operatorId] + ethWithdrawn[_operatorId]);
     }

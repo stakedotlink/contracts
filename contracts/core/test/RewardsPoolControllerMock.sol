@@ -15,7 +15,7 @@ contract RewardsPoolControllerMock is RewardsPoolController {
 
     IERC20 public token;
 
-    uint public stakedTotal;
+    uint256 public stakedTotal;
     mapping(address => uint) public stakeBalances;
 
     constructor(
@@ -34,13 +34,13 @@ contract RewardsPoolControllerMock is RewardsPoolController {
         return stakedTotal;
     }
 
-    function stake(uint _amount) external updateRewards(msg.sender) {
+    function stake(uint256 _amount) external updateRewards(msg.sender) {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         stakeBalances[msg.sender] += _amount;
         stakedTotal += _amount;
     }
 
-    function withdraw(uint _amount) external updateRewards(msg.sender) {
+    function withdraw(uint256 _amount) external updateRewards(msg.sender) {
         stakeBalances[msg.sender] -= _amount;
         stakedTotal -= _amount;
         token.safeTransfer(msg.sender, _amount);

@@ -9,7 +9,7 @@ import "../tokens/base/ERC677.sol";
  */
 contract WrappedSDTokenMock is ERC677 {
     IERC20 public immutable sdToken;
-    uint multiplier;
+    uint256 multiplier;
 
     constructor(address _sdToken) ERC677("test", "test", 0) {
         sdToken = IERC20(_sdToken);
@@ -23,7 +23,7 @@ contract WrappedSDTokenMock is ERC677 {
      **/
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata
     ) external {
         require(msg.sender == address(sdToken), "Sender must be staking derivative token");
@@ -35,7 +35,7 @@ contract WrappedSDTokenMock is ERC677 {
      * @notice unwraps tokens
      * @param _amount amount of wrapped tokens to unwrap
      */
-    function unwrap(uint _amount) external {
+    function unwrap(uint256 _amount) external {
         require(_amount > 0, "Amount must be > 0");
         uint256 unwrappedAmount = getUnderlyingByWrapped(_amount);
         _burn(msg.sender, _amount);
@@ -47,7 +47,7 @@ contract WrappedSDTokenMock is ERC677 {
      * @param _amount amount of unwrapped tokens
      * @return amount of wrapped tokens
      */
-    function getWrappedByUnderlying(uint _amount) public view returns (uint) {
+    function getWrappedByUnderlying(uint256 _amount) public view returns (uint) {
         return _amount / multiplier;
     }
 
@@ -56,11 +56,11 @@ contract WrappedSDTokenMock is ERC677 {
      * @param _amount amount of wrapped tokens
      * @return amount of unwrapped tokens
      */
-    function getUnderlyingByWrapped(uint _amount) public view returns (uint) {
+    function getUnderlyingByWrapped(uint256 _amount) public view returns (uint) {
         return _amount * multiplier;
     }
 
-    function setMultiplier(uint _multiplier) external {
+    function setMultiplier(uint256 _multiplier) external {
         multiplier = _multiplier;
     }
 }

@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 contract LinkPoolNFT is ERC721URIStorage, Ownable {
     address public lpMigration;
     string public baseURI;
-    uint public totalSupply;
+    uint256 public totalSupply;
 
     constructor(address _lpMigration, string memory _baseUri) ERC721("LinkPool OG", "LPOG") {
         lpMigration = _lpMigration;

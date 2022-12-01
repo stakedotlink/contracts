@@ -8,10 +8,10 @@ import "./base/VaultControllerStrategy.sol";
  * @notice Implemented strategy for managing multiple Chainlink operator staking vaults
  */
 contract OperatorVCS is VaultControllerStrategy {
-    uint private totalPrincipalDeposits;
+    uint256 private totalPrincipalDeposits;
 
     event VaultAdded(address indexed operator);
-    event DepositBufferedTokens(uint depositedAmount);
+    event DepositBufferedTokens(uint256 depositedAmount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -23,7 +23,7 @@ contract OperatorVCS is VaultControllerStrategy {
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        uint _minDepositThreshold,
+        uint256 _minDepositThreshold,
         Fee[] memory _fees,
         address[] calldata _initialVaults
     ) public initializer {
@@ -35,7 +35,7 @@ contract OperatorVCS is VaultControllerStrategy {
             _minDepositThreshold,
             _fees
         );
-        for (uint i = 0; i < _initialVaults.length; i++) {
+        for (uint256 i = 0; i < _initialVaults.length; i++) {
             address vault = _initialVaults[i];
             vaults.push(IVault(vault));
             token.approve(vault, type(uint256).max);
@@ -47,7 +47,7 @@ contract OperatorVCS is VaultControllerStrategy {
      * @return max deposit
      */
     function getMaxDeposits() public view override returns (uint) {
-        (, uint vaultMaxDeposits) = getVaultDepositLimits();
+        (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
         return totalDeposits + vaultMaxDeposits * vaults.length - (totalPrincipalDeposits + bufferedDeposits);
     }
 
@@ -92,12 +92,12 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
      */
     function _depositBufferedTokens(
-        uint _startIndex,
-        uint _toDeposit,
-        uint _vaultMinDeposits,
-        uint _vaultMaxDeposits
+        uint256 _startIndex,
+        uint256 _toDeposit,
+        uint256 _vaultMinDeposits,
+        uint256 _vaultMaxDeposits
     ) internal override {
-        uint deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
+        uint256 deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
         totalPrincipalDeposits += deposited;
         bufferedDeposits -= deposited;
         emit DepositBufferedTokens(deposited);

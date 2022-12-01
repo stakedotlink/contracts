@@ -12,19 +12,19 @@ interface IStakingPool is IStakingRewardsPool {
         uint256 _amount
     ) external;
 
-    function strategyDeposit(uint _index, uint256 _amount) external;
+    function strategyDeposit(uint256 _index, uint256 _amount) external;
 
-    function strategyWithdraw(uint _index, uint256 _amount) external;
+    function strategyWithdraw(uint256 _index, uint256 _amount) external;
 
-    function updateStrategyRewards(uint[] memory _strategyIdxs) external;
+    function updateStrategyRewards(uint256[] memory _strategyIdxs) external;
 
     function getMaxDeposits() external view returns (uint256);
 
     function addStrategy(address _strategy) external;
 
-    function removeStrategy(uint _index) external;
+    function removeStrategy(uint256 _index) external;
 
-    function reorderStrategies(uint[] calldata _newOrder) external;
+    function reorderStrategies(uint256[] calldata _newOrder) external;
 
     function getStrategies() external view returns (address[] memory);
 

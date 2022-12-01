@@ -38,19 +38,19 @@ contract PoolRouter is Ownable {
 
     mapping(bytes32 => Pool) private pools;
     mapping(address => uint16) public poolCountByToken;
-    uint public poolCount;
+    uint256 public poolCount;
 
     address[] public tokens;
     address public wrappedETH;
 
-    uint private reservedMultiplier;
+    uint256 private reservedMultiplier;
 
-    event StakeToken(address indexed token, address indexed pool, address indexed account, uint amount);
-    event WithdrawToken(address indexed token, address indexed pool, address indexed account, uint amount);
+    event StakeToken(address indexed token, address indexed pool, address indexed account, uint256 amount);
+    event WithdrawToken(address indexed token, address indexed pool, address indexed account, uint256 amount);
     event AddPool(address indexed token, address indexed pool);
     event RemovePool(address indexed token, address indexed pool);
 
-    modifier poolExists(address _token, uint _index) {
+    modifier poolExists(address _token, uint256 _index) {
         require(poolCountByToken[_token] > _index, "Pool does not exist");
         _;
     }
@@ -87,8 +87,8 @@ contract PoolRouter is Ownable {
     function allPools() external view returns (Pool[] memory poolList) {
         poolList = new Pool[](poolCount);
 
-        uint index = 0;
-        for (uint i = 0; i < tokens.length; i++) {
+        uint256 index = 0;
+        for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             for (uint16 j = 0; j < poolCountByToken[token]; j++) {
                 poolList[index] = pools[_poolKey(token, j)];
@@ -102,7 +102,7 @@ contract PoolRouter is Ownable {
      * @return reservedModeActive true/false
      */
     function isReservedMode() external view returns (bool) {
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             for (uint16 j = 0; j < poolCountByToken[token]; j++) {
                 if (pools[_poolKey(token, j)].reservedModeActive) {
@@ -129,8 +129,8 @@ contract PoolRouter is Ownable {
      */
     function poolUtilisation(address _token, uint16 _index) external view returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
-        uint totalSupply = stakingPool.totalSupply();
-        uint maxDeposits = stakingPool.getMaxDeposits();
+        uint256 totalSupply = stakingPool.totalSupply();
+        uint256 maxDeposits = stakingPool.getMaxDeposits();
         return (maxDeposits > totalSupply) ? (1e18 * totalSupply) / maxDeposits : 1 ether;
     }
 
@@ -142,7 +142,7 @@ contract PoolRouter is Ownable {
      **/
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata _calldata
     ) external {
         require(poolCountByToken[msg.sender] > 0, "Only callable by supported tokens");
@@ -162,7 +162,7 @@ contract PoolRouter is Ownable {
     function stake(
         address _token,
         uint16 _index,
-        uint _amount
+        uint256 _amount
     ) external poolExists(_token, _index) {
         IERC677(_token).safeTransferFrom(msg.sender, address(this), _amount);
         _stake(_token, _index, msg.sender, _amount);
@@ -177,7 +177,7 @@ contract PoolRouter is Ownable {
     function withdraw(
         address _token,
         uint16 _index,
-        uint _amount
+        uint256 _amount
     ) external poolExists(_token, _index) {
         _withdraw(_token, _index, _amount, msg.sender);
     }
@@ -196,7 +196,7 @@ contract PoolRouter is Ownable {
      * @param _index pool index
      * @param _amount amount to withdraw
      **/
-    function withdrawETH(uint16 _index, uint _amount) external poolExists(wrappedETH, _index) {
+    function withdrawETH(uint16 _index, uint256 _amount) external poolExists(wrappedETH, _index) {
         _withdraw(wrappedETH, _index, _amount, address(this));
         IWrappedETH(wrappedETH).unwrap(_amount);
         (bool success, ) = payable(msg.sender).call{value: _amount}("");
@@ -260,7 +260,7 @@ contract PoolRouter is Ownable {
         poolCount--;
 
         if (poolCountByToken[_token] == 0) {
-            for (uint i = 0; i < tokens.length; i++) {
+            for (uint256 i = 0; i < tokens.length; i++) {
                 if (tokens[i] == _token) {
                     tokens[i] = tokens[tokens.length - 1];
                     tokens.pop();
@@ -284,7 +284,7 @@ contract PoolRouter is Ownable {
     ) public view poolExists(_token, _index) returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
-        uint maximumStake = stakingPool.canDeposit();
+        uint256 maximumStake = stakingPool.canDeposit();
 
         return reservedModeActive ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
     }
@@ -299,14 +299,14 @@ contract PoolRouter is Ownable {
     function canDepositByAllowance(
         address _token,
         uint16 _index,
-        uint _amount
+        uint256 _amount
     ) public view poolExists(_token, _index) returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
-        uint maximumStake = stakingPool.canDeposit();
+        uint256 maximumStake = stakingPool.canDeposit();
 
-        uint accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.getMaxDeposits()) / 1e18) /
-            1e4) * reservedMultiplier;
+        uint256 accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.getMaxDeposits()) /
+            1e18) / 1e4) * reservedMultiplier;
 
         return (!reservedModeActive || accountMaxStake > maximumStake) ? maximumStake : accountMaxStake;
     }
@@ -364,7 +364,7 @@ contract PoolRouter is Ownable {
      * @notice sets the multiplier for stake per allowance when the pool has reserved space for allowance stakers
      * @param _reservedMultiplier multiplier
      **/
-    function setReservedSpaceMultiplier(uint _reservedMultiplier) external onlyOwner {
+    function setReservedSpaceMultiplier(uint256 _reservedMultiplier) external onlyOwner {
         require(_reservedMultiplier >= 1e4, "Invalid reserved space multiplier");
         reservedMultiplier = _reservedMultiplier;
     }
@@ -380,7 +380,7 @@ contract PoolRouter is Ownable {
         address _token,
         uint16 _index,
         address _account,
-        uint _amount
+        uint256 _amount
     ) private {
         Pool storage pool = pools[_poolKey(_token, _index)];
 
@@ -402,7 +402,7 @@ contract PoolRouter is Ownable {
     function _withdraw(
         address _token,
         uint16 _index,
-        uint _amount,
+        uint256 _amount,
         address _receiver
     ) private poolExists(_token, _index) {
         Pool storage pool = pools[_poolKey(_token, _index)];
@@ -423,14 +423,14 @@ contract PoolRouter is Ownable {
         address _account,
         address _token,
         uint16 _index,
-        uint _maximumStake
+        uint256 _maximumStake
     ) private view returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
 
         if (delegatorPool.balanceOf(_account) == 0) {
             return 0;
         }
-        uint accountMaxStake = (((((1e18 * delegatorPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
+        uint256 accountMaxStake = (((((1e18 * delegatorPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
             stakingPool.getMaxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
 
         if (stakingPool.balanceOf(_account) >= accountMaxStake) {
@@ -456,7 +456,7 @@ contract PoolRouter is Ownable {
      */
     function _bytesToUint(bytes memory _bytes) private pure returns (uint256) {
         uint256 number;
-        for (uint i = 0; i < _bytes.length; i++) {
+        for (uint256 i = 0; i < _bytes.length; i++) {
             number = number + uint(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
         }
         return number;

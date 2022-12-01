@@ -19,7 +19,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     struct Fee {
         address receiver;
-        uint basisPoints;
+        uint256 basisPoints;
     }
 
     IStaking public stakeController;
@@ -28,15 +28,15 @@ abstract contract VaultControllerStrategy is Strategy {
     address public vaultImplementation;
 
     IVault[] internal vaults;
-    uint internal totalDeposits;
-    uint internal bufferedDeposits;
-    uint public minDepositThreshold;
+    uint256 internal totalDeposits;
+    uint256 internal bufferedDeposits;
+    uint256 public minDepositThreshold;
 
     uint[10] private __gap;
 
-    event MigratedVaults(uint startIndex, uint numVaults, bytes data);
-    event UpgradedVaults(uint startIndex, uint numVaults, bytes data);
-    event SetMinDepositThreshold(uint minDepositThreshold);
+    event MigratedVaults(uint256 startIndex, uint256 numVaults, bytes data);
+    event UpgradedVaults(uint256 startIndex, uint256 numVaults, bytes data);
+    event SetMinDepositThreshold(uint256 minDepositThreshold);
     event SetVaultImplementation(address vaultImplementation);
 
     function __VaultControllerStrategy_init(
@@ -44,7 +44,7 @@ abstract contract VaultControllerStrategy is Strategy {
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        uint _minDepositThreshold,
+        uint256 _minDepositThreshold,
         Fee[] memory _fees
     ) public onlyInitializing {
         __Strategy_init(_token, _stakingPool);
@@ -54,7 +54,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
         stakeController = IStaking(_stakeController);
         minDepositThreshold = _minDepositThreshold;
-        for (uint i = 0; i < _fees.length; i++) {
+        for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
     }
@@ -92,11 +92,11 @@ abstract contract VaultControllerStrategy is Strategy {
             return (false, bytes(""));
         }
 
-        (, uint vaultMaxDeposits) = getVaultDepositLimits();
-        uint firstNonFullVault;
+        (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
+        uint256 firstNonFullVault;
 
-        for (uint i = 0; i < vaults.length; i++) {
-            uint vaultDeposits = vaults[i].getPrincipalDeposits();
+        for (uint256 i = 0; i < vaults.length; i++) {
+            uint256 vaultDeposits = vaults[i].getPrincipalDeposits();
 
             if (vaultDeposits < vaultMaxDeposits) {
                 firstNonFullVault = i;
@@ -113,7 +113,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function performUpkeep(bytes calldata _performData) external {
         require(bufferedDeposits >= minDepositThreshold, "Minimum deposit threshold has not been met");
-        uint startIndex = abi.decode(_performData, (uint));
+        uint256 startIndex = abi.decode(_performData, (uint));
         depositBufferedTokens(startIndex);
     }
 
@@ -121,8 +121,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice deposits buffered tokens into vaults
      * @param _startIndex index of first non-full vault
      */
-    function depositBufferedTokens(uint _startIndex) public {
-        (uint vaultMinDeposits, uint vaultMaxDeposits) = getVaultDepositLimits();
+    function depositBufferedTokens(uint256 _startIndex) public {
+        (uint256 vaultMinDeposits, uint256 vaultMaxDeposits) = getVaultDepositLimits();
         require(
             _startIndex == vaults.length - 1 || vaults[_startIndex].getPrincipalDeposits() < vaultMaxDeposits,
             "Cannot deposit into vault that is full"
@@ -140,8 +140,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return int deposit change
      */
     function depositChange() public view returns (int) {
-        uint totalBalance = token.balanceOf(address(this));
-        for (uint i = 0; i < vaults.length; i++) {
+        uint256 totalBalance = token.balanceOf(address(this));
+        for (uint256 i = 0; i < vaults.length; i++) {
             totalBalance += vaults[i].getTotalDeposits();
         }
         return int(totalBalance) - int(totalDeposits);
@@ -152,11 +152,11 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
+    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
         receivers = new address[](fees.length);
         amounts = new uint[](fees.length);
 
-        for (uint i = 0; i < fees.length; i++) {
+        for (uint256 i = 0; i < fees.length; i++) {
             receivers[i] = fees[i].receiver;
             amounts[i] = fees[i].basisPoints;
         }
@@ -171,7 +171,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice the amount of total deposits as tracked in this strategy
-     * @return uint total deposited
+     * @return uint256 total deposited
      */
     function getTotalDeposits() public view override returns (uint) {
         return totalDeposits;
@@ -191,11 +191,11 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _data migration data
      */
     function migrateVaults(
-        uint _startIndex,
-        uint _numVaults,
+        uint256 _startIndex,
+        uint256 _numVaults,
         bytes calldata _data
     ) external onlyOwner {
-        for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; i++) {
             vaults[i].migrate(_data);
         }
         emit MigratedVaults(_startIndex, _numVaults, _data);
@@ -208,11 +208,11 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _data optional encoded function call to be executed after upgrade
      */
     function upgradeVaults(
-        uint _startIndex,
-        uint _numVaults,
+        uint256 _startIndex,
+        uint256 _numVaults,
         bytes memory _data
     ) external onlyOwner {
-        for (uint i = _startIndex; i < _startIndex + _numVaults; i++) {
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; i++) {
             _upgradeVault(i, _data);
         }
         emit UpgradedVaults(_startIndex, _numVaults, _data);
@@ -223,7 +223,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
-    function addFee(address _receiver, uint _feeBasisPoints) external onlyOwner {
+    function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
     }
 
@@ -234,9 +234,9 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _feeBasisPoints fee in basis points
      **/
     function updateFee(
-        uint _index,
+        uint256 _index,
         address _receiver,
-        uint _feeBasisPoints
+        uint256 _feeBasisPoints
     ) external onlyOwner {
         require(_index < fees.length, "Fee does not exist");
 
@@ -254,8 +254,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @dev should always be >= to minimum vault deposit limit
      * @param _minDepositThreshold mimumum token balance
      **/
-    function setMinDepositThreshold(uint _minDepositThreshold) external onlyOwner {
-        (uint vaultMinDeposits, ) = getVaultDepositLimits();
+    function setMinDepositThreshold(uint256 _minDepositThreshold) external onlyOwner {
+        (uint256 vaultMinDeposits, ) = getVaultDepositLimits();
         require(_minDepositThreshold >= vaultMinDeposits, "Must be >= to minimum vault deposit limit");
         minDepositThreshold = _minDepositThreshold;
         emit SetMinDepositThreshold(_minDepositThreshold);
@@ -279,10 +279,10 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
      */
     function _depositBufferedTokens(
-        uint _startIndex,
-        uint _toDeposit,
-        uint _vaultMinDeposits,
-        uint _vaultMaxDeposits
+        uint256 _startIndex,
+        uint256 _toDeposit,
+        uint256 _vaultMinDeposits,
+        uint256 _vaultMaxDeposits
     ) internal virtual;
 
     /**
@@ -293,16 +293,16 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _maxDeposits minimum amount of deposits that a vault can hold
      */
     function _depositToVaults(
-        uint _startIndex,
-        uint _toDeposit,
-        uint _minDeposits,
-        uint _maxDeposits
+        uint256 _startIndex,
+        uint256 _toDeposit,
+        uint256 _minDeposits,
+        uint256 _maxDeposits
     ) internal returns (uint) {
-        uint toDeposit = _toDeposit;
-        for (uint i = _startIndex; i < vaults.length; i++) {
+        uint256 toDeposit = _toDeposit;
+        for (uint256 i = _startIndex; i < vaults.length; i++) {
             IVault vault = vaults[i];
-            uint deposits = vault.getPrincipalDeposits();
-            uint canDeposit = _maxDeposits - deposits;
+            uint256 deposits = vault.getPrincipalDeposits();
+            uint256 canDeposit = _maxDeposits - deposits;
 
             if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
                 break;
@@ -333,7 +333,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _vaultIdx index of vault to upgrade
      * @param _data optional encoded function call to be executed after upgrade
      */
-    function _upgradeVault(uint _vaultIdx, bytes memory _data) internal {
+    function _upgradeVault(uint256 _vaultIdx, bytes memory _data) internal {
         IVault vault = vaults[_vaultIdx];
         if (_data.length == 0) {
             vault.upgradeTo(vaultImplementation);

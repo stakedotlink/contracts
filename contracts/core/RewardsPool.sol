@@ -16,12 +16,12 @@ contract RewardsPool {
     IERC677 public immutable token;
     IRewardsPoolController public immutable controller;
 
-    uint public rewardPerToken;
-    uint public totalRewards;
+    uint256 public rewardPerToken;
+    uint256 public totalRewards;
     mapping(address => uint) public userRewardPerTokenPaid;
     mapping(address => uint) public userRewards;
 
-    event Withdraw(address indexed account, uint amount);
+    event Withdraw(address indexed account, uint256 amount);
     event DistributeRewards(address indexed sender, uint256 amountStaked, uint256 amount);
 
     constructor(address _controller, address _token) {
@@ -86,7 +86,7 @@ contract RewardsPool {
      * @param _account account to update for
      **/
     function updateReward(address _account) public virtual {
-        uint newRewards = withdrawableRewards(_account) - userRewards[_account];
+        uint256 newRewards = withdrawableRewards(_account) - userRewards[_account];
         if (newRewards > 0) {
             userRewards[_account] += newRewards;
         }
@@ -112,8 +112,8 @@ contract RewardsPool {
      * @notice updates rewardPerToken
      * @param _reward deposited reward amount
      **/
-    function _updateRewardPerToken(uint _reward) internal {
-        uint totalStaked = controller.totalStaked();
+    function _updateRewardPerToken(uint256 _reward) internal {
+        uint256 totalStaked = controller.totalStaked();
         require(totalStaked > 0, "Staked amount must be > 0");
         rewardPerToken += ((_reward * 1e18) / totalStaked);
     }

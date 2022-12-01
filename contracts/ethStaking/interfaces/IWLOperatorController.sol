@@ -5,18 +5,18 @@ import "./IOperatorController.sol";
 
 interface IWLOperatorController is IOperatorController {
     function assignNextValidators(
-        uint[] calldata _operatorIds,
-        uint[] calldata _validatorCounts,
-        uint _totalValidatorCount
+        uint256[] calldata _operatorIds,
+        uint256[] calldata _validatorCounts,
+        uint256 _totalValidatorCount
     ) external returns (bytes memory keys, bytes memory signatures);
 
-    function getNextValidators(uint _validatorCount)
+    function getNextValidators(uint256 _validatorCount)
         external
         view
         returns (
-            uint[] memory operatorIds,
-            uint[] memory validatorCounts,
-            uint totalValidatorCount,
+            uint256[] memory operatorIds,
+            uint256[] memory validatorCounts,
+            uint256 totalValidatorCount,
             bytes memory keys
         );
 }

@@ -8,12 +8,12 @@ import "./base/VaultControllerStrategy.sol";
  * @notice Implemented strategy for managing multiple Chainlink community staking vaults
  */
 contract CommunityVCS is VaultControllerStrategy {
-    uint private maxDeposits;
-    uint public maxVaultDeployments;
+    uint256 private maxDeposits;
+    uint256 public maxVaultDeployments;
 
-    event SetMaxDeposits(uint maxDeposits);
-    event SetMaxVaultDeployments(uint maxVaultDeployments);
-    event DepositBufferedTokens(uint amountDeposited, uint vaultsDeployed);
+    event SetMaxDeposits(uint256 maxDeposits);
+    event SetMaxVaultDeployments(uint256 maxVaultDeployments);
+    event DepositBufferedTokens(uint256 amountDeposited, uint256 vaultsDeployed);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -25,10 +25,10 @@ contract CommunityVCS is VaultControllerStrategy {
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        uint _minDepositThreshold,
+        uint256 _minDepositThreshold,
         Fee[] memory _fees,
-        uint _maxDeposits,
-        uint _maxVaultDeployments
+        uint256 _maxDeposits,
+        uint256 _maxVaultDeployments
     ) public initializer {
         __VaultControllerStrategy_init(
             _token,
@@ -72,7 +72,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @notice sets the maximum that can be deposited into this strategy
      * @param _maxDeposits maximum amount
      */
-    function setMaxDeposits(uint _maxDeposits) external onlyOwner {
+    function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
         maxDeposits = _maxDeposits;
         emit SetMaxDeposits(_maxDeposits);
     }
@@ -81,7 +81,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @notice sets the maximum number of vaults that can be deployed at once
      * @param _maxVaultDeployments maximum amount
      */
-    function setMaxVaultDeployments(uint _maxVaultDeployments) external onlyOwner {
+    function setMaxVaultDeployments(uint256 _maxVaultDeployments) external onlyOwner {
         maxVaultDeployments = _maxVaultDeployments;
         emit SetMaxVaultDeployments(_maxVaultDeployments);
     }
@@ -94,19 +94,19 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
      */
     function _depositBufferedTokens(
-        uint _startIndex,
-        uint _toDeposit,
-        uint _vaultMinDeposits,
-        uint _vaultMaxDeposits
+        uint256 _startIndex,
+        uint256 _toDeposit,
+        uint256 _vaultMinDeposits,
+        uint256 _vaultMaxDeposits
     ) internal override {
-        uint deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
+        uint256 deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
         require(
             deposited >= minDepositThreshold || vaults[vaults.length - 1].getPrincipalDeposits() >= _vaultMaxDeposits,
             "Invalid deposit"
         );
 
-        uint toDepositRemaining = _toDeposit - deposited;
-        uint vaultsToDeploy = toDepositRemaining / _vaultMaxDeposits;
+        uint256 toDepositRemaining = _toDeposit - deposited;
+        uint256 vaultsToDeploy = toDepositRemaining / _vaultMaxDeposits;
         if (toDepositRemaining % _vaultMaxDeposits >= _vaultMinDeposits) {
             vaultsToDeploy += 1;
         }
@@ -132,14 +132,14 @@ contract CommunityVCS is VaultControllerStrategy {
      * @notice deploys new vaults
      * @param _numVaults number of vaults to deploy
      */
-    function _deployVaults(uint _numVaults) internal {
+    function _deployVaults(uint256 _numVaults) internal {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,address)",
             address(token),
             address(this),
             address(stakeController)
         );
-        for (uint i = 0; i < _numVaults; i++) {
+        for (uint256 i = 0; i < _numVaults; i++) {
             _deployVault(data);
         }
     }

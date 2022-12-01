@@ -9,17 +9,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract RewardsReceiver is Ownable {
     address payable public immutable ethStakingStrategy;
-    uint public minWithdrawalAmount;
-    uint public maxWithdrawalAmount;
+    uint256 public minWithdrawalAmount;
+    uint256 public maxWithdrawalAmount;
 
-    event RewardsReceived(uint amount);
-    event RewardsWithdrawn(uint amount);
-    event SetWithdrawalLimits(uint min, uint max);
+    event RewardsReceived(uint256 amount);
+    event RewardsWithdrawn(uint256 amount);
+    event SetWithdrawalLimits(uint256 min, uint256 max);
 
     constructor(
         address _ethStakingStrategy,
-        uint _minWithdrawalAmount,
-        uint _maxWithdrawalAmount
+        uint256 _minWithdrawalAmount,
+        uint256 _maxWithdrawalAmount
     ) {
         ethStakingStrategy = payable(_ethStakingStrategy);
         minWithdrawalAmount = _minWithdrawalAmount;
@@ -36,8 +36,8 @@ contract RewardsReceiver is Ownable {
     function withdraw() external returns (uint) {
         require(msg.sender == ethStakingStrategy, "Sender is not ETH staking strategy");
 
-        uint balance = address(this).balance;
-        uint value;
+        uint256 balance = address(this).balance;
+        uint256 value;
 
         if (balance < minWithdrawalAmount) {
             value = 0;
@@ -61,7 +61,7 @@ contract RewardsReceiver is Ownable {
      * @param _minWithdrawalAmount minimum amount
      * @param _maxWithdrawalAmount maximum amount
      */
-    function setWithdrawalLimits(uint _minWithdrawalAmount, uint _maxWithdrawalAmount) external onlyOwner {
+    function setWithdrawalLimits(uint256 _minWithdrawalAmount, uint256 _maxWithdrawalAmount) external onlyOwner {
         require(_minWithdrawalAmount <= _maxWithdrawalAmount, "min must be less than or equal to max");
         minWithdrawalAmount = _minWithdrawalAmount;
         maxWithdrawalAmount = _maxWithdrawalAmount;

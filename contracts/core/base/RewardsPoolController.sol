@@ -61,10 +61,10 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @notice get all token balances of supported tokens within the controller
      * @return list of tokens with a list of token balances
      **/
-    function tokenBalances() external view returns (address[] memory, uint[] memory) {
-        uint[] memory balances = new uint[](tokens.length);
+    function tokenBalances() external view returns (address[] memory, uint256[] memory) {
+        uint256[] memory balances = new uint[](tokens.length);
 
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             balances[i] = IERC20(tokens[i]).balanceOf(address(this));
         }
 
@@ -180,7 +180,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @param _tokens list of token addresses
      */
     function distributeTokens(address[] memory _tokens) public {
-        for (uint i = 0; i < _tokens.length; i++) {
+        for (uint256 i = 0; i < _tokens.length; i++) {
             distributeToken(_tokens[i]);
         }
     }
@@ -193,7 +193,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         require(isTokenSupported(_token), "Token not supported");
 
         IERC20 token = IERC20(_token);
-        uint balance = token.balanceOf(address(this));
+        uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "Cannot distribute zero balance");
 
         token.safeTransfer(address(tokenPools[_token]), balance);
@@ -205,10 +205,10 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @param _account account to return reward amounts for
      * @return list of withdrawable reward amounts
      **/
-    function withdrawableRewards(address _account) external view returns (uint[] memory) {
-        uint[] memory withdrawable = new uint[](tokens.length);
+    function withdrawableRewards(address _account) external view returns (uint256[] memory) {
+        uint256[] memory withdrawable = new uint[](tokens.length);
 
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             withdrawable[i] = tokenPools[tokens[i]].withdrawableRewards(_account);
         }
 
@@ -220,7 +220,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @param _tokens list of token addresses to withdraw rewards from
      **/
     function withdrawRewards(address[] memory _tokens) public {
-        for (uint i = 0; i < _tokens.length; i++) {
+        for (uint256 i = 0; i < _tokens.length; i++) {
             tokenPools[_tokens[i]].withdraw(msg.sender);
         }
         emit WithdrawRewards(msg.sender);
@@ -253,7 +253,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
 
         IRewardsPool rewardsPool = tokenPools[_token];
         delete (tokenPools[_token]);
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             if (tokens[i] == _token) {
                 tokens[i] = tokens[tokens.length - 1];
                 tokens.pop();
@@ -274,7 +274,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         require(rewardRedirects[_from] != _to, "Cannot redirect rewards to the same address");
         require(rewardRedirects[_from] == address(0) ? (_from != _to) : true, "Cannot redirect to self");
 
-        uint balanceFrom = balanceOf(_from);
+        uint256 balanceFrom = balanceOf(_from);
         require(balanceFrom > 0, "A balance is required to redirect rewards");
 
         address previousRedirect = rewardRedirects[_from];
@@ -298,7 +298,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
      * @param _account account to update rewards for
      */
     function _updateRewards(address _account) internal {
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             tokenPools[tokens[i]].updateReward(_account);
         }
     }

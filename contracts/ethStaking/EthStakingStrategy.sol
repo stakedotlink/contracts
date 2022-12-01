@@ -20,13 +20,13 @@ import "./interfaces/IRewardsReceiver.sol";
 contract EthStakingStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint public constant PUBKEY_LENGTH = 48;
-    uint public constant SIGNATURE_LENGTH = 96;
+    uint256 public constant PUBKEY_LENGTH = 48;
+    uint256 public constant SIGNATURE_LENGTH = 96;
 
-    uint public constant DEPOSIT_AMOUNT = 32 ether;
-    uint internal constant DEPOSIT_AMOUNT_UNIT = 1 gwei;
+    uint256 public constant DEPOSIT_AMOUNT = 32 ether;
+    uint256 internal constant DEPOSIT_AMOUNT_UNIT = 1 gwei;
 
-    uint internal constant BASIS_POINTS = 10000;
+    uint256 internal constant BASIS_POINTS = 10000;
 
     IDepositContract public depositContract;
     IWLOperatorController public wlOperatorController;
@@ -37,24 +37,24 @@ contract EthStakingStrategy is Strategy {
 
     bytes32 public withdrawalCredentials;
 
-    uint public operatorFeeBasisPoints;
+    uint256 public operatorFeeBasisPoints;
 
-    uint public depositedValidators;
-    uint public beaconValidators;
-    uint public beaconBalance;
-    uint public nwlLostOperatorStakes;
+    uint256 public depositedValidators;
+    uint256 public beaconValidators;
+    uint256 public beaconBalance;
+    uint256 public nwlLostOperatorStakes;
 
     int public depositChange;
-    uint public totalDeposits;
-    uint public bufferedETH;
+    uint256 public totalDeposits;
+    uint256 public bufferedETH;
 
-    uint private maxDeposits;
-    uint private minDeposits;
+    uint256 private maxDeposits;
+    uint256 private minDeposits;
 
-    event DepositEther(uint nwlValidatorCount, uint wlValidatorCount);
-    event ReportBeaconState(uint beaconValidators, uint beaconBalance, uint nwlLostOperatorStakes);
-    event SetMaxDeposits(uint max);
-    event SetMinDeposits(uint min);
+    event DepositEther(uint256 nwlValidatorCount, uint256 wlValidatorCount);
+    event ReportBeaconState(uint256 beaconValidators, uint256 beaconBalance, uint256 nwlLostOperatorStakes);
+    event SetMaxDeposits(uint256 max);
+    event SetMinDeposits(uint256 min);
     event SetDepositController(address controller);
     event SetRewardsReceiver(address rewardsReceiver);
     event SetBeaconOracle(address oracle);
@@ -69,11 +69,11 @@ contract EthStakingStrategy is Strategy {
     function initialize(
         address _wETH,
         address _stakingPool,
-        uint _maxDeposits,
-        uint _minDeposits,
+        uint256 _maxDeposits,
+        uint256 _minDeposits,
         address _depositContract,
         bytes32 _withdrawalCredentials,
-        uint _operatorFeeBasisPoints
+        uint256 _operatorFeeBasisPoints
     ) public initializer {
         __Strategy_init(_wETH, _stakingPool);
         depositContract = IDepositContract(_depositContract);
@@ -94,15 +94,15 @@ contract EthStakingStrategy is Strategy {
      * the first 16 ETH lost for each nwl validator is staked by the operator, not this pool)
      */
     function reportBeaconState(
-        uint _beaconValidators,
-        uint _beaconBalance,
-        uint _nwlLostOperatorStakes
+        uint256 _beaconValidators,
+        uint256 _beaconBalance,
+        uint256 _nwlLostOperatorStakes
     ) external {
         require(msg.sender == beaconOracle, "Sender is not beacon oracle");
         require(_beaconValidators <= depositedValidators, "Reported more validators than deposited");
         require(_beaconValidators >= beaconValidators, "Reported less validators than tracked");
 
-        uint newValidators = _beaconValidators - beaconValidators;
+        uint256 newValidators = _beaconValidators - beaconValidators;
         int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance + nwlLostOperatorStakes);
 
         beaconBalance = _beaconBalance;
@@ -111,7 +111,7 @@ contract EthStakingStrategy is Strategy {
 
         int change = int(_beaconBalance) - rewardBase + int(_nwlLostOperatorStakes);
         if (change > 0) {
-            uint rewards = rewardsReceiver.withdraw();
+            uint256 rewards = rewardsReceiver.withdraw();
             if (rewards > 0) {
                 IWrappedETH(address(token)).wrap{value: rewards}();
                 bufferedETH += rewards;
@@ -133,14 +133,17 @@ contract EthStakingStrategy is Strategy {
      * @param _wlValidatorCounts number of validators to assign each whitelisted operator
      */
     function depositEther(
-        uint _nwlTotalValidatorCount,
-        uint _wlTotalValidatorCount,
-        uint[] calldata _wlOperatorIds,
-        uint[] calldata _wlValidatorCounts
+        uint256 _nwlTotalValidatorCount,
+        uint256 _wlTotalValidatorCount,
+        uint256[] calldata _wlOperatorIds,
+        uint256[] calldata _wlValidatorCounts
     ) external {
         require(msg.sender == depositController, "Sender is not deposit controller");
 
-        uint totalDepositAmount = (DEPOSIT_AMOUNT * _wlTotalValidatorCount + (DEPOSIT_AMOUNT / 2) * _nwlTotalValidatorCount);
+        uint256 totalDepositAmount = (DEPOSIT_AMOUNT *
+            _wlTotalValidatorCount +
+            (DEPOSIT_AMOUNT / 2) *
+            _nwlTotalValidatorCount);
         require(totalDepositAmount > 0, "Cannot deposit 0");
         require(bufferedETH >= totalDepositAmount, "Insufficient balance for deposit");
 
@@ -185,13 +188,13 @@ contract EthStakingStrategy is Strategy {
 
         IWrappedETH(address(token)).unwrap(totalDepositAmount);
 
-        for (uint i = 0; i < _nwlTotalValidatorCount; i++) {
+        for (uint256 i = 0; i < _nwlTotalValidatorCount; i++) {
             bytes memory pubkey = BytesLib.slice(nwlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             bytes memory signature = BytesLib.slice(nwlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
             _deposit(pubkey, signature);
         }
 
-        for (uint i = 0; i < _wlTotalValidatorCount; i++) {
+        for (uint256 i = 0; i < _wlTotalValidatorCount; i++) {
             bytes memory pubkey = BytesLib.slice(wlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             bytes memory signature = BytesLib.slice(wlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
             _deposit(pubkey, signature);
@@ -206,7 +209,7 @@ contract EthStakingStrategy is Strategy {
      * @notice deposits wETH from StakingPool into this strategy
      * @param _amount amount of wETH to deposit
      */
-    function deposit(uint _amount) external onlyStakingPool {
+    function deposit(uint256 _amount) external onlyStakingPool {
         require(_amount <= canDeposit(), "Insufficient deposit room");
         token.transferFrom(address(stakingPool), address(this), _amount);
         totalDeposits += _amount;
@@ -218,7 +221,7 @@ contract EthStakingStrategy is Strategy {
      * @dev not implemented yet
      * @param _amount amount of ETH to withdraw
      */
-    function withdraw(uint _amount) external onlyStakingPool {
+    function withdraw(uint256 _amount) external onlyStakingPool {
         revert("Not implemented yet");
     }
 
@@ -228,7 +231,7 @@ contract EthStakingStrategy is Strategy {
      * @param _receiver receiver of ETH
      * @param _amount amount of ETH to withdraw
      */
-    function nwlWithdraw(address _receiver, uint _amount) external {
+    function nwlWithdraw(address _receiver, uint256 _amount) external {
         require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
         revert("Not implemented yet");
     }
@@ -236,20 +239,20 @@ contract EthStakingStrategy is Strategy {
     /**
      * @notice updates deposit accounting and calculates reward distribution
      */
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint[] memory amounts) {
+    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
         if (depositChange > 0) {
-            uint rewards = uint(depositChange);
+            uint256 rewards = uint(depositChange);
 
-            uint nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
-            uint nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) /
+            uint256 nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
+            uint256 nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) /
                 (totalDeposits + nwlOperatorDeposits);
 
-            uint activeWLValidators = wlOperatorController.totalActiveValidators();
-            uint activeNWLValidators = nwlOperatorController.totalActiveValidators();
+            uint256 activeWLValidators = wlOperatorController.totalActiveValidators();
+            uint256 activeNWLValidators = nwlOperatorController.totalActiveValidators();
 
-            uint operatorFee = (rewards * operatorFeeBasisPoints) / BASIS_POINTS;
-            uint wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
-            uint nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / BASIS_POINTS;
+            uint256 operatorFee = (rewards * operatorFeeBasisPoints) / BASIS_POINTS;
+            uint256 wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
+            uint256 nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / BASIS_POINTS;
 
             receivers = new address[](2);
             amounts = new uint[](2);
@@ -358,8 +361,8 @@ contract EthStakingStrategy is Strategy {
     function _deposit(bytes memory _pubkey, bytes memory _signature) internal {
         require(withdrawalCredentials != 0, "Empty withdrawal credentials");
 
-        uint depositValue = DEPOSIT_AMOUNT;
-        uint depositAmount = depositValue / DEPOSIT_AMOUNT_UNIT;
+        uint256 depositValue = DEPOSIT_AMOUNT;
+        uint256 depositAmount = depositValue / DEPOSIT_AMOUNT_UNIT;
 
         bytes32 pubkeyRoot = sha256(abi.encodePacked(_pubkey, bytes16(0)));
         bytes32 signatureRoot = sha256(
@@ -375,7 +378,7 @@ contract EthStakingStrategy is Strategy {
             )
         );
 
-        uint targetBalance = address(this).balance - depositValue;
+        uint256 targetBalance = address(this).balance - depositValue;
 
         depositContract.deposit{value: depositValue}(
             _pubkey,

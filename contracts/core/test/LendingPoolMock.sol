@@ -8,13 +8,13 @@ pragma solidity 0.8.15;
 contract DelegatorPoolMock {
     address public token;
     uint16 public index;
-    uint public totalRewards;
-    uint public rate;
+    uint256 public totalRewards;
+    uint256 public rate;
 
     constructor(
         address _token,
         uint16 _index,
-        uint _rate
+        uint256 _rate
     ) {
         token = _token;
         index = _index;
@@ -23,7 +23,7 @@ contract DelegatorPoolMock {
 
     function onTokenTransfer(
         address _sender,
-        uint _value,
+        uint256 _value,
         bytes calldata _calldata
     ) external {
         totalRewards += _value;

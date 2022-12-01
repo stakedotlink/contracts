@@ -8,11 +8,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @notice Sets a flat fee
  */
 contract FlatFee is Ownable {
-    uint public feeBasisPoints;
+    uint256 public feeBasisPoints;
 
-    event FeeSet(uint _feeBasisPoints);
+    event FeeSet(uint256 _feeBasisPoints);
 
-    constructor(uint _feeBasisPoints) {
+    constructor(uint256 _feeBasisPoints) {
         feeBasisPoints = _feeBasisPoints;
     }
 
@@ -20,7 +20,7 @@ contract FlatFee is Ownable {
      * @notice sets the fee basis points
      * @param _feeBasisPoints
      **/
-    function setFeeBasisPoints(uint _feeBasisPoints) public onlyOwner {
+    function setFeeBasisPoints(uint256 _feeBasisPoints) public onlyOwner {
         require(_feeBasisPoints >= 0 && _feeBasisPoints <= 9500, "Invalid flat fee");
         feeBasisPoints = _feeBasisPoints;
         emit FeeSet(_feeBasisPoints);
