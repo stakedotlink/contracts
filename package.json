@@ -8,7 +8,7 @@
     "deploy": "npx hardhat deploy",
     "test": "npx hardhat test --network hardhat",
     "luv-deyta": "npx hardhat run scripts/test/luv-deyta.ts",
-    "mock-data": "npx hardhat run scripts/test/mock-data.ts",
+    "mock-data": "npx hardhat run scripts/test/mock-data-0.1.0.ts",
     "start-mock-data": "node scripts/test/start-mock-data.js",
     "deploy-operator-vaults": "ts-node --files scripts/linkStaking/deploy-operator-vaults.ts",
     "compile": "npx hardhat compile",
