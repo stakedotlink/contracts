@@ -1,8 +1,6 @@
 import { HardhatUserConfig } from 'hardhat/config'
-import 'hardhat-deploy'
 import '@nomiclabs/hardhat-ethers'
 import '@typechain/hardhat'
-import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 
@@ -33,7 +31,7 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: 'http://localhost:1248',
-      accounts: "remote",
+      accounts: 'remote',
     },
     testnet: {
       url: 'https://staking-metrics-monitor-beta.staging.linkpool.io/dev',
@@ -45,11 +43,6 @@ const config: HardhatUserConfig = {
         auto: true,
         interval: 5000,
       },
-    },
-  },
-  namedAccounts: {
-    deployer: {
-      default: 0,
     },
   },
   solidity: {

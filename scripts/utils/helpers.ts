@@ -1,4 +1,4 @@
-import { ethers, upgrades } from 'hardhat'
+import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 import { ERC677 } from '../../typechain-types'
 
@@ -8,21 +8,6 @@ export const toEther = (amount: string | number) => {
 
 export const fromEther = (amount: BigNumber) => {
   return Number(ethers.utils.formatEther(amount))
-}
-
-export const deploy = async (contractName: string, args: Array<any>) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return Contract.deploy(...args)
-}
-
-export const deployUpgradeable = async (contractName: string, args: any[] = []) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups' })
-}
-
-export const deployImplementation = async (contractName: string) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployImplementation(Contract, { kind: 'uups' })
 }
 
 export const getAccounts = async () => {
