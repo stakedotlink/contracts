@@ -1,10 +1,10 @@
 import fs from 'fs'
 import { ethers, network } from 'hardhat'
 import { ERC677 } from '../../typechain-types'
-import { deployUpgradeable } from '../utils/helpers'
+import { deployUpgradeable, getContract } from '../utils/deployment'
 
 async function main() {
-  const linkToken = (await ethers.getContract('LinkToken')) as ERC677
+  const linkToken = (await getContract('LINKToken')) as ERC677
   const addresses = []
 
   for (let i = 0; i < 10; i++) {
@@ -13,12 +13,11 @@ async function main() {
       ethers.constants.AddressZero,
       ethers.constants.AddressZero,
     ])
-    await vault.deployed()
     addresses.push(vault.address)
   }
 
   fs.writeFileSync(
-    `scripts/linkStaking/deployedOpVaults.${network.name}.json`,
+    `scripts/linkStrategies/deployedOpVaults.${network.name}.json`,
     JSON.stringify(addresses, null, 1)
   )
 }

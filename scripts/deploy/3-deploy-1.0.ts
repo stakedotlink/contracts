@@ -1,12 +1,22 @@
-import { config } from '../../config/deploy'
+import { DelegatorPool, ERC677, StakingAllowance } from '../../typechain-types'
 import { updateDeployments, deploy, getContract, deployUpgradeable } from '../utils/deployment'
 
-async function main() {
-  const { LINK_StakingPool, LINK_WrappedSDToken } = config
+// LINK Wrapped Staking Derivative Token
+const LINK_WrappedSDToken = {
+  name: 'Wrapped stLINK', // wrapped staking derivative token name
+  symbol: 'wstLINK', // wrapped staking derivative token symbol
+}
+// LINK Staking Pool
+const LINK_StakingPool = {
+  derivativeTokenName: 'Staked LINK', // LINK staking derivative token name
+  derivativeTokenSymbol: 'stLINK', // LINK staking derivative token symbol
+  fees: [['0x11187eff852069a33d102476b2E8A9cc9167dAde', 300]], // fee receivers & percentage amounts in basis points
+}
 
-  const linkToken = await getContract('LINKToken')
-  const stakingAllowance = await getContract('SDLToken')
-  const delegatorPool = await getContract('DelegatorPool')
+async function main() {
+  const linkToken = (await getContract('LINKToken')) as ERC677
+  const stakingAllowance = (await getContract('SDLToken')) as StakingAllowance
+  const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
 
   const poolRouter = await deployUpgradeable('PoolRouter', [
     stakingAllowance.address,

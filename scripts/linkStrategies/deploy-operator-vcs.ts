@@ -1,0 +1,93 @@
+import { ethers, network } from 'hardhat'
+import fs from 'fs'
+import { ERC677, OperatorVaultV0, OperatorVCS, StakingPool } from '../../typechain-types'
+import {
+  deployUpgradeable,
+  deployImplementation,
+  getContract,
+  updateDeployments,
+} from '../utils/deployment'
+import { Interface } from 'ethers/lib/utils'
+
+// Operator Vault Controller Strategy
+const config = {
+  stakeController: '0x11187eff852069a33d102476b2E8A9cc9167dAde', // address of Chainlink staking contract
+  minDepositThreshold: 1000, // minimum deposits required to initiate a deposit
+  fees: [], // fee receivers & percentage amounts in basis points
+  vaultOperatorAddresses: [
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  ], // list of operator addresses that correspond to each vault
+}
+
+async function main() {
+  const linkToken = (await getContract('LINKToken')) as ERC677
+  const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
+  const vaultInterface = (await ethers.getContractFactory('OperatorVault')).interface as Interface
+
+  const initialVaults = JSON.parse(
+    fs.readFileSync(`scripts/linkStrategies/deployedOpVaults.${network.name}.json`, {
+      encoding: 'utf8',
+    })
+  )
+
+  if (initialVaults.length != config.vaultOperatorAddresses.length) {
+    throw Error('The # of vault operator addresses must equal the # of deployed operator vaults')
+  }
+
+  const vaultImpAddress = (await deployImplementation('OperatorVault')) as string
+
+  console.log('OperatorVault implementation deployed: ', vaultImpAddress)
+
+  const operatorVCS = (await deployUpgradeable('OperatorVCS', [
+    linkToken.address,
+    stakingPool.address,
+    config.stakeController,
+    vaultImpAddress,
+    config.minDepositThreshold,
+    config.fees,
+    initialVaults,
+  ])) as OperatorVCS
+  await operatorVCS.deployed()
+
+  console.log('OperatorVCS deployed: ', operatorVCS.address)
+
+  let tx = await stakingPool.addStrategy(operatorVCS.address)
+  await tx.wait()
+
+  for (let i = 0; i < initialVaults.length; i++) {
+    let vault = (await ethers.getContractAt('OperatorVaultV0', initialVaults[i])) as OperatorVaultV0
+    tx = await vault.upgradeToAndCall(
+      vaultImpAddress,
+      vaultInterface.encodeFunctionData('initialize(address,address,address,address)', [
+        linkToken.address,
+        operatorVCS.address,
+        config.stakeController,
+        config.vaultOperatorAddresses[i],
+      ])
+    )
+    await tx.wait()
+    tx = await vault.transferOwnership(operatorVCS.address)
+    await tx.wait()
+  }
+
+  console.log('All OperatorVaults have been upgraded from V0 to V1')
+  console.log('All OperatorVaults have transferred ownership to OperatorVCS')
+
+  updateDeployments({ LINK_OperatorVCS: operatorVCS.address }, { LINK_OperatorVCS: 'OperatorVCS' })
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error)
+    process.exit(1)
+  })

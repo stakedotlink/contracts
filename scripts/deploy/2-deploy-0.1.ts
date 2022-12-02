@@ -1,10 +1,24 @@
-import { config } from '../../config/deploy'
+import { ERC677 } from '../../typechain-types'
 import { updateDeployments, deploy, getContract, deployUpgradeable } from '../utils/deployment'
 
-async function main() {
-  const { StakingAllowance, DelegatorPool, FlatFee } = config
+// SDL Token
+const StakingAllowance = {
+  name: 'Stake Dot Link', // SDL token name
+  symbol: 'SDL', // SDL token symbol
+  initialSupply: 220000000, // initial SDL supply to mint
+}
+// Delegator Pool (SDL staking)
+const DelegatorPool = {
+  derivativeTokenName: 'Staked SDL', // SDL staking derivative token name
+  derivativeTokenSymbol: 'stSDL', // SDL staking derivative token symbol
+}
+// Fee curve to be used by Delegator Pool
+const FlatFee = {
+  feeBasisPoints: 0, // constant percentage fee in basis points
+}
 
-  const lplToken = await getContract('LPLToken')
+async function main() {
+  const lplToken = (await getContract('LPLToken')) as ERC677
 
   const sdlToken = await deploy('StakingAllowance', [
     StakingAllowance.name,

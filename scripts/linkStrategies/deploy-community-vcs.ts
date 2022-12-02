@@ -1,0 +1,53 @@
+import { ERC677, StakingPool } from '../../typechain-types'
+import {
+  deployUpgradeable,
+  deployImplementation,
+  getContract,
+  updateDeployments,
+} from '../utils/deployment'
+
+// Community Vault Controller Strategy
+const config = {
+  stakeController: '0x11187eff852069a33d102476b2E8A9cc9167dAde', // address of Chainlink staking contract
+  minDepositThreshold: 1000, // minimum deposits required to initiate a deposit
+  fees: [], // fee receivers & percentage amounts in basis points
+  maxDeposits: 5000000, // maximum amount of deposits that can be deposited into this contract
+  maxVaultDeployments: 10, // maximum number of vaults that can be deployed at once
+}
+
+async function main() {
+  const linkToken = (await getContract('LINKToken')) as ERC677
+  const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
+
+  const vaultImpAddress = await deployImplementation('CommunityVault')
+
+  console.log('CommunityVault implementation deployed: ', vaultImpAddress)
+
+  const communityVCS = await deployUpgradeable('CommunityVCS', [
+    linkToken.address,
+    stakingPool.address,
+    config.stakeController,
+    vaultImpAddress,
+    config.minDepositThreshold,
+    config.fees,
+    config.maxDeposits,
+    config.maxVaultDeployments,
+  ])
+  await communityVCS.deployed()
+
+  console.log('CommunityVCS deployed: ', communityVCS.address)
+
+  await stakingPool.addStrategy(communityVCS.address)
+
+  updateDeployments(
+    { LINK_CommunityVCS: communityVCS.address },
+    { LINK_CommunityVCS: 'CommunityVCS' }
+  )
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error)
+    process.exit(1)
+  })
