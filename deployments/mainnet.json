@@ -1,0 +1,10 @@
+{
+  "LPLToken": {
+    "address": "0x99295f1141d58a99e939f7be6bbe734916a875b8",
+    "artifact": "ERC677"
+  },
+  "LINKToken": {
+    "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+    "artifact": "ERC677"
+  }
+}
