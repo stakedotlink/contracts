@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npx hardhat node --network hardhat",
     "test": "npx hardhat test --network hardhat",
+    "deploy": "ts-node --files scripts/deploy/1-deploy-test-contracts.ts && ts-node --files scripts/deploy/2-deploy-0.1.ts && ts-node --files scripts/deploy/3-deploy-1.0.ts && ts-node --files scripts/deploy/4-deploy-merkle-distributor.ts",
     "luv-deyta": "npx hardhat run scripts/test/luv-deyta.ts",
     "mock-data": "npx hardhat run scripts/test/mock-data-0.1.0.ts",
     "start-mock-data": "node scripts/test/start-mock-data.js",
