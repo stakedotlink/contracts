@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
-import "./interfaces/IWrappedSDToken.sol";
 import "./interfaces/IDelegatorPool.sol";
 
 /**
@@ -16,8 +12,8 @@ import "./interfaces/IDelegatorPool.sol";
  * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked
  * assets into strategy contracts to earn returns
  */
-contract StakingPool is StakingRewardsPool, Ownable {
-    using SafeERC20 for IERC677;
+contract StakingPool is StakingRewardsPool {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Fee {
         address receiver;
@@ -30,27 +26,33 @@ contract StakingPool is StakingRewardsPool, Ownable {
 
     Fee[] private fees;
 
-    address public immutable poolRouter;
-    address public immutable delegatorPool;
+    address public poolRouter;
+    address public delegatorPool;
     uint16 public poolIndex;
 
     event Stake(address indexed account, uint256 amount);
     event Withdraw(address indexed account, uint256 amount);
     event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
         Fee[] memory _fees,
         address _poolRouter,
         address _delegatorPool
-    ) StakingRewardsPool(_token, _derivativeTokenName, _derivativeTokenSymbol) {
+    ) public initializer {
+        __StakingRewardsPool_init(_token, _derivativeTokenName, _derivativeTokenSymbol);
+        poolRouter = _poolRouter;
+        delegatorPool = _delegatorPool;
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
-        poolRouter = _poolRouter;
-        delegatorPool = _delegatorPool;
     }
 
     modifier onlyRouter() {

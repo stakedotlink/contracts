@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../interfaces/IRewardsPoolController.sol";
 import "../interfaces/IRewardsPool.sol";
 import "../RewardsPool.sol";
-import "../tokens/base/ERC677.sol";
+import "../tokens/base/ERC677Upgradeable.sol";
 
 /**
  * @title Rewards Pool Controller
  * @notice Acts as a proxy for any number of rewards pools
  */
-abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC677 {
-    using SafeERC20 for IERC20;
+abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, ERC677Upgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     mapping(address => IRewardsPool) public tokenPools;
     address[] private tokens;
@@ -31,14 +31,19 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
     event RedirectApprovalRevoked(address indexed approver, address indexed from);
     event RewardsRedirected(address indexed from, address indexed to, address indexed by);
 
+    function __RewardsPoolController_init(string memory _derivativeTokenName, string memory _derivativeTokenSymbol)
+        public
+        onlyInitializing
+    {
+        __ERC677_init(_derivativeTokenName, _derivativeTokenSymbol, 0);
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+    }
+
     modifier updateRewards(address _account) {
         _updateRewards(_account);
         _;
     }
-
-    constructor(string memory _derivativeTokenName, string memory _derivativeTokenSymbol)
-        ERC677(_derivativeTokenName, _derivativeTokenSymbol, 0)
-    {}
 
     /**
      * @notice returns a list of configs for all supported tokens
@@ -65,7 +70,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         uint256[] memory balances = new uint[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            balances[i] = IERC20(tokens[i]).balanceOf(address(this));
+            balances[i] = IERC20Upgradeable(tokens[i]).balanceOf(address(this));
         }
 
         return (tokens, balances);
@@ -192,7 +197,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
     function distributeToken(address _token) public {
         require(isTokenSupported(_token), "Token not supported");
 
-        IERC20 token = IERC20(_token);
+        IERC20Upgradeable token = IERC20Upgradeable(_token);
         uint256 balance = token.balanceOf(address(this));
         require(balance > 0, "Cannot distribute zero balance");
 
@@ -237,7 +242,7 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
         tokenPools[_token] = IRewardsPool(_rewardsPool);
         tokens.push(_token);
 
-        if (IERC20(_token).balanceOf(address(this)) > 0) {
+        if (IERC20Upgradeable(_token).balanceOf(address(this)) > 0) {
             distributeToken(_token);
         }
 
@@ -302,4 +307,6 @@ abstract contract RewardsPoolController is Ownable, IRewardsPoolController, ERC6
             tokenPools[tokens[i]].updateReward(_account);
         }
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

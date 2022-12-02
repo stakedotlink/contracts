@@ -4,14 +4,15 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import "../../tokens/base/VirtualERC677.sol";
+import "../../tokens/base/ERC677.sol";
+import "../../interfaces/IERC677.sol";
 
 /**
  * @title RewardsPool
  * @dev Handles rewards distribution of an asset based on a staking derivative token
  * that represents a user's staked balance
  */
-contract RewardsPoolV1 is VirtualERC677, ReentrancyGuard {
+contract RewardsPoolV1 is ERC677, ReentrancyGuard {
     using SafeERC20 for IERC677;
 
     IERC677 public stakingDerivative;
@@ -27,7 +28,7 @@ contract RewardsPoolV1 is VirtualERC677, ReentrancyGuard {
         address _rewardsToken,
         string memory _tokenName,
         string memory _tokenSymbol
-    ) VirtualERC677(_tokenName, _tokenSymbol) {
+    ) ERC677(_tokenName, _tokenSymbol, 0) {
         rewardsToken = IERC677(_rewardsToken);
         stakingDerivative = IERC677(_stakingDerivative);
     }
@@ -37,7 +38,7 @@ contract RewardsPoolV1 is VirtualERC677, ReentrancyGuard {
      * @param _account user to calculate rewards for
      * @return user's total unclaimed rewards
      **/
-    function balanceOf(address _account) public view virtual override(IERC20, VirtualERC20) returns (uint256) {
+    function balanceOf(address _account) public view virtual override returns (uint256) {
         return
             (stakingDerivative.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +

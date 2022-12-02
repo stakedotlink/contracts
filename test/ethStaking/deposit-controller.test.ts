@@ -57,7 +57,7 @@ describe('DepositController', () => {
   beforeEach(async () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
 
-    stakingPool = (await deploy('StakingPool', [
+    stakingPool = (await deployUpgradeable('StakingPool', [
       wETH.address,
       'LinkPool ETH',
       'lplETH',

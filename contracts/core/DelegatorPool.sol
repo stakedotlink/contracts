@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IPoolRouter.sol";
 import "./interfaces/IFeeCurve.sol";
@@ -14,7 +10,7 @@ import "./interfaces/IFeeCurve.sol";
  * @notice Allows users to stake allowance tokens, stakers receive a percentage of earned rewards
  */
 contract DelegatorPool is RewardsPoolController {
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct VestingSchedule {
         uint256 totalAmount;
@@ -22,7 +18,7 @@ contract DelegatorPool is RewardsPoolController {
         uint64 durationSeconds;
     }
 
-    IERC20 public immutable allowanceToken;
+    IERC20Upgradeable public allowanceToken;
     IPoolRouter public poolRouter;
     IFeeCurve public feeCurve;
 
@@ -31,13 +27,19 @@ contract DelegatorPool is RewardsPoolController {
     event AllowanceStaked(address indexed user, uint256 amount);
     event AllowanceWithdrawn(address indexed user, uint256 amount);
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _allowanceToken,
         string memory _dTokenName,
         string memory _dTokenSymbol,
         address _feeCurve
-    ) RewardsPoolController(_dTokenName, _dTokenSymbol) {
-        allowanceToken = IERC20(_allowanceToken);
+    ) public initializer {
+        __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
+        allowanceToken = IERC20Upgradeable(_allowanceToken);
         feeCurve = IFeeCurve(_feeCurve);
     }
 
@@ -73,7 +75,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account
      * @return balance accounts balance
      */
-    function balanceOf(address _account) public view virtual override(ERC20, IERC20) returns (uint256) {
+    function balanceOf(address _account) public view virtual override returns (uint256) {
         return super.balanceOf(_account) - (vestingSchedules[_account].totalAmount - _vestedTokens(_account));
     }
 

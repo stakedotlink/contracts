@@ -1,36 +1,38 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../tokens/base/VirtualERC677.sol";
+import "../tokens/base/ERC677Upgradeable.sol";
 
 /**
  * @title StakingRewardsPool
  * @notice Handles staking and reward distribution for a single asset
  * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
-abstract contract StakingRewardsPool is VirtualERC677 {
-    using SafeERC20 for IERC677;
-
-    IERC677 public immutable token;
+abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    IERC20Upgradeable public token;
 
     mapping(address => uint) private shares;
     uint256 public totalShares;
 
-    constructor(
+    function __StakingRewardsPool_init(
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol
-    ) VirtualERC677(_derivativeTokenName, _derivativeTokenSymbol) {
-        token = IERC677(_token);
+    ) public onlyInitializing {
+        __ERC677_init(_derivativeTokenName, _derivativeTokenSymbol, 0);
+        __UUPSUpgradeable_init();
+        __Ownable_init();
+        token = IERC20Upgradeable(_token);
     }
 
     /**
      * @notice returns the total supply of staking derivative tokens
      * @return total supply
      */
-    function totalSupply() public view override(IERC20, VirtualERC20) returns (uint) {
+    function totalSupply() public view override returns (uint) {
         return _totalStaked();
     }
 
@@ -39,7 +41,7 @@ abstract contract StakingRewardsPool is VirtualERC677 {
      * @param _account account to return balance for
      * @return account's stake balance
      **/
-    function balanceOf(address _account) public view override(IERC20, VirtualERC20) returns (uint) {
+    function balanceOf(address _account) public view override returns (uint) {
         uint256 balance = getStakeByShares(shares[_account]);
         if (balance < 100) {
             return 0;
@@ -155,4 +157,6 @@ abstract contract StakingRewardsPool is VirtualERC677 {
         totalShares -= sharesToBurn;
         shares[_account] -= sharesToBurn;
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

@@ -7,6 +7,7 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  deployUpgradeable,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -47,7 +48,7 @@ describe('RewardsPoolController', () => {
     stakingToken = (await deploy('ERC677', ['StakingToken', 'ST', 1000000000])) as ERC677
     await setupToken(stakingToken, accounts)
 
-    controller = (await deploy('RewardsPoolControllerMock', [
+    controller = (await deployUpgradeable('RewardsPoolControllerMock', [
       stakingToken.address,
       'lSTA',
       'Lent Staking Allowance',

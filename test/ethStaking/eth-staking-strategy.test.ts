@@ -73,7 +73,7 @@ describe('EthStakingStrategy', () => {
       2000,
     ])) as DelegatorPoolMock
 
-    stakingPool = (await deploy('StakingPool', [
+    stakingPool = (await deployUpgradeable('StakingPool', [
       wETH.address,
       'LinkPool ETH',
       'lplETH',
