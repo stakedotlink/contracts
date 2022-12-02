@@ -12,6 +12,6 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["./scripts", "./test", "./deploy", "./typechain-types"],
+  "include": ["./scripts", "./test", "./typechain-types"],
   "files": ["./hardhat.config.ts"]
 }

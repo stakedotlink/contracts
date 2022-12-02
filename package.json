@@ -13,8 +13,8 @@
     "deploy-operator-vaults": "ts-node --files scripts/linkStaking/deploy-operator-vaults.ts",
     "compile": "npx hardhat compile",
     "tsc": "tsc",
-    "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
-    "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\" \"deploy/**/*.ts*\"",
+    "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
+    "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
     "solhint": "solhint contracts/**/*.sol"
   },
   "devDependencies": {
