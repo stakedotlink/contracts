@@ -1,3 +1,4 @@
+import { Contract } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
 
@@ -52,7 +53,7 @@ export const updateDeployments = (
   )
 }
 
-export const getContract = async (contractName: string) => {
+export const getContract = async (contractName: string): Promise<Contract> => {
   const deployments = getDeployments()
   const contract = deployments[contractName]
 
