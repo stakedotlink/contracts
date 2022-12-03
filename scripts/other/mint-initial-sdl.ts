@@ -4,12 +4,12 @@ import { getContract } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
 
 const linkPoolMintAddress = 'TODO' // LinkPool address to receive SDL
-const linkPoolAmount = 35000000 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
+const linkPoolAmount = 34339796 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
 const chainlinkMintAddress = 'TODO' // Chainlink address to receive SDL
 const chainlinkAmount = 20000000 // Amount of SDL to be minted to Chainlink
 const daoMintAddress = 'TODO' // DAO Treasury wallet to receive SDL
 const daoAmount = 50000000 // Amount of SDL to be minted to the DAO
-const lplMigrationAmount = 15000000 // Amount of SDL to be minted into the LPL migration contract
+const lplMigrationAmount = 15660204 // Amount of SDL to be minted into the LPL migration contract
 const lockedSDLPerOperator = 9900000 // Amount of locked SDL each operator should receive
 const unlockedSDLPerOperator = 100000 //  Amount of unlocked SDL each operator should receive
 const vestingStartTimeSeconds = 1685980800 // Start time of SDL vesting for operators (June 5th 2023)
