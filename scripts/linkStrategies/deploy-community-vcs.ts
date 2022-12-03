@@ -31,7 +31,6 @@ async function main() {
     maxDeposits,
     maxVaultDeployments,
   ])
-  await communityVCS.deployed()
 
   console.log('CommunityVCS deployed: ', communityVCS.address)
 

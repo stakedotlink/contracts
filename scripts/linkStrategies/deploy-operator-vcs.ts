@@ -14,6 +14,7 @@ const stakeController = '0x11187eff852069a33d102476b2E8A9cc9167dAde' // address 
 const minDepositThreshold = 1000 // minimum deposits required to initiate a deposit
 const fees: any = [] // fee receivers & percentage amounts in basis points
 const vaultOperatorAddresses = [
+  ethers.constants.AddressZero,
   '0xb621221D9850a93C67557F0B24b2483CAc4ce4b1',
   '0x03384EbdBA3d5D5672e8e26fa0F13DaFBCE5DaBA',
   '0x41fD547a85B1297062bcD53382D8aa65Df70be13',
@@ -58,7 +59,6 @@ async function main() {
     fees,
     initialVaults,
   ])) as OperatorVCS
-  await operatorVCS.deployed()
 
   console.log('OperatorVCS deployed: ', operatorVCS.address)
 

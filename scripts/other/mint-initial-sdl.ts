@@ -40,7 +40,7 @@ async function main() {
 
   for (let i = 0; i < operatorAddresses.length; i++) {
     let address = operatorAddresses[i]
-    let tx = await sdlToken.mintToContract(
+    tx = await sdlToken.mintToContract(
       delegatorPool.address,
       address,
       toEther(lockedSDLPerOperator),
