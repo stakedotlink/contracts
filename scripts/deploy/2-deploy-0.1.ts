@@ -3,7 +3,7 @@ import { updateDeployments, deploy, getContract, deployUpgradeable } from '../ut
 
 // SDL Token
 const StakingAllowance = {
-  name: 'Stake Dot Link', // SDL token name
+  name: 'stake.link', // SDL token name
   symbol: 'SDL', // SDL token symbol
   initialSupply: 260000000, // initial SDL supply to mint
 }
