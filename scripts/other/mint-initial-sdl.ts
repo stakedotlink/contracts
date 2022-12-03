@@ -4,7 +4,8 @@ import { getContract } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
 
 const linkPoolMintAddress = 'TODO' // LinkPool address to receive SDL
-const linkPoolAmount = 34339796 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
+const linkPoolAmount = 33996398.04 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
+const unlockedLinkPoolAmount = 343397.96 // Amount of SDL LinkPool should receive unlocked (1% of total)
 const chainlinkMintAddress = 'TODO' // Chainlink address to receive SDL
 const chainlinkAmount = 20000000 // Amount of SDL to be minted to Chainlink
 const daoMintAddress = 'TODO' // DAO Treasury wallet to receive SDL
@@ -55,6 +56,14 @@ async function main() {
     )
   )
   await tx.wait()
+  tx = await sdlToken.mintToContract(
+    delegatorPool.address,
+    linkPoolMintAddress,
+    toEther(unlockedLinkPoolAmount),
+    '0x00'
+  )
+  await tx.wait()
+
 
   for (let i = 0; i < operatorAddresses.length; i++) {
     let address = operatorAddresses[i]
@@ -68,7 +77,13 @@ async function main() {
       )
     )
     await tx.wait()
-    tx = await sdlToken.mint(address, toEther(unlockedSDLPerOperator))
+
+    tx = await sdlToken.mintToContract(
+      delegatorPool.address,
+      address,
+      toEther(unlockedSDLPerOperator),
+      '0x00'
+    )
     await tx.wait()
   }
 }
