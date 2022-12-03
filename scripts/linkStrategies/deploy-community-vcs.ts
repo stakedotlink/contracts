@@ -7,13 +7,11 @@ import {
 } from '../utils/deployment'
 
 // Community Vault Controller Strategy
-const config = {
-  stakeController: '0x11187eff852069a33d102476b2E8A9cc9167dAde', // address of Chainlink staking contract
-  minDepositThreshold: 1000, // minimum deposits required to initiate a deposit
-  fees: [], // fee receivers & percentage amounts in basis points
-  maxDeposits: 5000000, // maximum amount of deposits that can be deposited into this contract
-  maxVaultDeployments: 10, // maximum number of vaults that can be deployed at once
-}
+const stakeController = '0x11187eff852069a33d102476b2E8A9cc9167dAde' // address of Chainlink staking contract
+const minDepositThreshold = 1000 // minimum deposits required to initiate a deposit
+const fees: any = [] // fee receivers & percentage amounts in basis points
+const maxDeposits = 5000000 // maximum amount of deposits that can be deposited into this contract
+const maxVaultDeployments = 10 // maximum number of vaults that can be deployed at once
 
 async function main() {
   const linkToken = (await getContract('LINKToken')) as ERC677
@@ -26,12 +24,12 @@ async function main() {
   const communityVCS = await deployUpgradeable('CommunityVCS', [
     linkToken.address,
     stakingPool.address,
-    config.stakeController,
+    stakeController,
     vaultImpAddress,
-    config.minDepositThreshold,
-    config.fees,
-    config.maxDeposits,
-    config.maxVaultDeployments,
+    minDepositThreshold,
+    fees,
+    maxDeposits,
+    maxVaultDeployments,
   ])
   await communityVCS.deployed()
 

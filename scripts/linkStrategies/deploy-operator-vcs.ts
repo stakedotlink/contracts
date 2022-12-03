@@ -10,23 +10,21 @@ import {
 import { Interface } from 'ethers/lib/utils'
 
 // Operator Vault Controller Strategy
-const config = {
-  stakeController: '0x11187eff852069a33d102476b2E8A9cc9167dAde', // address of Chainlink staking contract
-  minDepositThreshold: 1000, // minimum deposits required to initiate a deposit
-  fees: [], // fee receivers & percentage amounts in basis points
-  vaultOperatorAddresses: [
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-    '0x11187eff852069a33d102476b2E8A9cc9167dAde',
-  ], // list of operator addresses that correspond to each vault
-}
+const stakeController = '0x11187eff852069a33d102476b2E8A9cc9167dAde' // address of Chainlink staking contract
+const minDepositThreshold = 1000 // minimum deposits required to initiate a deposit
+const fees: any = [] // fee receivers & percentage amounts in basis points
+const vaultOperatorAddresses = [
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+  '0x11187eff852069a33d102476b2E8A9cc9167dAde',
+] // list of operator addresses that correspond to each vault
 
 async function main() {
   const linkToken = (await getContract('LINKToken')) as ERC677
@@ -39,7 +37,7 @@ async function main() {
     })
   )
 
-  if (initialVaults.length != config.vaultOperatorAddresses.length) {
+  if (initialVaults.length != vaultOperatorAddresses.length) {
     throw Error('The # of vault operator addresses must equal the # of deployed operator vaults')
   }
 
@@ -50,10 +48,10 @@ async function main() {
   const operatorVCS = (await deployUpgradeable('OperatorVCS', [
     linkToken.address,
     stakingPool.address,
-    config.stakeController,
+    stakeController,
     vaultImpAddress,
-    config.minDepositThreshold,
-    config.fees,
+    minDepositThreshold,
+    fees,
     initialVaults,
   ])) as OperatorVCS
   await operatorVCS.deployed()
@@ -70,8 +68,8 @@ async function main() {
       vaultInterface.encodeFunctionData('initialize(address,address,address,address)', [
         linkToken.address,
         operatorVCS.address,
-        config.stakeController,
-        config.vaultOperatorAddresses[i],
+        stakeController,
+        vaultOperatorAddresses[i],
       ])
     )
     await tx.wait()
