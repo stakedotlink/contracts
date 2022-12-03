@@ -3,7 +3,7 @@ import { DelegatorPool, LPLMigration, StakingAllowance } from '../../typechain-t
 import { getContract } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
 
-const linkPoolMintAddress = '0x11187eff852069a33d102476b2E8A9cc9167dAde' // LinkPool address to receive SDL
+const linkPoolMintAddress = 'TODO' // LinkPool address to receive SDL
 const linkPoolAmount = 35000000 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
 const chainlinkMintAddress = 'TODO' // Chainlink address to receive SDL
 const chainlinkAmount = 20000000 // Amount of SDL to be minted to Chainlink
