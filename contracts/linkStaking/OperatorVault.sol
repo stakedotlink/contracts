@@ -53,4 +53,13 @@ contract OperatorVault is Vault {
         token.safeTransfer(vaultController, token.balanceOf(address(this)));
         emit AlertRaised();
     }
+
+    /**
+     * @notice sets the operator address if not already set
+     * @param _operator operator address
+     */
+    function setOperator(address _operator) external onlyOwner {
+        require(operator == address(0), "Operator already set");
+        operator = _operator;
+    }
 }

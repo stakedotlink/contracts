@@ -7,7 +7,7 @@ async function main() {
   const linkToken = (await getContract('LINKToken')) as ERC677
   const addresses = []
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 15; i++) {
     const vault = await deployUpgradeable('OperatorVaultV0', [
       linkToken.address,
       ethers.constants.AddressZero,
