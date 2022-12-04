@@ -2,22 +2,69 @@ const child_process = require('child_process')
 
 // Start hardhat, wait for `deploy-status-ready` status, then run mock data script
 
+async function compile() {
+  const child = child_process.spawn('npx', ['yarn', 'compile'])
+
+  child.stdout.on('data', (data) => {
+    console.log('yarn compile - process (' + child.pid + '): ' + data)
+  })
+
+  return await new Promise((resolve) => {
+    child.on('close', () => {
+      resolve('success')
+    })
+  })
+}
+
+async function startHardhat() {
+  const child = child_process.spawn('npx', ['yarn', 'start'])
+
+  child.stdout.on('data', (data) => {
+    console.log('yarn compile - process (' + child.pid + '): ' + data)
+  })
+
+  return await new Promise((resolve) => {
+    child.stdout.on('data', (data) => {
+      if (data.toString().includes('Mined empty block')) {
+        resolve('success')
+      }
+    })
+  })
+}
+
+async function deploy() {
+  const child = child_process.spawn('npx', ['yarn', 'deploy'])
+
+  child.stdout.on('data', (data) => {
+    console.log('yarn deploy - process (' + child.pid + '): ' + data)
+  })
+
+  return await new Promise((resolve) => {
+    child.on('close', () => {
+      resolve('success')
+    })
+  })
+}
+
+async function mockData() {
+  const child = child_process.spawn('npx', ['yarn', 'mock-data'])
+
+  child.stdout.on('data', (data) => {
+    console.log('yarn mock-data - process (' + child.pid + '): ' + data)
+  })
+
+  return await new Promise((resolve) => {
+    child.on('close', () => {
+      resolve('success')
+    })
+  })
+}
+
 async function run() {
-  const hardhatCP = child_process.spawn('npx', ['yarn', 'start'])
-  hardhatCP.stdout.on('data', (data) => {
-    console.log('hardhat process (' + hardhatCP.pid + '): ' + data)
-    if (data.toString().includes('deploy-status-ready')) {
-      child_process.spawn('npx', ['yarn', 'mock-data'])
-    }
-  })
-  process.on('SIGINT', () => {
-    process.kill(hardhatCP.pid)
-    process.exit()
-  })
-  process.on('SIGTERM', () => {
-    process.kill(hardhatCP.pid)
-    process.exit()
-  })
+  await compile()
+  await startHardhat()
+  await deploy()
+  await mockData()
 }
 
 run().catch((error) => {
