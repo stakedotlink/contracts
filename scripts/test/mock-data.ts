@@ -1,7 +1,7 @@
 // @ts-nocheck
 
-import {  fromEther, getAccounts, toEther } from '../utils/helpers'
-import {  getContract, deployUpgradeable } from '../utils/deployment'
+import { fromEther, getAccounts, toEther } from '../utils/helpers'
+import { getContract, deployUpgradeable } from '../utils/deployment'
 
 /*
 Accounts:
@@ -13,7 +13,7 @@ Accounts:
 */
 
 async function main() {
-  const { signers, accounts } = await getAccounts() 
+  const { signers, accounts } = await getAccounts()
   const linkToken = (await getContract('LINKToken')) as any
   const lplToken = (await getContract('LPLToken')) as any
   const sdlToken = (await getContract('SDLToken')) as any
@@ -23,9 +23,7 @@ async function main() {
   const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
   const delegatorPool = (await getContract('DelegatorPool')) as any
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as any
-  const stLINK_DelegatorRewardsPool = (await getContract(
-    'stLINK_DelegatorRewardsPool'
-  )) as any
+  const stLINK_DelegatorRewardsPool = (await getContract('stLINK_DelegatorRewardsPool')) as any
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
 
@@ -56,9 +54,7 @@ async function main() {
 
   // stake SDL
 
-  await sdlToken
-    .connect(signers[3])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x00')
 
   // const canDepositAddress3 = await poolRouter['canDeposit(address,address,uint16)'](
   //   accounts[3],
@@ -68,15 +64,15 @@ async function main() {
 
   // stake LINK
 
-  await linkToken
-    .connect(signers[3])
-    .transferAndCall(poolRouter.address, toEther(1), '0x00')
+  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(1), '0x00')
 
   // send stLINK rewards to rewards pool
 
-  await LINK_StakingPool
-    .connect(signers[3])
-    .transferAndCall(stLINK_DelegatorRewardsPool.address, toEther(1), '0x00')
+  await LINK_StakingPool.connect(signers[3]).transferAndCall(
+    stLINK_DelegatorRewardsPool.address,
+    toEther(1),
+    '0x00'
+  )
 
   // account 4
 
@@ -86,9 +82,7 @@ async function main() {
 
   // // stake SDL
 
-  await sdlToken
-    .connect(signers[4])
-    .transferAndCall(delegatorPool.address, toEther(100000), '0x00')
+  await sdlToken.connect(signers[4]).transferAndCall(delegatorPool.address, toEther(100000), '0x00')
 
   const canDepositAddress4 = await poolRouter['canDeposit(address,address,uint16)'](
     accounts[4],
