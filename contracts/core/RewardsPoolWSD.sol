@@ -27,7 +27,7 @@ contract RewardsPoolWSD is RewardsPool {
 
     /**
      * @notice returns an account's total unwrapped withdrawable rewards (principal balance + newly earned rewards)
-     * @param _account account to return rewards for
+     * @param _account account address
      * @return account's total unclaimed rewards
      **/
     function withdrawableRewards(address _account) public view override returns (uint) {
@@ -36,7 +36,7 @@ contract RewardsPoolWSD is RewardsPool {
 
     /**
      * @notice returns an account's total wrapped withdrawable rewards (principal balance + newly earned rewards)
-     * @param _account account to return rewards for
+     * @param _account account address
      * @return account's total unclaimed rewards
      **/
     function withdrawableRewardsWrapped(address _account) public view returns (uint) {
@@ -61,7 +61,7 @@ contract RewardsPoolWSD is RewardsPool {
 
     /**
      * @notice updates an account's principal reward balance
-     * @param _account account to update for
+     * @param _account account address
      **/
     function updateReward(address _account) public override {
         uint256 newRewards = withdrawableRewardsWrapped(_account) - userRewards[_account];
@@ -73,7 +73,7 @@ contract RewardsPoolWSD is RewardsPool {
 
     /**
      * @notice withdraws rewards for an account
-     * @param _account account to withdraw for
+     * @param _account account address
      **/
     function _withdraw(address _account) internal override {
         uint256 toWithdraw = withdrawableRewardsWrapped(_account);

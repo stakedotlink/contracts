@@ -48,14 +48,13 @@ contract OperatorControllerMock is OperatorController {
      * @notice Assigns the next set of validators in the queue
      * @param _operatorIds ids of operators that should be assigned validators
      * @param _validatorCounts number of validators to assign each operator
-     * @param _totalValidatorCount sum of all entries in _validatorCounts
      * @return keys concatenated list of pubkeys
      * @return signatures concatenated list of signatures
      */
     function assignNextValidators(
         uint256[] calldata _operatorIds,
         uint256[] calldata _validatorCounts,
-        uint256 _totalValidatorCount
+        uint256
     ) external returns (bytes memory keys, bytes memory signatures) {
         for (uint256 i = 0; i < _operatorIds.length; i++) {
             uint256 operatorId = _operatorIds[i];

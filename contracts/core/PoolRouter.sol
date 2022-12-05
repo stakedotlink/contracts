@@ -14,7 +14,7 @@ import "../ethStaking/interfaces/IWrappedETH.sol";
 
 /**
  * @title PoolRouter
- * @dev Handles staking allowances and acts as a proxy for staking pools
+ * @dev Acts as a proxy for staking pools
  */
 contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -81,13 +81,14 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Returns a pool
      * @param _token pool token
      * @param _index pool index
+     * @return pool
      */
     function getPool(address _token, uint16 _index) external view returns (Pool memory) {
         return pools[_poolKey(_token, _index)];
     }
 
     /**
-     * @notice Fetch a list of all pools
+     * @notice Returns a list of all pools
      * @return poolList list of all pools
      **/
     function allPools() external view returns (Pool[] memory poolList) {
@@ -105,7 +106,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice returns whether any pool is in reserved mode
-     * @return reservedModeActive true/false
+     * @return true if any pool is in reserved mode, false otherwise
      */
     function isReservedMode() external view returns (bool) {
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -121,7 +122,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice returns the allocation multiplier while in reserved mode
-     * @return reservedMultiplier multiplier
+     * @return multiplier
      */
     function getReservedMultiplier() external view returns (uint) {
         return reservedMultiplier;
@@ -131,7 +132,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice returns the percentange utilisation of the pool
      * @param _token pool token
      * @param _index pool index
-     * @return poolUtilisation percentage full (0-10000)
+     * @return percentage full (0-1e18)
      */
     function poolUtilisation(address _token, uint16 _index) external view returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
@@ -162,7 +163,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice stakes tokens in a staking pool
      * @param _token token to stake
-     * @param _index index of pool to stake in
+     * @param _index pool index
      * @param _amount amount to stake
      **/
     function stake(
@@ -211,7 +212,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice adds a new pool
-     * @param _token staking token to add
+     * @param _token staking token
      * @param _stakingPool token staking pool
      **/
     function addPool(
@@ -246,7 +247,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice removes an existing pool
      * @param _token staking token
-     * @param _index index of pool to remove
+     * @param _index index of pool
      **/
     function removePool(address _token, uint16 _index) external onlyOwner poolExists(_token, _index) {
         Pool storage pool = pools[_poolKey(_token, _index)];
@@ -277,7 +278,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice calculates the amount of stake an account can deposit based on it's allowance staked
+     * @notice calculates the amount of stake an account can deposit based on its allowance staked
      * @param _account account address
      * @param _token the token address used by the staking pool
      * @param _index pool index
@@ -297,7 +298,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice calculates the amount of stake that can be deposited for an amount of allowance
-     * @param _token the token address used by the staking pool
+     * @param _token token address
      * @param _index pool index
      * @param _amount amount of allowance
      * @return amount that can be deposited
@@ -319,7 +320,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice sets a pool's status
-     * @param _token pool token
+     * @param _token token address
      * @param _index pool index
      * @param _status pool status
      */
@@ -334,7 +335,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice sets a pool's status to CLOSED
-     * @param _token pool token
+     * @param _token token address
      * @param _index pool index
      */
     function setPoolStatusClosed(address _token, uint16 _index) external poolExists(_token, _index) onlyOwner {
@@ -354,7 +355,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice sets whether a pool is reserved by only the allowance stakers
-     * @param _token pool token
+     * @param _token token address
      * @param _index pool index
      * @param _reservedModeActive whether it is reserved only
      **/
@@ -378,7 +379,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice stakes tokens in a staking pool
      * @param _token token to stake
-     * @param _index index of pool to stake in
+     * @param _index pool index
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
@@ -424,6 +425,10 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice returns the reserved allocation for the user based on their amount of allocation staked in the delegator pool.
      * If the user has no allowance staked, the public allocation is returned. The public allocation reduces the more allowance
      * stakers reserve their space.
+     * @param _account account address
+     * @param _token token address
+     * @param _index pool index
+     * @param _maximumStake pool deposit limit
      */
     function _reservedAllocation(
         address _account,
@@ -449,7 +454,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice returns the pool key hash by token and index
-     * @param _token token
+     * @param _token token address
      * @param _index pool index
      * @return the hashed pool key
      */

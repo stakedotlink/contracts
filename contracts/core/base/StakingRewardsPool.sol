@@ -38,7 +38,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
     /**
      * @notice returns an account's stake balance
-     * @param _account account to return balance for
+     * @param _account account address
      * @return account's stake balance
      **/
     function balanceOf(address _account) public view override returns (uint) {
@@ -52,7 +52,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
     /**
      * @notice returns an account's share balance
-     * @param _account account to return balance for
+     * @param _account account address
      * @return account's share balance
      **/
     function sharesOf(address _account) public view returns (uint) {

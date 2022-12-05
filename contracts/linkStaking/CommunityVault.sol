@@ -25,7 +25,7 @@ contract CommunityVault is Vault {
 
     /**
      * @notice returns the total balance of this contract in the Chainlink staking contract
-     * @return balance total balance
+     * @return total balance
      */
     function getTotalDeposits() public view override returns (uint) {
         return stakeController.getStake(address(this)) + stakeController.getBaseReward(address(this));

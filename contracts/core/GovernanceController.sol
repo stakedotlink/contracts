@@ -30,7 +30,7 @@ contract GovernanceController is Ownable {
 
     /**
      * @notice returns a list of all role names
-     * @return roleNames list of all roles names
+     * @return roleNames list of all role names
      **/
     function getRoles() external view returns (string[] memory roleNames) {
         roleNames = new string[](roles.length);

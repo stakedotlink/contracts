@@ -61,7 +61,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice returns a list of all vaults
-     * @return vaults list of vault addresses
+     * @return  list of vault addresses
      */
     function getVaults() external view returns (IVault[] memory) {
         return vaults;
@@ -84,6 +84,12 @@ abstract contract VaultControllerStrategy is Strategy {
         revert("withdrawals not yet implemented");
     }
 
+    /**
+     * @notice returns whether there are enough buffered tokens to initiate a deposit and the index
+     * of the first non-full vault
+     * @return whether a deposit should be initiated
+     * @return encoded index of first non-full vault
+     */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         if (!stakeController.isActive() || stakeController.isPaused()) {
             return (false, bytes(""));
@@ -109,7 +115,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice deposits buffered tokens into vaults if buffered balance exceeds minDepositThreshold
-     * @param _performData abi encoded index of first non-full vault
+     * @param _performData encoded index of first non-full vault
      */
     function performUpkeep(bytes calldata _performData) external {
         require(bufferedDeposits >= minDepositThreshold, "Minimum deposit threshold has not been met");
@@ -137,7 +143,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice returns the deposit change (positive/negative) since deposits were last updated
-     * @return int deposit change
+     * @return deposit change
      */
     function depositChange() public view returns (int) {
         uint256 totalBalance = token.balanceOf(address(this));
@@ -170,8 +176,8 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice the amount of total deposits as tracked in this strategy
-     * @return uint256 total deposited
+     * @notice the total amount of deposits as tracked in this strategy
+     * @return total deposited
      */
     function getTotalDeposits() public view override returns (uint) {
         return totalDeposits;
@@ -179,8 +185,8 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice returns the vault deposit limits
-     * @return minimum minimum amount of deposits that a vault can hold
-     * @return maximum maximum amount of deposits that a vault can hold
+     * @return minimum amount of deposits that a vault can hold
+     * @return maximum amount of deposits that a vault can hold
      */
     function getVaultDepositLimits() public view virtual returns (uint, uint);
 
@@ -263,7 +269,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
-     * @param _vaultImplementation address of implementaion contract
+     * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
         require(_isContract(_vaultImplementation), "Address must belong to a contract");
@@ -345,7 +351,7 @@ abstract contract VaultControllerStrategy is Strategy {
     /**
      * @notice returns whether an address belongs to a contract
      * @param _address address to check
-     * @return isContract true if address is contract
+     * @return true if address is contract, false otherwise
      */
     function _isContract(address _address) private view returns (bool) {
         uint256 length;

@@ -36,7 +36,7 @@ contract OperatorVault is Vault {
 
     /**
      * @notice returns the total balance of this contract in the Chainlink staking contract
-     * @return balance total balance
+     * @return total balance
      */
     function getTotalDeposits() public view override returns (uint) {
         return
@@ -46,7 +46,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice raises an alert in the stake controller
+     * @notice raises an alert in the Chainlink staking contract
      */
     function raiseAlert() external onlyOperator {
         stakeController.raiseAlert();

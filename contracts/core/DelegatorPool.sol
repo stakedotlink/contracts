@@ -47,6 +47,7 @@ contract DelegatorPool is RewardsPoolController {
      * @notice ERC677 implementation to stake allowance or distribute rewards
      * @param _sender of the stake
      * @param _value of the token transfer
+     * @param _calldata encoded vesting startTimestamp and durationSeconds if applicable
      **/
     function onTokenTransfer(
         address _sender,
@@ -72,7 +73,7 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice returns an accounts balance minus the amount of tokens that are currently vesting
-     * @param _account account
+     * @param _account account address
      * @return balance accounts balance
      */
     function balanceOf(address _account) public view virtual override returns (uint256) {
@@ -94,6 +95,7 @@ contract DelegatorPool is RewardsPoolController {
      * @notice returns an account's staked amount for use by reward pools
      * controlled by this contract. Overridden as the the staked amount needs to include any vesting tokens.
      * @dev required by RewardsPoolController
+     * @param _account account address
      * @return account's staked amount
      */
     function staked(address _account) external view override returns (uint) {
@@ -112,7 +114,6 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice returns the current fee rate based on a specified percentage
-     * @dev 1 ether = 100%, 0.5 ether = 50% etc
      * @param _percentageBorrowed the percentage borrowed for fee calculation
      * @return current rate
      **/
@@ -149,7 +150,7 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice returns the vesting schedule of a given account
-     * @param _account account
+     * @param _account account address
      * @return vestingSchedule account's vesting schedule
      */
     function getVestingSchedule(address _account) external view returns (VestingSchedule memory) {
@@ -157,8 +158,8 @@ contract DelegatorPool is RewardsPoolController {
     }
 
     /**
-     * @notice sets the fee curve interface
-     * @param _feeCurve interface
+     * @notice sets the fee curve contract
+     * @param _feeCurve contract address
      */
     function setFeeCurve(address _feeCurve) external onlyOwner {
         require(_feeCurve != address(0), "Invalid fee curve address");
@@ -176,6 +177,7 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice stakes allowance tokens
+     * @param _sender account to stake for
      * @param _amount amount to stake
      **/
     function _stakeAllowance(address _sender, uint256 _amount) private updateRewards(_sender) {
@@ -188,6 +190,10 @@ contract DelegatorPool is RewardsPoolController {
      * - If the new start timestamp is after the previous schedule, the schedule is overwritten and any remaining vesting tokens go into the new schedule
      * - Will release any tokens that have vested but not transferred
      * - If the start timestamp is before the current schedule, the current schedule is used
+     * @param _account account address
+     * @param _amount amount of tokens to lock
+     * @param _startTimestamp vesting start time
+     * @param _durationSeconds vesting duration
      */
     function _setVestingSchedule(
         address _account,
@@ -211,6 +217,7 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice Returns the amount of tokens that are currently vested for an account
+     * @param _account account address
      */
     function _vestedTokens(address _account) internal view virtual returns (uint256) {
         VestingSchedule memory vestingSchedule = vestingSchedules[_account];

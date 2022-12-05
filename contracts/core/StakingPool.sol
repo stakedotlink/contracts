@@ -10,7 +10,7 @@ import "./interfaces/IDelegatorPool.sol";
 /**
  * @title Staking Pool
  * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked
- * assets into strategy contracts to earn returns
+ * assets into strategy contracts
  */
 contract StakingPool is StakingRewardsPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -124,8 +124,8 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice deposits assets in a strategy
-     * @param _index index of strategy to deposit in
+     * @notice deposits assets into a strategy
+     * @param _index index of strategy
      * @param _amount amount to deposit
      **/
     function strategyDeposit(uint256 _index, uint256 _amount) external onlyOwner {
@@ -135,7 +135,7 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice withdraws assets from a strategy
-     * @param _index index of strategy to withdraw from
+     * @param _index index of strategy
      * @param _amount amount to withdraw
      **/
     function strategyWithdraw(uint256 _index, uint256 _amount) external onlyOwner {
@@ -144,8 +144,8 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the maximum amount that can be staked via the pool
-     * @return the overall staking limit
+     * @notice returns the maximum amount that can be deposited into the pool
+     * @return maximum deposit limit
      **/
     function getMaxDeposits() public view returns (uint256) {
         uint256 max;
@@ -162,7 +162,7 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice returns the minimum amount that must remain the pool
-     * @return min deposit
+     * @return minimum deposit limit
      */
     function getMinDeposits() public view returns (uint256) {
         uint256 min;
@@ -205,7 +205,7 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice adds a new strategy
-     * @param _strategy address of strategy to add
+     * @param _strategy address of strategy
      **/
     function addStrategy(address _strategy) external onlyOwner {
         require(!_strategyExists(_strategy), "Strategy already exists");
@@ -215,7 +215,7 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice removes a strategy
-     * @param _index index of strategy to remove
+     * @param _index index of strategy
      **/
     function removeStrategy(uint256 _index) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
@@ -240,7 +240,7 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice reorders strategies
-     * @param _newOrder array containing strategy indexes in a new order
+     * @param _newOrder list containing strategy indexes in a new order
      **/
     function reorderStrategies(uint256[] calldata _newOrder) external onlyOwner {
         require(_newOrder.length == strategies.length, "newOrder.length must = strategies.length");
@@ -291,8 +291,7 @@ contract StakingPool is StakingRewardsPool {
     /**
      * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
      * of the pool by always keeping a % of the staked token as liquid within the pool. The buffer
-     * has the effect of diluting yield, but promotes pool liquidity with any lock-in that would prevent
-     * the un-wind of allowance.
+     * has the effect of diluting yield, but promotes pool liquidity.
      * @param _liquidityBufferBasisPoints basis points to use for the liquidity buffer
      **/
     function setLiquidityBuffer(uint256 _liquidityBufferBasisPoints) external onlyOwner {
@@ -381,13 +380,13 @@ contract StakingPool is StakingRewardsPool {
         if (toDeposit > 0) {
             for (uint256 i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
-                uint256 canDeposit = strategy.canDeposit();
-                if (canDeposit >= toDeposit) {
+                uint256 strategyCanDeposit = strategy.canDeposit();
+                if (strategyCanDeposit >= toDeposit) {
                     strategy.deposit(toDeposit);
                     break;
-                } else if (canDeposit > 0) {
-                    strategy.deposit(canDeposit);
-                    toDeposit -= canDeposit;
+                } else if (strategyCanDeposit > 0) {
+                    strategy.deposit(strategyCanDeposit);
+                    toDeposit -= strategyCanDeposit;
                 }
             }
         }
@@ -420,14 +419,14 @@ contract StakingPool is StakingRewardsPool {
 
         for (uint256 i = strategies.length; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
-            uint256 canWithdraw = strategy.canWithdraw();
+            uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
 
-            if (canWithdraw >= toWithdraw) {
+            if (strategyCanWithdrawdraw >= toWithdraw) {
                 strategy.withdraw(toWithdraw);
                 break;
-            } else if (canWithdraw > 0) {
-                strategy.withdraw(canWithdraw);
-                toWithdraw -= canWithdraw;
+            } else if (strategyCanWithdrawdraw > 0) {
+                strategy.withdraw(strategyCanWithdrawdraw);
+                toWithdraw -= strategyCanWithdrawdraw;
             }
         }
     }

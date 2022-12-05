@@ -22,9 +22,9 @@ contract DelegatorPoolMock {
     }
 
     function onTokenTransfer(
-        address _sender,
+        address,
         uint256 _value,
-        bytes calldata _calldata
+        bytes calldata
     ) external {
         totalRewards += _value;
     }

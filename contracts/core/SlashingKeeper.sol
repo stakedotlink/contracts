@@ -22,7 +22,7 @@ contract SlashingKeeper is KeeperCompatibleInterface {
      * @return upkeepNeeded whether or not rewards should be updated
      * @return performData abi encoded list of strategy indexes to update
      **/
-    function checkUpkeep(bytes calldata _checkData) external view override returns (bool, bytes memory) {
+    function checkUpkeep(bytes calldata) external view override returns (bool, bytes memory) {
         address[] memory strategies = stakingPool.getStrategies();
         bool[] memory strategiesToUpdate = new bool[](strategies.length);
         uint256 totalStrategiesToUpdate;

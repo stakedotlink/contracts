@@ -45,7 +45,7 @@ contract CommunityVCS is VaultControllerStrategy {
 
     /**
      * @notice returns the maximum that can be deposited into this strategy
-     * @return max deposit
+     * @return maximum deposits
      */
     function getMaxDeposits() public view override returns (uint) {
         return maxDeposits;
@@ -53,7 +53,7 @@ contract CommunityVCS is VaultControllerStrategy {
 
     /**
      * @notice returns the minimum that must remain this strategy
-     * @return min deposit
+     * @return minimum deposits
      */
     function getMinDeposits() public view override returns (uint) {
         return totalDeposits;
@@ -61,8 +61,8 @@ contract CommunityVCS is VaultControllerStrategy {
 
     /**
      * @notice returns the vault deposit limits
-     * @return minimum minimum amount of deposits that a vault can hold
-     * @return maximum maximum amount of deposits that a vault can hold
+     * @return minimum amount of deposits that a vault can hold
+     * @return maximum amount of deposits that a vault can hold
      */
     function getVaultDepositLimits() public view override returns (uint, uint) {
         return stakeController.getCommunityStakerLimits();
