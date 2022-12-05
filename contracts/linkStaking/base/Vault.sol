@@ -40,7 +40,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice deposits the amount of token into the Chainlink staking contract
+     * @notice deposits tokens into the Chainlink staking contract
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyVaultController {
@@ -57,20 +57,20 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice returns the total balance of this contract in the Chainlink staking contract
-     * @return balance total balance
+     * @return total balance
      */
     function getTotalDeposits() public view virtual returns (uint);
 
     /**
      * @notice returns the principal balance of this contract in the Chainlink staking contract
-     * @return balance principal balance
+     * @return principal balance
      */
     function getPrincipalDeposits() public view returns (uint) {
         return stakeController.getStake(address(this));
     }
 
     /**
-     * @notice migrates the tokens deposited into a new stake controller
+     * @notice migrates the deposited tokens into a new stake controller
      */
     function migrate(bytes calldata data) external onlyVaultController {
         stakeController.migrate(data);

@@ -31,7 +31,7 @@ contract RewardsPool {
 
     /**
      * @notice returns an account's total withdrawable rewards (principal balance + newly earned rewards)
-     * @param _account account to return rewards for
+     * @param _account account address
      * @return account's total unclaimed rewards
      **/
     function withdrawableRewards(address _account) public view virtual returns (uint) {
@@ -50,7 +50,7 @@ contract RewardsPool {
 
     /**
      * @notice withdraws an account's earned rewards
-     * @dev used by PoolOwners
+     * @dev used by RewardsPoolController
      * @param _account account to withdraw for
      **/
     function withdraw(address _account) external {
@@ -83,7 +83,7 @@ contract RewardsPool {
 
     /**
      * @notice updates an account's principal reward balance
-     * @param _account account to update for
+     * @param _account account address
      **/
     function updateReward(address _account) public virtual {
         uint256 newRewards = withdrawableRewards(_account) - userRewards[_account];

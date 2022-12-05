@@ -46,8 +46,8 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     }
 
     /**
-     * @notice returns a list of configs for all supported tokens
-     * @return list of token configs
+     * @notice returns a list of supported tokens
+     * @return list of token addresses
      **/
     function supportedTokens() external view returns (address[] memory) {
         return tokens;
@@ -63,8 +63,9 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     }
 
     /**
-     * @notice get all token balances of supported tokens within the controller
-     * @return list of tokens with a list of token balances
+     * @notice returns balances of supported tokens within the controller
+     * @return list of supported tokens
+     * @return list of token balances
      **/
     function tokenBalances() external view returns (address[] memory, uint256[] memory) {
         uint256[] memory balances = new uint[](tokens.length);
@@ -76,6 +77,9 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
         return (tokens, balances);
     }
 
+    /**
+     * @notice ERC677 implementation to receive a token distribution
+     **/
     function onTokenTransfer(
         address,
         uint256,
@@ -90,7 +94,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
      * @notice returns an account's staked amount for use by reward pools
      * controlled by this contract. If rewards are redirected, it returns the sum of the amount
      * staked by all of the accounts that have redirected rewards.
-     * @dev required by RewardsPoolController
+     * @param _account account address
      * @return account's staked amount
      */
     function staked(address _account) external view virtual returns (uint) {
@@ -100,7 +104,6 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     /**
      * @notice returns the total staked amount for use by reward pools
      * controlled by this contract
-     * @dev required by RewardsPoolController
      * @return total staked amount
      */
     function totalStaked() external view virtual returns (uint) {
@@ -109,7 +112,8 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
 
     /**
      * @notice returns the address that receives rewards for an account
-     * @param _account address to query
+     * @param _account account address
+     * @return rewards receiver address
      */
     function rewardsAddress(address _account) external view returns (address) {
         return rewardRedirects[_account] != address(0) ? rewardRedirects[_account] : _account;
@@ -181,7 +185,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     }
 
     /**
-     * @notice distributes token balances to their equivalent reward pools
+     * @notice distributes token balances to their respective rewards pools
      * @param _tokens list of token addresses
      */
     function distributeTokens(address[] memory _tokens) public {
@@ -191,7 +195,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     }
 
     /**
-     * @notice distributes a token balance to its equivalent reward pool
+     * @notice distributes a token balance to its respective rewards pool
      * @param _token token address
      */
     function distributeToken(address _token) public {
@@ -207,7 +211,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
 
     /**
      * @notice returns a list of withdrawable rewards for an account
-     * @param _account account to return reward amounts for
+     * @param _account account address
      * @return list of withdrawable reward amounts
      **/
     function withdrawableRewards(address _account) external view returns (uint256[] memory) {

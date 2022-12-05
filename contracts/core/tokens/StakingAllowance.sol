@@ -23,7 +23,7 @@ contract StakingAllowance is ERC677, Ownable {
 
     /**
      * @dev Mints a given amount of tokens to a contract on behalf of an account via ERC677
-     * @param _contract to send tokens to
+     * @param _contract contract to send tokens to
      * @param _account address to mint to
      * @param _amount amount of tokens to mint
      **/

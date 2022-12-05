@@ -63,13 +63,13 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
 
     /**
      * @notice returns the maximum that can be deposited into this strategy
-     * @return max deposit
+     * @return max deposits
      */
     function getMaxDeposits() public view virtual returns (uint);
 
     /**
      * @notice returns the minimum that must remain in this strategy
-     * @return min deposit
+     * @return min deposits
      */
     function getMinDeposits() public view virtual returns (uint);
 
