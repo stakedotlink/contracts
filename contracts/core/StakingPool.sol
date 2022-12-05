@@ -380,13 +380,13 @@ contract StakingPool is StakingRewardsPool {
         if (toDeposit > 0) {
             for (uint256 i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
-                uint256 canDeposit = strategy.canDeposit();
-                if (canDeposit >= toDeposit) {
+                uint256 strategyCanDeposit = strategy.canDeposit();
+                if (strategyCanDeposit >= toDeposit) {
                     strategy.deposit(toDeposit);
                     break;
-                } else if (canDeposit > 0) {
-                    strategy.deposit(canDeposit);
-                    toDeposit -= canDeposit;
+                } else if (strategyCanDeposit > 0) {
+                    strategy.deposit(strategyCanDeposit);
+                    toDeposit -= strategyCanDeposit;
                 }
             }
         }
@@ -419,14 +419,14 @@ contract StakingPool is StakingRewardsPool {
 
         for (uint256 i = strategies.length; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
-            uint256 canWithdraw = strategy.canWithdraw();
+            uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
 
-            if (canWithdraw >= toWithdraw) {
+            if (strategyCanWithdrawdraw >= toWithdraw) {
                 strategy.withdraw(toWithdraw);
                 break;
-            } else if (canWithdraw > 0) {
-                strategy.withdraw(canWithdraw);
-                toWithdraw -= canWithdraw;
+            } else if (strategyCanWithdrawdraw > 0) {
+                strategy.withdraw(strategyCanWithdrawdraw);
+                toWithdraw -= strategyCanWithdrawdraw;
             }
         }
     }

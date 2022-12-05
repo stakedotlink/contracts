@@ -12,7 +12,7 @@ contract EthStakingStrategyMock {
         INWLOperatorController(nwlOperatorController).assignNextValidators(_totalValidatorCount);
     }
 
-    function nwlWithdraw(address _receiver, uint256 _amount) external {
+    function nwlWithdraw(address, uint256) external {
         require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
     }
 

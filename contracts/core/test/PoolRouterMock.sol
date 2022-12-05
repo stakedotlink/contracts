@@ -64,14 +64,14 @@ contract PoolRouterMock {
         poolUtilisationPercentage = _poolUtilisationPercentage;
     }
 
-    function poolUtilisation(address _token, uint16 _index) external view returns (uint) {
+    function poolUtilisation(address, uint16) external view returns (uint) {
         return poolUtilisationPercentage;
     }
 
     function onTokenTransfer(
         address _sender,
         uint256 _value,
-        bytes calldata _calldata
+        bytes calldata
     ) external {
         require(msg.sender == allowanceToken, "Unauthorized");
         IDelegatorPool(delegatorPool).stakeAllowance(_sender, _value);

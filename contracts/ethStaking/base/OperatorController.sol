@@ -171,13 +171,12 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
 
     /**
      * @notice ERC677 implementation to receive operator rewards
-     * @param _sender of the token transfer
      * @param _value of the token transfer
      **/
     function onTokenTransfer(
-        address _sender,
+        address,
         uint256 _value,
-        bytes calldata _data
+        bytes calldata
     ) external {
         require(msg.sender == address(sdToken), "Sender is not sdToken");
         sdToken.transferAndCall(address(rewardsPool), _value, "0x00");
