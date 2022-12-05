@@ -64,7 +64,6 @@ async function main() {
   )
   await tx.wait()
 
-
   for (let i = 0; i < operatorAddresses.length; i++) {
     let address = operatorAddresses[i]
     tx = await sdlToken.mintToContract(
