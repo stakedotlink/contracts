@@ -2,6 +2,7 @@
 
 import { fromEther, getAccounts, toEther } from '../utils/helpers'
 import { getContract, deployUpgradeable } from '../utils/deployment'
+import { defaultAbiCoder } from 'ethers/lib/utils'
 
 /*
 Accounts:
@@ -80,7 +81,7 @@ async function main() {
   await lplToken.transfer(accounts[4], toEther(10000))
   await sdlToken.mint(accounts[4], toEther(100000))
 
-  // // stake SDL
+  // stake SDL
 
   await sdlToken.connect(signers[4]).transferAndCall(delegatorPool.address, toEther(100000), '0x00')
 
@@ -95,6 +96,15 @@ async function main() {
   await linkToken
     .connect(signers[4])
     .transferAndCall(poolRouter.address, canDepositAddress4, '0x00')
+
+  // account 5
+
+  await sdlToken.mintToContract(
+    delegatorPool.address,
+    accounts[5],
+    toEther(600),
+    defaultAbiCoder.encode(['uint64', 'uint64'], [1685980800, 47347200])
+  )
 }
 
 main()
