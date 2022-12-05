@@ -18,7 +18,6 @@ async function main() {
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
 
   const vaultImpAddress = await deployImplementation('CommunityVault')
-
   console.log('CommunityVault implementation deployed: ', vaultImpAddress)
 
   const communityVCS = await deployUpgradeable('CommunityVCS', [
@@ -31,10 +30,11 @@ async function main() {
     maxDeposits,
     maxVaultDeployments,
   ])
-
   console.log('CommunityVCS deployed: ', communityVCS.address)
 
-  await stakingPool.addStrategy(communityVCS.address)
+  let tx = await stakingPool.addStrategy(communityVCS.address)
+  await tx.wait()
+  console.log('CommunityVCS added to StakingPool')
 
   updateDeployments(
     { LINK_CommunityVCS: communityVCS.address },
