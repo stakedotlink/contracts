@@ -1,10 +1,42 @@
 {
-  "LPLToken": {
-    "address": "0x99295f1141d58a99e939f7be6bbe734916a875b8",
-    "artifact": "ERC677"
-  },
-  "LINKToken": {
-    "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
-    "artifact": "ERC677"
-  }
+ "LPLToken": {
+  "address": "0x99295f1141d58a99e939f7be6bbe734916a875b8",
+  "artifact": "ERC677"
+ },
+ "LINKToken": {
+  "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+  "artifact": "ERC677"
+ },
+ "SDLToken": {
+  "address": "0xA95C5ebB86E0dE73B4fB8c47A45B792CFeA28C23",
+  "artifact": "StakingAllowance"
+ },
+ "LPLMigration": {
+  "address": "0x08341befE6428568cdF798D19223821697DcEC15",
+  "artifact": "LPLMigration"
+ },
+ "FeeCurve": {
+  "address": "0x8ef5d844De9bbf52FCacED2ecf66B7FAf0B3AA12",
+  "artifact": "FeeCurve"
+ },
+ "DelegatorPool": {
+  "address": "0xAEF186611EC96427d161107fFE14bba8aA1C2284",
+  "artifact": "DelegatorPool"
+ },
+ "PoolRouter": {
+  "address": "0x9AE7895258efB5eBDa3e97E26f9819287c668A9A",
+  "artifact": "PoolRouter"
+ },
+ "LINK_StakingPool": {
+  "address": "0xb8b295df2cd735b15BE5Eb419517Aa626fc43cD5",
+  "artifact": "StakingPool"
+ },
+ "LINK_WrappedSDToken": {
+  "address": "0x911D86C72155c33993d594B0Ec7E6206B4C803da",
+  "artifact": "WrappedSDToken"
+ },
+ "stLINK_DelegatorRewardsPool": {
+  "address": "0xbcD10c166b83Edb0EbD05aaca5fACab9C0a307F0",
+  "artifact": "RewardsPoolWSD"
+ }
 }
