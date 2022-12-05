@@ -227,7 +227,6 @@ contract StakingPool is StakingRewardsPool {
         IStrategy strategy = IStrategy(strategies[_index]);
         uint256 totalStrategyDeposits = strategy.getTotalDeposits();
         if (totalStrategyDeposits > 0) {
-            require(strategy.canWithdraw() == totalStrategyDeposits, "Strategy contains deposits that cannot be withdrawn");
             strategy.withdraw(totalStrategyDeposits);
         }
 
