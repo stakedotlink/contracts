@@ -32,6 +32,7 @@ const config: HardhatUserConfig = {
     mainnet: {
       url: 'http://localhost:1248',
       accounts: 'remote',
+      timeout: 600000
     },
     testnet: {
       url: 'https://staking-metrics-monitor-beta.staging.linkpool.io/dev',
