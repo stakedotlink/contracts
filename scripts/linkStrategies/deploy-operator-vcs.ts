@@ -59,6 +59,7 @@ async function main() {
     initialVaults,
   ])) as OperatorVCS
   console.log('OperatorVCS deployed: ', operatorVCS.address)
+  updateDeployments({ LINK_OperatorVCS: operatorVCS.address }, { LINK_OperatorVCS: 'OperatorVCS' })
 
   let tx = await stakingPool.addStrategy(operatorVCS.address)
   await tx.wait()
@@ -79,8 +80,6 @@ async function main() {
 
   console.log('All OperatorVaults have been upgraded from V0 to V1')
   console.log('All OperatorVaults have transferred ownership to OperatorVCS')
-
-  updateDeployments({ LINK_OperatorVCS: operatorVCS.address }, { LINK_OperatorVCS: 'OperatorVCS' })
 }
 
 main()
