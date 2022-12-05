@@ -3,10 +3,15 @@ import { DelegatorPool, LPLMigration, StakingAllowance } from '../../typechain-t
 import { getContract } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
 
-const linkPoolMintAddress = '0x11187eff852069a33d102476b2E8A9cc9167dAde' // LinkPool address to receive SDL
-const linkPoolAmount = 120000000 // Amount of SDL LinkPool should receive (LinkPool (50M) + DAO (50M) + Chainlink (20M))
-const lplMigrationAmount = 100 // Amount of SDL to be minted into the LPL migration contract
-const lockedSDLPerOperator = 9990000 // Amount of locked SDL each operator should receive
+const linkPoolMintAddress = '0x6879826450e576B401c4dDeff2B7755B1e85d97c' // LinkPool address to receive SDL
+const linkPoolAmount = 33996398.04 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
+const unlockedLinkPoolAmount = 343397.96 // Amount of SDL LinkPool should receive unlocked (1% of total)
+const chainlinkMintAddress = 'TODO' // Chainlink address to receive SDL
+const chainlinkAmount = 20000000 // Amount of SDL to be minted to Chainlink
+const daoMintAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D' // DAO Treasury wallet to receive SDL
+const daoAmount = 50000000 // Amount of SDL to be minted to the DAO
+const lplMigrationAmount = 15660204 // Amount of SDL to be minted into the LPL migration contract
+const lockedSDLPerOperator = 9900000 // Amount of locked SDL each operator should receive
 const unlockedSDLPerOperator = 100000 //  Amount of unlocked SDL each operator should receive
 const vestingStartTimeSeconds = 1685980800 // Start time of SDL vesting for operators (June 5th 2023)
 const vestingDurationSeconds = 47347200 // Duration of SDL vesting for operators (18 months)
@@ -32,10 +37,31 @@ async function main() {
   const lplMigration = (await getContract('LPLMigration')) as LPLMigration
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
 
-  let tx = await sdlToken.mint(linkPoolMintAddress, toEther(linkPoolAmount))
+  let tx = await sdlToken.mint(chainlinkMintAddress, toEther(chainlinkAmount))
+  await tx.wait()
+
+  tx = await sdlToken.mint(daoMintAddress, toEther(daoAmount))
   await tx.wait()
 
   tx = await sdlToken.mint(lplMigration.address, toEther(lplMigrationAmount))
+  await tx.wait()
+
+  tx = await sdlToken.mintToContract(
+    delegatorPool.address,
+    linkPoolMintAddress,
+    toEther(linkPoolAmount),
+    ethers.utils.defaultAbiCoder.encode(
+      ['uint64', 'uint64'],
+      [vestingStartTimeSeconds, vestingDurationSeconds]
+    )
+  )
+  await tx.wait()
+  tx = await sdlToken.mintToContract(
+    delegatorPool.address,
+    linkPoolMintAddress,
+    toEther(unlockedLinkPoolAmount),
+    '0x00'
+  )
   await tx.wait()
 
   for (let i = 0; i < operatorAddresses.length; i++) {
@@ -50,7 +76,13 @@ async function main() {
       )
     )
     await tx.wait()
-    tx = await sdlToken.mint(address, toEther(unlockedSDLPerOperator))
+
+    tx = await sdlToken.mintToContract(
+      delegatorPool.address,
+      address,
+      toEther(unlockedSDLPerOperator),
+      '0x00'
+    )
     await tx.wait()
   }
 }
