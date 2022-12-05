@@ -6,7 +6,7 @@ import { toEther } from '../utils/helpers'
 const linkPoolMintAddress = '0x6879826450e576B401c4dDeff2B7755B1e85d97c' // LinkPool address to receive SDL
 const linkPoolAmount = 33996398.04 // Amount of SDL LinkPool should receive (50M - LPL holders relative SDL amount)
 const unlockedLinkPoolAmount = 343397.96 // Amount of SDL LinkPool should receive unlocked (1% of total)
-const chainlinkMintAddress = 'TODO' // Chainlink address to receive SDL
+const chainlinkMintAddress = '0xdedA4c43136D4f40F75073B0d815c648330fD072' // Chainlink address to receive SDL
 const chainlinkAmount = 20000000 // Amount of SDL to be minted to Chainlink
 const daoMintAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D' // DAO Treasury wallet to receive SDL
 const daoAmount = 50000000 // Amount of SDL to be minted to the DAO
