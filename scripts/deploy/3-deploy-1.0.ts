@@ -10,7 +10,7 @@ const LINK_WrappedSDToken = {
 const LINK_StakingPool = {
   derivativeTokenName: 'Staked LINK', // LINK staking derivative token name
   derivativeTokenSymbol: 'stLINK', // LINK staking derivative token symbol
-  fees: [['0x11187eff852069a33d102476b2E8A9cc9167dAde', 300]], // fee receivers & percentage amounts in basis points
+  fees: [['0x6879826450e576B401c4dDeff2B7755B1e85d97c', 300]], // fee receivers & percentage amounts in basis points
 }
 
 async function main() {

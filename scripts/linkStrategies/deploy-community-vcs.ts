@@ -7,7 +7,7 @@ import {
 } from '../utils/deployment'
 
 // Community Vault Controller Strategy
-const stakeController = '0x11187eff852069a33d102476b2E8A9cc9167dAde' // address of Chainlink staking contract
+const stakeController = 'TODO' // address of Chainlink staking contract
 const minDepositThreshold = 1000 // minimum deposits required to initiate a deposit
 const fees: any = [] // fee receivers & percentage amounts in basis points
 const maxDeposits = 5000000 // maximum amount of deposits that can be deposited into this contract
