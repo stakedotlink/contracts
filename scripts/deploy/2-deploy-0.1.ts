@@ -5,7 +5,6 @@ import { updateDeployments, deploy, getContract, deployUpgradeable } from '../ut
 const StakingAllowance = {
   name: 'stake.link', // SDL token name
   symbol: 'SDL', // SDL token symbol
-  initialSupply: 260000000, // initial SDL supply to mint
 }
 // Delegator Pool (SDL staking)
 const DelegatorPool = {
