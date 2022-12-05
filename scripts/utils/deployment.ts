@@ -21,6 +21,22 @@ export const deployImplementation = async (contractName: string) => {
   return upgrades.deployImplementation(Contract, { kind: 'uups' })
 }
 
+export const upgradeProxy = async (
+  proxyAddress: string,
+  implementationContractName: string,
+  useDeployedImplementation = false,
+  call: { fn: string; args?: unknown[] } | undefined
+) => {
+  const Contract = await ethers.getContractFactory(implementationContractName)
+  const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
+    useDeployedImplementation,
+    call,
+    kind: 'uups',
+  })
+  await contract.deployed()
+  return contract
+}
+
 export const getDeployments = () => {
   fse.ensureFileSync(`deployments/${network.name}.json`)
   const deployments = fse.readJSONSync(`deployments/${network.name}.json`, { throws: false })
