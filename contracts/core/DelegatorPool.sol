@@ -76,8 +76,17 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account address
      * @return balance accounts balance
      */
-    function balanceOf(address _account) public view virtual override returns (uint256) {
+    function balanceOf(address _account) public view override returns (uint256) {
         return super.balanceOf(_account) - (vestingSchedules[_account].totalAmount - _vestedTokens(_account));
+    }
+
+    /**
+     * @notice returns an accounts balance including any tokens that are currently vesting
+     * @param _account account address
+     * @return balance accounts balance
+     */
+    function totalBalanceOf(address _account) public view returns (uint256) {
+        return super.balanceOf(_account);
     }
 
     /**
@@ -87,7 +96,7 @@ contract DelegatorPool is RewardsPoolController {
         address,
         address,
         uint256
-    ) internal virtual override {
+    ) internal override {
         revert("Token cannot be transferred");
     }
 
@@ -219,7 +228,7 @@ contract DelegatorPool is RewardsPoolController {
      * @notice Returns the amount of tokens that are currently vested for an account
      * @param _account account address
      */
-    function _vestedTokens(address _account) internal view virtual returns (uint256) {
+    function _vestedTokens(address _account) internal view returns (uint256) {
         VestingSchedule memory vestingSchedule = vestingSchedules[_account];
         uint256 totalAmount = vestingSchedule.totalAmount;
         uint64 startTimestamp = vestingSchedule.startTimestamp;

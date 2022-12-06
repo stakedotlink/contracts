@@ -25,7 +25,7 @@ export const upgradeProxy = async (
   proxyAddress: string,
   implementationContractName: string,
   useDeployedImplementation = false,
-  call: { fn: string; args?: unknown[] } | undefined
+  call?: { fn: string; args?: unknown[] } | undefined
 ) => {
   const Contract = await ethers.getContractFactory(implementationContractName)
   const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
