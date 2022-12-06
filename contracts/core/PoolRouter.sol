@@ -438,10 +438,10 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     ) private view returns (uint) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
 
-        if (delegatorPool.balanceOf(_account) == 0) {
+        if (delegatorPool.totalBalanceOf(_account) == 0) {
             return 0;
         }
-        uint256 accountMaxStake = (((((1e18 * delegatorPool.balanceOf(_account)) / allowanceToken.totalSupply()) *
+        uint256 accountMaxStake = (((((1e18 * delegatorPool.totalBalanceOf(_account)) / allowanceToken.totalSupply()) *
             stakingPool.getMaxDeposits()) / 1e18) / 1e4) * reservedMultiplier;
 
         if (stakingPool.balanceOf(_account) >= accountMaxStake) {
