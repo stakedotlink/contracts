@@ -10,7 +10,7 @@ import {
 } from '../utils/deployment'
 
 // Operator Vault Controller Strategy
-const stakeController = 'TODO' // address of Chainlink staking contract
+const stakeController = '0x3feB1e09b4bb0E7f0387CeE092a52e85797ab889' // address of Chainlink staking contract
 const minDepositThreshold = 1000 // minimum deposits required to initiate a deposit
 const fees: any = [] // fee receivers & percentage amounts in basis points
 const vaultOperatorAddresses = [
