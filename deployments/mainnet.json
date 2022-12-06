@@ -38,5 +38,9 @@
  "stLINK_DelegatorRewardsPool": {
   "address": "0xbcD10c166b83Edb0EbD05aaca5fACab9C0a307F0",
   "artifact": "RewardsPoolWSD"
+ },
+ "LINK_OperatorVCS": {
+  "address": "0x4852e48215A4785eE99B640CACED5378Cc39D2A4",
+  "artifact": "OperatorVCS"
  }
 }
