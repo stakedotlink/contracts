@@ -23,7 +23,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     IStaking public stakeController;
-    Fee[] internal fees;
+    Fee[] public fees;
 
     address public vaultImplementation;
 

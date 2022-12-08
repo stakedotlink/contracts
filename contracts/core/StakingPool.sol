@@ -24,7 +24,7 @@ contract StakingPool is StakingRewardsPool {
     uint256 public totalStaked;
     uint256 public liquidityBuffer;
 
-    Fee[] private fees;
+    Fee[] public fees;
 
     address public poolRouter;
     address public delegatorPool;
