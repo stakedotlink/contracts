@@ -124,7 +124,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice returns the allocation multiplier while in reserved mode
      * @return multiplier
      */
-    function getReservedMultiplier() external view returns (uint) {
+    function getReservedMultiplier() external view returns (uint256) {
         return reservedMultiplier;
     }
 
@@ -134,7 +134,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _index pool index
      * @return percentage full (0-1e18)
      */
-    function poolUtilisation(address _token, uint16 _index) external view returns (uint) {
+    function poolUtilisation(address _token, uint16 _index) external view returns (uint256) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         uint256 totalSupply = stakingPool.totalSupply();
         uint256 maxDeposits = stakingPool.getMaxDeposits();
@@ -236,7 +236,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         pool.reservedModeActive = _reservedModeActive;
 
         if (IERC20Upgradeable(_token).allowance(address(this), _stakingPool) == 0) {
-            IERC20Upgradeable(_token).safeApprove(_stakingPool, type(uint).max);
+            IERC20Upgradeable(_token).safeApprove(_stakingPool, type(uint256).max);
         }
 
         IStakingPool(_stakingPool).setPoolIndex(tokenPoolCount);
@@ -288,7 +288,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _account,
         address _token,
         uint16 _index
-    ) public view poolExists(_token, _index) returns (uint) {
+    ) public view poolExists(_token, _index) returns (uint256) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
         uint256 maximumStake = stakingPool.canDeposit();
@@ -307,7 +307,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _token,
         uint16 _index,
         uint256 _amount
-    ) public view poolExists(_token, _index) returns (uint) {
+    ) public view poolExists(_token, _index) returns (uint256) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
         bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
         uint256 maximumStake = stakingPool.canDeposit();
@@ -350,7 +350,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function setWrappedETH(address _wrappedETH) external onlyOwner {
         require(wrappedETH == address(0), "wrappedETH already set");
         wrappedETH = _wrappedETH;
-        IERC20Upgradeable(_wrappedETH).safeApprove(_wrappedETH, type(uint).max);
+        IERC20Upgradeable(_wrappedETH).safeApprove(_wrappedETH, type(uint256).max);
     }
 
     /**
@@ -435,7 +435,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _token,
         uint16 _index,
         uint256 _maximumStake
-    ) private view returns (uint) {
+    ) private view returns (uint256) {
         IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
 
         if (delegatorPool.totalBalanceOf(_account) == 0) {
@@ -470,7 +470,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function _bytesToUint(bytes memory _bytes) private pure returns (uint256) {
         uint256 number;
         for (uint256 i = 0; i < _bytes.length; i++) {
-            number = number + uint(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
+            number = number + uint256(uint8(_bytes[i])) * (2**(8 * (_bytes.length - (i + 1))));
         }
         return number;
     }

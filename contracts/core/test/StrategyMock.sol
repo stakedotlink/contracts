@@ -58,15 +58,15 @@ contract StrategyMock is Strategy {
     function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
         int256 balanceChange = depositChange();
         if (balanceChange > 0) {
-            totalDeposits += uint(balanceChange);
+            totalDeposits += uint256(balanceChange);
             if (feeBasisPoints > 0) {
                 receivers = new address[](1);
-                amounts = new uint[](1);
+                amounts = new uint256[](1);
                 receivers[0] = owner();
-                amounts[0] = (feeBasisPoints * uint(balanceChange)) / 10000;
+                amounts[0] = (feeBasisPoints * uint256(balanceChange)) / 10000;
             }
         } else if (balanceChange < 0) {
-            totalDeposits -= uint(balanceChange * -1);
+            totalDeposits -= uint256(balanceChange * -1);
         }
     }
 
@@ -78,15 +78,15 @@ contract StrategyMock is Strategy {
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function getTotalDeposits() public view override returns (uint) {
+    function getTotalDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
-    function getMaxDeposits() public view override returns (uint) {
+    function getMaxDeposits() public view override returns (uint256) {
         return maxDeposits;
     }
 
-    function getMinDeposits() public view override returns (uint) {
+    function getMinDeposits() public view override returns (uint256) {
         return minDeposits;
     }
 

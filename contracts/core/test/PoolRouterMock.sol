@@ -36,11 +36,11 @@ contract PoolRouterMock {
         delegatorPool = _delegatorPool;
     }
 
-    function maxAllowanceInUse() public view returns (uint) {
+    function maxAllowanceInUse() public view returns (uint256) {
         return 20 ether;
     }
 
-    function allowanceInUse(address _token, uint16 _index) public view returns (uint) {
+    function allowanceInUse(address _token, uint16 _index) public view returns (uint256) {
         if (_token != token || _index != index) {
             return 0;
         }
@@ -56,7 +56,7 @@ contract PoolRouterMock {
         return reservedMode;
     }
 
-    function getReservedMultiplier() external view returns (uint) {
+    function getReservedMultiplier() external view returns (uint256) {
         return 10000;
     }
 
@@ -64,7 +64,7 @@ contract PoolRouterMock {
         poolUtilisationPercentage = _poolUtilisationPercentage;
     }
 
-    function poolUtilisation(address, uint16) external view returns (uint) {
+    function poolUtilisation(address, uint16) external view returns (uint256) {
         return poolUtilisationPercentage;
     }
 

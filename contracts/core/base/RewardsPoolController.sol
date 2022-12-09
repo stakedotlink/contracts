@@ -20,7 +20,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     address[] private tokens;
 
     mapping(address => address) public rewardRedirects;
-    mapping(address => uint) public redirectedStakes;
+    mapping(address => uint256) public redirectedStakes;
     mapping(address => address) public redirectApprovals;
 
     event WithdrawRewards(address indexed account);
@@ -68,7 +68,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
      * @return list of token balances
      **/
     function tokenBalances() external view returns (address[] memory, uint256[] memory) {
-        uint256[] memory balances = new uint[](tokens.length);
+        uint256[] memory balances = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             balances[i] = IERC20Upgradeable(tokens[i]).balanceOf(address(this));
@@ -97,7 +97,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
      * @param _account account address
      * @return account's staked amount
      */
-    function staked(address _account) external view virtual returns (uint) {
+    function staked(address _account) external view virtual returns (uint256) {
         return (rewardRedirects[_account] == address(0) ? balanceOf(_account) : 0) + redirectedStakes[_account];
     }
 
@@ -106,7 +106,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
      * controlled by this contract
      * @return total staked amount
      */
-    function totalStaked() external view virtual returns (uint) {
+    function totalStaked() external view virtual returns (uint256) {
         return totalSupply();
     }
 
@@ -215,7 +215,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
      * @return list of withdrawable reward amounts
      **/
     function withdrawableRewards(address _account) external view returns (uint256[] memory) {
-        uint256[] memory withdrawable = new uint[](tokens.length);
+        uint256[] memory withdrawable = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             withdrawable[i] = tokenPools[tokens[i]].withdrawableRewards(_account);

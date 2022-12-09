@@ -29,7 +29,7 @@ contract DelegatorPoolMock {
         totalRewards += _value;
     }
 
-    function currentRate(address _token, uint16 _index) public view returns (uint) {
+    function currentRate(address _token, uint16 _index) public view returns (uint256) {
         if (_token != token || _index != index) {
             return 0;
         }

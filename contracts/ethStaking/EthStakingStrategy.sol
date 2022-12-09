@@ -241,7 +241,7 @@ contract EthStakingStrategy is Strategy {
      */
     function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
         if (depositChange > 0) {
-            uint256 rewards = uint(depositChange);
+            uint256 rewards = uint256(depositChange);
 
             uint256 nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
             uint256 nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) /
@@ -255,14 +255,14 @@ contract EthStakingStrategy is Strategy {
             uint256 nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / BASIS_POINTS;
 
             receivers = new address[](2);
-            amounts = new uint[](2);
+            amounts = new uint256[](2);
 
             receivers[0] = address(wlOperatorController);
             receivers[1] = address(nwlOperatorController);
             amounts[0] = wlOperatorFee;
             amounts[1] = nwlOperatorFee;
         }
-        totalDeposits = uint(int(totalDeposits) + depositChange);
+        totalDeposits = uint256(int(totalDeposits) + depositChange);
         depositChange = 0;
     }
 
@@ -297,7 +297,7 @@ contract EthStakingStrategy is Strategy {
      * @notice returns the total amount of deposits in this strategy
      * @return total deposits
      */
-    function getTotalDeposits() public view override returns (uint) {
+    function getTotalDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
@@ -305,7 +305,7 @@ contract EthStakingStrategy is Strategy {
      * @notice returns the maximum that can be deposited into the strategy
      * @return max deposit
      */
-    function getMaxDeposits() public view override returns (uint) {
+    function getMaxDeposits() public view override returns (uint256) {
         return maxDeposits;
     }
 
@@ -313,7 +313,7 @@ contract EthStakingStrategy is Strategy {
      * @notice returns the minimum that must remain the strategy
      * @return min deposit
      */
-    function getMinDeposits() public view override returns (uint) {
+    function getMinDeposits() public view override returns (uint256) {
         return minDeposits;
     }
 

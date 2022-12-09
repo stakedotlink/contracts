@@ -24,7 +24,7 @@ contract StakingPool is StakingRewardsPool {
     uint256 public totalStaked;
     uint256 public liquidityBuffer;
 
-    Fee[] public fees;
+    Fee[] private fees;
 
     address public poolRouter;
     address public delegatorPool;
@@ -106,7 +106,7 @@ contract StakingPool is StakingRewardsPool {
         uint256 _amount
     ) external onlyRouter {
         uint256 toWithdraw = _amount;
-        if (_amount == type(uint).max) {
+        if (_amount == type(uint256).max) {
             toWithdraw = balanceOf(_account);
         }
 
@@ -209,7 +209,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function addStrategy(address _strategy) external onlyOwner {
         require(!_strategyExists(_strategy), "Strategy already exists");
-        token.safeApprove(_strategy, type(uint).max);
+        token.safeApprove(_strategy, type(uint256).max);
         strategies.push(_strategy);
     }
 
@@ -220,7 +220,7 @@ contract StakingPool is StakingRewardsPool {
     function removeStrategy(uint256 _index) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
 
-        uint256[] memory idxs = new uint[](1);
+        uint256[] memory idxs = new uint256[](1);
         idxs[0] = _index;
         updateStrategyRewards(idxs);
 
@@ -306,7 +306,7 @@ contract StakingPool is StakingRewardsPool {
         uint256 totalFeeAmounts;
         uint256 totalFeeCount;
         address[][] memory receivers = new address[][](strategies.length + 1);
-        uint[][] memory feeAmounts = new uint[][](strategies.length + 1);
+        uint256[][] memory feeAmounts = new uint256[][](strategies.length + 1);
 
         for (uint256 i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
@@ -326,7 +326,7 @@ contract StakingPool is StakingRewardsPool {
         }
 
         if (totalRewards != 0) {
-            totalStaked = uint(int(totalStaked) + totalRewards);
+            totalStaked = uint256(int(totalStaked) + totalRewards);
         }
 
         if (totalRewards > 0) {
@@ -334,18 +334,18 @@ contract StakingPool is StakingRewardsPool {
             uint256 feesLength = currentRate > 0 ? fees.length + 1 : fees.length;
 
             receivers[receivers.length - 1] = new address[](feesLength);
-            feeAmounts[feeAmounts.length - 1] = new uint[](feesLength);
+            feeAmounts[feeAmounts.length - 1] = new uint256[](feesLength);
             totalFeeCount += feesLength;
 
             for (uint256 i = 0; i < fees.length; i++) {
                 receivers[receivers.length - 1][i] = fees[i].receiver;
-                feeAmounts[feeAmounts.length - 1][i] = (uint(totalRewards) * fees[i].basisPoints) / 10000;
+                feeAmounts[feeAmounts.length - 1][i] = (uint256(totalRewards) * fees[i].basisPoints) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
 
             if (currentRate > 0) {
                 receivers[receivers.length - 1][fees.length] = delegatorPool;
-                feeAmounts[feeAmounts.length - 1][fees.length] = (uint(totalRewards) * currentRate) / 10000;
+                feeAmounts[feeAmounts.length - 1][fees.length] = (uint256(totalRewards) * currentRate) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][fees.length];
             }
         }
@@ -403,7 +403,7 @@ contract StakingPool is StakingRewardsPool {
      * @notice returns the total amount of assets staked in the pool
      * @return the total staked amount
      */
-    function _totalStaked() internal view override returns (uint) {
+    function _totalStaked() internal view override returns (uint256) {
         return totalStaked;
     }
 

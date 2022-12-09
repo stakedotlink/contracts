@@ -6,9 +6,9 @@ interface IVault {
 
     function withdraw(uint256 _amount) external view;
 
-    function getTotalDeposits() external view returns (uint);
+    function getTotalDeposits() external view returns (uint256);
 
-    function getPrincipalDeposits() external view returns (uint);
+    function getPrincipalDeposits() external view returns (uint256);
 
     function migrate(bytes calldata _data) external;
 

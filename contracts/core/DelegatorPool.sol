@@ -107,7 +107,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account address
      * @return account's staked amount
      */
-    function staked(address _account) external view override returns (uint) {
+    function staked(address _account) external view override returns (uint256) {
         return (rewardRedirects[_account] == address(0) ? super.balanceOf(_account) : 0) + redirectedStakes[_account];
     }
 
@@ -117,7 +117,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _index the pool index
      * @return current rate
      **/
-    function currentRate(address _token, uint16 _index) public view returns (uint) {
+    function currentRate(address _token, uint16 _index) public view returns (uint256) {
         return feeCurve.currentRate(poolRouter.poolUtilisation(_token, _index));
     }
 
@@ -126,7 +126,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _percentageBorrowed the percentage borrowed for fee calculation
      * @return current rate
      **/
-    function currentRateAt(uint256 _percentageBorrowed) public view returns (uint) {
+    function currentRateAt(uint256 _percentageBorrowed) public view returns (uint256) {
         return feeCurve.currentRate(_percentageBorrowed);
     }
 
@@ -139,7 +139,7 @@ contract DelegatorPool is RewardsPoolController {
         require(balanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds balance");
 
         uint256 toWithdraw = _amount;
-        if (_amount == type(uint).max) {
+        if (_amount == type(uint256).max) {
             toWithdraw = balanceOf(msg.sender);
         }
 

@@ -18,8 +18,8 @@ contract RewardsPool {
 
     uint256 public rewardPerToken;
     uint256 public totalRewards;
-    mapping(address => uint) public userRewardPerTokenPaid;
-    mapping(address => uint) public userRewards;
+    mapping(address => uint256) public userRewardPerTokenPaid;
+    mapping(address => uint256) public userRewards;
 
     event Withdraw(address indexed account, uint256 amount);
     event DistributeRewards(address indexed sender, uint256 amountStaked, uint256 amount);
@@ -34,7 +34,7 @@ contract RewardsPool {
      * @param _account account address
      * @return account's total unclaimed rewards
      **/
-    function withdrawableRewards(address _account) public view virtual returns (uint) {
+    function withdrawableRewards(address _account) public view virtual returns (uint256) {
         return
             (controller.staked(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +

@@ -42,7 +42,7 @@ contract MerkleDistributor is Ownable {
      * @param _token token address
      * @param _account address of the account to return claimed amount for
      **/
-    function getClaimed(address _token, address _account) external view distributionExists(_token) returns (uint) {
+    function getClaimed(address _token, address _account) external view distributionExists(_token) returns (uint256) {
         return distributions[_token].claimed[_account];
     }
 

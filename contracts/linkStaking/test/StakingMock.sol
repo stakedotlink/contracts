@@ -14,7 +14,7 @@ import "../../core/interfaces/IERC677Receiver.sol";
 contract StakingMock is IStaking, IERC677Receiver {
     IERC677 public token;
 
-    mapping(address => uint) public stakedBalances;
+    mapping(address => uint256) public stakedBalances;
     address public migration;
 
     uint256 public baseReward;

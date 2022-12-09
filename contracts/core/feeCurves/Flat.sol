@@ -30,7 +30,7 @@ contract FlatFee is Ownable {
      * @notice returns the flat fee
      * @return current rate
      **/
-    function currentRate(uint) external view returns (uint) {
+    function currentRate(uint256) external view returns (uint256) {
         return feeBasisPoints;
     }
 }

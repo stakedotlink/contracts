@@ -33,7 +33,7 @@ contract RewardsReceiver is Ownable {
     /**
      * @notice Withdraws rewards to the ETH staking strategy
      */
-    function withdraw() external returns (uint) {
+    function withdraw() external returns (uint256) {
         require(msg.sender == ethStakingStrategy, "Sender is not ETH staking strategy");
 
         uint256 balance = address(this).balance;

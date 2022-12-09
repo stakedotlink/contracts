@@ -41,15 +41,15 @@ contract VCSMock is VaultControllerStrategy {
         }
     }
 
-    function getMaxDeposits() public view override returns (uint) {
+    function getMaxDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
-    function getMinDeposits() public view override returns (uint) {
+    function getMinDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
-    function getVaultDepositLimits() public view override returns (uint, uint) {
+    function getVaultDepositLimits() public view override returns (uint256, uint256) {
         return stakeController.getOperatorLimits();
     }
 
@@ -58,7 +58,7 @@ contract VCSMock is VaultControllerStrategy {
         uint256 _toDeposit,
         uint256 _vaultMinDeposits,
         uint256 _vaultMaxDeposits
-    ) external returns (uint) {
+    ) external returns (uint256) {
         return _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
     }
 

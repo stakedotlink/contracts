@@ -14,7 +14,7 @@ import "../tokens/base/ERC677Upgradeable.sol";
 abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
     IERC20Upgradeable public token;
 
-    mapping(address => uint) private shares;
+    mapping(address => uint256) private shares;
     uint256 public totalShares;
 
     function __StakingRewardsPool_init(
@@ -32,7 +32,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice returns the total supply of staking derivative tokens
      * @return total supply
      */
-    function totalSupply() public view override returns (uint) {
+    function totalSupply() public view override returns (uint256) {
         return _totalStaked();
     }
 
@@ -41,7 +41,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @param _account account address
      * @return account's stake balance
      **/
-    function balanceOf(address _account) public view override returns (uint) {
+    function balanceOf(address _account) public view override returns (uint256) {
         uint256 balance = getStakeByShares(shares[_account]);
         if (balance < 100) {
             return 0;
@@ -55,7 +55,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @param _account account address
      * @return account's share balance
      **/
-    function sharesOf(address _account) public view returns (uint) {
+    function sharesOf(address _account) public view returns (uint256) {
         return shares[_account];
     }
 
@@ -90,7 +90,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice returns the total amount of assets staked in the pool
      * @return total staked amount
      */
-    function _totalStaked() internal view virtual returns (uint);
+    function _totalStaked() internal view virtual returns (uint256);
 
     /**
      * @notice transfers a stake balance from one account to another

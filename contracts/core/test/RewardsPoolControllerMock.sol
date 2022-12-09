@@ -13,7 +13,7 @@ contract RewardsPoolControllerMock is RewardsPoolController {
     IERC20Upgradeable public token;
 
     uint256 public stakedTotal;
-    mapping(address => uint) public stakeBalances;
+    mapping(address => uint256) public stakeBalances;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -29,11 +29,11 @@ contract RewardsPoolControllerMock is RewardsPoolController {
         token = IERC20Upgradeable(_token);
     }
 
-    function staked(address _account) external view override returns (uint) {
+    function staked(address _account) external view override returns (uint256) {
         return stakeBalances[_account];
     }
 
-    function totalStaked() external view override returns (uint) {
+    function totalStaked() external view override returns (uint256) {
         return stakedTotal;
     }
 
