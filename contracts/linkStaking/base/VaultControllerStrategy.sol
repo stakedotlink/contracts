@@ -159,17 +159,18 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return amounts list of fee amounts
      */
     function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
-        receivers = new address[](fees.length);
-        amounts = new uint256[](fees.length);
-
-        for (uint256 i = 0; i < fees.length; i++) {
-            receivers[i] = fees[i].receiver;
-            amounts[i] = fees[i].basisPoints;
-        }
-
         int balanceChange = depositChange();
+
         if (balanceChange > 0) {
             totalDeposits += uint256(balanceChange);
+
+            receivers = new address[](fees.length);
+            amounts = new uint256[](fees.length);
+
+            for (uint256 i = 0; i < fees.length; i++) {
+                receivers[i] = fees[i].receiver;
+                amounts[i] = (uint256(balanceChange) * fees[i].basisPoints) / 10000;
+            }
         } else if (balanceChange < 0) {
             totalDeposits -= uint256(balanceChange * -1);
         }

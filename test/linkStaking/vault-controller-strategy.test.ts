@@ -229,11 +229,20 @@ describe('VaultControllerStrategy', () => {
     await strategy.updateDeposits()
     assert.equal(fromEther(await strategy.getTotalDeposits()), 570)
     assert.equal(fromEther(await strategy.depositChange()), 0)
+  })
 
-    assert.deepEqual(await strategy.callStatic.updateDeposits(), [
-      [accounts[4]],
-      [BigNumber.from(500)],
-    ])
+  it('fees should be properly calculated in updateDeposits', async () => {
+    await strategy.deposit(toEther(300))
+    await strategy.depositToVaults(0, toEther(300), toEther(10), toEther(100))
+
+    await staking.setBaseReward(toEther(10))
+    await strategy.addFee(accounts[3], 1000)
+    let [receivers, amounts] = await strategy.callStatic.updateDeposits()
+
+    assert.equal(receivers[0], accounts[4])
+    assert.equal(receivers[1], accounts[3])
+    assert.equal(fromEther(amounts[0]), 5)
+    assert.equal(fromEther(amounts[1]), 10)
   })
 
   it('migrateVaults should work correctly', async () => {

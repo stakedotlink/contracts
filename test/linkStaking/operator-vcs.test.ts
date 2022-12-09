@@ -9,7 +9,7 @@ import {
   fromEther,
   deployImplementation,
 } from '../utils/helpers'
-import { ERC677, OperatorVault, OperatorVCS, StakingMock } from '../../typechain-types'
+import { ERC677, OperatorVCS, StakingMock } from '../../typechain-types'
 
 const encode = (data: any) => ethers.utils.defaultAbiCoder.encode(['uint'], [data])
 
