@@ -154,10 +154,8 @@ contract StakingPool is StakingRewardsPool {
             IStrategy strategy = IStrategy(strategies[i]);
             max += strategy.getMaxDeposits();
         }
-        if (liquidityBuffer > 0) {
-            max += (max * liquidityBuffer) / 10000;
-        }
-        return max;
+
+        return max + _liquidityBufferAmount(max);
     }
 
     /**
@@ -289,12 +287,14 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
-     * of the pool by always keeping a % of the staked token as liquid within the pool. The buffer
+     * of the pool by always keeping a portion of the staked tokens as liquid within the pool. The buffer
      * has the effect of diluting yield, but promotes pool liquidity.
-     * @param _liquidityBufferBasisPoints basis points to use for the liquidity buffer
+     * @dev if buffer is < 1 ether, it represents a percentage of total deposits in basis points; otherwise,
+     * it represents a token amount
+     * @param _liquidityBuffer basis points or token amount
      **/
-    function setLiquidityBuffer(uint256 _liquidityBufferBasisPoints) external onlyOwner {
-        liquidityBuffer = _liquidityBufferBasisPoints;
+    function setLiquidityBuffer(uint256 _liquidityBuffer) external onlyOwner {
+        liquidityBuffer = _liquidityBuffer;
     }
 
     /**
@@ -405,6 +405,19 @@ contract StakingPool is StakingRewardsPool {
      */
     function _totalStaked() internal view override returns (uint256) {
         return totalStaked;
+    }
+
+    /**
+     * @notice returns the amount of tokens in the liquidity buffer
+     * @param _maxDeposits pool deposit limit without liquidity buffer
+     * @return token amount
+     */
+    function _liquidityBufferAmount(uint256 _maxDeposits) internal view returns (uint256) {
+        if (liquidityBuffer < 1 ether) {
+            return (_maxDeposits * liquidityBuffer) / 10000;
+        } else {
+            return liquidityBuffer;
+        }
     }
 
     /**
