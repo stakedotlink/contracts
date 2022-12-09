@@ -292,8 +292,8 @@ contract WLOperatorController is OperatorController {
         require(_validatorCount > 0, "Validator count must be greater than 0");
         require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
-        uint256[] memory validatorCounter = new uint[](operators.length);
-        uint256[] memory operatorTracker = new uint[](operators.length);
+        uint256[] memory validatorCounter = new uint256[](operators.length);
+        uint256[] memory operatorTracker = new uint256[](operators.length);
         uint256 operatorCount;
         uint256 remainingToAssign = _validatorCount;
 
@@ -344,8 +344,8 @@ contract WLOperatorController is OperatorController {
 
         totalValidatorCount = _validatorCount - remainingToAssign;
 
-        operatorIds = new uint[](operatorCount);
-        validatorCounts = new uint[](operatorCount);
+        operatorIds = new uint256[](operatorCount);
+        validatorCounts = new uint256[](operatorCount);
 
         for (uint256 i = 0; i < operatorCount; i++) {
             operatorIds[i] = operatorTracker[i];

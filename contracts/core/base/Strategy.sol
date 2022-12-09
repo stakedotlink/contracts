@@ -33,7 +33,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @notice returns the available deposit room for this strategy
      * @return available deposit room
      */
-    function canDeposit() public view virtual returns (uint) {
+    function canDeposit() public view virtual returns (uint256) {
         uint256 deposits = getTotalDeposits();
         if (deposits >= getMaxDeposits()) {
             return 0;
@@ -46,7 +46,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @notice returns the available withdrawal room for this strategy
      * @return available withdrawal room
      */
-    function canWithdraw() public view virtual returns (uint) {
+    function canWithdraw() public view virtual returns (uint256) {
         uint256 deposits = getTotalDeposits();
         if (deposits <= getMinDeposits()) {
             return 0;
@@ -59,19 +59,19 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @notice returns the total amount of deposits in this strategy
      * @return total deposits
      */
-    function getTotalDeposits() public view virtual returns (uint);
+    function getTotalDeposits() public view virtual returns (uint256);
 
     /**
      * @notice returns the maximum that can be deposited into this strategy
      * @return max deposits
      */
-    function getMaxDeposits() public view virtual returns (uint);
+    function getMaxDeposits() public view virtual returns (uint256);
 
     /**
      * @notice returns the minimum that must remain in this strategy
      * @return min deposits
      */
-    function getMinDeposits() public view virtual returns (uint);
+    function getMinDeposits() public view virtual returns (uint256);
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }

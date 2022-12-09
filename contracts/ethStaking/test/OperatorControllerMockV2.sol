@@ -8,7 +8,7 @@ import "./OperatorControllerMock.sol";
  * @notice Mocks contract upgrade for testing
  */
 contract OperatorControllerMockV2 is OperatorControllerMock {
-    function contractVersion() external pure returns (uint) {
+    function contractVersion() external pure returns (uint256) {
         return 2;
     }
 }

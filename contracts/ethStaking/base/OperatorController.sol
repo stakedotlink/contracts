@@ -39,7 +39,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
 
     uint256 public totalAssignedValidators;
     uint256 public totalActiveValidators;
-    mapping(address => uint) internal activeValidators;
+    mapping(address => uint256) internal activeValidators;
 
     uint256 public queueLength;
     bytes32 public currentStateHash;
@@ -85,7 +85,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @dev stake balance in this case is an account's # of active validators
      * @return activeValidators account's # of active validators
      */
-    function staked(address _account) public view returns (uint) {
+    function staked(address _account) public view returns (uint256) {
         return activeValidators[_account];
     }
 
@@ -95,7 +95,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @dev total staked amount in this case is the total # of active validators
      * @return totalActiveValidators total # of active validators
      */
-    function totalStaked() public view returns (uint) {
+    function totalStaked() public view returns (uint256) {
         return totalActiveValidators;
     }
 
@@ -193,7 +193,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @notice Returns an operator owner's withdrawable reward amount
 
      **/
-    function withdrawableRewards(address _account) external view returns (uint) {
+    function withdrawableRewards(address _account) external view returns (uint256) {
         return rewardsPool.withdrawableRewards(_account);
     }
 
@@ -409,7 +409,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _keyIndex index of pair
      * @return storageAddress storage address of pair
      */
-    function _keyPairStorageAddress(uint256 _operatorId, uint256 _keyIndex) internal pure returns (uint) {
+    function _keyPairStorageAddress(uint256 _operatorId, uint256 _keyIndex) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked("operator-controller-keys", _operatorId, _keyIndex)));
     }
 

@@ -32,7 +32,7 @@ abstract contract VaultControllerStrategy is Strategy {
     uint256 internal bufferedDeposits;
     uint256 public minDepositThreshold;
 
-    uint[10] private __gap;
+    uint256[10] private __gap;
 
     event MigratedVaults(uint256 startIndex, uint256 numVaults, bytes data);
     event UpgradedVaults(uint256 startIndex, uint256 numVaults, bytes data);
@@ -119,7 +119,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function performUpkeep(bytes calldata _performData) external {
         require(bufferedDeposits >= minDepositThreshold, "Minimum deposit threshold has not been met");
-        uint256 startIndex = abi.decode(_performData, (uint));
+        uint256 startIndex = abi.decode(_performData, (uint256));
         depositBufferedTokens(startIndex);
     }
 
@@ -160,7 +160,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
         receivers = new address[](fees.length);
-        amounts = new uint[](fees.length);
+        amounts = new uint256[](fees.length);
 
         for (uint256 i = 0; i < fees.length; i++) {
             receivers[i] = fees[i].receiver;
@@ -169,9 +169,9 @@ abstract contract VaultControllerStrategy is Strategy {
 
         int balanceChange = depositChange();
         if (balanceChange > 0) {
-            totalDeposits += uint(balanceChange);
+            totalDeposits += uint256(balanceChange);
         } else if (balanceChange < 0) {
-            totalDeposits -= uint(balanceChange * -1);
+            totalDeposits -= uint256(balanceChange * -1);
         }
     }
 
@@ -179,7 +179,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice the total amount of deposits as tracked in this strategy
      * @return total deposited
      */
-    function getTotalDeposits() public view override returns (uint) {
+    function getTotalDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
@@ -188,7 +188,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return minimum amount of deposits that a vault can hold
      * @return maximum amount of deposits that a vault can hold
      */
-    function getVaultDepositLimits() public view virtual returns (uint, uint);
+    function getVaultDepositLimits() public view virtual returns (uint256, uint256);
 
     /**
      * @notice migrates vaults to a new stake controller
@@ -222,6 +222,14 @@ abstract contract VaultControllerStrategy is Strategy {
             _upgradeVault(i, _data);
         }
         emit UpgradedVaults(_startIndex, _numVaults, _data);
+    }
+
+    /**
+     * @notice returns a list of all fees
+     * @return list of fees
+     */
+    function getFees() external view returns (Fee[] memory) {
+        return fees;
     }
 
     /**
@@ -303,7 +311,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _toDeposit,
         uint256 _minDeposits,
         uint256 _maxDeposits
-    ) internal returns (uint) {
+    ) internal returns (uint256) {
         uint256 toDeposit = _toDeposit;
         for (uint256 i = _startIndex; i < vaults.length; i++) {
             IVault vault = vaults[i];
@@ -330,7 +338,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function _deployVault(bytes memory _data) internal {
         address vault = address(new ERC1967Proxy(vaultImplementation, _data));
-        token.safeApprove(vault, type(uint).max);
+        token.safeApprove(vault, type(uint256).max);
         vaults.push(IVault(vault));
     }
 

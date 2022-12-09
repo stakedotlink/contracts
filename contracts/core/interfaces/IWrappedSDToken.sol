@@ -21,7 +21,7 @@ interface IWrappedSDToken is IERC677 {
      * @param _amount amount of wrapped tokens
      * @return amount of unwrapped tokens
      */
-    function getUnderlyingByWrapped(uint256 _amount) external view returns (uint);
+    function getUnderlyingByWrapped(uint256 _amount) external view returns (uint256);
 
     function sdToken() external view returns (address);
 }

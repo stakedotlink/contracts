@@ -8,7 +8,7 @@ interface INWLOperatorController is IOperatorController {
         external
         returns (bytes memory keys, bytes memory signatures);
 
-    function totalActiveStake() external view returns (uint);
+    function totalActiveStake() external view returns (uint256);
 
     function getNextValidators(uint256 _validatorCount) external view returns (bytes memory keys);
 }

@@ -58,7 +58,7 @@ contract WrappedSDToken is ERC677 {
      * @param _amount amount of unwrapped tokens
      * @return amount of wrapped tokens
      */
-    function getWrappedByUnderlying(uint256 _amount) external view returns (uint) {
+    function getWrappedByUnderlying(uint256 _amount) external view returns (uint256) {
         return sdToken.getSharesByStake(_amount);
     }
 
@@ -67,7 +67,7 @@ contract WrappedSDToken is ERC677 {
      * @param _amount amount of wrapped tokens
      * @return amount of unwrapped tokens
      */
-    function getUnderlyingByWrapped(uint256 _amount) external view returns (uint) {
+    function getUnderlyingByWrapped(uint256 _amount) external view returns (uint256) {
         return sdToken.getStakeByShares(_amount);
     }
 

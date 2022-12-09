@@ -30,7 +30,7 @@ contract RewardsPoolWSD is RewardsPool {
      * @param _account account address
      * @return account's total unclaimed rewards
      **/
-    function withdrawableRewards(address _account) public view override returns (uint) {
+    function withdrawableRewards(address _account) public view override returns (uint256) {
         return wsdToken.getUnderlyingByWrapped(super.withdrawableRewards(_account));
     }
 
@@ -39,7 +39,7 @@ contract RewardsPoolWSD is RewardsPool {
      * @param _account account address
      * @return account's total unclaimed rewards
      **/
-    function withdrawableRewardsWrapped(address _account) public view returns (uint) {
+    function withdrawableRewardsWrapped(address _account) public view returns (uint256) {
         return super.withdrawableRewards(_account);
     }
 

@@ -20,7 +20,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     address public vaultController;
     IStaking public stakeController;
 
-    uint[10] private __gap;
+    uint256[10] private __gap;
 
     function __Vault_init(
         address _token,
@@ -59,13 +59,13 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice returns the total balance of this contract in the Chainlink staking contract
      * @return total balance
      */
-    function getTotalDeposits() public view virtual returns (uint);
+    function getTotalDeposits() public view virtual returns (uint256);
 
     /**
      * @notice returns the principal balance of this contract in the Chainlink staking contract
      * @return principal balance
      */
-    function getPrincipalDeposits() public view returns (uint) {
+    function getPrincipalDeposits() public view returns (uint256) {
         return stakeController.getStake(address(this));
     }
 

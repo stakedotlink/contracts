@@ -11,7 +11,7 @@ import "./StrategyMock.sol";
  * @notice Mocks contract upgrade for testing
  */
 contract StrategyMockV2 is StrategyMock {
-    function contractVersion() external pure returns (uint) {
+    function contractVersion() external pure returns (uint256) {
         return 2;
     }
 }

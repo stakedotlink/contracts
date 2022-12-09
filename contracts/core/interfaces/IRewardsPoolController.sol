@@ -9,14 +9,14 @@ interface IRewardsPoolController {
      * controlled by this contract
      * @return account's balance
      */
-    function staked(address _account) external view returns (uint);
+    function staked(address _account) external view returns (uint256);
 
     /**
      * @notice returns the total staked amount for use by reward pools
      * controlled by this contract
      * @return total staked amount
      */
-    function totalStaked() external view returns (uint);
+    function totalStaked() external view returns (uint256);
 
     /**
      * @notice adds a new token

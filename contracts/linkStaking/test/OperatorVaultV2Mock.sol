@@ -18,7 +18,7 @@ contract OperatorVaultV2Mock is OperatorVault {
         return true;
     }
 
-    function getVersion() external view returns (uint) {
+    function getVersion() external view returns (uint256) {
         return version;
     }
 }

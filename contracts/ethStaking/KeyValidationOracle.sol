@@ -53,7 +53,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         require(msg.sender == chainlinkTokenAddress(), "Sender is not chainlink token");
         require(_value == fee, "Value is not equal to fee");
 
-        (uint256 operatorId, bool isWhitelisted) = abi.decode(_calldata, (uint, bool));
+        (uint256 operatorId, bool isWhitelisted) = abi.decode(_calldata, (uint256, bool));
 
         _initiateKeyPairValidation(_sender, operatorId, isWhitelisted);
     }

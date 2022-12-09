@@ -36,7 +36,7 @@ contract SlashingKeeper is KeeperCompatibleInterface {
         }
 
         if (totalStrategiesToUpdate > 0) {
-            uint256[] memory strategyIdxs = new uint[](totalStrategiesToUpdate);
+            uint256[] memory strategyIdxs = new uint256[](totalStrategiesToUpdate);
             uint256 strategiesAdded;
 
             for (uint256 i = 0; i < strategiesToUpdate.length; i++) {
@@ -58,7 +58,7 @@ contract SlashingKeeper is KeeperCompatibleInterface {
      */
     function performUpkeep(bytes calldata _performData) external override {
         address[] memory strategies = stakingPool.getStrategies();
-        uint256[] memory strategiesToUpdate = abi.decode(_performData, (uint[]));
+        uint256[] memory strategiesToUpdate = abi.decode(_performData, (uint256[]));
         require(strategiesToUpdate.length > 0, "No strategies to update");
 
         for (uint256 i = 0; i < strategiesToUpdate.length; i++) {

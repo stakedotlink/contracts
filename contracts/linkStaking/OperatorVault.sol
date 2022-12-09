@@ -38,7 +38,7 @@ contract OperatorVault is Vault {
      * @notice returns the total balance of this contract in the Chainlink staking contract
      * @return total balance
      */
-    function getTotalDeposits() public view override returns (uint) {
+    function getTotalDeposits() public view override returns (uint256) {
         return
             stakeController.getStake(address(this)) +
             stakeController.getBaseReward(address(this)) +

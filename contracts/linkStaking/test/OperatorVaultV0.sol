@@ -62,7 +62,7 @@ contract OperatorVaultV0 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice returns the total balance of this contract in the Chainlink staking contract
      * @return balance total balance
      */
-    function totalBalance() public view returns (uint) {
+    function totalBalance() public view returns (uint256) {
         return
             stakeController.getStake(address(this)) +
             stakeController.getBaseReward(address(this)) +
@@ -73,7 +73,7 @@ contract OperatorVaultV0 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice returns the principal balance of this contract in the Chainlink staking contract
      * @return balance principal balance
      */
-    function totalDeposits() public view returns (uint) {
+    function totalDeposits() public view returns (uint256) {
         return stakeController.getStake(address(this));
     }
 

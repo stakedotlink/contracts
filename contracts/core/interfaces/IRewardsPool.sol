@@ -8,5 +8,5 @@ interface IRewardsPool {
 
     function distributeRewards() external;
 
-    function withdrawableRewards(address _account) external view returns (uint);
+    function withdrawableRewards(address _account) external view returns (uint256);
 }

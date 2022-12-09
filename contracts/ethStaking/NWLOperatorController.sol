@@ -20,8 +20,8 @@ contract NWLOperatorController is OperatorController {
     QueueEntry[] private queue;
     uint256 public queueIndex;
 
-    mapping(uint256 => uint) public ethLost;
-    mapping(uint256 => uint) public ethWithdrawn;
+    mapping(uint256 => uint256) public ethLost;
+    mapping(uint256 => uint256) public ethWithdrawn;
 
     event RemoveKeyPairs(uint256 indexed operatorId, uint256 quantity);
     event ReportKeyPairValidation(uint256 indexed operatorId, bool success);
@@ -61,7 +61,7 @@ contract NWLOperatorController is OperatorController {
      * @notice Returns the total active stake across all validators
      * @return totalActiveStake total active stake
      */
-    function totalActiveStake() external view returns (uint) {
+    function totalActiveStake() external view returns (uint256) {
         return totalActiveValidators * DEPOSIT_AMOUNT;
     }
 
@@ -249,7 +249,7 @@ contract NWLOperatorController is OperatorController {
         require(_validatorCount > 0, "Validator count must be greater than 0");
         require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
-        uint256[] memory assignedToOperators = new uint[](operators.length);
+        uint256[] memory assignedToOperators = new uint256[](operators.length);
         uint256 toAssign = _validatorCount;
         uint256 index = queueIndex;
 
@@ -361,7 +361,7 @@ contract NWLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @return withdrawableStake total withdrawable stake
      */
-    function withdrawableStake(uint256 _operatorId) public view returns (uint) {
+    function withdrawableStake(uint256 _operatorId) public view returns (uint256) {
         return
             operators[_operatorId].stoppedValidators * DEPOSIT_AMOUNT - (ethLost[_operatorId] + ethWithdrawn[_operatorId]);
     }

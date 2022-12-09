@@ -6,9 +6,9 @@ interface IOperatorController {
 
     function reportKeyPairValidation(uint256 _operatorId, bool _success) external;
 
-    function queueLength() external view returns (uint);
+    function queueLength() external view returns (uint256);
 
-    function totalActiveValidators() external view returns (uint);
+    function totalActiveValidators() external view returns (uint256);
 
     function currentStateHash() external view returns (bytes32);
 }
