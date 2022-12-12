@@ -154,6 +154,22 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
+     * @notice returns the  total amount of fees that will be paid on the next update
+     * @return total fees
+     */
+    function pendingFees() external view override returns (uint256) {
+        int256 balanceChange = depositChange();
+        uint256 totalFees;
+
+        if (balanceChange > 0) {
+            for (uint256 i = 0; i < fees.length; i++) {
+                totalFees += (uint256(balanceChange) * fees[i].basisPoints) / 10000;
+            }
+        }
+        return totalFees;
+    }
+
+    /**
      * @notice updates the total amount deposited for reward distribution
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
