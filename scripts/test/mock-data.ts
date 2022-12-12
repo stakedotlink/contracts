@@ -39,6 +39,16 @@ async function main() {
   ])
   await LINK_StakingPool.addStrategy(strategyMock.address)
 
+  // account 5 lpl rewards
+
+  await lplToken.transfer(accounts[5], toEther(1))
+  await lplToken.connect(signers[5]).transferAndCall(poolOwnersV1.address, toEther(1), '0x00')
+  await linkToken.transfer(ownersRewardsPoolV1.address, toEther(1))
+  await ownersRewardsPoolV1.distributeRewards()
+  await poolOwnersV1.connect(signers[5]).withdraw(toEther(1))
+  await lplToken.connect(signers[5]).transferAndCall(lplMigration.address, toEther(1), '0x00')
+  // await lplToken.connect(signers[5]).transferAndCall(accounts[0].address, toEther(1), '0x00')
+
   // account 2
 
   await linkToken.transfer(accounts[2], toEther(10000))
