@@ -148,13 +148,7 @@ contract StakingPool is StakingRewardsPool {
      * @return maximum deposit limit
      **/
     function getMaxDeposits() public view returns (uint256) {
-        uint256 max;
-
-        for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            max += strategy.getMaxDeposits();
-        }
-
+        uint256 max = _maxDepositsWithoutBuffer();
         return max + _liquidityBufferAmount(max);
     }
 
@@ -286,6 +280,15 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
+     * @notice returns the amount of tokens in the liquidity buffer
+     * @return token amount
+     */
+    function getLiquidityBufferAmount() external view returns (uint256) {
+        uint256 max = _maxDepositsWithoutBuffer();
+        return _liquidityBufferAmount(max);
+    }
+
+    /**
      * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
      * of the pool by always keeping a portion of the staked tokens as liquid within the pool. The buffer
      * has the effect of diluting yield, but promotes pool liquidity.
@@ -298,11 +301,23 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
+     * @notice returns the amount of rewards earned since the last update
+     * @param _strategyIdxs indexes of strategies to sum rewards for
+     **/
+    function getStrategyRewards(uint256[] memory _strategyIdxs) external view returns (int256) {
+        int256 totalRewards;
+        for (uint256 i = 0; i < _strategyIdxs.length; i++) {
+            totalRewards += IStrategy(strategies[_strategyIdxs[i]]).depositChange();
+        }
+        return totalRewards;
+    }
+
+    /**
      * @notice updates and distributes rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
      **/
     function updateStrategyRewards(uint256[] memory _strategyIdxs) public {
-        int totalRewards;
+        int256 totalRewards;
         uint256 totalFeeAmounts;
         uint256 totalFeeCount;
         address[][] memory receivers = new address[][](strategies.length + 1);
@@ -326,7 +341,7 @@ contract StakingPool is StakingRewardsPool {
         }
 
         if (totalRewards != 0) {
-            totalStaked = uint256(int(totalStaked) + totalRewards);
+            totalStaked = uint256(int256(totalStaked) + totalRewards);
         }
 
         if (totalRewards > 0) {
@@ -405,6 +420,20 @@ contract StakingPool is StakingRewardsPool {
      */
     function _totalStaked() internal view override returns (uint256) {
         return totalStaked;
+    }
+
+    /**
+     * @notice returns the maximum amount that can be deposited into the pool without
+     * the liquidity buffer
+     * @return maximum deposit limit
+     */
+    function _maxDepositsWithoutBuffer() internal view returns (uint256) {
+        uint256 max;
+        for (uint256 i = 0; i < strategies.length; i++) {
+            IStrategy strategy = IStrategy(strategies[i]);
+            max += strategy.getMaxDeposits();
+        }
+        return max;
     }
 
     /**
