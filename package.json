@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npx hardhat node --network hardhat",
     "test": "npx hardhat test --network hardhat",
-    "deploy": "ts-node --files scripts/deploy/1-deploy-test-contracts.ts && ts-node --files scripts/deploy/2-deploy-0.1.ts && ts-node --files scripts/deploy/3-deploy-1.0.ts && ts-node --files scripts/deploy/4-deploy-merkle-distributor.ts",
+    "deploy": "ts-node --files scripts/deploy/1-deploy-test-contracts.ts && ts-node --files scripts/deploy/2-deploy-0.1.ts && ts-node --files scripts/deploy/3-deploy-1.0.ts && ts-node --files scripts/deploy/4-deploy-governance-controller.ts && ts-node --files scripts/deploy/5-deploy-merkle-distributor.ts",
     "deploy-0.1": "ts-node --files scripts/deploy/2-deploy-0.1.ts",
     "deploy-1.0": "ts-node --files scripts/deploy/3-deploy-1.0.ts",
     "deploy-operator-vcs": "ts-node --files scripts/linkStrategies/deploy-operator-vcs.ts",
