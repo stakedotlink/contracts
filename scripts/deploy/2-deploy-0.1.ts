@@ -28,14 +28,14 @@ async function main() {
   const lplMigration = await deploy('LPLMigration', [lplToken.address, sdlToken.address])
   console.log('LPLMigration deployed: ', lplMigration.address)
 
-  const feeCurve = await deploy('FlatFee', [FlatFee.feeBasisPoints])
-  console.log('FeeCurve deployed: ', feeCurve.address)
+  const flatFee = await deploy('FlatFee', [FlatFee.feeBasisPoints])
+  console.log('FeeCurve deployed: ', flatFee.address)
 
   const delegatorPool = await deployUpgradeable('DelegatorPool', [
     sdlToken.address,
     DelegatorPool.derivativeTokenName,
     DelegatorPool.derivativeTokenSymbol,
-    feeCurve.address,
+    flatFee.address,
   ])
   console.log('DelegatorPool deployed: ', delegatorPool.address)
 
@@ -43,7 +43,7 @@ async function main() {
     {
       SDLToken: sdlToken.address,
       LPLMigration: lplMigration.address,
-      FeeCurve: feeCurve.address,
+      FlatFee: flatFee.address,
       DelegatorPool: delegatorPool.address,
     },
     { SDLToken: 'StakingAllowance' }

@@ -22,7 +22,7 @@ export const roles = [
     contractNames: [
       'SDLToken',
       'DelegatorPool',
-      'FeeCurve',
+      'FlatFee',
       'PoolRouter',
       'LINK_StakingPool',
       'LINK_OperatorVCS',
@@ -43,9 +43,9 @@ export const roles = [
       ],
       ['setFeeBasisPoints(uint256)', ...ownableFunctions],
       [
-        'addPool(address,address,uint256,bool)',
+        'addPool(address,address,uint8,bool)',
         'removePool(address,uint16)',
-        'setPoolStatus(address,uint16,uint256)',
+        'setPoolStatus(address,uint16,uint8)',
         'setPoolStatusClosed(address,uint16)',
         'setReservedModeActive(address,uint16,bool)',
         'setReservedSpaceMultiplier(uint256)',
@@ -63,7 +63,7 @@ export const roles = [
         ...ownableFunctions,
         ...feeFunctions,
       ],
-      ['addVault(address)', ...vcsFunctions],
+      ['addVault(address)', 'setOperator(uint256,address)', ...vcsFunctions],
       ['setMaxDeposits(uint256)', 'setMaxVaultDeployments(uint256)', ...vcsFunctions],
     ],
   },
@@ -71,31 +71,42 @@ export const roles = [
     name: 'LinkPool',
     members: ['0x6879826450e576B401c4dDeff2B7755B1e85d97c'],
     contractNames: ['PoolRouter'],
-    functions: [['setPoolStatus(address,uint16,uint256)', 'setWrappedETH(address)']],
+    functions: [['setPoolStatus(address,uint16,uint8)', 'setWrappedETH(address)']],
   },
 ]
 
 async function main() {
   const governanceController = (await getContract('GovernanceController')) as GovernanceController
 
-  roles.forEach(async (role) => {
+  for (let i = 0; i < roles.length; i++) {
+    const role = roles[i]
     const contracts = []
     const selectors: any = []
 
-    for (let i = 0; i < role.contractNames.length; i++) {
-      const functions = role.functions[i]
-      const contract = await getContract(role.contractNames[i])
+    for (let j = 0; j < role.contractNames.length; j++) {
+      const functions = role.functions[j]
+      const contract = await getContract(role.contractNames[j])
       const iface = contract.interface as Interface
       contracts.push(contract.address)
       selectors.push([])
 
-      for (let j = 0; j < functions.length; j++) {
-        selectors[i].push(iface.getSighash(functions[j]))
+      for (let k = 0; k < functions.length; k++) {
+        selectors[j].push(iface.getSighash(functions[k]))
       }
     }
 
-    await governanceController.addRole(role.name, role.members, contracts, selectors)
-  })
+    let tx = await governanceController.addRole(role.name, role.members, contracts, selectors)
+    await tx.wait()
+    console.log(role.name, 'role added')
+  }
+
+  const contractNames = roles[0].contractNames
+  for (let i = 0; i < contractNames.length; i++) {
+    const contract = await getContract(contractNames[i])
+    let tx = await contract.transferOwnership(governanceController.address)
+    await tx.wait()
+  }
+  console.log('Ownership transferred to GovernanceController for all contracts')
 }
 
 main()
