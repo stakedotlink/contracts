@@ -85,6 +85,15 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice sets a vault's operator address
+     * @param _index index of vault
+     * @param _operator address of operator that the vault represents
+     */
+    function setOperator(uint256 _index, address _operator) external onlyOwner {
+        vaults[_index].setOperator(_operator);
+    }
+
+    /**
      * @notice deposits buffered tokens into vaults
      * @param _startIndex index of first vault to deposit into
      * @param _toDeposit amount to deposit

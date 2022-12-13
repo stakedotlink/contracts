@@ -12,7 +12,9 @@ interface IVault {
 
     function migrate(bytes calldata _data) external;
 
-    function upgradeToAndCall(address newImplementation, bytes memory data) external;
+    function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
 
-    function upgradeTo(address newImplementation) external;
+    function upgradeTo(address _newImplementation) external;
+
+    function setOperator(address _operator) external;
 }

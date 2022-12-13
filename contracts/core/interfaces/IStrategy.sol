@@ -19,4 +19,6 @@ interface IStrategy {
     function canWithdraw() external view returns (uint256);
 
     function depositChange() external view returns (int256);
+
+    function pendingFees() external view returns (uint256);
 }

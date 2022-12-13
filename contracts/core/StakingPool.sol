@@ -301,15 +301,22 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the amount of rewards earned since the last update
-     * @param _strategyIdxs indexes of strategies to sum rewards for
+     * @notice returns the amount of rewards earned since the last update and the amount of fees that
+     * will be paid on the rewards
+     * @param _strategyIdxs indexes of strategies to sum rewards/fees for
+     * @return total rewards
+     * @return total fees
      **/
-    function getStrategyRewards(uint256[] memory _strategyIdxs) external view returns (int256) {
+    function getStrategyRewards(uint256[] memory _strategyIdxs) external view returns (int256, uint256) {
         int256 totalRewards;
+        uint256 totalFees;
+
         for (uint256 i = 0; i < _strategyIdxs.length; i++) {
-            totalRewards += IStrategy(strategies[_strategyIdxs[i]]).depositChange();
+            IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
+            totalRewards += strategy.depositChange();
+            totalFees += strategy.pendingFees();
         }
-        return totalRewards;
+        return (totalRewards, totalFees);
     }
 
     /**
