@@ -65,7 +65,7 @@ export const updateDeployments = (
   fse.outputJSONSync(
     `deployments/${network.name}.json`,
     { ...deployments, ...newDeploymentsWithArtifacts },
-    { spaces: 1 }
+    { spaces: 2 }
   )
 }
 
