@@ -1,12 +1,10 @@
-import { ethers, network } from 'hardhat'
-import fs from 'fs'
-import { ERC677, OperatorVault, OperatorVCS, StakingPool } from '../../typechain-types'
+import { ethers } from 'hardhat'
+import { ERC677, OperatorVCS, StakingPool } from '../../typechain-types'
 import {
   deployUpgradeable,
   deployImplementation,
   getContract,
   updateDeployments,
-  upgradeProxy,
 } from '../utils/deployment'
 
 // Operator Vault Controller Strategy
@@ -35,16 +33,6 @@ async function main() {
   const linkToken = (await getContract('LINKToken')) as ERC677
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
 
-  const initialVaults = JSON.parse(
-    fs.readFileSync(`scripts/linkStrategies/deployedOpVaults.${network.name}.json`, {
-      encoding: 'utf8',
-    })
-  )
-
-  if (initialVaults.length != vaultOperatorAddresses.length) {
-    throw Error('The # of vault operator addresses must equal the # of deployed operator vaults')
-  }
-
   const vaultImpAddress = (await deployImplementation('OperatorVault')) as string
 
   console.log('OperatorVault implementation deployed: ', vaultImpAddress)
@@ -56,7 +44,7 @@ async function main() {
     vaultImpAddress,
     minDepositThreshold,
     fees,
-    initialVaults,
+    [],
   ])) as OperatorVCS
   console.log('OperatorVCS deployed: ', operatorVCS.address)
   updateDeployments({ LINK_OperatorVCS: operatorVCS.address }, { LINK_OperatorVCS: 'OperatorVCS' })
@@ -65,21 +53,11 @@ async function main() {
   await tx.wait()
   console.log('OperatorVCS added to StakingPool')
 
-  for (let i = 0; i < initialVaults.length; i++) {
-    await upgradeProxy(initialVaults[i], 'OperatorVault', true, {
-      fn: 'initialize(address,address,address,address)',
-      args: [linkToken.address, operatorVCS.address, stakeController, vaultOperatorAddresses[i]],
-    })
+  for (let i = 0; i < vaultOperatorAddresses.length; i++) {
+    tx = await operatorVCS.addVault(vaultOperatorAddresses[i])
     await tx.wait()
-    console.log('Vault at ', initialVaults[i], ' upgraded from V0 to V1')
-    let vault = (await ethers.getContractAt('OperatorVault', initialVaults[i])) as OperatorVault
-    tx = await vault.transferOwnership(operatorVCS.address)
-    await tx.wait()
-    console.log('Vault at ', initialVaults[i], ' transferred ownership to OperatorVCS')
+    console.log('Vault with operator address', vaultOperatorAddresses[i], 'created')
   }
-
-  console.log('All OperatorVaults have been upgraded from V0 to V1')
-  console.log('All OperatorVaults have transferred ownership to OperatorVCS')
 }
 
 main()
