@@ -128,6 +128,8 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         }
 
         _mintShares(_recipient, sharesToMint);
+
+        emit Transfer(address(0), _recipient, _amount);
     }
 
     /**
@@ -156,6 +158,8 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
         totalShares -= sharesToBurn;
         shares[_account] -= sharesToBurn;
+
+        emit Transfer(_account, address(0), _amount);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
