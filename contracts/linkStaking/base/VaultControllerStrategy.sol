@@ -260,7 +260,7 @@ abstract contract VaultControllerStrategy is Strategy {
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
-        require(_totalFeesBasisPoints() < 5000, "Total fees must be < 50%");
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
     /**
@@ -284,7 +284,7 @@ abstract contract VaultControllerStrategy is Strategy {
             fees[_index].basisPoints = _feeBasisPoints;
         }
 
-        require(_totalFeesBasisPoints() < 5000, "Total fees must be < 50%");
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
     /**
@@ -384,7 +384,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice returns the sum of all fees
      * @return sum of fees in basis points
      **/
-    function _totalFeesBasisPoints() private returns (uint256) {
+    function _totalFeesBasisPoints() private view returns (uint256) {
         uint256 totalFees;
         for (uint i = 0; i < fees.length; i++) {
             totalFees += fees[i].basisPoints;

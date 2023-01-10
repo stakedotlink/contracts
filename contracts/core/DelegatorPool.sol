@@ -3,11 +3,10 @@ pragma solidity 0.8.15;
 
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IPoolRouter.sol";
-import "./interfaces/IFeeCurve.sol";
 
 /**
  * @title Delegator Pool
- * @notice Allows users to stake allowance tokens, stakers receive a percentage of earned rewards
+ * @notice Allows users to stake allowance tokens and receive a percentage of earned rewards
  */
 contract DelegatorPool is RewardsPoolController {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -20,7 +19,7 @@ contract DelegatorPool is RewardsPoolController {
 
     IERC20Upgradeable public allowanceToken;
     IPoolRouter public poolRouter;
-    IFeeCurve public feeCurve;
+    address public feeCurve;
 
     mapping(address => VestingSchedule) private vestingSchedules;
 
@@ -35,12 +34,10 @@ contract DelegatorPool is RewardsPoolController {
     function initialize(
         address _allowanceToken,
         string memory _dTokenName,
-        string memory _dTokenSymbol,
-        address _feeCurve
+        string memory _dTokenSymbol
     ) public initializer {
         __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
         allowanceToken = IERC20Upgradeable(_allowanceToken);
-        feeCurve = IFeeCurve(_feeCurve);
     }
 
     /**
@@ -112,26 +109,7 @@ contract DelegatorPool is RewardsPoolController {
     }
 
     /**
-     * @notice returns the current fee rate based on the % of allowance token borrowed
-     * @param _token the token address of the pool
-     * @param _index the pool index
-     * @return current rate
-     **/
-    function currentRate(address _token, uint16 _index) public view returns (uint256) {
-        return feeCurve.currentRate(poolRouter.poolUtilisation(_token, _index));
-    }
-
-    /**
-     * @notice returns the current fee rate based on a specified percentage
-     * @param _percentageBorrowed the percentage borrowed for fee calculation
-     * @return current rate
-     **/
-    function currentRateAt(uint256 _percentageBorrowed) public view returns (uint256) {
-        return feeCurve.currentRate(_percentageBorrowed);
-    }
-
-    /**
-     * @notice withdraws lent allowance tokens if there are enough available
+     * @notice withdraws allowance tokens if no pools are in reserve mode
      * @param _amount amount to withdraw
      **/
     function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
@@ -159,15 +137,6 @@ contract DelegatorPool is RewardsPoolController {
      */
     function getVestingSchedule(address _account) external view returns (VestingSchedule memory) {
         return vestingSchedules[_account];
-    }
-
-    /**
-     * @notice sets the fee curve contract
-     * @param _feeCurve contract address
-     */
-    function setFeeCurve(address _feeCurve) external onlyOwner {
-        require(_feeCurve != address(0), "Invalid fee curve address");
-        feeCurve = IFeeCurve(_feeCurve);
     }
 
     /**

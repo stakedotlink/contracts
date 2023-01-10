@@ -5,6 +5,4 @@ interface IPoolRouter {
     function isReservedMode() external view returns (bool);
 
     function getReservedMultiplier() external view returns (uint256);
-
-    function poolUtilisation(address _token, uint16 _index) external view returns (uint256);
 }

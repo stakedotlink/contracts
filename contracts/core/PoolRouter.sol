@@ -129,19 +129,6 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the percentange utilisation of the pool
-     * @param _token pool token
-     * @param _index pool index
-     * @return percentage full (0-1e18)
-     */
-    function poolUtilisation(address _token, uint16 _index) external view returns (uint256) {
-        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
-        uint256 totalSupply = stakingPool.totalSupply();
-        uint256 maxDeposits = stakingPool.getMaxDeposits();
-        return (maxDeposits > totalSupply) ? (1e18 * totalSupply) / maxDeposits : 1 ether;
-    }
-
-    /**
      * @notice ERC677 implementation to receive a token stake
      * @param _sender of the token transfer
      * @param _value of the token transfer

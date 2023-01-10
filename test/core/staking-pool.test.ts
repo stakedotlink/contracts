@@ -48,17 +48,16 @@ describe('StakingPool', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    delegatorPool = (await deploy('DelegatorPoolMock', [
-      token.address,
-      0,
-      2000,
-    ])) as DelegatorPoolMock
+    delegatorPool = (await deploy('DelegatorPoolMock', [token.address, 0])) as DelegatorPoolMock
 
     stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',
-      [[ownersRewards, 1000]],
+      [
+        [ownersRewards, 1000],
+        [delegatorPool.address, 2000],
+      ],
       accounts[0],
       delegatorPool.address,
     ])) as StakingPool
@@ -102,27 +101,31 @@ describe('StakingPool', () => {
   })
 
   it('should be able to add new fee', async () => {
-    await stakingPool.addFee(accounts[1], 2500)
+    await stakingPool.addFee(accounts[1], 500)
     assert.equal(
       JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
       JSON.stringify([
         [ownersRewards, BigNumber.from(1000)],
-        [accounts[1], BigNumber.from(2500)],
+        [delegatorPool.address, BigNumber.from(2000)],
+        [accounts[1], BigNumber.from(500)],
       ]),
       'fees incorrect'
     )
   })
 
   it('should be able to update existing fees', async () => {
-    await stakingPool.updateFee(0, accounts[1], 2500)
+    await stakingPool.updateFee(0, accounts[1], 100)
     assert.equal(
       JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
-      JSON.stringify([[accounts[1], BigNumber.from(2500)]]),
+      JSON.stringify([
+        [accounts[1], BigNumber.from(100)],
+        [delegatorPool.address, BigNumber.from(2000)],
+      ]),
       'fees incorrect'
     )
 
     await stakingPool.updateFee(0, accounts[2], 0)
-    assert.equal((await stakingPool.getFees()).length, 0, 'fees incorrect')
+    assert.equal((await stakingPool.getFees()).length, 1, 'fees incorrect')
   })
 
   it('should be able to add new strategies', async () => {

@@ -40,11 +40,7 @@ describe('WrappedSDToken', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    let delegatorPool = (await deploy('DelegatorPoolMock', [
-      token.address,
-      0,
-      0,
-    ])) as DelegatorPoolMock
+    let delegatorPool = (await deploy('DelegatorPoolMock', [token.address, 0])) as DelegatorPoolMock
 
     stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,

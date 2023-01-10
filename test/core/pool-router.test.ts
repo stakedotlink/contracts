@@ -19,7 +19,6 @@ import {
   StakingAllowance,
   WrappedETH,
   DelegatorPool,
-  RampUpCurveFee,
 } from '../../typechain-types'
 
 describe('PoolRouter', () => {
@@ -31,7 +30,6 @@ describe('PoolRouter', () => {
   let stakingPool1: StakingPool
   let stakingPool2: StakingPool
   let stakingPool3: StakingPool
-  let feeCurve: RampUpCurveFee
   let signers: Signer[]
   let accounts: string[]
 
@@ -104,13 +102,10 @@ describe('PoolRouter', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    feeCurve = (await deploy('RampUpCurveFee', [10, 500, 6, 12, 20])) as RampUpCurveFee
-
     delegatorPool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
-      feeCurve.address,
     ])) as DelegatorPool
 
     poolRouter = (await deployUpgradeable('PoolRouter', [
@@ -610,12 +605,6 @@ describe('PoolRouter', () => {
       await token1
         .connect(signers[2])
         .transferAndCall(poolRouter.address, toEther(500), padBytes('0x0', 32))
-
-      assert.equal(
-        fromEther(await poolRouter.poolUtilisation(token1.address, 0)),
-        0.1,
-        'incorrect maximum stake'
-      )
     })
 
     it('should be able 10% with a 2x multiplier', async () => {
@@ -625,12 +614,6 @@ describe('PoolRouter', () => {
       await token1
         .connect(signers[1])
         .transferAndCall(poolRouter.address, toEther(600), padBytes('0x0', 32))
-
-      assert.equal(
-        fromEther(await poolRouter.poolUtilisation(token1.address, 0)),
-        0.1,
-        'incorrect maximum stake'
-      )
     })
 
     it('should update reserved amounts when maximum deposits are increased', async () => {
@@ -641,11 +624,6 @@ describe('PoolRouter', () => {
       await token1
         .connect(signers[2])
         .transferAndCall(poolRouter.address, toEther(500), padBytes('0x0', 32))
-      assert.equal(
-        fromEther(await poolRouter.poolUtilisation(token1.address, 0)),
-        0.1,
-        'incorrect maximum stake'
-      )
 
       let strategy4 = (await deployUpgradeable('StrategyMock', [
         token1.address,
@@ -655,11 +633,6 @@ describe('PoolRouter', () => {
       ])) as StrategyMock
       await stakingPool1.addStrategy(strategy4.address)
 
-      assert.equal(
-        fromEther(await poolRouter.poolUtilisation(token1.address, 0)),
-        0.05,
-        'incorrect pool utilisation'
-      )
       assert.equal(
         fromEther(await poolRouter.canDeposit(accounts[2], token1.address, 0)),
         500,
