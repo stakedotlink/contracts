@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { BigNumber, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -19,7 +19,7 @@ import {
   StakingAllowance,
   WrappedETH,
   DelegatorPool,
-  RampUpCurve,
+  RampUpCurveFee,
 } from '../../typechain-types'
 
 describe('PoolRouter', () => {
@@ -31,7 +31,7 @@ describe('PoolRouter', () => {
   let stakingPool1: StakingPool
   let stakingPool2: StakingPool
   let stakingPool3: StakingPool
-  let feeCurve: RampUpCurve
+  let feeCurve: RampUpCurveFee
   let signers: Signer[]
   let accounts: string[]
 
@@ -72,7 +72,7 @@ describe('PoolRouter', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
 
-    await poolRouter.addPool(token, stakingPool.address, 0, false)
+    await poolRouter.addPool(stakingPool.address, 0, false)
     await token1.approve(stakingPool.address, ethers.constants.MaxUint256)
     await token2.approve(stakingPool.address, ethers.constants.MaxUint256)
 
@@ -104,7 +104,7 @@ describe('PoolRouter', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
+    feeCurve = (await deploy('RampUpCurveFee', [10, 500, 6, 12, 20])) as RampUpCurveFee
 
     delegatorPool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,
@@ -246,6 +246,7 @@ describe('PoolRouter', () => {
   it('should not be able to stake with an unsupported token', async () => {
     let token = (await deploy('ERC677', ['Unknown', 'ANON', 1000000000])) as ERC677
     await setupToken(token, accounts)
+    await token.approve(poolRouter.address, toEther(10))
     await expect(poolRouter.stake(token.address, 0, toEther(10))).to.be.revertedWith(
       'Pool does not exist'
     )

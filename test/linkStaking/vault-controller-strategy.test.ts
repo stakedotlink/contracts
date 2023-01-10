@@ -310,7 +310,7 @@ describe('VaultControllerStrategy', () => {
 
   it('setMinDepositThreshold should work correctly', async () => {
     await expect(strategy.setMinDepositThreshold(toEther(9))).to.be.revertedWith(
-      'Must be >= to minimum vault deposit limit'
+      'Invalid min deposit threshold'
     )
 
     await strategy.setMinDepositThreshold(toEther(20))

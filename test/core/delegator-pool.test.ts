@@ -13,7 +13,7 @@ import {
   StakingAllowance,
   DelegatorPool,
   RewardsPool,
-  RampUpCurve,
+  RampUpCurveFee,
 } from '../../typechain-types'
 import { assert, expect } from 'chai'
 import { defaultAbiCoder } from 'ethers/lib/utils'
@@ -25,7 +25,7 @@ describe('DelegatorPool', () => {
   let delegatorPool: DelegatorPool
   let poolRouter: PoolRouterMock
   let rewardsPool: RewardsPool
-  let feeCurve: RampUpCurve
+  let feeCurve: RampUpCurveFee
   let signers: Signer[]
   let accounts: string[]
 
@@ -45,7 +45,7 @@ describe('DelegatorPool', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
+    feeCurve = (await deploy('RampUpCurveFee', [10, 500, 6, 12, 20])) as RampUpCurveFee
 
     delegatorPool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,

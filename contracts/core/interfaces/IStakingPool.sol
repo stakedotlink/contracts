@@ -31,4 +31,6 @@ interface IStakingPool is IStakingRewardsPool {
     function setPoolIndex(uint16 _poolIndex) external;
 
     function canDeposit() external view returns (uint256);
+
+    function token() external view returns (address);
 }

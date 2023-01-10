@@ -13,6 +13,7 @@ contract FlatFee is Ownable {
     event FeeSet(uint256 _feeBasisPoints);
 
     constructor(uint256 _feeBasisPoints) {
+        require(_feeBasisPoints <= 9500, "Invalid flat fee");
         feeBasisPoints = _feeBasisPoints;
     }
 
@@ -21,7 +22,7 @@ contract FlatFee is Ownable {
      * @param _feeBasisPoints
      **/
     function setFeeBasisPoints(uint256 _feeBasisPoints) public onlyOwner {
-        require(_feeBasisPoints >= 0 && _feeBasisPoints <= 9500, "Invalid flat fee");
+        require(_feeBasisPoints <= 9500, "Invalid flat fee");
         feeBasisPoints = _feeBasisPoints;
         emit FeeSet(_feeBasisPoints);
     }

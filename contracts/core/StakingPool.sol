@@ -255,6 +255,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
+        require(_totalFeesBasisPoints() < 5000, "Total fees must be < 50%");
     }
 
     /**
@@ -277,6 +278,8 @@ contract StakingPool is StakingRewardsPool {
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
         }
+
+        require(_totalFeesBasisPoints() < 5000, "Total fees must be < 50%");
     }
 
     /**
@@ -437,8 +440,11 @@ contract StakingPool is StakingRewardsPool {
     function _maxDepositsWithoutBuffer() internal view returns (uint256) {
         uint256 max;
         for (uint256 i = 0; i < strategies.length; i++) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            max += strategy.getMaxDeposits();
+            uint strategyMax = IStrategy(strategies[i]).getMaxDeposits();
+            if (strategyMax >= type(uint256).max - max) {
+                return type(uint256).max;
+            }
+            max += strategyMax;
         }
         return max;
     }
@@ -449,7 +455,9 @@ contract StakingPool is StakingRewardsPool {
      * @return token amount
      */
     function _liquidityBufferAmount(uint256 _maxDeposits) internal view returns (uint256) {
-        if (liquidityBuffer < 1 ether) {
+        if (_maxDeposits == type(uint256).max) {
+            return 0;
+        } else if (liquidityBuffer < 1 ether) {
             return (_maxDeposits * liquidityBuffer) / 10000;
         } else {
             return liquidityBuffer;
@@ -477,6 +485,18 @@ contract StakingPool is StakingRewardsPool {
                 toWithdraw -= strategyCanWithdrawdraw;
             }
         }
+    }
+
+    /**
+     * @notice returns the sum of all fees
+     * @return sum of fees in basis points
+     **/
+    function _totalFeesBasisPoints() private returns (uint256) {
+        uint256 totalFees;
+        for (uint i = 0; i < fees.length; i++) {
+            totalFees += fees[i].basisPoints;
+        }
+        return totalFees;
     }
 
     /**

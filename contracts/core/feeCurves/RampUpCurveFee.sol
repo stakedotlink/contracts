@@ -10,7 +10,7 @@ import "@prb/math/contracts/PRBMathUD60x18.sol";
  * @title Ramp Up Curve
  * @notice Sets a fee curve that significantly ramps up when the percentage increases
  */
-contract RampUpCurve is Ownable {
+contract RampUpCurveFee is Ownable {
     using PRBMathUD60x18 for uint256;
 
     uint256 public rateConstantA;
@@ -66,7 +66,8 @@ contract RampUpCurve is Ownable {
     /**
      * @notice calculates the current percentage of rewards that lenders
      * receive and borrowers pay. Fee cap of 95% hardcoded.
-     * @dev Equation: y = (A*x/B)^C + x/D + E
+     * @dev When D > 1: y = (A*x/B)^C + x/D + E
+     * Else: y = (A*x/B)^C + E
      * @return current rate
      **/
     function currentRate(uint256 _percentage) external view returns (uint256) {

@@ -138,11 +138,6 @@ contract DelegatorPool is RewardsPoolController {
         require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
         require(balanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds balance");
 
-        uint256 toWithdraw = _amount;
-        if (_amount == type(uint256).max) {
-            toWithdraw = balanceOf(msg.sender);
-        }
-
         VestingSchedule memory vestingSchedule = vestingSchedules[msg.sender];
         if (
             vestingSchedule.startTimestamp != 0 &&
@@ -151,10 +146,10 @@ contract DelegatorPool is RewardsPoolController {
             delete vestingSchedules[msg.sender];
         }
 
-        _burn(msg.sender, toWithdraw);
-        allowanceToken.safeTransfer(msg.sender, toWithdraw);
+        _burn(msg.sender, _amount);
+        allowanceToken.safeTransfer(msg.sender, _amount);
 
-        emit AllowanceWithdrawn(msg.sender, toWithdraw);
+        emit AllowanceWithdrawn(msg.sender, _amount);
     }
 
     /**
