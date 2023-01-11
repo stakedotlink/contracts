@@ -67,17 +67,16 @@ describe('EthStakingStrategy', () => {
   beforeEach(async () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
 
-    let delegatorPool = (await deploy('DelegatorPoolMock', [
-      wETH.address,
-      0,
-      2000,
-    ])) as DelegatorPoolMock
+    let delegatorPool = (await deploy('DelegatorPoolMock', [wETH.address, 0])) as DelegatorPoolMock
 
     stakingPool = (await deployUpgradeable('StakingPool', [
       wETH.address,
       'LinkPool ETH',
       'lplETH',
-      [[ownersRewards, '1000']],
+      [
+        [ownersRewards, 1000],
+        [delegatorPool.address, 2000],
+      ],
       accounts[0],
       delegatorPool.address,
     ])) as StakingPool

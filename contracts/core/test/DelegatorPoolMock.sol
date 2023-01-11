@@ -9,16 +9,10 @@ contract DelegatorPoolMock {
     address public token;
     uint16 public index;
     uint256 public totalRewards;
-    uint256 public rate;
 
-    constructor(
-        address _token,
-        uint16 _index,
-        uint256 _rate
-    ) {
+    constructor(address _token, uint16 _index) {
         token = _token;
         index = _index;
-        rate = _rate;
     }
 
     function onTokenTransfer(
@@ -27,12 +21,5 @@ contract DelegatorPoolMock {
         bytes calldata
     ) external {
         totalRewards += _value;
-    }
-
-    function currentRate(address _token, uint16 _index) public view returns (uint256) {
-        if (_token != token || _index != index) {
-            return 0;
-        }
-        return rate;
     }
 }

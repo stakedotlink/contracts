@@ -13,7 +13,6 @@ import {
   StakingAllowance,
   DelegatorPool,
   RewardsPool,
-  RampUpCurve,
 } from '../../typechain-types'
 import { assert, expect } from 'chai'
 import { defaultAbiCoder } from 'ethers/lib/utils'
@@ -25,7 +24,6 @@ describe('DelegatorPool', () => {
   let delegatorPool: DelegatorPool
   let poolRouter: PoolRouterMock
   let rewardsPool: RewardsPool
-  let feeCurve: RampUpCurve
   let signers: Signer[]
   let accounts: string[]
 
@@ -45,13 +43,10 @@ describe('DelegatorPool', () => {
     await allowanceToken.transfer(accounts[1], toEther(2000))
     await allowanceToken.transfer(accounts[2], toEther(2000))
 
-    feeCurve = (await deploy('RampUpCurve', [10, 500, 6, 12, 20])) as RampUpCurve
-
     delegatorPool = (await deployUpgradeable('DelegatorPool', [
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
-      feeCurve.address,
     ])) as DelegatorPool
 
     poolRouter = (await deploy('PoolRouterMock', [
@@ -153,7 +148,6 @@ describe('DelegatorPool', () => {
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
-      feeCurve.address,
     ])) as DelegatorPool
 
     await allowanceToken.transferAndCall(pool.address, toEther(1000), '0x00')
@@ -164,199 +158,6 @@ describe('DelegatorPool', () => {
     )
 
     await expect(pool.withdrawAllowance(toEther(500))).to.be.reverted
-  })
-
-  // Rate set in tests (candidate for production)
-  // y\ =\ \left(10\frac{x}{500}\right)^{6}\ +\frac{x}{12}\ +\ 20
-  // https://www.desmos.com/calculator
-  describe('should be able to correctly calculate current rate', async () => {
-    it('0% borrowed (rate: 10%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0))
-      assert.equal(
-        (await delegatorPool.currentRate(accounts[0], 0)).toNumber(),
-        2000,
-        'current rate is wrong'
-      )
-    })
-
-    it('20% borrowed (rate: 21.67%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.2))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        2167,
-        'current rate is wrong'
-      )
-    })
-
-    it('50% borrowed (rate: 25.16%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.5))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        2516,
-        'current rate is wrong'
-      )
-    })
-
-    it('75% borrowed (rate: 37.64%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.75))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        3764,
-        'current rate is wrong'
-      )
-    })
-
-    it('90% borrowed (rate: 61.51%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.9))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        6151,
-        'current rate is wrong'
-      )
-    })
-
-    it('100% borrowed (rate: 92.33%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(1))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        9233,
-        'current rate is wrong'
-      )
-    })
-  })
-
-  describe('should be able to correctly calculate current rate with a linear rate increase', async () => {
-    beforeEach(async () => {
-      await feeCurve.setRateConstants(1, 2, 1, 0, 0)
-    })
-
-    it('0% borrowed (rate: 0%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0))
-      assert.equal(
-        (await delegatorPool.currentRate(accounts[0], 0)).toNumber(),
-        0,
-        'current rate is wrong'
-      )
-    })
-
-    it('20% borrowed (rate: 10%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.2))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        1000,
-        'current rate is wrong'
-      )
-    })
-
-    it('50% borrowed (rate: 25%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.5))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        2500,
-        'current rate is wrong'
-      )
-    })
-
-    it('75% borrowed (rate: 37.5%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.75))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        3750,
-        'current rate is wrong'
-      )
-    })
-
-    it('100% borrowed (rate: 50%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(1))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        5000,
-        'current rate is wrong'
-      )
-    })
-  })
-
-  describe('should be able to correctly calculate current rate with a small curve', async () => {
-    beforeEach(async () => {
-      await feeCurve.setRateConstants(1, 50, 2, 2, 20)
-    })
-
-    it('0% borrowed (rate: 20%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0))
-      assert.equal(
-        (await delegatorPool.currentRate(accounts[0], 0)).toNumber(),
-        2000,
-        'current rate is wrong'
-      )
-    })
-
-    it('20% borrowed (rate: 30.16%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.2))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        3016,
-        'current rate is wrong'
-      )
-    })
-
-    it('50% borrowed (rate: 46%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.5))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        4600,
-        'current rate is wrong'
-      )
-    })
-
-    it('75% borrowed (rate: 59.75%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.75))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        5975,
-        'current rate is wrong'
-      )
-    })
-
-    it('100% borrowed (rate: 74%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(1))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        7400,
-        'current rate is wrong'
-      )
-    })
-  })
-
-  describe('should be able to correctly calculate current rate with a fee cap', async () => {
-    beforeEach(async () => {
-      await feeCurve.setRateConstants(10, 500, 20, 12, 20)
-    })
-
-    it('20% borrowed (rate: 21.66%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.2))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        2166,
-        'current rate is wrong'
-      )
-    })
-
-    it('92% borrowed (rate: 95%)', async () => {
-      await poolRouter.setPoolUtilisation(toEther(0.92))
-      assert.equal(
-        (await delegatorPool.currentRate(token.address, 0)).toNumber(),
-        9500,
-        'current rate is wrong'
-      )
-    })
-  })
-
-  it('should be able to getCurrentRateAt with specified percentage', async () => {
-    assert.equal(
-      (await delegatorPool.currentRateAt(toEther(0.5))).toNumber(),
-      2516,
-      'current rate is wrong'
-    )
   })
 
   describe('token vesting', async () => {

@@ -129,19 +129,6 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the percentange utilisation of the pool
-     * @param _token pool token
-     * @param _index pool index
-     * @return percentage full (0-1e18)
-     */
-    function poolUtilisation(address _token, uint16 _index) external view returns (uint256) {
-        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
-        uint256 totalSupply = stakingPool.totalSupply();
-        uint256 maxDeposits = stakingPool.getMaxDeposits();
-        return (maxDeposits > totalSupply) ? (1e18 * totalSupply) / maxDeposits : 1 ether;
-    }
-
-    /**
      * @notice ERC677 implementation to receive a token stake
      * @param _sender of the token transfer
      * @param _value of the token transfer
@@ -170,7 +157,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _token,
         uint16 _index,
         uint256 _amount
-    ) external poolExists(_token, _index) {
+    ) external {
         IERC20Upgradeable(_token).safeTransferFrom(msg.sender, address(this), _amount);
         _stake(_token, _index, msg.sender, _amount);
     }
@@ -194,6 +181,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _index index of pool to stake in
      **/
     function stakeETH(uint16 _index) external payable poolExists(wrappedETH, _index) {
+        require(msg.value > 0, "Value must be > 0");
         IWrappedETH(wrappedETH).wrap{value: msg.value}();
         _stake(wrappedETH, _index, msg.sender, msg.value);
     }
@@ -212,36 +200,35 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice adds a new pool
-     * @param _token staking token
-     * @param _stakingPool token staking pool
+     * @param _stakingPool staking pool address
      **/
     function addPool(
-        address _token,
         address _stakingPool,
         PoolStatus _status,
         bool _reservedModeActive
     ) external onlyOwner {
-        poolCount++;
-        uint16 tokenPoolCount = poolCountByToken[_token];
-        Pool storage pool = pools[_poolKey(_token, tokenPoolCount)];
+        address token = IStakingPool(_stakingPool).token();
+        uint16 tokenPoolCount = poolCountByToken[token];
+        Pool storage pool = pools[_poolKey(token, tokenPoolCount)];
 
-        poolCountByToken[_token]++;
+        poolCountByToken[token]++;
+        poolCount++;
         if (tokenPoolCount == 0) {
-            tokens.push(_token);
+            tokens.push(token);
         }
 
-        pool.token = IERC20Upgradeable(_token);
+        pool.token = IERC20Upgradeable(token);
         pool.stakingPool = IStakingPool(_stakingPool);
         pool.status = _status;
         pool.reservedModeActive = _reservedModeActive;
 
-        if (IERC20Upgradeable(_token).allowance(address(this), _stakingPool) == 0) {
-            IERC20Upgradeable(_token).safeApprove(_stakingPool, type(uint256).max);
+        if (IERC20Upgradeable(token).allowance(address(this), _stakingPool) == 0) {
+            IERC20Upgradeable(token).safeApprove(_stakingPool, type(uint256).max);
         }
 
         IStakingPool(_stakingPool).setPoolIndex(tokenPoolCount);
 
-        emit AddPool(_token, _stakingPool);
+        emit AddPool(token, _stakingPool);
     }
 
     /**
@@ -254,6 +241,8 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         require(pool.stakingPool.totalSupply() == 0, "Can only remove a pool with no active stake");
 
         emit RemovePool(_token, address(pool.stakingPool));
+
+        IERC20Upgradeable(_token).safeApprove(address(pools[_poolKey(_token, _index)].stakingPool), 0);
 
         uint16 lastPoolIndex = poolCountByToken[_token] - 1;
 
@@ -363,7 +352,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _token,
         uint16 _index,
         bool _reservedModeActive
-    ) external onlyOwner {
+    ) external poolExists(_token, _index) onlyOwner {
         pools[_poolKey(_token, _index)].reservedModeActive = _reservedModeActive;
     }
 

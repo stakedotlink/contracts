@@ -49,10 +49,14 @@ abstract contract VaultControllerStrategy is Strategy {
     ) public onlyInitializing {
         __Strategy_init(_token, _stakingPool);
 
+        stakeController = IStaking(_stakeController);
+
         require(_isContract(_vaultImplementation), "Vault implementation address must belong to a contract");
         vaultImplementation = _vaultImplementation;
 
-        stakeController = IStaking(_stakeController);
+        (uint256 vaultMinDeposits, ) = getVaultDepositLimits();
+        require(_minDepositThreshold >= vaultMinDeposits, "Invalid min deposit threshold");
+
         minDepositThreshold = _minDepositThreshold;
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
@@ -256,6 +260,7 @@ abstract contract VaultControllerStrategy is Strategy {
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
     /**
@@ -278,6 +283,8 @@ abstract contract VaultControllerStrategy is Strategy {
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
         }
+
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
     /**
@@ -287,7 +294,7 @@ abstract contract VaultControllerStrategy is Strategy {
      **/
     function setMinDepositThreshold(uint256 _minDepositThreshold) external onlyOwner {
         (uint256 vaultMinDeposits, ) = getVaultDepositLimits();
-        require(_minDepositThreshold >= vaultMinDeposits, "Must be >= to minimum vault deposit limit");
+        require(_minDepositThreshold >= vaultMinDeposits, "Invalid min deposit threshold");
         minDepositThreshold = _minDepositThreshold;
         emit SetMinDepositThreshold(_minDepositThreshold);
     }
@@ -371,6 +378,18 @@ abstract contract VaultControllerStrategy is Strategy {
         } else {
             vault.upgradeToAndCall(vaultImplementation, _data);
         }
+    }
+
+    /**
+     * @notice returns the sum of all fees
+     * @return sum of fees in basis points
+     **/
+    function _totalFeesBasisPoints() private view returns (uint256) {
+        uint256 totalFees;
+        for (uint i = 0; i < fees.length; i++) {
+            totalFees += fees[i].basisPoints;
+        }
+        return totalFees;
     }
 
     /**

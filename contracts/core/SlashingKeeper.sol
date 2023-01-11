@@ -8,7 +8,7 @@ import "./interfaces/IStrategy.sol";
 
 /**
  * @title Slashing Keeper
- * @notice Updates strategy rewards if any losses have been inucurred
+ * @notice Updates strategy rewards if any losses have been incurred
  */
 contract SlashingKeeper is KeeperCompatibleInterface {
     IStakingPool public stakingPool;

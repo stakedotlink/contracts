@@ -22,8 +22,6 @@ contract PoolRouterMock {
 
     bool public reservedMode;
 
-    uint256 public poolUtilisationPercentage;
-
     constructor(
         address _allowanceToken,
         address _token,
@@ -58,14 +56,6 @@ contract PoolRouterMock {
 
     function getReservedMultiplier() external view returns (uint256) {
         return 10000;
-    }
-
-    function setPoolUtilisation(uint256 _poolUtilisationPercentage) external {
-        poolUtilisationPercentage = _poolUtilisationPercentage;
-    }
-
-    function poolUtilisation(address, uint16) external view returns (uint256) {
-        return poolUtilisationPercentage;
     }
 
     function onTokenTransfer(
