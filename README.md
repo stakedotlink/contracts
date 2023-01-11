@@ -1,13 +1,34 @@
-# Staking Contracts v2
+# stake.link Liquid Staking Protocol
 
-Provisions contracts for stake.link
+stake.link is a Liquid Staking protocol, built initially for the Chainlink Network with upcoming support for Ethereum
+2.0's beacon chain. stake.link consists of the highest-quality node operators and validators to ensure a seamless and
+secure way to put tokens to stake.
 
-**Table of contents**
+## Chainlink
 
-- [I. Setup Locally](#I-Setup-Locally)
-- [II. Running Locally](#II-Running-Locally)
-- [III. Deploying Contracts](#III-Deploying-Contracts)
-- [IV. Testing](#IV-Testing)
+By building on top of Chainlink Staking stake.link offers a way for users to stake their LINK across Chainlink Node
+Operators and in-future the wider community pool, receiving stLINK, the liquid staking receipt token that rebases
+rewards. stLINK is always backed by the amount of LINK staked 1:1.
+
+## Ethereum 2.0
+
+stake.link proposes a unique way of liquid staking within the Ethereum ecosystem, by allowing both reputable and
+self-hosted validators to participate in the same pool. By the way of governance, any self-hosted validator has the
+opportunity to raise a proposal to become a whitelisted reputable validator removing the need for the validator to
+provide collateral by being performant.
+
+Users who stake their ETH within the stake.link protocol will in return receive sdlETH, the liquid staking receipt token
+that is backed by staked ETH on the beacon chain 1:1. Users who stake ETH will see their tokens buffered, being
+distributed between validators who are either whitelisted or non-whitelisted, with all users receiving a blended reward
+rate between the two.
+
+## Technical Documentation
+
+For more detailed technical documentation:
+
+https://docs.stake.link/
+
+---
 
 ## I. Setup Locally
 
@@ -57,12 +78,6 @@ To deploy all contracts to the currently selected network, run:
 
 ```bash
 $ yarn deploy
-```
-
-To deploy only a subset of contracts (see [here](https://github.com/wighawag/hardhat-deploy#deploy-scripts-tags-and-dependencies) for details), run:
-
-```bash
-$ yarn deploy --tags <tags>
 ```
 
 ## IV. Testing
