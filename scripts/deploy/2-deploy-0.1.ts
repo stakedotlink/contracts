@@ -11,10 +11,6 @@ const DelegatorPool = {
   derivativeTokenName: 'Staked SDL', // SDL staking derivative token name
   derivativeTokenSymbol: 'stSDL', // SDL staking derivative token symbol
 }
-// Fee curve to be used by Delegator Pool
-const FlatFee = {
-  feeBasisPoints: 0, // constant percentage fee in basis points
-}
 
 async function main() {
   const lplToken = (await getContract('LPLToken')) as ERC677
@@ -28,14 +24,10 @@ async function main() {
   const lplMigration = await deploy('LPLMigration', [lplToken.address, sdlToken.address])
   console.log('LPLMigration deployed: ', lplMigration.address)
 
-  const flatFee = await deploy('FlatFee', [FlatFee.feeBasisPoints])
-  console.log('FeeCurve deployed: ', flatFee.address)
-
   const delegatorPool = await deployUpgradeable('DelegatorPool', [
     sdlToken.address,
     DelegatorPool.derivativeTokenName,
     DelegatorPool.derivativeTokenSymbol,
-    flatFee.address,
   ])
   console.log('DelegatorPool deployed: ', delegatorPool.address)
 
@@ -43,7 +35,6 @@ async function main() {
     {
       SDLToken: sdlToken.address,
       LPLMigration: lplMigration.address,
-      FlatFee: flatFee.address,
       DelegatorPool: delegatorPool.address,
     },
     { SDLToken: 'StakingAllowance' }
