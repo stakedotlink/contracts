@@ -48,7 +48,7 @@ async function main() {
   ])
   console.log('stLINK_DelegatorRewardsPool deployed: ', stLinkDelegatorRewardsPool.address)
 
-  let tx = await poolRouter.addPool(linkToken.address, stakingPool.address, 0, true)
+  let tx = await poolRouter.addPool(stakingPool.address, 0, true)
   await tx.wait()
 
   tx = await delegatorPool.addToken(stakingPool.address, stLinkDelegatorRewardsPool.address)
