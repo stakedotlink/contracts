@@ -22,11 +22,11 @@ const config: HardhatUserConfig = {
       accounts,
     },
     rinkeby: {
-      url: 'https://rinkeby.infura.io/v3/2efb9487f06e470a95766f009a5012ff',
+      url: '',
       accounts,
     },
     ropsten: {
-      url: 'https://ropsten.infura.io/v3/2efb9487f06e470a95766f009a5012ff',
+      url: '',
       accounts,
     },
     mainnet: {
@@ -35,7 +35,7 @@ const config: HardhatUserConfig = {
       timeout: 600000
     },
     testnet: {
-      url: 'https://staking-metrics-monitor-beta.staging.linkpool.io/dev',
+      url: '',
       accounts,
     },
     hardhat: {
