@@ -1,34 +1,34 @@
 {
   "LPLToken": {
-    "address": "0xC1B90A1258713d8a9e11dbD643F883f0466A7D13",
+    "address": "0xf608c5a697D9F07ad502bb854cD38C53D5443f9F",
     "artifact": "ERC677"
   },
   "LINKToken": {
-    "address": "0xd3273167006Ca974bFF0107F9f8686130A88b219",
+    "address": "0x63309E64Bc20704D6e4f411aAC3de5E0345F6d69",
     "artifact": "ERC677"
   },
   "PoolOwnersV1": {
-    "address": "0x15A49Eca833Dc98dB3E9b7C0A2EC35d96A438059",
+    "address": "0xBB102106c869CA23f3DdFe337018FD43C3b9FECD",
     "artifact": "PoolOwnersV1"
   },
   "LINK_OwnersRewardsPoolV1": {
-    "address": "0xD404b28aCa97F46097Cae9C9A376C690A2e3AEC8",
+    "address": "0xDF9F33f83526A110498a22434add350BE89FfAc7",
     "artifact": "OwnersRewardsPoolV1"
   },
   "PoolAllowanceV1": {
-    "address": "0x974a71a81a5107083414138839776C3D864671F0",
+    "address": "0x5055D666EF2381261F96FbaB229cf41d386155aa",
     "artifact": "PoolAllowanceV1"
   },
   "Multicall3": {
-    "address": "0xe82953bF339a330DCDe4Eb009caBe6d6f42a24E2",
+    "address": "0xA5F9D440028332C06338DC3289a9CBfA42264Bd8",
     "artifact": "Multicall3"
   },
   "SDLToken": {
-    "address": "0x3526b955e813b689e64d41EaB7d14a02b0397E0C",
+    "address": "0x9b057dB7e0e165a2B3FdF7d28B6A84F1c9338838",
     "artifact": "StakingAllowance"
   },
   "LPLMigration": {
-    "address": "0x7c13c99DD1a526E2bd25a7024421bA5f618675Be",
+    "address": "0x207E1EDcc7E01FEaE5D185B45A555c96F4446ACA",
     "artifact": "LPLMigration"
   },
   "FlatFee": {
@@ -36,23 +36,31 @@
     "artifact": "FlatFee"
   },
   "DelegatorPool": {
-    "address": "0x8B7F4801e684488e058f865931647d283228F4B7",
+    "address": "0xeB94f6f9A28DA605089d361cD0Abe580817C3516",
     "artifact": "DelegatorPool"
   },
   "PoolRouter": {
-    "address": "0x50Fa507a91d86B002D3290CcAA367200d47aaD2B",
+    "address": "0xE90240992c7E35a32Ba65803Ca47082C0fDd6108",
     "artifact": "PoolRouter"
   },
   "LINK_StakingPool": {
-    "address": "0x390A79DbDFBA9ABD8c9d5945732e99b74a0eB2D8",
+    "address": "0x3aD797AeDE5004aBDDCBA18Ff973A74c766893Cc",
     "artifact": "StakingPool"
   },
   "LINK_WrappedSDToken": {
-    "address": "0xAD1966fB3D97AEB4Ae3F405CC4C59DA1D3C40B47",
+    "address": "0xa42F451635b398bd5bc25B7c729C7b2058BdD4e8",
     "artifact": "WrappedSDToken"
   },
   "stLINK_DelegatorRewardsPool": {
-    "address": "0xeeCbd25479BD3118A435e9D9636Cf50C87cC2953",
+    "address": "0xe52aaaf97fC94641624F7eA9A202B74e4eb80C4A",
     "artifact": "RewardsPoolWSD"
+  },
+  "GovernanceController": {
+    "address": "0xbE20bC31F55e02FAB74323f325006B847304C98e",
+    "artifact": "GovernanceController"
+  },
+  "MerkleDistributor": {
+    "address": "0xFB8D714eEb9065e1352d43975b9B881074d2036E",
+    "artifact": "MerkleDistributor"
   }
 }
