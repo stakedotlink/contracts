@@ -9,6 +9,13 @@ interface ILiquidSDAdapter {
     function getTotalDeposits() external view returns (uint256);
 
     /**
+     * @notice returns the underlying amount that corresponds to the total deposits of this adapter's
+     * token in the index pool
+     * @return total underlying amount
+     */
+    function getTotalDepositsValue() external view returns (uint256);
+
+    /**
      * @notice returns the underlying amount that corresponds to an LSD amount
      * @param _lsdAmount amount of LSD tokens
      * @return underlying amount

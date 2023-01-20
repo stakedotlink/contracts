@@ -31,6 +31,15 @@ abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgr
     }
 
     /**
+     * @notice returns the underlying amount that corresponds to the total deposits of this adapter's
+     * token in the index pool
+     * @return total underlying amount
+     */
+    function getTotalDepositsValue() public view returns (uint256) {
+        return getUnderlyingByLSD(token.balanceOf(address(this)));
+    }
+
+    /**
      * @notice returns the underlying amount that corresponds to an LSD amount
      * @param _lsdAmount amount of LSD tokens
      * @return underlying amount
