@@ -11,17 +11,12 @@ import "./interfaces/IPoolRouter.sol";
 contract DelegatorPool is RewardsPoolController {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    struct VestingSchedule {
-        uint256 totalAmount;
-        uint64 startTimestamp;
-        uint64 durationSeconds;
-    }
-
     IERC20Upgradeable public allowanceToken;
     IPoolRouter public poolRouter;
-    address public feeCurve;
 
-    mapping(address => VestingSchedule) private vestingSchedules;
+    mapping(address => uint256) public lockedBalances;
+    mapping(address => uint256) public lockedApprovals;
+    uint public totalLocked;
 
     event AllowanceStaked(address indexed user, uint256 amount);
     event AllowanceWithdrawn(address indexed user, uint256 amount);
@@ -58,32 +53,12 @@ contract DelegatorPool is RewardsPoolController {
 
         if (msg.sender == address(allowanceToken)) {
             _stakeAllowance(_sender, _value);
-
-            if (_calldata.length > 1) {
-                (uint64 startTimestamp, uint64 durationSeconds) = abi.decode(_calldata, (uint64, uint64));
-                _setVestingSchedule(_sender, _value, startTimestamp, durationSeconds);
-            }
+            uint256 lockedAmount = abi.decode(_calldata, (uint256));
+            lockedBalances[_sender] += lockedAmount;
+            totalLocked += lockedAmount;
         } else {
             distributeToken(msg.sender);
         }
-    }
-
-    /**
-     * @notice returns an accounts balance minus the amount of tokens that are currently vesting
-     * @param _account account address
-     * @return balance accounts balance
-     */
-    function balanceOf(address _account) public view override returns (uint256) {
-        return super.balanceOf(_account) - (vestingSchedules[_account].totalAmount - _vestedTokens(_account));
-    }
-
-    /**
-     * @notice returns an accounts balance including any tokens that are currently vesting
-     * @param _account account address
-     * @return balance accounts balance
-     */
-    function totalBalanceOf(address _account) public view returns (uint256) {
-        return super.balanceOf(_account);
     }
 
     /**
@@ -99,8 +74,8 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice returns an account's staked amount for use by reward pools
-     * controlled by this contract. Overridden as the the staked amount needs to include any vesting tokens.
-     * @dev required by RewardsPoolController
+     * controlled by this contract. If rewards are redirected, it returns the sum of the amount
+     * staked by all of the accounts that have redirected rewards.
      * @param _account account address
      * @return account's staked amount
      */
@@ -109,19 +84,36 @@ contract DelegatorPool is RewardsPoolController {
     }
 
     /**
+     * @notice returns the total staked amount for use by reward pools
+     * controlled by this contract
+     * @return total staked amount
+     */
+    function totalStaked() external view override returns (uint256) {
+        bool excludeLocked = communityPools[msg.sender];
+        return excludeLocked ? totalSupply() : totalSupply() - totalLocked;
+    }
+
+    /**
+     * @notice returns the available balance of an account, taking into account any locked and approved tokens
+     */
+    function availableBalanceOf(address _account) public view returns (uint256) {
+        return balanceOf(_account) - lockedBalances[_account] + lockedApprovals[_account];
+    }
+
+    /**
      * @notice withdraws allowance tokens if no pools are in reserve mode
      * @param _amount amount to withdraw
      **/
-    function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
+    function withdrawAllowance(uint _amount) external updateRewards(msg.sender) {
         require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
-        require(balanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds balance");
+        require(availableBalanceOf(msg.sender) > _amount, "Withdrawal amount exceeds available balance");
 
-        VestingSchedule memory vestingSchedule = vestingSchedules[msg.sender];
-        if (
-            vestingSchedule.startTimestamp != 0 &&
-            block.timestamp > vestingSchedule.startTimestamp + vestingSchedule.durationSeconds
-        ) {
-            delete vestingSchedules[msg.sender];
+        uint unlockedBalance = balanceOf(msg.sender) - lockedBalances[msg.sender];
+        if (_amount > unlockedBalance) {
+            uint unlockedAmount =  _amount - unlockedBalance;
+            lockedApprovals[msg.sender] -= unlockedAmount;
+            lockedBalances[msg.sender] -= unlockedAmount;
+            totalLocked -= unlockedAmount;
         }
 
         _burn(msg.sender, _amount);
@@ -131,12 +123,13 @@ contract DelegatorPool is RewardsPoolController {
     }
 
     /**
-     * @notice returns the vesting schedule of a given account
-     * @param _account account address
-     * @return vestingSchedule account's vesting schedule
+     * @notice approves an amount of locked balances to be withdrawn
+     * @param _account account to approve locked balance
+     * @param _amount account to approve
      */
-    function getVestingSchedule(address _account) external view returns (VestingSchedule memory) {
-        return vestingSchedules[_account];
+    function setLockedApproval(address _account, uint _amount) external onlyOwner {
+        require(lockedBalances[_account] >= _amount, "Cannot approve more than locked balance");
+        lockedApprovals[_account] = _amount;
     }
 
     /**
@@ -156,54 +149,5 @@ contract DelegatorPool is RewardsPoolController {
     function _stakeAllowance(address _sender, uint256 _amount) private updateRewards(_sender) {
         _mint(_sender, _amount);
         emit AllowanceStaked(_sender, _amount);
-    }
-
-    /**
-     * @notice sets an account's derivative token vesting schedule. If a schedule already exists:
-     * - If the new start timestamp is after the previous schedule, the schedule is overwritten and any remaining vesting tokens go into the new schedule
-     * - Will release any tokens that have vested but not transferred
-     * - If the start timestamp is before the current schedule, the current schedule is used
-     * @param _account account address
-     * @param _amount amount of tokens to lock
-     * @param _startTimestamp vesting start time
-     * @param _durationSeconds vesting duration
-     */
-    function _setVestingSchedule(
-        address _account,
-        uint256 _amount,
-        uint64 _startTimestamp,
-        uint64 _durationSeconds
-    ) internal {
-        require(_startTimestamp > 0, "Start timestamp cannot be 0");
-        require(_durationSeconds > 0, "Seconds duration cannot be 0");
-
-        VestingSchedule storage vestingSchedule = vestingSchedules[_account];
-        if (_startTimestamp > vestingSchedule.startTimestamp) {
-            if (vestingSchedule.startTimestamp != 0) {
-                vestingSchedule.totalAmount -= _vestedTokens(_account);
-            }
-            vestingSchedule.startTimestamp = _startTimestamp;
-            vestingSchedule.durationSeconds = _durationSeconds;
-        }
-        vestingSchedule.totalAmount += _amount;
-    }
-
-    /**
-     * @notice Returns the amount of tokens that are currently vested for an account
-     * @param _account account address
-     */
-    function _vestedTokens(address _account) internal view returns (uint256) {
-        VestingSchedule memory vestingSchedule = vestingSchedules[_account];
-        uint256 totalAmount = vestingSchedule.totalAmount;
-        uint64 startTimestamp = vestingSchedule.startTimestamp;
-        uint64 timestamp = uint64(block.timestamp);
-
-        if (totalAmount == 0 || timestamp < startTimestamp) {
-            return 0;
-        } else if (timestamp > startTimestamp + vestingSchedule.durationSeconds) {
-            return totalAmount;
-        } else {
-            return ((totalAmount * (timestamp - startTimestamp)) / vestingSchedule.durationSeconds);
-        }
     }
 }

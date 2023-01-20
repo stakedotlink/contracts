@@ -17,6 +17,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     mapping(address => IRewardsPool) public tokenPools;
+    mapping(address => bool) public communityPools;
     address[] private tokens;
 
     mapping(address => address) public rewardRedirects; // deprecated
