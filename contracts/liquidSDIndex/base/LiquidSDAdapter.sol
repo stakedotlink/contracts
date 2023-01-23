@@ -23,20 +23,19 @@ abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgr
     }
 
     /**
-     * @notice returns the total amount of deposits of this adapter's token in the index pool
+     * @notice returns the total underlying value of deposits in this adapter
      * @return total deposits amount
      */
     function getTotalDeposits() public view returns (uint256) {
-        return token.balanceOf(address(this));
+        return getUnderlyingByLSD(token.balanceOf(address(this)));
     }
 
     /**
-     * @notice returns the underlying amount that corresponds to the total deposits of this adapter's
-     * token in the index pool
+     * @notice returns the total amount of deposits in this adapter
      * @return total underlying amount
      */
-    function getTotalDepositsValue() public view returns (uint256) {
-        return getUnderlyingByLSD(token.balanceOf(address(this)));
+    function getTotalDepositsLSD() public view returns (uint256) {
+        return token.balanceOf(address(this));
     }
 
     /**
