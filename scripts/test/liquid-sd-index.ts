@@ -66,6 +66,17 @@ async function main() {
   ])) as LiquidSDIndexPool
   console.log('LiquidSDIndexPool deployed: ', indexPool.address)
 
+  const wsdToken = await deploy('WrappedSDToken', [indexPool.address, 'Wrapped iETH', 'wiETH'])
+  console.log('iETH_WrappedSDToken token deployed: ', wsdToken.address)
+
+  const iETHDelegatorRewardsPool = await deploy('RewardsPoolWSD', [
+    delegatorPool.address,
+    indexPool.address,
+    wsdToken.address,
+  ])
+  await delegatorPool.addToken(indexPool.address, iETHDelegatorRewardsPool.address)
+  console.log('iETH_DelegatorRewardsPool deployed: ', iETHDelegatorRewardsPool.address)
+
   const adapterOne = (await deployUpgradeable('LidoSTETHAdapter', [
     stakingPoolOne.address,
     indexPool.address,
@@ -77,6 +88,9 @@ async function main() {
     indexPool.address,
   ])) as LidoSTETHAdapter
   console.log('LidoSTETHAdapter_tETH deployed: ', adapterTwo.address)
+
+  await indexPool.addFee(delegatorPool.address, 25)
+  console.log('SDL Fee Added')
 
   await indexPool.addLSDToken(stakingPoolOne.address, adapterOne.address, [10000])
   await indexPool.addLSDToken(stakingPoolTwo.address, adapterTwo.address, [5000, 5000])
@@ -99,6 +113,8 @@ async function main() {
       ETH_StakingPool_1: stakingPoolOne.address,
       ETH_StakingPool_2: stakingPoolTwo.address,
       LiquidSDIndexPool: indexPool.address,
+      iETH_WrappedSDToken: wsdToken.address,
+      iETH_DelegatorRewardsPool: iETHDelegatorRewardsPool.address,
       LidoSTETHAdapter_oETH: adapterOne.address,
       LidoSTETHAdapter_tETH: adapterTwo.address,
     },
@@ -107,6 +123,8 @@ async function main() {
       SDLToken: 'StakingAllowance',
       ETH_StakingPool_1: 'StakingPool',
       ETH_StakingPool_2: 'StakingPool',
+      iETH_WrappedSDToken: 'WrappedSDToken',
+      iETH_DelegatorRewardsPool: 'RewardsPoolWSD',
       LidoSTETHAdapter_oETH: 'LidoSTETHAdapter',
       LidoSTETHAdapter_tETH: 'LidoSTETHAdapter',
     }
