@@ -7,7 +7,7 @@ import "../base/LiquidSDAdapter.sol";
  * @title Lido stETH Adapter
  * @notice Adapter for Lido's stETH
  */
-abstract contract LidoSTETHAdapter is LiquidSDAdapter {
+contract LidoSTETHAdapter is LiquidSDAdapter {
     function initialize(address _token, address _indexPool) public initializer {
         __LiquidSDAdapter_init(_token, _indexPool);
     }
@@ -17,6 +17,6 @@ abstract contract LidoSTETHAdapter is LiquidSDAdapter {
      * @return exchange rate
      */
     function getExchangeRate() public view override returns (uint256) {
-        return 1;
+        return 1 ether;
     }
 }

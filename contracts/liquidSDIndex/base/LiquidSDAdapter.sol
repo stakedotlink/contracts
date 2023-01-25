@@ -44,7 +44,7 @@ abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgr
      * @return underlying amount
      */
     function getUnderlyingByLSD(uint256 _lsdAmount) public view returns (uint256) {
-        return (_lsdAmount * getExchangeRate()) / 10e18;
+        return (_lsdAmount * getExchangeRate()) / 1e18;
     }
 
     /**
@@ -53,7 +53,7 @@ abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgr
      * @return LSD amount
      */
     function getLSDByUnderlying(uint256 _underlyingAmount) public view returns (uint256) {
-        return (_underlyingAmount * 10e18) / getExchangeRate();
+        return (_underlyingAmount * 1e18) / getExchangeRate();
     }
 
     /**

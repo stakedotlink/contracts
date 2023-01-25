@@ -8,7 +8,7 @@ import "../interfaces/IRocketPoolRETH.sol";
  * @title RocketPool rETH Adapter
  * @notice Adapter for RocketPool's rETH
  */
-abstract contract RocketPoolRETHAdapter is LiquidSDAdapter {
+contract RocketPoolRETHAdapter is LiquidSDAdapter {
     function initialize(address _token, address _indexPool) public initializer {
         __LiquidSDAdapter_init(_token, _indexPool);
     }

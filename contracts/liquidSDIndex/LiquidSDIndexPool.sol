@@ -39,10 +39,12 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     function initialize(
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
-        uint256 _compositionTolerance
+        uint256 _compositionTolerance,
+        uint256 _compositionEnforcementThreshold
     ) public initializer {
         __StakingRewardsPool_init(address(0), _derivativeTokenName, _derivativeTokenSymbol);
         compositionTolerance = _compositionTolerance;
+        compositionEnforcementThreshold = _compositionEnforcementThreshold;
     }
 
     modifier tokenIsSupported(address _lsdToken) {
@@ -66,6 +68,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         return fees;
     }
 
+    /**
+     * @notice returns a list of basis point composition targets for each lsd
+     * @return list of composition targets
+     */
     function getCompositionTargets() external view returns (uint256[] memory) {
         uint256[] memory targets = new uint256[](lsdTokens.length);
         for (uint256 i = 0; i < lsdTokens.length; i++) {
@@ -74,11 +80,15 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         return targets;
     }
 
+    /**
+     * @notice returns the current basis point composition of deposits
+     * @return list of compositions for each lsd
+     */
     function getComposition() public view returns (uint256[] memory) {
         uint256[] memory depositAmounts = getDepositAmounts();
         uint256 totalDepositAmounts;
 
-        for (uint256 i = 0; i < depositAmounts[i]; i++) {
+        for (uint256 i = 0; i < depositAmounts.length; i++) {
             totalDepositAmounts += depositAmounts[i];
         }
 
@@ -91,6 +101,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         return composition;
     }
 
+    /**
+     * @notice returns the amount of deposits for each lsd
+     * @return list of deposit amounts
+     */
     function getDepositAmounts() public view returns (uint256[] memory) {
         uint256[] memory depositAmounts = new uint256[](lsdTokens.length);
 
@@ -107,30 +121,28 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      **/
     function getDepositRoom(address _lsdToken) public view tokenIsSupported(_lsdToken) returns (uint256) {
         uint256 depositLimit = type(uint256).max;
-        uint256 depositsTotal;
-        uint256 lsdTokenDeposits;
 
         for (uint256 i = 0; i < lsdTokens.length; i++) {
             address lsdToken = lsdTokens[i];
 
-            uint256 deposits = lsdAdapters[lsdToken].getTotalDeposits();
-            depositsTotal += deposits;
-
             if (lsdToken == _lsdToken) {
-                lsdTokenDeposits = deposits;
                 continue;
             }
 
-            uint256 minComposition = compositionTargets[lsdToken] / 2;
+            uint256 compositionTarget = compositionTargets[lsdToken];
+            uint256 deposits = lsdAdapters[lsdToken].getTotalDeposits();
+
+            uint256 minComposition = (compositionTarget * compositionTolerance) / 10000;
             depositLimit = MathUpgradeable.min(deposits / minComposition, depositLimit);
         }
 
-        uint256 maxComposition = compositionTargets[_lsdToken] * 2;
-        uint256 currentComposition = (lsdTokenDeposits * 10000) / depositsTotal;
-        if (currentComposition < maxComposition) {
-            depositLimit = MathUpgradeable.min((lsdTokenDeposits * maxComposition) / currentComposition, depositLimit);
-        } else {
-            depositLimit = 0;
+        uint256 compositionTarget = compositionTargets[_lsdToken];
+        uint256 deposits = lsdAdapters[_lsdToken].getTotalDeposits();
+        uint256 minThreshold = (compositionEnforcementThreshold * compositionTarget) / 10000;
+
+        if (deposits < minThreshold) {
+            uint256 thresholdDiff = minThreshold - deposits;
+            depositLimit = MathUpgradeable.max(thresholdDiff, depositLimit);
         }
 
         return depositLimit;
@@ -196,6 +208,9 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         require(totalComposition == 10000, "Composition target must sum to 100%");
     }
 
+    /**
+     * @notice updates and distributes rewards based on balance changes in adapters
+     **/
     function updateRewards() public {
         uint256 currentTotalDeposits;
 
