@@ -1,6 +1,6 @@
 import { updateDeployments, deployUpgradeable, deploy, getContract } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
-import { DelegatorPool, LiquidSDIndexPool } from "../../typechain-types";
+import { DelegatorPool, LiquidSDIndexPool } from '../../typechain-types'
 
 // ETH LSD Index
 const ETH_LSDIndexPool = {
@@ -8,7 +8,7 @@ const ETH_LSDIndexPool = {
   symbol: 'iETH', // wrapped staking derivative token symbol
   compositionTolerance: 5000, // pool composition tolerance
   compositionEnforcementThreshold: 10000, // ETH intervals in which composition is enforced
-  fee: 25 // delegator pool fee basis points
+  fee: 25, // delegator pool fee basis points
 }
 // Wrapped iETH
 const iETH_WrappedSDToken = {
@@ -19,12 +19,12 @@ const iETH_WrappedSDToken = {
 async function main() {
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
 
-  const indexPool = await deployUpgradeable('LiquidSDIndexPool', [
+  const indexPool = (await deployUpgradeable('LiquidSDIndexPool', [
     ETH_LSDIndexPool.name,
     ETH_LSDIndexPool.symbol,
     ETH_LSDIndexPool.compositionTolerance,
     toEther(ETH_LSDIndexPool.compositionEnforcementThreshold),
-  ]) as LiquidSDIndexPool
+  ])) as LiquidSDIndexPool
   console.log('LiquidSDIndexPool deployed: ', indexPool.address)
 
   await indexPool.addFee(delegatorPool.address, ETH_LSDIndexPool.fee)

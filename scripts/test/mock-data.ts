@@ -1,10 +1,16 @@
 // @ts-nocheck
 
 import { fromEther, getAccounts, toEther } from '../utils/helpers'
-import { getContract, deployUpgradeable, deploy, updateDeployments } from "../utils/deployment";
+import { getContract, deployUpgradeable, deploy, updateDeployments } from '../utils/deployment'
 import { defaultAbiCoder } from 'ethers/lib/utils'
-import { ERC677, LidoSTETHAdapter, LiquidSDIndexPool, StakingPool, StrategyMock } from "../../typechain-types";
-import { padBytes } from "../../test/utils/helpers";
+import {
+  ERC677,
+  LidoSTETHAdapter,
+  LiquidSDIndexPool,
+  StakingPool,
+  StrategyMock,
+} from '../../typechain-types'
+import { padBytes } from '../../test/utils/helpers'
 
 /*
 Accounts:
@@ -183,7 +189,7 @@ async function main() {
 
   updateDeployments({
     LidoETH: stakingPoolOne.address,
-    RocketPoolETH: stakingPoolTwo.address
+    RocketPoolETH: stakingPoolTwo.address,
   })
 }
 
