@@ -12,7 +12,6 @@
     "deploy-operator-vcs": "ts-node --files scripts/linkStrategies/deploy-operator-vcs.ts",
     "deploy-community-vcs": "ts-node --files scripts/linkStrategies/deploy-community-vcs.ts",
     "mint-initial-sdl": "ts-node --files scripts/other/mint-initial-sdl.ts",
-    "test-liquid-sd-index": "ts-node --files scripts/test/liquid-sd-index.ts",
     "luv-deyta": "npx hardhat run scripts/test/luv-deyta.ts",
     "mock-data": "ts-node --files scripts/test/mock-data.ts",
     "start-mock-data": "node scripts/test/start-mock-data.js",
