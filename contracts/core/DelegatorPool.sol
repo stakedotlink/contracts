@@ -11,11 +11,21 @@ import "./interfaces/IPoolRouter.sol";
 contract DelegatorPool is RewardsPoolController {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    struct VestingSchedule {
+        uint256 totalAmount;
+        uint64 startTimestamp;
+        uint64 durationSeconds;
+    }
+
     IERC20Upgradeable public allowanceToken;
     IPoolRouter public poolRouter;
+    address public feeCurve; // unused
+
+    mapping(address => VestingSchedule) private vestingSchedules; // unused
 
     mapping(address => uint256) public lockedBalances;
     mapping(address => uint256) public lockedApprovals;
+    mapping(address => bool) public communityPools;
     uint public totalLocked;
 
     event AllowanceStaked(address indexed user, uint256 amount);
@@ -33,6 +43,16 @@ contract DelegatorPool is RewardsPoolController {
     ) public initializer {
         __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
         allowanceToken = IERC20Upgradeable(_allowanceToken);
+    }
+
+    function initializeV2(address[] calldata _vestingAddresses) public reinitializer(2) {
+        for (uint i = 0; i < _vestingAddresses.length; i++) {
+            address account = _vestingAddresses[i];
+            VestingSchedule memory vestingSchedule = vestingSchedules[account];
+            lockedBalances[account] += vestingSchedule.totalAmount;
+            totalLocked += vestingSchedule.totalAmount;
+            delete vestingSchedules[account];
+        }
     }
 
     /**
@@ -53,9 +73,11 @@ contract DelegatorPool is RewardsPoolController {
 
         if (msg.sender == address(allowanceToken)) {
             _stakeAllowance(_sender, _value);
-            uint256 lockedAmount = abi.decode(_calldata, (uint256));
-            lockedBalances[_sender] += lockedAmount;
-            totalLocked += lockedAmount;
+            if (_calldata.length > 1) {
+                uint256 lockedAmount = abi.decode(_calldata, (uint256));
+                lockedBalances[_sender] += lockedAmount;
+                totalLocked += lockedAmount;
+            }
         } else {
             distributeToken(msg.sender);
         }
@@ -106,11 +128,11 @@ contract DelegatorPool is RewardsPoolController {
      **/
     function withdrawAllowance(uint _amount) external updateRewards(msg.sender) {
         require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
-        require(availableBalanceOf(msg.sender) > _amount, "Withdrawal amount exceeds available balance");
+        require(availableBalanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds available balance");
 
         uint unlockedBalance = balanceOf(msg.sender) - lockedBalances[msg.sender];
         if (_amount > unlockedBalance) {
-            uint unlockedAmount =  _amount - unlockedBalance;
+            uint unlockedAmount = _amount - unlockedBalance;
             lockedApprovals[msg.sender] -= unlockedAmount;
             lockedBalances[msg.sender] -= unlockedAmount;
             totalLocked -= unlockedAmount;
@@ -139,6 +161,16 @@ contract DelegatorPool is RewardsPoolController {
     function setPoolRouter(address _poolRouter) external onlyOwner {
         require(address(poolRouter) == address(0), "pool router already set");
         poolRouter = IPoolRouter(_poolRouter);
+    }
+
+    /**
+     * @notice sets whether a given token pool is a community pool
+     * @param _pool address of token pool
+     * @param _isCommunityPool is community pool
+     */
+    function setCommunityPool(address _pool, bool _isCommunityPool) external onlyOwner {
+        require(address(tokenPools[_pool]) != address(0), "Token pool must exist");
+        communityPools[_pool] = _isCommunityPool;
     }
 
     /**

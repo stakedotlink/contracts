@@ -129,7 +129,7 @@ describe('DelegatorPool', () => {
       .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
 
     await expect(delegatorPool.withdrawAllowance(toEther(1001))).to.be.revertedWith(
-      'Withdrawal amount exceeds balance'
+      'Withdrawal amount exceeds available balance'
     )
   })
 
@@ -139,7 +139,7 @@ describe('DelegatorPool', () => {
       .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
 
     await expect(delegatorPool.withdrawAllowance(toEther(1000))).to.be.revertedWith(
-      'Withdrawal amount exceeds balance'
+      'Withdrawal amount exceeds available balance'
     )
   })
 
@@ -160,7 +160,7 @@ describe('DelegatorPool', () => {
     await expect(pool.withdrawAllowance(toEther(500))).to.be.reverted
   })
 
-  describe('token vesting', async () => {
+  describe('token lockup', async () => {
     let cliff: number
     let duration: number
 
