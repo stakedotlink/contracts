@@ -39,19 +39,20 @@ contract DelegatorPool is RewardsPoolController {
     function initialize(
         address _allowanceToken,
         string memory _dTokenName,
-        string memory _dTokenSymbol
-    ) public initializer {
-        __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
-        allowanceToken = IERC20Upgradeable(_allowanceToken);
-    }
-
-    function initializeV2(address[] calldata _vestingAddresses) public reinitializer(2) {
-        for (uint i = 0; i < _vestingAddresses.length; i++) {
-            address account = _vestingAddresses[i];
-            VestingSchedule memory vestingSchedule = vestingSchedules[account];
-            lockedBalances[account] += vestingSchedule.totalAmount;
-            totalLocked += vestingSchedule.totalAmount;
-            delete vestingSchedules[account];
+        string memory _dTokenSymbol,
+        address[] calldata _vestingAddresses
+    ) public reinitializer(2) {
+        if (address(allowanceToken) == address(0)) {
+            __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
+            allowanceToken = IERC20Upgradeable(_allowanceToken);
+        } else {
+            for (uint i = 0; i < _vestingAddresses.length; i++) {
+                address account = _vestingAddresses[i];
+                VestingSchedule memory vestingSchedule = vestingSchedules[account];
+                lockedBalances[account] += vestingSchedule.totalAmount;
+                totalLocked += vestingSchedule.totalAmount;
+                delete vestingSchedules[account];
+            }
         }
     }
 
