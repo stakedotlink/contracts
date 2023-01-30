@@ -104,7 +104,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     /**
      * @notice returns the deposit room for an lsd token
      * @param _lsdToken address of token
-     * @param deposit room for lsd
+     * @return deposit room for lsd
      **/
     function getDepositRoom(address _lsdToken) public view tokenIsSupported(_lsdToken) returns (uint256) {
         uint256 depositLimit = type(uint256).max;
@@ -300,6 +300,43 @@ contract LiquidSDIndexPool is StakingRewardsPool {
 
         lsdTokens.push(_lsdToken);
         lsdAdapters[_lsdToken] = ILiquidSDAdapter(_lsdAdapter);
+
+        uint256 totalComposition;
+        for (uint256 i = 0; i < _compositionTargets.length; i++) {
+            compositionTargets[lsdTokens[i]] = _compositionTargets[i];
+            totalComposition += _compositionTargets[i];
+        }
+
+        require(totalComposition == 10000, "Composition targets must sum to 100%");
+    }
+
+    /**
+     * @notice removes a liquid staking derivative token
+     * @param _lsdToken address of token
+     * @param _compositionTargets basis point composition targets for each remaining lsd
+     **/
+    function removeLSDToken(address _lsdToken, uint256[] calldata _compositionTargets)
+        external
+        onlyOwner
+        tokenIsSupported(_lsdToken)
+    {
+        require(_compositionTargets.length == lsdTokens.length - 1, "Invalid composition targets length");
+        require(lsdAdapters[_lsdToken].getTotalDeposits() < 1 ether, "Cannot remove adapter that contains deposits");
+
+        uint256 index;
+        for (uint256 i = 0; i < lsdTokens.length; i++) {
+            if (lsdTokens[i] == _lsdToken) {
+                index = i;
+                break;
+            }
+        }
+
+        for (uint256 i = index; i < lsdTokens.length - 1; i++) {
+            lsdTokens[i] = lsdTokens[i + 1];
+        }
+
+        lsdTokens.pop();
+        delete lsdAdapters[_lsdToken];
 
         uint256 totalComposition;
         for (uint256 i = 0; i < _compositionTargets.length; i++) {
