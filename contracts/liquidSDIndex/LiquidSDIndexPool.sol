@@ -88,7 +88,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @notice returns the current basis point composition of deposits
      * @return list of compositions for each lsd
      */
-    function getComposition() public view returns (uint256[] memory) {
+    function getComposition() external view returns (uint256[] memory) {
         uint256 depositsTotal = _totalDeposits();
 
         uint256[] memory composition = new uint256[](lsdTokens.length);
@@ -109,18 +109,20 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         uint256 depositLimit = type(uint256).max;
         uint256 depositsTotal;
 
+        if (compositionTargets[_lsdToken] == 0) return 0;
+
         for (uint256 i = 0; i < lsdTokens.length; i++) {
             address lsdToken = lsdTokens[i];
 
             uint256 deposits = lsdAdapters[lsdToken].getTotalDeposits();
             depositsTotal += deposits;
 
-            if (lsdToken == _lsdToken) {
-                continue;
-            }
+            if (lsdToken == _lsdToken) continue;
+
+            uint256 compositionTarget = compositionTargets[lsdToken];
+            if (compositionTarget == 0) continue;
 
             // check how much can be deposited before the decrease in composition percentage exceeds the composition tolerance
-            uint256 compositionTarget = compositionTargets[lsdToken];
             uint256 minComposition = compositionTarget - (compositionTarget * compositionTolerance) / 10000;
             depositLimit = MathUpgradeable.min((deposits * 10000) / minComposition, depositLimit);
         }
@@ -165,6 +167,45 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     }
 
     /**
+     * @notice returns the amount of each lsd a withdrawer will receive for an amount of index tokens
+     * @dev sender receives an amount of each lsd proportional to the size of the deposit gap
+     * between each lsd's pre-withdrawal composition and its post-withdrawal target composition
+     * (as a result, the current composition will move closer to the target after each withdrawal)
+     * @param _amount amount to withdraw
+     **/
+    function getWithdrawalAmounts(uint256 _amount) public view returns (uint256[] memory) {
+        uint256[] memory withdrawalAmounts = new uint256[](lsdTokens.length);
+        uint256[] memory targetDepositDiffs = new uint256[](lsdTokens.length);
+        uint256 newDepositsTotal = _totalDeposits() - _amount;
+        uint256 totalTargetDepositDiffs;
+
+        for (uint256 i = 0; i < targetDepositDiffs.length; i++) {
+            uint256 newTargetDeposits = (newDepositsTotal * compositionTargets[lsdTokens[i]]) / 10000;
+            uint256 currentDeposits = lsdAdapters[lsdTokens[i]].getTotalDeposits();
+            int256 targetDepositDiff = int256(currentDeposits) - int256(newTargetDeposits);
+
+            if (targetDepositDiff > 0) {
+                targetDepositDiffs[i] = uint256(targetDepositDiff);
+                totalTargetDepositDiffs += uint256(targetDepositDiff);
+            }
+        }
+
+        for (uint256 i = 0; i < targetDepositDiffs.length; i++) {
+            uint256 targetDepositDiff = targetDepositDiffs[i];
+
+            if (targetDepositDiff > 0) {
+                ILiquidSDAdapter lsdAdapter = lsdAdapters[lsdTokens[i]];
+                uint256 withdrawalAmount = lsdAdapter.getLSDByUnderlying(
+                    (_amount * ((targetDepositDiff * 10000) / totalTargetDepositDiffs)) / 10000
+                );
+                withdrawalAmounts[i] = withdrawalAmount;
+            }
+        }
+
+        return withdrawalAmounts;
+    }
+
+    /**
      * @notice withdraws lsd tokens and burns lsd index tokens
      * @param _amount amount to withdraw
      **/
@@ -172,14 +213,13 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         _burn(msg.sender, _amount);
         totalDeposits -= _amount;
 
-        uint256 depositsTotal = _totalDeposits();
+        uint256[] memory withdrawalAmounts = getWithdrawalAmounts(_amount);
 
-        for (uint256 i = 0; i < lsdTokens.length; i++) {
-            ILiquidSDAdapter lsdAdapter = lsdAdapters[lsdTokens[i]];
-            uint256 deposits = lsdAdapter.getTotalDeposits();
-            uint256 composition = (deposits * 1e18) / depositsTotal;
-            uint256 lsdAmount = lsdAdapter.getLSDByUnderlying((_amount * composition) / 1e18);
-            IERC20Upgradeable(lsdTokens[i]).safeTransferFrom(address(lsdAdapter), msg.sender, lsdAmount);
+        for (uint256 i = 0; i < withdrawalAmounts.length; i++) {
+            uint256 amount = withdrawalAmounts[i];
+            if (amount > 0) {
+                IERC20Upgradeable(lsdTokens[i]).safeTransferFrom(address(lsdAdapters[lsdTokens[i]]), msg.sender, amount);
+            }
         }
     }
 
@@ -205,7 +245,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     /**
      * @notice updates and distributes rewards based on balance changes in adapters
      **/
-    function updateRewards() public {
+    function updateRewards() external {
         uint256 currentTotalDeposits;
 
         for (uint256 i = 0; i < lsdTokens.length; i++) {
@@ -265,7 +305,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             totalComposition += _compositionTargets[i];
         }
 
-        require(totalComposition == 10000, "Composition target must sum to 100%");
+        require(totalComposition == 10000, "Composition targets must sum to 100%");
     }
 
     /**

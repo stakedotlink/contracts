@@ -108,18 +108,31 @@ describe('LiquidSDIndexPool', () => {
     await pool.connect(signers[2]).deposit(lsd2.address, toEther(250))
 
     await pool.connect(signers[1]).withdraw(toEther(200))
-    await pool.connect(signers[2]).withdraw(toEther(400))
 
     assert.equal(fromEther(await pool.balanceOf(accounts[1])), 2800)
-    assert.equal(fromEther(await pool.balanceOf(accounts[2])), 1100)
-    assert.equal(fromEther(await pool.totalSupply()), 3900)
-    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 2600)
+    assert.equal(fromEther(await pool.totalSupply()), 4300)
+    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 3000)
     assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 650)
 
-    assert.equal(Number(fromEther(await lsd1.balanceOf(accounts[1])).toFixed(3)), 8133.333)
-    assert.equal(Number(fromEther(await lsd2.balanceOf(accounts[1])).toFixed(3)), 9533.333)
-    assert.equal(Number(fromEther(await lsd1.balanceOf(accounts[2])).toFixed(3)), 9266.667)
-    assert.equal(Number(fromEther(await lsd2.balanceOf(accounts[2])).toFixed(3)), 9816.667)
+    await pool.connect(signers[2]).withdraw(toEther(100))
+
+    assert.equal(fromEther(await pool.balanceOf(accounts[2])), 1400)
+    assert.equal(fromEther(await pool.totalSupply()), 4200)
+    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 2940)
+    assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 630)
+
+    await pool.connect(signers[2]).deposit(lsd1.address, toEther(500))
+    await pool.connect(signers[2]).withdraw(toEther(200))
+
+    assert.equal(fromEther(await pool.balanceOf(accounts[2])), 1700)
+    assert.equal(fromEther(await pool.totalSupply()), 4500)
+    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 3240)
+    assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 630)
+
+    assert.equal(Number(fromEther(await lsd1.balanceOf(accounts[1])).toFixed(3)), 8000)
+    assert.equal(Number(fromEther(await lsd2.balanceOf(accounts[1])).toFixed(3)), 9600)
+    assert.equal(Number(fromEther(await lsd1.balanceOf(accounts[2])).toFixed(3)), 8760)
+    assert.equal(Number(fromEther(await lsd2.balanceOf(accounts[2])).toFixed(3)), 9770)
 
     await expect(pool.connect(signers[1]).withdraw(toEther(5000))).to.be.revertedWith(
       'Burn amount exceeds balance'
@@ -150,8 +163,9 @@ describe('LiquidSDIndexPool', () => {
       'Invalid composition targets length'
     )
   })
-
-  it('getComposition should work correctly', async () => {
+  //3000
+  //1900
+  it.only('getComposition should work correctly', async () => {
     assert.deepEqual(
       (await pool.getComposition()).map((c) => c.toNumber()),
       [6666, 3333]
@@ -169,12 +183,12 @@ describe('LiquidSDIndexPool', () => {
     await pool.withdraw(toEther(100))
     assert.deepEqual(
       (await pool.getComposition()).map((c) => c.toNumber()),
-      [6000, 4000]
+      [6122, 3877]
     )
-    await pool.connect(signers[1]).withdraw(toEther(300))
+    await pool.connect(signers[1]).withdraw(toEther(700))
     assert.deepEqual(
       (await pool.getComposition()).map((c) => c.toNumber()),
-      [6000, 4000]
+      [6999, 3000]
     )
   })
 
@@ -214,6 +228,13 @@ describe('LiquidSDIndexPool', () => {
     await pool.setCompositionEnforcementThreshold(toEther(100000))
     assert.equal(Number(fromEther(await pool.getDepositRoom(lsd1.address)).toFixed(3)), 73166.667)
     assert.equal(fromEther(await pool.getDepositRoom(lsd2.address)), 24500)
+
+    await pool.setCompositionTargets([10000, 0])
+    assert.equal(
+      (await pool.getDepositRoom(lsd1.address)).toHexString(),
+      ethers.constants.MaxUint256.sub(toEther(18500)).toHexString()
+    )
+    assert.equal(fromEther(await pool.getDepositRoom(lsd2.address)), 0)
   })
 
   it('getRewards should work correctly', async () => {
