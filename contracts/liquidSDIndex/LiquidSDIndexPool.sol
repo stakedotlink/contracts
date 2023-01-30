@@ -104,6 +104,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     /**
      * @notice returns the deposit room for an lsd token
      * @param _lsdToken address of token
+     * @param deposit room for lsd
      **/
     function getDepositRoom(address _lsdToken) public view tokenIsSupported(_lsdToken) returns (uint256) {
         uint256 depositLimit = type(uint256).max;
@@ -172,6 +173,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * between each lsd's pre-withdrawal composition and its post-withdrawal target composition
      * (as a result, the current composition will move closer to the target after each withdrawal)
      * @param _amount amount to withdraw
+     * @return list of lsd amounts
      **/
     function getWithdrawalAmounts(uint256 _amount) public view returns (uint256[] memory) {
         uint256[] memory withdrawalAmounts = new uint256[](lsdTokens.length);

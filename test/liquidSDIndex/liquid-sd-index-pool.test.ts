@@ -129,10 +129,18 @@ describe('LiquidSDIndexPool', () => {
     assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 3240)
     assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 630)
 
-    assert.equal(Number(fromEther(await lsd1.balanceOf(accounts[1])).toFixed(3)), 8000)
-    assert.equal(Number(fromEther(await lsd2.balanceOf(accounts[1])).toFixed(3)), 9600)
-    assert.equal(Number(fromEther(await lsd1.balanceOf(accounts[2])).toFixed(3)), 8760)
-    assert.equal(Number(fromEther(await lsd2.balanceOf(accounts[2])).toFixed(3)), 9770)
+    await pool.setCompositionTargets([10000, 0])
+    await pool.connect(signers[2]).withdraw(toEther(1400))
+
+    assert.equal(fromEther(await pool.balanceOf(accounts[2])), 300)
+    assert.equal(fromEther(await pool.totalSupply()), 3100)
+    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 3100)
+    assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 0)
+
+    assert.equal(fromEther(await lsd1.balanceOf(accounts[1])), 8000)
+    assert.equal(fromEther(await lsd2.balanceOf(accounts[1])), 9600)
+    assert.equal(fromEther(await lsd1.balanceOf(accounts[2])), 8900)
+    assert.equal(fromEther(await lsd2.balanceOf(accounts[2])), 10400)
 
     await expect(pool.connect(signers[1]).withdraw(toEther(5000))).to.be.revertedWith(
       'Burn amount exceeds balance'
@@ -163,9 +171,8 @@ describe('LiquidSDIndexPool', () => {
       'Invalid composition targets length'
     )
   })
-  //3000
-  //1900
-  it.only('getComposition should work correctly', async () => {
+
+  it('getComposition should work correctly', async () => {
     assert.deepEqual(
       (await pool.getComposition()).map((c) => c.toNumber()),
       [6666, 3333]
