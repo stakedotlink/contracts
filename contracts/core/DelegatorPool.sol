@@ -23,8 +23,8 @@ contract DelegatorPool is RewardsPoolController {
 
     mapping(address => VestingSchedule) private vestingSchedules; // unused
 
-    mapping(address => uint256) public lockedBalances;
-    mapping(address => uint256) public lockedApprovals;
+    mapping(address => uint256) private lockedBalances;
+    mapping(address => uint256) private lockedApprovals;
     mapping(address => bool) public communityPools;
     uint public totalLocked;
 
@@ -76,6 +76,7 @@ contract DelegatorPool is RewardsPoolController {
             _stakeAllowance(_sender, _value);
             if (_calldata.length > 1) {
                 uint256 lockedAmount = abi.decode(_calldata, (uint256));
+                require(_value >= lockedAmount, "Cannot lock more than transferred value");
                 lockedBalances[_sender] += lockedAmount;
                 totalLocked += lockedAmount;
             }
@@ -113,14 +114,34 @@ contract DelegatorPool is RewardsPoolController {
      */
     function totalStaked() external view override returns (uint256) {
         bool excludeLocked = communityPools[msg.sender];
-        return excludeLocked ? totalSupply() : totalSupply() - totalLocked;
+        return excludeLocked ? totalSupply() - totalLocked : totalSupply();
     }
 
     /**
      * @notice returns the available balance of an account, taking into account any locked and approved tokens
+     * @param _account account address
+     * @return available balance
      */
     function availableBalanceOf(address _account) public view returns (uint256) {
         return balanceOf(_account) - lockedBalances[_account] + lockedApprovals[_account];
+    }
+
+    /**
+     * @notice returns the locked balance for a given account
+     * @param _account account address
+     * @return locked balance
+     */
+    function lockedBalanceOf(address _account) public view returns (uint256) {
+        return lockedBalances[_account] - lockedApprovals[_account];
+    }
+
+    /**
+     * @notice returns the approved locked balance for a given account
+     * @param _account account address
+     * @return approved locked balance
+     */
+    function approvedLockedBalanceOf(address _account) public view returns (uint256) {
+        return lockedApprovals[_account];
     }
 
     /**
@@ -171,7 +192,7 @@ contract DelegatorPool is RewardsPoolController {
      */
     function setCommunityPool(address _pool, bool _isCommunityPool) external onlyOwner {
         require(address(tokenPools[_pool]) != address(0), "Token pool must exist");
-        communityPools[_pool] = _isCommunityPool;
+        communityPools[address(tokenPools[_pool])] = _isCommunityPool;
     }
 
     /**
