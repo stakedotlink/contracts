@@ -93,7 +93,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
 
         uint256[] memory composition = new uint256[](lsdTokens.length);
 
-        for (uint256 i = 0; i < lsdTokens.length; i++) {
+        for (uint256 i = 0; i < composition.length; i++) {
             uint256 deposits = lsdAdapters[lsdTokens[i]].getTotalDeposits();
             composition[i] = (deposits * 10000) / depositsTotal;
         }
@@ -104,7 +104,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     /**
      * @notice returns the deposit room for an lsd token
      * @param _lsdToken address of token
-     * @return deposit room for lsd
+     * @return deposit room for token
      **/
     function getDepositRoom(address _lsdToken) public view tokenIsSupported(_lsdToken) returns (uint256) {
         uint256 depositLimit = type(uint256).max;
@@ -129,11 +129,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         }
 
         uint256 compositionTarget = compositionTargets[_lsdToken];
-        uint256 maxComposition = compositionTarget + (compositionTarget * compositionTolerance) / 10000;
         uint256 deposits = lsdAdapters[_lsdToken].getTotalDeposits();
-        uint256 minThreshold = (compositionEnforcementThreshold * compositionTarget) / 10000;
 
         // check how much can be deposited before the increase in composition percentage exceeds the composition tolerance
+        uint256 maxComposition = compositionTarget + (compositionTarget * compositionTolerance) / 10000;
         if (maxComposition < 10000) {
             depositLimit = MathUpgradeable.min(
                 ((depositsTotal - deposits) * 10000) / (10000 - maxComposition),
@@ -141,8 +140,9 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             );
         }
 
-        // check if deposits are below the composition enforcement threshold and if so, use return deposit room if it's greater
+        // check if deposits are below the composition enforcement threshold and if so, use deposit room if it's greater
         // than the amount that could be deposited with enforcement of composition targets
+        uint256 minThreshold = (compositionEnforcementThreshold * compositionTarget) / 10000;
         if (deposits < minThreshold) {
             uint256 thresholdDiff = minThreshold - deposits;
             depositLimit = MathUpgradeable.max(depositsTotal + thresholdDiff, depositLimit);
@@ -371,7 +371,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @param _compositionTolerance basis point composition tolerance
      **/
     function setCompositionTolerance(uint256 _compositionTolerance) external onlyOwner {
-        require(_compositionTolerance < 10000, "Compositon tolerance must be < 100%");
+        require(_compositionTolerance < 10000, "Composition tolerance must be < 100%");
         compositionTolerance = _compositionTolerance;
     }
 
