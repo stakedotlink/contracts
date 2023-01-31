@@ -14,6 +14,8 @@ abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgr
     IERC20Upgradeable public token;
     address public indexPool;
 
+    uint256[10] private __gap; //upgradeability storage gap
+
     function __LiquidSDAdapter_init(address _token, address _indexPool) public onlyInitializing {
         token = IERC20Upgradeable(_token);
         token.approve(_indexPool, type(uint256).max);
