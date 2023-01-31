@@ -9,6 +9,11 @@ import "../interfaces/IRocketPoolRETH.sol";
  * @notice Adapter for RocketPool's rETH
  */
 contract RocketPoolRETHAdapter is LiquidSDAdapter {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address _token, address _indexPool) public initializer {
         __LiquidSDAdapter_init(_token, _indexPool);
     }

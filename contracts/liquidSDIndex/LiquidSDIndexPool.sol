@@ -198,7 +198,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             if (targetDepositDiff > 0) {
                 ILiquidSDAdapter lsdAdapter = lsdAdapters[lsdTokens[i]];
                 uint256 withdrawalAmount = lsdAdapter.getLSDByUnderlying(
-                    (_amount * ((targetDepositDiff * 10000) / totalTargetDepositDiffs)) / 10000
+                    (_amount * ((targetDepositDiff * 1e18) / totalTargetDepositDiffs)) / 1e18
                 );
                 withdrawalAmounts[i] = withdrawalAmount;
             }

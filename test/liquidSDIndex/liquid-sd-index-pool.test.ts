@@ -70,6 +70,16 @@ describe('LiquidSDIndexPool', () => {
       toEther(5),
     ])) as LiquidSDAdapterMock
 
+    await expect(pool.addLSDToken(lsd1.address, adapter1.address, [2000, 8000])).to.be.revertedWith(
+      'Token is already supported'
+    )
+    await expect(pool.addLSDToken(lsd3.address, adapter3.address, [2000, 8000])).to.be.revertedWith(
+      'Invalid composition targets length'
+    )
+    await expect(
+      pool.addLSDToken(lsd3.address, adapter3.address, [1000, 8000, 2000])
+    ).to.be.revertedWith('Composition targets must sum to 100%')
+
     await pool.addLSDToken(lsd3.address, adapter3.address, [5000, 3000, 2000])
     assert.deepEqual(await pool.getLSDTokens(), [lsd1.address, lsd2.address, lsd3.address])
     assert.deepEqual(
@@ -81,7 +91,7 @@ describe('LiquidSDIndexPool', () => {
     assert.equal(await pool.lsdAdapters(lsd3.address), adapter3.address)
   })
 
-  it.only('removeLSDToken should work correctly', async () => {
+  it('removeLSDToken should work correctly', async () => {
     let lsd3 = (await deploy('ERC677', ['Liquid SD Token 2', 'LSD2', 100000000])) as ERC677
     let adapter3 = (await deployUpgradeable('LiquidSDAdapterMock', [
       lsd3.address,
@@ -92,6 +102,12 @@ describe('LiquidSDIndexPool', () => {
 
     await expect(pool.removeLSDToken(lsd2.address, [2000, 8000])).to.be.revertedWith(
       'Cannot remove adapter that contains deposits'
+    )
+    await expect(pool.removeLSDToken(lsd3.address, [2000, 7000, 1000])).to.be.revertedWith(
+      'Invalid composition targets length'
+    )
+    await expect(pool.removeLSDToken(lsd3.address, [2000, 7000])).to.be.revertedWith(
+      'Composition targets must sum to 100%'
     )
 
     await pool.connect(signers[1]).withdraw(toEther(3000))

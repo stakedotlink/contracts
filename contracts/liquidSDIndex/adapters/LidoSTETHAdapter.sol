@@ -8,6 +8,11 @@ import "../base/LiquidSDAdapter.sol";
  * @notice Adapter for Lido's stETH
  */
 contract LidoSTETHAdapter is LiquidSDAdapter {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address _token, address _indexPool) public initializer {
         __LiquidSDAdapter_init(_token, _indexPool);
     }
