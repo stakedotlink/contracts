@@ -61,6 +61,7 @@ abstract contract VaultControllerStrategy is Strategy {
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
     /**
