@@ -105,7 +105,7 @@ contract DelegatorPool is RewardsPoolController {
      * @return account's staked amount
      */
     function staked(address _account) external view override returns (uint256) {
-        return (rewardRedirects[_account] == address(0) ? super.balanceOf(_account) : 0) + redirectedStakes[_account];
+        return super.balanceOf(_account);
     }
 
     /**
