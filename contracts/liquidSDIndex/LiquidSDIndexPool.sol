@@ -32,6 +32,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
 
     uint256 private totalDeposits;
 
+    bool public isPaused;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -58,6 +60,11 @@ contract LiquidSDIndexPool is StakingRewardsPool {
 
     modifier tokenIsSupported(address _lsdToken) {
         require(address(lsdAdapters[_lsdToken]) != address(0), "Token is not supported");
+        _;
+    }
+
+    modifier notPaused() {
+        require(!isPaused, "Contract is paused");
         _;
     }
 
@@ -161,7 +168,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @param _lsdToken token to deposit
      * @param _amount amount to deposit
      **/
-    function deposit(address _lsdToken, uint256 _amount) external tokenIsSupported(_lsdToken) {
+    function deposit(address _lsdToken, uint256 _amount) external tokenIsSupported(_lsdToken) notPaused {
         require(getDepositRoom(_lsdToken) >= _amount, "Insufficient deposit room for the selected lsd");
 
         ILiquidSDAdapter lsdAdapter = lsdAdapters[_lsdToken];
@@ -217,7 +224,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @notice withdraws lsd tokens and burns lsd index tokens
      * @param _amount amount to withdraw
      **/
-    function withdraw(uint256 _amount) external {
+    function withdraw(uint256 _amount) external notPaused {
         _burn(msg.sender, _amount);
         totalDeposits -= _amount - _getWithdrawalFeeAmount(_amount);
 
@@ -253,7 +260,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     /**
      * @notice updates and distributes rewards based on balance changes in adapters
      **/
-    function updateRewards() external {
+    function updateRewards() external notPaused {
         uint256 currentTotalDeposits;
 
         for (uint256 i = 0; i < lsdTokens.length; i++) {
@@ -434,6 +441,15 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         }
 
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+    }
+
+    /**
+     * @notice pauses/unpauses the contract
+     * @param _isPaused pause status of the contract
+     **/
+    function setPaused(bool _isPaused) external onlyOwner {
+        require(_isPaused != isPaused, "This pause status is already set");
+        isPaused = _isPaused;
     }
 
     /**

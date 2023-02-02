@@ -374,4 +374,23 @@ describe('LiquidSDIndexPool', () => {
 
     await expect(pool.setWithdrawalFee(501)).to.be.revertedWith('Withdrawal fee must be <= 5%')
   })
+
+  it('pausing should work correctly', async () => {
+    await expect(pool.setPaused(false)).to.be.revertedWith('This pause status is already set')
+
+    await pool.setPaused(true)
+
+    await expect(pool.setPaused(true)).to.be.revertedWith('This pause status is already set')
+    await expect(pool.connect(signers[1]).deposit(lsd1.address, 10)).to.be.revertedWith(
+      'Contract is paused'
+    )
+    await expect(pool.connect(signers[1]).withdraw(10)).to.be.revertedWith('Contract is paused')
+    await expect(pool.updateRewards()).to.be.revertedWith('Contract is paused')
+
+    await pool.setPaused(false)
+
+    await pool.connect(signers[1]).deposit(lsd1.address, 10)
+    await pool.connect(signers[1]).withdraw(10)
+    await pool.updateRewards()
+  })
 })
