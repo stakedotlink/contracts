@@ -28,6 +28,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     uint256 public compositionEnforcementThreshold;
 
     Fee[] private fees;
+    uint256 public withdrawalFee;
 
     uint256 private totalDeposits;
 
@@ -41,7 +42,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         string memory _derivativeTokenSymbol,
         uint256 _compositionTolerance,
         uint256 _compositionEnforcementThreshold,
-        Fee[] memory _fees
+        Fee[] memory _fees,
+        uint256 _withdrawalFee
     ) public initializer {
         __StakingRewardsPool_init(address(0), _derivativeTokenName, _derivativeTokenSymbol);
         compositionTolerance = _compositionTolerance;
@@ -49,6 +51,9 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        require(_withdrawalFee <= 500, "Withdrawal fee must be <= 5%");
+        withdrawalFee = _withdrawalFee;
     }
 
     modifier tokenIsSupported(address _lsdToken) {
@@ -178,6 +183,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     function getWithdrawalAmounts(uint256 _amount) public view returns (uint256[] memory) {
         uint256[] memory withdrawalAmounts = new uint256[](lsdTokens.length);
         uint256[] memory targetDepositDiffs = new uint256[](lsdTokens.length);
+        uint256 amount = _amount - _getWithdrawalFeeAmount(_amount);
         uint256 newDepositsTotal = _totalDeposits() - _amount;
         uint256 totalTargetDepositDiffs;
 
@@ -198,7 +204,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             if (targetDepositDiff > 0) {
                 ILiquidSDAdapter lsdAdapter = lsdAdapters[lsdTokens[i]];
                 uint256 withdrawalAmount = lsdAdapter.getLSDByUnderlying(
-                    (_amount * ((targetDepositDiff * 1e18) / totalTargetDepositDiffs)) / 1e18
+                    (amount * ((targetDepositDiff * 1e18) / totalTargetDepositDiffs)) / 1e18
                 );
                 withdrawalAmounts[i] = withdrawalAmount;
             }
@@ -213,7 +219,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      **/
     function withdraw(uint256 _amount) external {
         _burn(msg.sender, _amount);
-        totalDeposits -= _amount;
+        totalDeposits -= _amount - _getWithdrawalFeeAmount(_amount);
 
         uint256[] memory withdrawalAmounts = getWithdrawalAmounts(_amount);
 
@@ -388,6 +394,15 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     }
 
     /**
+     * @notice sets the withdrawal fee
+     * @param _withdrawalFee fee in basis points
+     **/
+    function setWithdrawalFee(uint256 _withdrawalFee) external onlyOwner {
+        require(_withdrawalFee <= 500, "Withdrawal fee must be <= 5%");
+        withdrawalFee = _withdrawalFee;
+    }
+
+    /**
      * @notice adds a new fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -453,5 +468,14 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             totalFees += fees[i].basisPoints;
         }
         return totalFees;
+    }
+
+    /**
+     * @notice returns the withdrawal fee to be paid on a withdrawal
+     * @param _amount amount to withdraw
+     * @return amount of tokens to be paid on withdrawal
+     **/
+    function _getWithdrawalFeeAmount(uint256 _amount) internal view returns (uint256) {
+        return (_amount * withdrawalFee) / 10000;
     }
 }

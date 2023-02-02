@@ -39,6 +39,7 @@ describe('LiquidSDIndexPool', () => {
         [accounts[3], 1000],
         [accounts[4], 500],
       ],
+      0,
     ])) as LiquidSDIndexPool
 
     adapter1 = (await deployUpgradeable('LiquidSDAdapterMock', [
@@ -334,5 +335,43 @@ describe('LiquidSDIndexPool', () => {
     assert.equal(fromEther(await pool.totalSupply()), 2500)
     assert.equal(Number(fromEther(await pool.balanceOf(accounts[3])).toFixed(3)), 35.714)
     assert.equal(Number(fromEther(await pool.balanceOf(accounts[4])).toFixed(3)), 17.857)
+  })
+
+  it('withdrawal fee should work correctly', async () => {
+    await pool.setCompositionTargets([8000, 2000])
+    await adapter2.setExchangeRate(toEther(1))
+    await pool.updateRewards()
+
+    await pool.setWithdrawalFee(50)
+    assert.equal((await pool.withdrawalFee()).toNumber(), 50)
+
+    assert.deepEqual(
+      (await pool.getWithdrawalAmounts(toEther(500))).map((e) => fromEther(e)),
+      [398, 99.5]
+    )
+
+    await pool.connect(signers[1]).withdraw(toEther(500))
+    assert.equal(fromEther(await pool.balanceOf(accounts[1])), 2002.5)
+    assert.equal(fromEther(await pool.totalSupply()), 2002.5)
+    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 1602)
+    assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 400.5)
+
+    await lsd2.connect(signers[2]).approve(pool.address, ethers.constants.MaxUint256)
+    await pool.connect(signers[2]).deposit(lsd2.address, toEther(200.5))
+    await pool.setWithdrawalFee(200)
+
+    assert.deepEqual(
+      (await pool.getWithdrawalAmounts(toEther(100))).map((e) => fromEther(e)),
+      [0, 98]
+    )
+
+    await pool.connect(signers[2]).withdraw(toEther(100))
+    assert.equal(fromEther(await pool.totalSupply()), 2105)
+    assert.equal(Number(fromEther(await pool.balanceOf(accounts[1])).toFixed(3)), 2004.404)
+    assert.equal(Number(fromEther(await pool.balanceOf(accounts[2])).toFixed(3)), 100.596)
+    assert.equal(fromEther(await lsd1.balanceOf(adapter1.address)), 1602)
+    assert.equal(fromEther(await lsd2.balanceOf(adapter2.address)), 503)
+
+    await expect(pool.setWithdrawalFee(501)).to.be.revertedWith('Withdrawal fee must be <= 5%')
   })
 })
