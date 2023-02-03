@@ -53,6 +53,7 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
+        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
     modifier onlyRouter() {
@@ -371,6 +372,10 @@ contract StakingPool is StakingRewardsPool {
                 feeAmounts[feeAmounts.length - 1][i] = (uint256(totalRewards) * fees[i].basisPoints) / 10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
+        }
+
+        if (totalFeeAmounts >= totalStaked) {
+            totalFeeAmounts = 0;
         }
 
         if (totalFeeAmounts > 0) {

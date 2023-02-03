@@ -83,7 +83,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _index pool index
      * @return pool
      */
-    function getPool(address _token, uint16 _index) external view returns (Pool memory) {
+    function getPool(address _token, uint16 _index) public view returns (Pool memory) {
         return pools[_poolKey(_token, _index)];
     }
 
@@ -98,7 +98,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             for (uint16 j = 0; j < poolCountByToken[token]; j++) {
-                poolList[index] = pools[_poolKey(token, j)];
+                poolList[index] = getPool(token, j);
                 index++;
             }
         }
@@ -112,7 +112,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             for (uint16 j = 0; j < poolCountByToken[token]; j++) {
-                if (pools[_poolKey(token, j)].reservedModeActive) {
+                if (getPool(token, j).reservedModeActive) {
                     return true;
                 }
             }
@@ -208,6 +208,10 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bool _reservedModeActive
     ) external onlyOwner {
         address token = IStakingPool(_stakingPool).token();
+        require(
+            address(getPool(token, IStakingPool(_stakingPool).poolIndex()).stakingPool) != _stakingPool,
+            "Pool is already added"
+        );
         uint16 tokenPoolCount = poolCountByToken[token];
         Pool storage pool = pools[_poolKey(token, tokenPoolCount)];
 
@@ -242,7 +246,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         emit RemovePool(_token, address(pool.stakingPool));
 
-        IERC20Upgradeable(_token).safeApprove(address(pools[_poolKey(_token, _index)].stakingPool), 0);
+        IERC20Upgradeable(_token).safeApprove(address(pool.stakingPool), 0);
 
         uint16 lastPoolIndex = poolCountByToken[_token] - 1;
 
@@ -278,8 +282,8 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _token,
         uint16 _index
     ) public view poolExists(_token, _index) returns (uint256) {
-        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
-        bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
+        IStakingPool stakingPool = getPool(_token, _index).stakingPool;
+        bool reservedModeActive = getPool(_token, _index).reservedModeActive;
         uint256 maximumStake = stakingPool.canDeposit();
 
         return reservedModeActive ? _reservedAllocation(_account, _token, _index, maximumStake) : maximumStake;
@@ -297,8 +301,8 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint16 _index,
         uint256 _amount
     ) public view poolExists(_token, _index) returns (uint256) {
-        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
-        bool reservedModeActive = pools[_poolKey(_token, _index)].reservedModeActive;
+        IStakingPool stakingPool = getPool(_token, _index).stakingPool;
+        bool reservedModeActive = getPool(_token, _index).reservedModeActive;
         uint256 maximumStake = stakingPool.canDeposit();
 
         uint256 accountMaxStake = (((((1e18 * _amount) / allowanceToken.totalSupply()) * stakingPool.getMaxDeposits()) /
@@ -378,7 +382,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address _account,
         uint256 _amount
     ) private {
-        Pool storage pool = pools[_poolKey(_token, _index)];
+        Pool memory pool = getPool(_token, _index);
 
         require(pool.status == PoolStatus.OPEN, "Pool is not open");
         require(_amount <= canDeposit(_account, _token, _index), "Not enough allowance staked");
@@ -401,7 +405,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 _amount,
         address _receiver
     ) private poolExists(_token, _index) {
-        Pool storage pool = pools[_poolKey(_token, _index)];
+        Pool memory pool = getPool(_token, _index);
         require(pool.status != PoolStatus.CLOSED, "Pool is closed");
         require(pool.stakingPool.balanceOf(msg.sender) >= _amount, "Amount exceeds staked balance");
 
@@ -425,7 +429,7 @@ contract PoolRouter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint16 _index,
         uint256 _maximumStake
     ) private view returns (uint256) {
-        IStakingPool stakingPool = pools[_poolKey(_token, _index)].stakingPool;
+        IStakingPool stakingPool = getPool(_token, _index).stakingPool;
 
         if (delegatorPool.totalBalanceOf(_account) == 0) {
             return 0;

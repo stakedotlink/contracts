@@ -157,6 +157,22 @@ describe('PoolRouter', () => {
     )
   })
 
+  it('should not be able to add duplicate pools', async () => {
+    expect(poolRouter.addPool(stakingPool1.address, 0, false)).to.be.revertedWith(
+      'Pool is already added'
+    )
+    await poolRouter.removePool(token1.address, 0)
+    await poolRouter.addPool(stakingPool1.address, 0, false)
+    expect(poolRouter.addPool(stakingPool1.address, 0, false)).to.be.revertedWith(
+      'Pool is already added'
+    )
+    await poolRouter.removePool(token1.address, 1)
+    await poolRouter.addPool(stakingPool1.address, 0, false)
+    expect(poolRouter.addPool(stakingPool1.address, 0, false)).to.be.revertedWith(
+      'Pool is already added'
+    )
+  })
+
   it('onTokenTransfer validation should work correctly', async () => {
     let token = (await deploy('ERC677', ['Unknown', 'ANON', 1000000000])) as ERC677
     await setupToken(token, accounts)
