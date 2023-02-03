@@ -37,18 +37,18 @@ async function main() {
   ])
   console.log('iETH_WrappedSDToken token deployed: ', wsdToken.address)
 
-  const iETHDelegatorRewardsPool = await deploy('RewardsPoolWSD', [
+  const iETH_DelegatorRewardsPool = await deploy('RewardsPoolWSD', [
     delegatorPool.address,
     indexPool.address,
     wsdToken.address,
   ])
-  await delegatorPool.addToken(indexPool.address, iETHDelegatorRewardsPool.address)
-  console.log('iETH_DelegatorRewardsPool deployed: ', iETHDelegatorRewardsPool.address)
+  await delegatorPool.addToken(indexPool.address, iETH_DelegatorRewardsPool.address)
+  console.log('iETH_DelegatorRewardsPool deployed: ', iETH_DelegatorRewardsPool.address)
 
   updateDeployments(
     {
       iETH_WrappedSDToken: wsdToken.address,
-      iETHDelegatorRewardsPool: iETHDelegatorRewardsPool.address,
+      iETH_DelegatorRewardsPool: iETH_DelegatorRewardsPool.address,
       LiquidSDIndexPool: indexPool.address,
     },
     {

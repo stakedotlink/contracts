@@ -17,7 +17,7 @@ Accounts:
 0 - main account that holds most of the tokens. Do not test ui with this account.
 1 - account with no tokens.
 2 - account with STA/LINK/LPL and with no staked assets
-3 - account with staked STA/LINK/LPL
+3 - account with staked STA/LINK/LPL/rETH/stETH
 4 - account with without STA + rewards
 */
 
@@ -34,6 +34,7 @@ async function main() {
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as any
   const stLINK_DelegatorRewardsPool = (await getContract('stLINK_DelegatorRewardsPool')) as any
   const indexPool = (await getContract('LiquidSDIndexPool')) as any
+  const iETH_DelegatorRewardsPool = (await getContract('iETH_DelegatorRewardsPool')) as any
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
 
@@ -182,10 +183,22 @@ async function main() {
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x0', 32))
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x1', 32))
 
-  await stakingPoolOne.approve(indexPool.address, toEther(1000))
-  await stakingPoolTwo.approve(indexPool.address, toEther(1000))
-  await indexPool.deposit(stakingPoolOne.address, toEther(500))
-  await indexPool.deposit(stakingPoolTwo.address, toEther(500))
+  await stakingPoolOne.transfer(accounts[3], toEther(400))
+  await stakingPoolTwo.transfer(accounts[3], toEther(600))
+
+  await stakingPoolOne.connect(signers[3]).approve(indexPool.address, toEther(400))
+  await stakingPoolTwo.connect(signers[3]).approve(indexPool.address, toEther(600))
+  await indexPool.connect(signers[3]).deposit(stakingPoolOne.address, toEther(400))
+  await indexPool.connect(signers[3]).deposit(stakingPoolTwo.address, toEther(600))
+
+  await stakingPoolOne.transfer(accounts[2], toEther(100))
+  await stakingPoolTwo.transfer(accounts[2], toEther(100))
+
+  // send rewards to rewards pool
+
+  await indexPool
+    .connect(signers[3])
+    .transferAndCall(iETH_DelegatorRewardsPool.address, toEther(1), '0x00')
 
   updateDeployments({
     LidoETH: stakingPoolOne.address,
