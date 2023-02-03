@@ -9,6 +9,7 @@ const ETH_LSDIndexPool = {
   compositionTolerance: 5000, // pool composition tolerance
   compositionEnforcementThreshold: 10000, // ETH intervals in which composition is enforced
   fee: 25, // delegator pool fee basis points
+  withdrawalFee: 25, // withdrawal fee that goes to iETH holders
 }
 // Wrapped iETH
 const iETH_WrappedSDToken = {
@@ -24,10 +25,10 @@ async function main() {
     ETH_LSDIndexPool.symbol,
     ETH_LSDIndexPool.compositionTolerance,
     toEther(ETH_LSDIndexPool.compositionEnforcementThreshold),
+    [[delegatorPool.address, ETH_LSDIndexPool.fee]],
+    ETH_LSDIndexPool.withdrawalFee,
   ])) as LiquidSDIndexPool
   console.log('LiquidSDIndexPool deployed: ', indexPool.address)
-
-  await indexPool.addFee(delegatorPool.address, ETH_LSDIndexPool.fee)
 
   const wsdToken = await deploy('WrappedSDToken', [
     indexPool.address,
