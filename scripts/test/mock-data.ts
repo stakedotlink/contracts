@@ -183,10 +183,9 @@ async function main() {
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x0', 32))
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x1', 32))
 
-
   await stakingPoolOne.transfer(accounts[3], toEther(400))
   await stakingPoolTwo.transfer(accounts[3], toEther(600))
-  
+
   await stakingPoolOne.connect(signers[3]).approve(indexPool.address, toEther(400))
   await stakingPoolTwo.connect(signers[3]).approve(indexPool.address, toEther(600))
   await indexPool.connect(signers[3]).deposit(stakingPoolOne.address, toEther(400))
@@ -197,12 +196,9 @@ async function main() {
 
   // send rewards to rewards pool
 
-  await indexPool.connect(signers[3]).transferAndCall(
-    iETH_DelegatorRewardsPool.address,
-    toEther(1),
-    '0x00'
-  )
-
+  await indexPool
+    .connect(signers[3])
+    .transferAndCall(iETH_DelegatorRewardsPool.address, toEther(1), '0x00')
 
   updateDeployments({
     LidoETH: stakingPoolOne.address,
