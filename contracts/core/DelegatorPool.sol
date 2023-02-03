@@ -109,6 +109,16 @@ contract DelegatorPool is RewardsPoolController {
     }
 
     /**
+     * @notice returns an accounts balance
+     * @dev required for backwards compatability with the PoolRouter
+     * @param _account account address
+     * @return balance accounts balance
+     */
+    function totalBalanceOf(address _account) public view returns (uint256) {
+        return super.balanceOf(_account);
+    }
+
+    /**
      * @notice returns the total staked amount for use by reward pools
      * controlled by this contract
      * @return total staked amount

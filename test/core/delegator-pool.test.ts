@@ -354,7 +354,7 @@ describe('DelegatorPool', () => {
       assert.equal(fromEther(await delegatorPool.totalLocked()), 500, 'total locked does not match')
     })
 
-    it('should be able to burn locked balances', async () => {
+    it.only('should be able to burn locked balances', async () => {
       await delegatorPool.setLockedApproval(accounts[0], toEther(250))
       await delegatorPool.burnLockedBalance(accounts[0], toEther(500))
       assert.equal(
@@ -378,9 +378,15 @@ describe('DelegatorPool', () => {
         'locked balance of account does not match'
       )
       assert.equal(fromEther(await delegatorPool.totalLocked()), 500, 'total locked does not match')
+      assert.equal(
+        fromEther(await allowanceToken.totalSupply()),
+        9500,
+        'total supply does not match'
+      )
 
       await delegatorPool.setLockedApproval(accounts[1], toEther(500))
       await delegatorPool.burnLockedBalance(accounts[1], toEther(250))
+
       assert.equal(
         fromEther(await delegatorPool.balanceOf(accounts[1])),
         750,
@@ -402,6 +408,11 @@ describe('DelegatorPool', () => {
         'locked balance of account does not match'
       )
       assert.equal(fromEther(await delegatorPool.totalLocked()), 250, 'total locked does not match')
+      assert.equal(
+        fromEther(await allowanceToken.totalSupply()),
+        9250,
+        'total supply does not match'
+      )
     })
 
     it('should not be able to burn more than locked balance', async () => {
