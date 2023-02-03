@@ -7,8 +7,6 @@ async function main() {
   updateDeployments({
     MerkleDistributor: merkleDistributor.address,
   })
-
-  console.log('deploy-status-ready')
 }
 
 main()

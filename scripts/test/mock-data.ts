@@ -1,8 +1,16 @@
 // @ts-nocheck
 
 import { fromEther, getAccounts, toEther } from '../utils/helpers'
-import { getContract, deployUpgradeable } from '../utils/deployment'
+import { getContract, deployUpgradeable, deploy, updateDeployments } from '../utils/deployment'
 import { defaultAbiCoder } from 'ethers/lib/utils'
+import {
+  ERC677,
+  LidoSTETHAdapter,
+  LiquidSDIndexPool,
+  StakingPool,
+  StrategyMock,
+} from '../../typechain-types'
+import { padBytes } from '../../test/utils/helpers'
 
 /*
 Accounts:
@@ -25,6 +33,7 @@ async function main() {
   const delegatorPool = (await getContract('DelegatorPool')) as any
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as any
   const stLINK_DelegatorRewardsPool = (await getContract('stLINK_DelegatorRewardsPool')) as any
+  const indexPool = (await getContract('LiquidSDIndexPool')) as any
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
 
@@ -115,6 +124,73 @@ async function main() {
     toEther(600),
     defaultAbiCoder.encode(['uint64', 'uint64'], [1685980800, 47347200])
   )
+
+  // Liquid SD Index
+
+  const ethToken = (await deploy('ERC677', ['ETH', 'ETH', 1000000000])) as ERC677
+
+  const stakingPoolOne = (await deployUpgradeable('StakingPool', [
+    ethToken.address,
+    'Staked ETH',
+    'stETH',
+    [],
+    poolRouter.address,
+    delegatorPool.address,
+  ])) as StakingPool
+
+  const stakingPoolTwo = (await deployUpgradeable('StakingPool', [
+    ethToken.address,
+    'RocketPool ETH',
+    'rETH',
+    [],
+    poolRouter.address,
+    delegatorPool.address,
+  ])) as StakingPool
+
+  const strategyOne = (await deployUpgradeable('StrategyMock', [
+    ethToken.address,
+    stakingPoolOne.address,
+    toEther(1000),
+    toEther(10),
+  ])) as StrategyMock
+  await stakingPoolOne.addStrategy(strategyOne.address)
+
+  const strategyTwo = (await deployUpgradeable('StrategyMock', [
+    ethToken.address,
+    stakingPoolTwo.address,
+    toEther(2000),
+    toEther(20),
+  ])) as StrategyMock
+  await stakingPoolTwo.addStrategy(strategyTwo.address)
+
+  await poolRouter.addPool(stakingPoolOne.address, 0, false)
+  await poolRouter.addPool(stakingPoolTwo.address, 0, false)
+
+  const adapterOne = (await deployUpgradeable('LidoSTETHAdapter', [
+    stakingPoolOne.address,
+    indexPool.address,
+  ])) as LidoSTETHAdapter
+
+  const adapterTwo = (await deployUpgradeable('LidoSTETHAdapter', [
+    stakingPoolTwo.address,
+    indexPool.address,
+  ])) as LidoSTETHAdapter
+
+  await indexPool.addLSDToken(stakingPoolOne.address, adapterOne.address, [10000])
+  await indexPool.addLSDToken(stakingPoolTwo.address, adapterTwo.address, [5000, 5000])
+
+  await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x0', 32))
+  await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x1', 32))
+
+  await stakingPoolOne.approve(indexPool.address, toEther(1000))
+  await stakingPoolTwo.approve(indexPool.address, toEther(1000))
+  await indexPool.deposit(stakingPoolOne.address, toEther(500))
+  await indexPool.deposit(stakingPoolTwo.address, toEther(500))
+
+  updateDeployments({
+    LidoETH: stakingPoolOne.address,
+    RocketPoolETH: stakingPoolTwo.address,
+  })
 }
 
 main()
