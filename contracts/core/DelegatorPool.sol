@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "./base/RewardsPoolController.sol";
 import "./interfaces/IPoolRouter.sol";
+import "./interfaces/IStakingAllowance.sol";
 
 /**
  * @title Delegator Pool
@@ -104,7 +105,7 @@ contract DelegatorPool is RewardsPoolController {
      * @return account's staked amount
      */
     function staked(address _account) external view override returns (uint256) {
-        return super.balanceOf(_account);
+        return communityPools[msg.sender] ? super.balanceOf(_account) - lockedBalances[_account] : super.balanceOf(_account);
     }
 
     /**
@@ -174,6 +175,26 @@ contract DelegatorPool is RewardsPoolController {
     function setLockedApproval(address _account, uint _amount) external onlyOwner {
         require(lockedBalances[_account] >= _amount, "Cannot approve more than locked balance");
         lockedApprovals[_account] = _amount;
+    }
+
+    /**
+     * @notice burns an amount of an accounts locked allowance token
+     * @param _account account to burn tokens
+     * @param _amount amount of tokens to burn
+     */
+    function burnLockedBalance(address _account, uint _amount) external onlyOwner {
+        require(lockedBalances[_account] >= _amount, "Cannot burn more than locked balance");
+
+        if (lockedApprovals[_account] > 0 && _amount >= lockedApprovals[_account]) {
+            delete lockedApprovals[_account];
+        } else if (lockedApprovals[_account] > 0) {
+            lockedApprovals[_account] -= _amount;
+        }
+        lockedBalances[_account] -= _amount;
+        totalLocked -= _amount;
+
+        _burn(_account, _amount);
+        IStakingAllowance(address(allowanceToken)).burn(_amount);
     }
 
     /**
