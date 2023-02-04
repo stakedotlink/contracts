@@ -34,6 +34,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
 
     bool public isPaused;
 
+    event Deposit(address indexed account, address indexed token, uint256 amount);
+    event Withdraw(address indexed account, address[] tokens, uint256[] amounts);
+    event UpdateRewards(address indexed account, uint256 totalDeposits, int rewardsAmount, uint256 totalFees);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -177,6 +181,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         uint256 underlyingAmount = lsdAdapter.getUnderlyingByLSD(_amount);
         _mint(msg.sender, underlyingAmount);
         totalDeposits += underlyingAmount;
+
+        emit Deposit(msg.sender, _lsdToken, _amount);
     }
 
     /**
@@ -236,6 +242,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
                 IERC20Upgradeable(lsdTokens[i]).safeTransferFrom(address(lsdAdapters[lsdTokens[i]]), msg.sender, amount);
             }
         }
+
+        emit Withdraw(msg.sender, lsdTokens, withdrawalAmounts);
     }
 
     /**
@@ -273,9 +281,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             totalDeposits = uint256(int256(totalDeposits) + totalRewards);
         }
 
+        uint256 totalFeeAmounts;
+
         if (totalRewards > 0) {
             uint256[] memory feeAmounts = new uint256[](fees.length);
-            uint256 totalFeeAmounts;
 
             for (uint256 i = 0; i < fees.length; i++) {
                 feeAmounts[i] = (uint256(totalRewards) * fees[i].basisPoints) / 10000;
@@ -295,6 +304,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
                 }
             }
         }
+
+        emit UpdateRewards(msg.sender, totalDeposits, totalRewards, totalFeeAmounts);
     }
 
     /**
