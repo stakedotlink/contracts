@@ -194,6 +194,9 @@ async function main() {
   await stakingPoolOne.transfer(accounts[2], toEther(100))
   await stakingPoolTwo.transfer(accounts[2], toEther(100))
 
+  await stakingPoolOne.transfer(accounts[3], toEther(10))
+  await stakingPoolTwo.transfer(accounts[3], toEther(10))
+
   // send rewards to rewards pool
 
   await indexPool
