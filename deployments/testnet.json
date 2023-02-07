@@ -62,5 +62,17 @@
   "MerkleDistributor": {
     "address": "0xFB8D714eEb9065e1352d43975b9B881074d2036E",
     "artifact": "MerkleDistributor"
+  },
+  "iETH_WrappedSDToken": {
+    "address": "0x4dDe1b0D435F0f9316CEDfcD0aa69f608Db3B62D",
+    "artifact": "WrappedSDToken"
+  },
+  "iETH_DelegatorRewardsPool": {
+    "address": "0x380e3552fd6Dca5bB5BE082b1865Db2af219c0E6",
+    "artifact": "RewardsPoolWSD"
+  },
+  "LiquidSDIndexPool": {
+    "address": "0xBdf93A71Dc50120bc9Cf3524E5d077481746110b",
+    "artifact": "LiquidSDIndexPool"
   }
 }
