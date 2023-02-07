@@ -74,5 +74,13 @@
   "LiquidSDIndexPool": {
     "address": "0xBdf93A71Dc50120bc9Cf3524E5d077481746110b",
     "artifact": "LiquidSDIndexPool"
+  },
+  "LidoToken": {
+    "address": "0xeAF59ece1D1E900E3b3367f22b2E4EE12efaa385",
+    "artifact": "ERC677"
+  },
+  "RPToken": {
+    "address": "0x66C201D9129B509c0B03B84960Ac8889BBf18AB8",
+    "artifact": "ERC677"
   }
 }
