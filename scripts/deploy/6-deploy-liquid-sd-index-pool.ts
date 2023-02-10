@@ -1,6 +1,5 @@
 import { updateDeployments, deployUpgradeable, deploy, getContract } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
-import { network } from 'hardhat'
 import { DelegatorPool, LiquidSDIndexPool } from '../../typechain-types'
 
 // ETH LSD Index
@@ -19,21 +18,6 @@ const iETH_WrappedSDToken = {
 }
 
 async function main() {
-  if (network.name == 'localhost' || network.name == 'testnet') {
-    const lidoToken = await deploy('ERC677', ['Liquid staked Ether 2.0', 'stETH', 100000000])
-    console.log('Lido Token deployed: ', lidoToken.address)
-
-    const rpToken = await deploy('ERC677', ['Rocket Pool ETH', 'rETH', 1000000000])
-    console.log('RocketPool Token deployed: ', rpToken.address)
-
-    updateDeployments(
-      {
-        LidoToken: lidoToken.address,
-        RPToken: rpToken.address,
-      },
-      { LidoToken: 'ERC677', RPToken: 'ERC677' }
-    )
-  }
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
 
   const indexPool = (await deployUpgradeable('LiquidSDIndexPool', [
