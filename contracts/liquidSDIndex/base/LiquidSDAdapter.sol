@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -11,14 +12,14 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
  * @notice Base adapter contract used to retrieve information on the LSD tokens held in the index pool
  */
 abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     IERC20Upgradeable public token;
     address public indexPool;
 
-    uint256[10] private __gap; //upgradeability storage gap
-
     function __LiquidSDAdapter_init(address _token, address _indexPool) public onlyInitializing {
         token = IERC20Upgradeable(_token);
-        token.approve(_indexPool, type(uint256).max);
+        token.safeApprove(_indexPool, type(uint256).max);
         indexPool = _indexPool;
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -59,10 +60,19 @@ abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgr
     }
 
     /**
-     * @notice returns the exchange rate between this adapter's token and the underlying asset
+     * @notice returns the exchange rate between the underlying asset and this adapter's token
      * @return exchange rate
      */
     function getExchangeRate() public view virtual returns (uint256);
 
+    /**
+     * @dev Checks authorization for contract upgrades
+     */
     function _authorizeUpgrade(address) internal override onlyOwner {}
+
+    /**
+     * @dev Allows future contract versions to add new variables without shifting
+     * down storage in the inheritance chain
+     */
+    uint256[10] private __gap;
 }

@@ -20,6 +20,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         uint256 basisPoints;
     }
 
+    uint256 private constant BASIS_POINTS_TOTAL = 10000;
+
     address[] private lsdTokens;
     mapping(address => ILiquidSDAdapter) public lsdAdapters;
 
@@ -30,13 +32,21 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     Fee[] private fees;
     uint256 public withdrawalFee;
 
-    uint256 private totalDeposits;
+    uint256 private totalStaked;
 
     bool public isPaused;
 
     event Deposit(address indexed account, address indexed token, uint256 amount);
     event Withdraw(address indexed account, address[] tokens, uint256[] amounts);
-    event UpdateRewards(address indexed account, uint256 totalDeposits, int rewardsAmount, uint256 totalFees);
+    event UpdateRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
+    event AddLSDToken(address indexed lsdToken, address lsdAdapter, uint256[] compositionTargets);
+    event RemoveLSDToken(address indexed lsdToken, uint256[] compositionTargets);
+    event SetCompositionTargets(uint256[] compositionTargets);
+    event SetCompositionTolerance(uint256 compositionTolerance);
+    event SetCompositionEnforcementThreshold(uint256 compositionEnforcementThreshold);
+    event SetWithdrawalFee(uint256 withdrawalFee);
+    event AddFee(address indexed receiver, uint256 feeBasisPoints);
+    event UpdateFee(address indexed receiver, uint256 feeBasisPoints);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -48,18 +58,17 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         string memory _derivativeTokenSymbol,
         uint256 _compositionTolerance,
         uint256 _compositionEnforcementThreshold,
-        Fee[] memory _fees,
+        Fee[] calldata _fees,
         uint256 _withdrawalFee
     ) public initializer {
         __StakingRewardsPool_init(address(0), _derivativeTokenName, _derivativeTokenSymbol);
-        compositionTolerance = _compositionTolerance;
-        compositionEnforcementThreshold = _compositionEnforcementThreshold;
+        setCompositionTolerance(_compositionTolerance);
+        setCompositionEnforcementThreshold(_compositionEnforcementThreshold);
+        setWithdrawalFee(_withdrawalFee);
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
-        require(_withdrawalFee <= 500, "Withdrawal fee must be <= 5%");
-        withdrawalFee = _withdrawalFee;
     }
 
     modifier tokenIsSupported(address _lsdToken) {
@@ -105,13 +114,14 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @return list of compositions for each lsd
      */
     function getComposition() external view returns (uint256[] memory) {
-        uint256 depositsTotal = _totalDeposits();
-
+        uint256 totalDeposits = _totalDeposits();
         uint256[] memory composition = new uint256[](lsdTokens.length);
+
+        if (totalDeposits == 0) return composition;
 
         for (uint256 i = 0; i < composition.length; i++) {
             uint256 deposits = lsdAdapters[lsdTokens[i]].getTotalDeposits();
-            composition[i] = (deposits * 10000) / depositsTotal;
+            composition[i] = (deposits * BASIS_POINTS_TOTAL) / totalDeposits;
         }
 
         return composition;
@@ -140,27 +150,29 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             if (compositionTarget == 0) continue;
 
             // check how much can be deposited before the decrease in composition percentage exceeds the composition tolerance
-            uint256 minComposition = compositionTarget - (compositionTarget * compositionTolerance) / 10000;
-            depositLimit = MathUpgradeable.min((deposits * 10000) / minComposition, depositLimit);
+            uint256 minComposition = compositionTarget - (compositionTarget * compositionTolerance) / BASIS_POINTS_TOTAL;
+            depositLimit = MathUpgradeable.min((deposits * BASIS_POINTS_TOTAL) / minComposition, depositLimit);
         }
 
-        uint256 compositionTarget = compositionTargets[_lsdToken];
-        uint256 deposits = lsdAdapters[_lsdToken].getTotalDeposits();
+        uint256 depositTokenCompositionTarget = compositionTargets[_lsdToken];
+        uint256 depositTokenDeposits = lsdAdapters[_lsdToken].getTotalDeposits();
 
         // check how much can be deposited before the increase in composition percentage exceeds the composition tolerance
-        uint256 maxComposition = compositionTarget + (compositionTarget * compositionTolerance) / 10000;
-        if (maxComposition < 10000) {
+        uint256 maxComposition = depositTokenCompositionTarget +
+            (depositTokenCompositionTarget * compositionTolerance) /
+            BASIS_POINTS_TOTAL;
+        if (maxComposition < BASIS_POINTS_TOTAL) {
             depositLimit = MathUpgradeable.min(
-                ((depositsTotal - deposits) * 10000) / (10000 - maxComposition),
+                ((depositsTotal - depositTokenDeposits) * BASIS_POINTS_TOTAL) / (BASIS_POINTS_TOTAL - maxComposition),
                 depositLimit
             );
         }
 
         // check if deposits are below the composition enforcement threshold and if so, use deposit room if it's greater
         // than the amount that could be deposited with enforcement of composition targets
-        uint256 minThreshold = (compositionEnforcementThreshold * compositionTarget) / 10000;
-        if (deposits < minThreshold) {
-            uint256 thresholdDiff = minThreshold - deposits;
+        uint256 minThreshold = (compositionEnforcementThreshold * depositTokenCompositionTarget) / BASIS_POINTS_TOTAL;
+        if (depositTokenDeposits < minThreshold) {
+            uint256 thresholdDiff = minThreshold - depositTokenDeposits;
             depositLimit = MathUpgradeable.max(depositsTotal + thresholdDiff, depositLimit);
         }
 
@@ -176,11 +188,14 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         require(getDepositRoom(_lsdToken) >= _amount, "Insufficient deposit room for the selected lsd");
 
         ILiquidSDAdapter lsdAdapter = lsdAdapters[_lsdToken];
-        IERC20Upgradeable(_lsdToken).safeTransferFrom(msg.sender, address(lsdAdapter), _amount);
 
         uint256 underlyingAmount = lsdAdapter.getUnderlyingByLSD(_amount);
+        require(underlyingAmount != 0, "Deposit amount too small");
+
         _mint(msg.sender, underlyingAmount);
-        totalDeposits += underlyingAmount;
+        totalStaked += underlyingAmount;
+
+        IERC20Upgradeable(_lsdToken).safeTransferFrom(msg.sender, address(lsdAdapter), _amount);
 
         emit Deposit(msg.sender, _lsdToken, _amount);
     }
@@ -194,14 +209,16 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @return list of lsd amounts
      **/
     function getWithdrawalAmounts(uint256 _amount) public view returns (uint256[] memory) {
+        require(_amount <= totalStaked, "Cannot withdraw more than total staked amount");
+
         uint256[] memory withdrawalAmounts = new uint256[](lsdTokens.length);
         uint256[] memory targetDepositDiffs = new uint256[](lsdTokens.length);
         uint256 amount = _amount - _getWithdrawalFeeAmount(_amount);
-        uint256 newDepositsTotal = _totalDeposits() - _amount;
+        uint256 newTotalDeposits = _totalDeposits() - amount;
         uint256 totalTargetDepositDiffs;
 
         for (uint256 i = 0; i < targetDepositDiffs.length; i++) {
-            uint256 newTargetDeposits = (newDepositsTotal * compositionTargets[lsdTokens[i]]) / 10000;
+            uint256 newTargetDeposits = (newTotalDeposits * compositionTargets[lsdTokens[i]]) / BASIS_POINTS_TOTAL;
             uint256 currentDeposits = lsdAdapters[lsdTokens[i]].getTotalDeposits();
             int256 targetDepositDiff = int256(currentDeposits) - int256(newTargetDeposits);
 
@@ -231,14 +248,14 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @param _amount amount to withdraw
      **/
     function withdraw(uint256 _amount) external notPaused {
-        _burn(msg.sender, _amount);
-        totalDeposits -= _amount - _getWithdrawalFeeAmount(_amount);
-
         uint256[] memory withdrawalAmounts = getWithdrawalAmounts(_amount);
+
+        _burn(msg.sender, _amount);
+        totalStaked -= _amount - _getWithdrawalFeeAmount(_amount);
 
         for (uint256 i = 0; i < withdrawalAmounts.length; i++) {
             uint256 amount = withdrawalAmounts[i];
-            if (amount > 0) {
+            if (amount != 0) {
                 IERC20Upgradeable(lsdTokens[i]).safeTransferFrom(address(lsdAdapters[lsdTokens[i]]), msg.sender, amount);
             }
         }
@@ -253,12 +270,12 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @return total fees
      **/
     function getRewards() external view returns (int256, uint256) {
-        int256 totalRewards = int256(_totalDeposits()) - int256(totalDeposits);
+        int256 totalRewards = int256(_totalDeposits()) - int256(totalStaked);
         uint256 totalFees;
 
         if (totalRewards > 0) {
             for (uint256 i = 0; i < fees.length; i++) {
-                totalFees += (uint256(totalRewards) * fees[i].basisPoints) / 10000;
+                totalFees += (uint256(totalRewards) * fees[i].basisPoints) / BASIS_POINTS_TOTAL;
             }
         }
 
@@ -269,16 +286,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @notice updates and distributes rewards based on balance changes in adapters
      **/
     function updateRewards() external notPaused {
-        uint256 currentTotalDeposits;
-
-        for (uint256 i = 0; i < lsdTokens.length; i++) {
-            currentTotalDeposits += lsdAdapters[lsdTokens[i]].getTotalDeposits();
-        }
-
-        int256 totalRewards = int256(currentTotalDeposits) - int256(totalDeposits);
+        int256 totalRewards = int256(_totalDeposits()) - int256(totalStaked);
 
         if (totalRewards != 0) {
-            totalDeposits = uint256(int256(totalDeposits) + totalRewards);
+            totalStaked = uint256(int256(totalStaked) + totalRewards);
         }
 
         uint256 totalFeeAmounts;
@@ -287,12 +298,12 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             uint256[] memory feeAmounts = new uint256[](fees.length);
 
             for (uint256 i = 0; i < fees.length; i++) {
-                feeAmounts[i] = (uint256(totalRewards) * fees[i].basisPoints) / 10000;
+                feeAmounts[i] = (uint256(totalRewards) * fees[i].basisPoints) / BASIS_POINTS_TOTAL;
                 totalFeeAmounts += feeAmounts[i];
             }
 
-            if (totalFeeAmounts > 0) {
-                uint256 sharesToMint = (totalFeeAmounts * totalShares) / (totalDeposits - totalFeeAmounts);
+            if (totalFeeAmounts != 0) {
+                uint256 sharesToMint = (totalFeeAmounts * totalShares) / (totalStaked - totalFeeAmounts);
                 _mintShares(address(this), sharesToMint);
 
                 for (uint256 i = 0; i < fees.length; i++) {
@@ -305,7 +316,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             }
         }
 
-        emit UpdateRewards(msg.sender, totalDeposits, totalRewards, totalFeeAmounts);
+        emit UpdateRewards(msg.sender, totalStaked, totalRewards, totalFeeAmounts);
     }
 
     /**
@@ -331,7 +342,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             totalComposition += _compositionTargets[i];
         }
 
-        require(totalComposition == 10000, "Composition targets must sum to 100%");
+        require(totalComposition == BASIS_POINTS_TOTAL, "Composition targets must sum to 100%");
+        emit AddLSDToken(_lsdToken, _lsdAdapter, _compositionTargets);
     }
 
     /**
@@ -368,14 +380,15 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             totalComposition += _compositionTargets[i];
         }
 
-        require(totalComposition == 10000, "Composition targets must sum to 100%");
+        require(totalComposition == BASIS_POINTS_TOTAL, "Composition targets must sum to 100%");
+        emit RemoveLSDToken(_lsdToken, _compositionTargets);
     }
 
     /**
      * @notice sets composition targets
      * @param _compositionTargets list of basis point composition targets
      **/
-    function setCompositionTargets(uint256[] memory _compositionTargets) external onlyOwner {
+    function setCompositionTargets(uint256[] calldata _compositionTargets) external onlyOwner {
         require(_compositionTargets.length == lsdTokens.length, "Invalid composition targets length");
 
         uint256 totalComposition;
@@ -384,7 +397,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             totalComposition += _compositionTargets[i];
         }
 
-        require(totalComposition == 10000, "Composition targets must sum to 100%");
+        require(totalComposition == BASIS_POINTS_TOTAL, "Composition targets must sum to 100%");
+        emit SetCompositionTargets(_compositionTargets);
     }
 
     /**
@@ -394,9 +408,10 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * composition target of 30%, then its minimum composition of the pool is 15% of deposits and its maximum is 45%)
      * @param _compositionTolerance basis point composition tolerance
      **/
-    function setCompositionTolerance(uint256 _compositionTolerance) external onlyOwner {
-        require(_compositionTolerance < 10000, "Composition tolerance must be < 100%");
+    function setCompositionTolerance(uint256 _compositionTolerance) public onlyOwner {
+        require(_compositionTolerance < BASIS_POINTS_TOTAL, "Composition tolerance must be < 100%");
         compositionTolerance = _compositionTolerance;
+        emit SetCompositionTolerance(_compositionTolerance);
     }
 
     /**
@@ -407,17 +422,19 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * reached, enough of the second lsd would have to be deposited to open up more room for the first lsd)
      * @param _compositionEnforcementThreshold threshold total deposit amount
      **/
-    function setCompositionEnforcementThreshold(uint256 _compositionEnforcementThreshold) external onlyOwner {
+    function setCompositionEnforcementThreshold(uint256 _compositionEnforcementThreshold) public onlyOwner {
         compositionEnforcementThreshold = _compositionEnforcementThreshold;
+        emit SetCompositionEnforcementThreshold(_compositionEnforcementThreshold);
     }
 
     /**
      * @notice sets the withdrawal fee
      * @param _withdrawalFee fee in basis points
      **/
-    function setWithdrawalFee(uint256 _withdrawalFee) external onlyOwner {
+    function setWithdrawalFee(uint256 _withdrawalFee) public onlyOwner {
         require(_withdrawalFee <= 500, "Withdrawal fee must be <= 5%");
         withdrawalFee = _withdrawalFee;
+        emit SetWithdrawalFee(_withdrawalFee);
     }
 
     /**
@@ -428,6 +445,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        emit AddFee(_receiver, _feeBasisPoints);
     }
 
     /**
@@ -452,6 +470,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         }
 
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        emit UpdateFee(_receiver, _feeBasisPoints);
     }
 
     /**
@@ -468,7 +487,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @return the total underlying value
      */
     function _totalStaked() internal view override returns (uint256) {
-        return totalDeposits;
+        return totalStaked;
     }
 
     /**
@@ -503,6 +522,6 @@ contract LiquidSDIndexPool is StakingRewardsPool {
      * @return amount of tokens to be paid on withdrawal
      **/
     function _getWithdrawalFeeAmount(uint256 _amount) internal view returns (uint256) {
-        return (_amount * withdrawalFee) / 10000;
+        return (_amount * withdrawalFee) / BASIS_POINTS_TOTAL;
     }
 }

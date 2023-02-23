@@ -185,7 +185,7 @@ describe('LiquidSDIndexPool', () => {
     assert.equal(fromEther(await lsd1.balanceOf(accounts[2])), 8900)
     assert.equal(fromEther(await lsd2.balanceOf(accounts[2])), 10400)
 
-    await expect(pool.connect(signers[1]).withdraw(toEther(5000))).to.be.revertedWith(
+    await expect(pool.connect(signers[2]).withdraw(toEther(301))).to.be.revertedWith(
       'Burn amount exceeds balance'
     )
   })
