@@ -19,7 +19,7 @@ contract RocketPoolRETHAdapter is LiquidSDAdapter {
     }
 
     /**
-     * @notice returns the exchange rate between this adapter's token and the underlying asset
+     * @notice returns the exchange rate between the underlying asset and this adapter's token
      * @return exchange rate
      */
     function getExchangeRate() public view override returns (uint256) {
