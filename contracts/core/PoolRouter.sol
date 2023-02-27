@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
 import "./interfaces/IStakingPool.sol";
 import "./interfaces/IDelegatorPool.sol";
-import "../ethStaking/interfaces/IWrappedETH.sol";
+import "./interfaces/IWrappedETH.sol";
 
 /**
  * @title PoolRouter

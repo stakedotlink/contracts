@@ -6,8 +6,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../../core/interfaces/IRewardsPool.sol";
-import "../../core/interfaces/IERC677.sol";
+import "../../../core/interfaces/IRewardsPool.sol";
+import "../../../core/interfaces/IERC677.sol";
 
 /**
  * @title Operator Controller

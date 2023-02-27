@@ -6,8 +6,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "../core/base/Strategy.sol";
-import "./interfaces/IWrappedETH.sol";
+import "../../core/base/Strategy.sol";
+import "../../core/interfaces/IWrappedETH.sol";
 import "./interfaces/IWLOperatorController.sol";
 import "./interfaces/INWLOperatorController.sol";
 import "./interfaces/IDepositContract.sol";
