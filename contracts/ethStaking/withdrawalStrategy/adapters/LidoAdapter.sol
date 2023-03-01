@@ -11,7 +11,7 @@ import "../interfaces/ILidoWQERC721.sol";
 contract LidoAdapter is WithdrawalAdapter {
     struct Withdrawal {
         uint256 totalETHAmount;
-        uint256 withdrawnETHAmount;
+        uint256 initialETHWithdrawalAmount;
         address owner;
     }
 
@@ -101,7 +101,7 @@ contract LidoAdapter is WithdrawalAdapter {
                 _sendEther(withdrawal.owner, toWithdraw);
             }
 
-            totalFinalizedDeposits += withdrawal.withdrawnETHAmount;
+            totalFinalizedDeposits += withdrawal.initialETHWithdrawalAmount;
             emit FinalizeWithdrawal(withdrawal.owner, _requestIds[i], toWithdraw, claimableETH);
         }
 
