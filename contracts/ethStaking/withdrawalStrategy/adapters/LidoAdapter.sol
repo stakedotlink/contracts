@@ -33,6 +33,9 @@ contract LidoAdapter is WithdrawalAdapter {
         uint256 totalFinalizedAmount
     );
 
+    error DuplicateRequestId();
+    error InsufficientETHClaimed();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -81,6 +84,8 @@ contract LidoAdapter is WithdrawalAdapter {
      * @param _requestId Lido withdrawal request id
      */
     function initiateWithdrawal(uint256 _requestId) external {
+        if (withdrawals[_requestId].owner != address(0)) revert DuplicateRequestId();
+
         uint256[] memory reqList = new uint256[](1);
         reqList[0] = _requestId;
         ILidoWQERC721.WithdrawalRequestStatus memory requestStatus = wqERC721.getWithdrawalStatus(reqList)[0];
@@ -105,13 +110,19 @@ contract LidoAdapter is WithdrawalAdapter {
      * @param _hints list of hints, see Lido's WithdrawalQueue.sol
      */
     function finalizeWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
-        uint256 startingBalance = address(this).balance;
         uint256[] memory claimableEther = wqERC721.getClaimableEther(_requestIds, _hints);
+
+        uint256 totalClaimableETH;
+        for (uint256 i = 0; i < claimableEther.length; ++i) {
+            totalClaimableETH += claimableEther[i];
+        }
 
         wqERC721.claimWithdrawals(_requestIds, _hints);
 
+        if (address(this).balance < totalClaimableETH) revert InsufficientETHClaimed();
+
         uint256 totalFinalizedDeposits;
-        for (uint i = 0; i < _requestIds.length; ++i) {
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
             uint256 claimableETH = claimableEther[i];
             Withdrawal memory withdrawal = withdrawals[_requestIds[i]];
 
@@ -131,6 +142,6 @@ contract LidoAdapter is WithdrawalAdapter {
         }
 
         totalOutstandingDeposits -= totalFinalizedDeposits;
-        controller.adapterDeposit{value: address(this).balance - startingBalance}();
+        controller.adapterDeposit{value: address(this).balance}();
     }
 }
