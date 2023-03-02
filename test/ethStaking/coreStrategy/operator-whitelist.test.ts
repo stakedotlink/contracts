@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai'
-import { deploy, getAccounts } from '../utils/helpers'
-import { OperatorWhitelist } from '../../typechain-types'
+import { deploy, getAccounts } from '../../utils/helpers'
+import { OperatorWhitelist } from '../../../typechain-types'
 import { Signer } from 'ethers'
 
 describe('OperatorWhitelist', () => {

@@ -8,13 +8,13 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
-} from '../utils/helpers'
+} from '../../utils/helpers'
 import {
   ERC677,
   EthStakingStrategyMock,
   NWLOperatorController,
   RewardsPool,
-} from '../../typechain-types'
+} from '../../../typechain-types'
 import { Signer } from 'ethers'
 
 const pubkeyLength = 48 * 2

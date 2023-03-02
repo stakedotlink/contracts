@@ -7,7 +7,7 @@ import {
   getAccounts,
   padBytes,
   concatBytes,
-} from '../utils/helpers'
+} from '../../utils/helpers'
 import {
   StakingPool,
   WrappedSDToken,
@@ -19,7 +19,7 @@ import {
   OperatorWhitelistMock,
   RewardsPool,
   DepositController,
-} from '../../typechain-types'
+} from '../../../typechain-types'
 import { Signer } from 'ethers'
 
 const pubkeyLength = 48 * 2

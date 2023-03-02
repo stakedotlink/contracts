@@ -5,10 +5,10 @@ import "../base/WithdrawalAdapter.sol";
 import "../interfaces/ILidoWQERC721.sol";
 
 /**
- * @title Lido Adapter
+ * @title Lido Withdrawal Adapter
  * @notice Withdrawal adapter for Lido
  */
-contract LidoAdapter is WithdrawalAdapter {
+contract LidoWithdrawalAdapter is WithdrawalAdapter {
     struct Withdrawal {
         uint256 totalETHAmount;
         uint256 initialETHWithdrawalAmount;

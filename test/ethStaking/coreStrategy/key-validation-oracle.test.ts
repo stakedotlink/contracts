@@ -8,8 +8,8 @@ import {
   fromEther,
   concatBytes,
   padBytes,
-} from '../utils/helpers'
-import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../typechain-types'
+} from '../../utils/helpers'
+import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../../typechain-types'
 import { Signer } from 'ethers'
 
 const keyPairs = {

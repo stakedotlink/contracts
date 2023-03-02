@@ -7,13 +7,13 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
-} from '../utils/helpers'
+} from '../../utils/helpers'
 import {
   ERC677,
   OperatorWhitelistMock,
   RewardsPool,
   WLOperatorController,
-} from '../../typechain-types'
+} from '../../../typechain-types'
 import { Signer } from 'ethers'
 import { ethers } from 'hardhat'
 
