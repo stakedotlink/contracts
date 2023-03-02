@@ -9,7 +9,7 @@ import "../interfaces/IETHWithdrawalStrategy.sol";
 
 /**
  * @title Withdrawal Adapter
- * @notice Base adapter contract used to handle ETH withdrawals from an LSD protocol
+ * @notice Base adapter contract used to handle withdrawals from an ETH staking protocol
  */
 abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IETHWithdrawalStrategy public controller;
@@ -18,7 +18,6 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
     uint256 public feeBasisPoints;
 
     error InsufficientFundsForWithdrawal();
-    error InsufficientETHBalance();
     error ETHTransferFailed();
 
     function __WithdrawalAdapter_init(address _controller, uint256 _instantAmountBasisPoints) public onlyInitializing {
@@ -28,11 +27,20 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
         __UUPSUpgradeable_init();
     }
 
+    /**
+     * @notice returns the total deposits held by this adapter
+     * @dev deposits are equal to the amount of ETH backing unfinalized withdrawals
+     * held by this adapter minus the ETH owed to withdrawers on finalization
+     * @return total deposits amount
+     */
     function getTotalDeposits() external view virtual returns (uint256);
 
+    /**
+     * @notice performs an ETH transfer
+     * @param _to account to receive transfer
+     * @param _amount amount to transfer
+     */
     function _sendEther(address _to, uint256 _amount) internal {
-        if (address(this).balance < _amount) revert InsufficientETHBalance();
-
         (bool success, ) = _to.call{value: _amount}("");
         if (!success) revert ETHTransferFailed();
     }

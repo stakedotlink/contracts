@@ -49,12 +49,16 @@ contract EthWithdrawalStrategy is Strategy {
 
     receive() external payable {}
 
+    /**
+     * @notice returns a list of all adapters linked to thus strategy
+     * @return list of adapters
+     */
     function getAdapters() external view returns (address[] memory) {
         return adapters;
     }
 
     /**
-     * @notice deposits wETH from StakingPool into this strategy
+     * @notice deposits wETH into this strategy
      * @param _amount amount of wETH to deposit
      */
     function deposit(uint256 _amount) external onlyStakingPool {
@@ -64,7 +68,7 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
-     * @notice withdraws wETH into StakingPool
+     * @notice withdraws wETH from this strategy
      * @param _amount amount of ETH to withdraw
      */
     function withdraw(uint256 _amount) external onlyStakingPool {
@@ -73,16 +77,27 @@ contract EthWithdrawalStrategy is Strategy {
         totalDeposits += _amount;
     }
 
+    /**
+     * @notice deposits ETH into this strategy from an adapter and wraps it
+     */
     function adapterDeposit() external payable onlyAdapter {
         IWrappedETH(address(token)).wrap{value: msg.value}();
     }
 
+    /**
+     * @notice unwraps ETH and withdraws it to a receiver
+     * @param _receiver account to receive ETH
+     * @param _amount amount of ETH to withdraw
+     */
     function adapterWithdraw(address _receiver, uint256 _amount) external onlyAdapter {
         IWrappedETH(address(token)).unwrap(_amount);
-        (bool success, ) = payable(_receiver).call{value: _amount}("");
-        if (!success) revert ETHTransferFailed();
+        _sendEther(_receiver, _amount);
     }
 
+    /**
+     * @notice returns the deposit change (positive/negative) since deposits were last updated
+     * @return deposit change
+     */
     function depositChange() public view override returns (int256) {
         uint256 newTotalDeposits = token.balanceOf(address(this));
         for (uint256 i = 0; i < adapters.length; ++i) {
@@ -92,7 +107,7 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
-     * @notice updates deposit accounting and calculates reward distribution
+     * @notice updates deposit accounting
      */
     function updateDeposits() external onlyStakingPool returns (address[] memory, uint256[] memory) {
         int balanceChange = depositChange();
@@ -113,7 +128,7 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
-     * @notice returns the maximum that can be deposited into the strategy
+     * @notice returns the maximum that can be deposited into this strategy
      * @return max deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
@@ -121,7 +136,7 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
-     * @notice returns the minimum that must remain in the strategy
+     * @notice returns the minimum that must remain in this strategy
      * @return min deposits
      */
     function getMinDeposits() public view override returns (uint256) {
@@ -133,11 +148,21 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
-     * @notice sets the maximum that can be deposited into the strategy
+     * @notice sets the maximum that can be deposited into this strategy
      * @param _maxDeposits maximum deposits
      */
     function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
         maxDeposits = _maxDeposits;
         emit SetMaxDeposits(_maxDeposits);
+    }
+
+    /**
+     * @notice performs an ETH transfer
+     * @param _to account to receive transfer
+     * @param _amount amount to transfer
+     */
+    function _sendEther(address _to, uint256 _amount) internal {
+        (bool success, ) = _to.call{value: _amount}("");
+        if (!success) revert ETHTransferFailed();
     }
 }

@@ -47,20 +47,39 @@ contract LidoAdapter is WithdrawalAdapter {
         wqERC721 = ILidoWQERC721(_wqERC721);
     }
 
+    /**
+     * @notice returns the total deposits held by this adapter
+     * @dev deposits are equal to the amount of ETH backing unfinalized withdrawals
+     * held by this adapter minus the ETH owed to withdrawers on finalization
+     * @return total deposits amount
+     */
     function getTotalDeposits() external view override returns (uint256) {
         return totalOutstandingDeposits;
     }
 
+    /**
+     * @notice returns a list of all Lido withdrawal request ids owned by this adapter
+     * @return list of request ids
+     */
     function getRequestIds() external view returns (uint256[] memory) {
         return wqERC721.getWithdrawalRequests(address(this));
     }
 
+    /**
+     * @notice returns a list of withdrawable ETH for all Lido withdrawal requests owned by this adapter
+     * @return list of withdrawable ETH amounts
+     */
     function getWithdrawableEther() external view returns (uint256[] memory) {
         uint256[] memory requestIds = wqERC721.getWithdrawalRequests(address(this));
         uint256[] memory hints = wqERC721.findCheckpointHintsUnbounded(requestIds);
         return wqERC721.getClaimableEther(requestIds, hints);
     }
 
+    /**
+     * @notice swaps a Lido withdrawal for a percentage of it's value in ETH, the remaining value to be
+     * paid out on request finalization
+     * @param _requestId Lido withdrawal request id
+     */
     function initiateWithdrawal(uint256 _requestId) external {
         uint256[] memory reqList = new uint256[](1);
         reqList[0] = _requestId;
@@ -79,6 +98,12 @@ contract LidoAdapter is WithdrawalAdapter {
         emit InitiateWithdrawal(msg.sender, _requestId, instantWithdrawalAmount, totalAmount);
     }
 
+    /**
+     * @notice finalizes a list of withdrawal requests and pays out the remaining ETH owed to withdrawers
+     * minus any applicable fees
+     * @param _requestIds list of Lido withdrawal request ids
+     * @param _hints list of hints, see Lido's WithdrawalQueue.sol
+     */
     function finalizeWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
         uint256 startingBalance = address(this).balance;
         uint256[] memory claimableEther = wqERC721.getClaimableEther(_requestIds, _hints);
