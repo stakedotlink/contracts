@@ -45,6 +45,10 @@ contract CurveMock {
             j = 1;
         }
 
+        if (_j == 0) {
+            i = 1;
+        }
+
         tokens[i].transferFrom(msg.sender, address(this), _dx);
         tokens[j].transfer(_receiver, _dx);
 
