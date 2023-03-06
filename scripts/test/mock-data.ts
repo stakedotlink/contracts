@@ -4,6 +4,7 @@ import { fromEther, getAccounts, toEther } from '../utils/helpers'
 import { getContract, deployUpgradeable, deploy, updateDeployments } from '../utils/deployment'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 import {
+  CurveMock,
   ERC677,
   LidoSTETHAdapter,
   LiquidSDIndexPool,
@@ -206,6 +207,18 @@ async function main() {
   updateDeployments({
     LidoETH: stakingPoolOne.address,
     RocketPoolETH: stakingPoolTwo.address,
+  })
+
+  // Basic Curve Mock
+
+  const curveMock = (await deploy('CurveMock', [
+    LINK_StakingPool.address,
+    linkToken.address,
+  ])) as CurveMock
+  await linkToken.transfer(curveMock.address, toEther(1000))
+
+  updateDeployments({
+    CurvePool: curveMock.address,
   })
 }
 
