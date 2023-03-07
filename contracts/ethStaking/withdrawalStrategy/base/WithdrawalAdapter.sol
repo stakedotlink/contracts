@@ -27,6 +27,8 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
         __UUPSUpgradeable_init();
     }
 
+    receive() external payable {}
+
     /**
      * @notice returns the total deposits held by this adapter
      * @dev deposits are equal to the amount of ETH backing unfinalized withdrawals
