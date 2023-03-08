@@ -56,8 +56,6 @@ async function main() {
       iETH_DelegatorRewardsPool: 'RewardsPoolWSD',
     }
   )
-
-  console.log('deploy-status-ready')
 }
 
 main()
