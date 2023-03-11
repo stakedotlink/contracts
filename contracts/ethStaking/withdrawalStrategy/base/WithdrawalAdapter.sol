@@ -16,15 +16,34 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
 
     uint256 public instantAmountBasisPoints;
     uint256 public feeBasisPoints;
+    bool public isPaused;
+
+    event SetInstantAmountBasisPoints(uint256 instantAmountBasisPoints);
+    event SetFeeBasisPoints(uint256 feeBasisPoints);
+    event SetPaused(bool isPaused);
 
     error InsufficientFundsForWithdrawal();
     error ETHTransferFailed();
+    error CannotSetSamePauseStatus();
+    error ContractIsPaused();
+    error InvalidInstantAmount();
+    error InvalidFee();
 
-    function __WithdrawalAdapter_init(address _controller, uint256 _instantAmountBasisPoints) public onlyInitializing {
-        controller = IETHWithdrawalStrategy(_controller);
-        instantAmountBasisPoints = _instantAmountBasisPoints;
+    function __WithdrawalAdapter_init(
+        address _controller,
+        uint256 _instantAmountBasisPoints,
+        uint256 _feeBasisPoints
+    ) public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
+        controller = IETHWithdrawalStrategy(_controller);
+        setInstantAmountBasisPoints(_instantAmountBasisPoints);
+        setFeeBasisPoints(_feeBasisPoints);
+    }
+
+    modifier notPaused() {
+        if (isPaused) revert ContractIsPaused();
+        _;
     }
 
     receive() external payable {}
@@ -36,6 +55,36 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
      * @return total deposits amount
      */
     function getTotalDeposits() external view virtual returns (uint256);
+
+    /**
+     * @notice sets the basis point amount of ETH instantly received when initiating a withdrawal
+     * @param _instantAmountBasisPoints basis point amount
+     **/
+    function setInstantAmountBasisPoints(uint256 _instantAmountBasisPoints) public onlyOwner {
+        if (_instantAmountBasisPoints >= 10000) revert InvalidInstantAmount();
+        instantAmountBasisPoints = _instantAmountBasisPoints;
+        emit SetInstantAmountBasisPoints(_instantAmountBasisPoints);
+    }
+
+    /**
+     * @notice sets the basis point fee paid on withdrawals
+     * @param _feeBasisPoints basis point fee
+     **/
+    function setFeeBasisPoints(uint256 _feeBasisPoints) public onlyOwner {
+        if (_feeBasisPoints > 500) revert InvalidFee();
+        feeBasisPoints = _feeBasisPoints;
+        emit SetFeeBasisPoints(_feeBasisPoints);
+    }
+
+    /**
+     * @notice pauses/unpauses the contract
+     * @param _isPaused pause status of the contract
+     **/
+    function setPaused(bool _isPaused) external onlyOwner {
+        if (_isPaused == isPaused) revert CannotSetSamePauseStatus();
+        isPaused = _isPaused;
+        emit SetPaused(_isPaused);
+    }
 
     /**
      * @notice performs an ETH transfer

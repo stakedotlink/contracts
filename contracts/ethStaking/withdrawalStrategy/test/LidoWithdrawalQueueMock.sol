@@ -7,10 +7,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
  * @title Lido Withdrawal Queue Mock
  * @notice Mocks contract for testing
  */
-contract LidoWithdrawalQueueMock {
+contract LidoWithdrawalQueueMock is ERC721 {
     struct WithdrawalRequest {
-        uint256 amount;
+        uint256 amountOfStETH;
+        uint256 amountOfShares;
         address owner;
+        uint256 timestamp;
         bool isFinalized;
         bool isClaimed;
     }
@@ -18,9 +20,10 @@ contract LidoWithdrawalQueueMock {
     WithdrawalRequest[] private requests;
     mapping(address => uint256[]) private ownerRequests;
 
-    constructor(WithdrawalRequest[] memory _requests) {
-        for (uint256 i = 0; i < _requests.length; i++) {
+    constructor(WithdrawalRequest[] memory _requests) ERC721("Lido Withdrawal", "LW") {
+        for (uint256 i = 0; i < _requests.length; ++i) {
             requests.push(_requests[i]);
+            _mint(_requests[i].owner, i);
         }
     }
 
@@ -34,31 +37,36 @@ contract LidoWithdrawalQueueMock {
         return _requestIds;
     }
 
-    function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints) external view {
+    function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints)
+        external
+        view
+        returns (uint256[] memory)
+    {
         uint256[] memory claimable = new uint256[](_requestIds.length);
-        for (uint256 i = 0; i < _requestIds.length; i++) {
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
             WithdrawalRequest memory request = requests[_requestIds[i]];
-            if (!request.isFinalized || !request.isClaimed) {
-                claimable[i] = request.amount;
+            if (request.isFinalized && !request.isClaimed) {
+                claimable[i] = request.amountOfStETH;
             }
         }
+        return claimable;
     }
 
     function getWithdrawalStatus(uint256[] calldata _requestIds) external view returns (WithdrawalRequest[] memory) {
-        WithdrawalRequest[] memory returnRequets = new WithdrawalRequest[](_requestIds.length);
-        for (uint256 i = 0; i < _requestIds.length; i++) {
-            returnRequets[i] = requests[i];
+        WithdrawalRequest[] memory returnRequests = new WithdrawalRequest[](_requestIds.length);
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            returnRequests[i] = requests[_requestIds[i]];
         }
-        return returnRequets;
+        return returnRequests;
     }
 
     function claimWithdrawals(uint256[] calldata _requestIds, uint256[] calldata _hints) external {
-        for (uint256 i = 0; i < _requestIds.length; i++) {
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
             WithdrawalRequest storage request = requests[_requestIds[i]];
 
             require(request.isFinalized && !request.isClaimed, "ETH not claimable");
             request.isClaimed = true;
-            (bool success, ) = payable(request.owner).call{value: request.amount}("");
+            (bool success, ) = payable(request.owner).call{value: request.amountOfStETH}("");
             require(success, "Transfer failed");
         }
     }
@@ -68,6 +76,23 @@ contract LidoWithdrawalQueueMock {
 
         require(!request.isFinalized, "Already finalized");
         request.isFinalized = true;
-        request.amount = _finalAmount;
+        request.amountOfStETH = _finalAmount;
+    }
+
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _tokenId
+    ) internal override {
+        uint256[] storage fromRequests = ownerRequests[_from];
+        for (uint256 i = 0; i < fromRequests.length; ++i) {
+            if (fromRequests[i] == _tokenId) {
+                fromRequests[i] = fromRequests[fromRequests.length - 1];
+                fromRequests.pop();
+                break;
+            }
+        }
+        ownerRequests[_to].push(_tokenId);
+        requests[_tokenId].owner = _to;
     }
 }

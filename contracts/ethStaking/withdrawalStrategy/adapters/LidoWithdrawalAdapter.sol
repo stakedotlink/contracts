@@ -17,6 +17,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
     ILidoWQERC721 public wqERC721;
     mapping(uint256 => Withdrawal) public withdrawals;
+    mapping(address => uint256[]) private ownerRequestIds;
 
     uint256 private totalOutstandingDeposits;
 
@@ -35,6 +36,8 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
     error DuplicateRequestId();
     error InsufficientETHClaimed();
+    error RequestNotFound(uint256 requestId);
+    error WithdrawalAmountTooSmall();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -44,9 +47,10 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     function initialize(
         address _controller,
         address _wqERC721,
-        uint256 _instantAmountBasisPoints
+        uint256 _instantAmountBasisPoints,
+        uint256 _feeBasisPoints
     ) public initializer {
-        __WithdrawalAdapter_init(_controller, _instantAmountBasisPoints);
+        __WithdrawalAdapter_init(_controller, _instantAmountBasisPoints, _feeBasisPoints);
         wqERC721 = ILidoWQERC721(_wqERC721);
     }
 
@@ -69,13 +73,53 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     }
 
     /**
-     * @notice returns a list of withdrawable ETH for all Lido withdrawal requests owned by this adapter
+     * @notice returns a list of all Lido request ids associated with an owner
+     * @param _owner owner address
+     * @return list of request ids
+     */
+    function getRequestIdsByOwner(address _owner) external view returns (uint256[] memory) {
+        return ownerRequestIds[_owner];
+    }
+
+    /**
+     * @notice returns a list of claimable ETH for a list of Lido withdrawal requests owned by this adapter
+     * @dev returns the total claimable ETH amount for each withdrawal request
+     * @param _requestIds list of request ids
+     * @return list of claimable ETH amounts
+     */
+    function getClaimableEther(uint256[] calldata _requestIds) external view returns (uint256[] memory) {
+        for (uint256 i = 0; i < _requestIds.length; i++) {
+            if (withdrawals[_requestIds[i]].owner == address(0)) revert RequestNotFound(_requestIds[i]);
+        }
+        uint256[] memory hints = wqERC721.findCheckpointHintsUnbounded(_requestIds);
+        return wqERC721.getClaimableEther(_requestIds, hints);
+    }
+
+    /**
+     * @notice returns a list of withdrawable ETH for a list of Lido withdrawal requests owned by this adapter
+     * @dev returns only the withdrawable ETH amount for each withdrawal request
+     * @param _requestIds list of request ids
      * @return list of withdrawable ETH amounts
      */
-    function getWithdrawableEther() external view returns (uint256[] memory) {
-        uint256[] memory requestIds = wqERC721.getWithdrawalRequests(address(this));
-        uint256[] memory hints = wqERC721.findCheckpointHintsUnbounded(requestIds);
-        return wqERC721.getClaimableEther(requestIds, hints);
+    function getWithdrawableEther(uint256[] calldata _requestIds) external view returns (uint256[] memory) {
+        uint256[] memory hints = wqERC721.findCheckpointHintsUnbounded(_requestIds);
+        uint256[] memory claimable = wqERC721.getClaimableEther(_requestIds, hints);
+        uint256[] memory withdrawable = new uint256[](claimable.length);
+
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
+            uint256 claimableETH = claimable[i];
+            Withdrawal memory withdrawal = withdrawals[_requestIds[i]];
+
+            if (withdrawal.owner == address(0)) revert RequestNotFound(_requestIds[i]);
+
+            uint256 toRemainInPool = withdrawal.initialETHWithdrawalAmount + (claimableETH * feeBasisPoints) / 10000;
+
+            if (toRemainInPool < claimableETH) {
+                withdrawable[i] = claimableETH - toRemainInPool;
+            }
+        }
+
+        return withdrawable;
     }
 
     /**
@@ -83,7 +127,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
      * paid out on request finalization
      * @param _requestId Lido withdrawal request id
      */
-    function initiateWithdrawal(uint256 _requestId) external {
+    function initiateWithdrawal(uint256 _requestId) external notPaused {
         if (withdrawals[_requestId].owner != address(0)) revert DuplicateRequestId();
 
         uint256[] memory reqList = new uint256[](1);
@@ -93,10 +137,12 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
         uint256 totalAmount = requestStatus.amountOfStETH;
         uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / 10000;
 
+        if ((totalAmount * feeBasisPoints) / 10000 == 0) revert WithdrawalAmountTooSmall();
         if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
 
         withdrawals[_requestId] = Withdrawal(totalAmount, instantWithdrawalAmount, msg.sender);
         totalOutstandingDeposits += instantWithdrawalAmount;
+        ownerRequestIds[msg.sender].push(_requestId);
         wqERC721.transferFrom(msg.sender, address(this), _requestId);
         controller.adapterWithdraw(msg.sender, instantWithdrawalAmount);
 
@@ -126,10 +172,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
             uint256 claimableETH = claimableEther[i];
             Withdrawal memory withdrawal = withdrawals[_requestIds[i]];
 
-            uint256 toRemainInPool = (claimableETH * feeBasisPoints) / 10000;
-            if (claimableETH < withdrawal.totalETHAmount) {
-                toRemainInPool += withdrawal.totalETHAmount - claimableETH;
-            }
+            uint256 toRemainInPool = withdrawal.initialETHWithdrawalAmount + (claimableETH * feeBasisPoints) / 10000;
 
             uint256 toWithdraw;
             if (toRemainInPool < claimableETH) {
