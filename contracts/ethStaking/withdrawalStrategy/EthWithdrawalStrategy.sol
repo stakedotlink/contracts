@@ -15,18 +15,23 @@ import "./interfaces/IWithdrawalAdapter.sol";
 contract EthWithdrawalStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint256 public totalDeposits;
+    uint256 private totalDeposits;
     uint256 private maxDeposits;
 
     address[] private adapters;
     mapping(address => bool) private adaptersMap;
 
     event SetMaxDeposits(uint256 max);
+    event AdapterAdded(address adapter);
+    event AdapterRemoved(address adapter);
 
     error ETHTransferFailed();
     error OnlyAdapter();
     error InsufficientDepositRoom(uint256 amount, uint256 depositRoom);
     error InsufficientWithdrawalRoom(uint256 amount, uint256 withdrawalRoom);
+    error AdapterAlreadyExists();
+    error AdapterNotFound();
+    error AdapterContainsDeposits();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -50,7 +55,7 @@ contract EthWithdrawalStrategy is Strategy {
     receive() external payable {}
 
     /**
-     * @notice returns a list of all adapters linked to thus strategy
+     * @notice returns a list of all adapters linked to this strategy
      * @return list of adapters
      */
     function getAdapters() external view returns (address[] memory) {
@@ -74,7 +79,7 @@ contract EthWithdrawalStrategy is Strategy {
     function withdraw(uint256 _amount) external onlyStakingPool {
         if (_amount > canWithdraw()) revert InsufficientWithdrawalRoom(_amount, canWithdraw());
         token.safeTransfer(address(stakingPool), _amount);
-        totalDeposits += _amount;
+        totalDeposits -= _amount;
     }
 
     /**
@@ -120,6 +125,14 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
+     * @notice returns the amount of deposits available for use by adapters
+     * @return available deposits
+     */
+    function availableDeposits() external view returns (uint256) {
+        return token.balanceOf(address(this));
+    }
+
+    /**
      * @notice returns the total amount of deposits in this strategy
      * @return total deposits
      */
@@ -154,6 +167,35 @@ contract EthWithdrawalStrategy is Strategy {
     function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
         maxDeposits = _maxDeposits;
         emit SetMaxDeposits(_maxDeposits);
+    }
+
+    /**
+     * @notice adds a new withdrawal adapter
+     * @param _adapter address of adapter
+     */
+    function addAdapter(address _adapter) external onlyOwner {
+        if (adaptersMap[_adapter]) revert AdapterAlreadyExists();
+        adaptersMap[_adapter] = true;
+        adapters.push(_adapter);
+        emit AdapterAdded(_adapter);
+    }
+
+    /**
+     * @notice removes an existing withdrawal adapter
+     * @param _adapter address of adapter
+     */
+    function removeAdapter(address _adapter) external onlyOwner {
+        if (!adaptersMap[_adapter]) revert AdapterNotFound();
+        for (uint256 i = 0; i < adapters.length; ++i) {
+            if (adapters[i] == _adapter) {
+                if (IWithdrawalAdapter(adapters[i]).getTotalDeposits() > 0) revert AdapterContainsDeposits();
+                adapters[i] = adapters[adapters.length - 1];
+                adapters.pop();
+                break;
+            }
+        }
+        delete adaptersMap[_adapter];
+        emit AdapterRemoved(_adapter);
     }
 
     /**
