@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../interfaces/IETHWithdrawalStrategy.sol";
+import "../interfaces/IFeeAdapter.sol";
 
 /**
  * @title Withdrawal Adapter
@@ -13,13 +14,15 @@ import "../interfaces/IETHWithdrawalStrategy.sol";
  */
 abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IETHWithdrawalStrategy public controller;
+    IFeeAdapter public feeAdapter;
 
     uint256 public instantAmountBasisPoints;
-    uint256 public feeBasisPoints;
+    uint256 public minWithdrawalAmount;
     bool public isPaused;
 
     event SetInstantAmountBasisPoints(uint256 instantAmountBasisPoints);
-    event SetFeeBasisPoints(uint256 feeBasisPoints);
+    event SetMinWithdrawalAmount(uint256 minWithdrawalAmount);
+    event SetFeeAdapter(address feeAdapter);
     event SetPaused(bool isPaused);
 
     error InsufficientFundsForWithdrawal();
@@ -27,18 +30,20 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
     error CannotSetSamePauseStatus();
     error ContractIsPaused();
     error InvalidInstantAmount();
-    error InvalidFee();
+    error InvalidFeeAdapter();
 
     function __WithdrawalAdapter_init(
         address _controller,
+        address _feeAdapter,
         uint256 _instantAmountBasisPoints,
-        uint256 _feeBasisPoints
+        uint256 _minWithdrawalAmount
     ) public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
         controller = IETHWithdrawalStrategy(_controller);
         setInstantAmountBasisPoints(_instantAmountBasisPoints);
-        setFeeBasisPoints(_feeBasisPoints);
+        setFeeAdapter(_feeAdapter);
+        setMinWithdrawalAmount(_minWithdrawalAmount);
     }
 
     modifier notPaused() {
@@ -67,13 +72,22 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
     }
 
     /**
-     * @notice sets the basis point fee paid on withdrawals
-     * @param _feeBasisPoints basis point fee
+     * @notice sets the minimum withdrawal amount
+     * @param _minWithdrawalAmount minimum amount
      **/
-    function setFeeBasisPoints(uint256 _feeBasisPoints) public onlyOwner {
-        if (_feeBasisPoints > 500) revert InvalidFee();
-        feeBasisPoints = _feeBasisPoints;
-        emit SetFeeBasisPoints(_feeBasisPoints);
+    function setMinWithdrawalAmount(uint256 _minWithdrawalAmount) public onlyOwner {
+        minWithdrawalAmount = _minWithdrawalAmount;
+        emit SetMinWithdrawalAmount(_minWithdrawalAmount);
+    }
+
+    /**
+     * @notice sets the fee adapter
+     * @param _feeAdapter address of fee adapter
+     **/
+    function setFeeAdapter(address _feeAdapter) public onlyOwner {
+        if (_feeAdapter == address(0)) revert InvalidFeeAdapter();
+        feeAdapter = IFeeAdapter(_feeAdapter);
+        emit SetFeeAdapter(_feeAdapter);
     }
 
     /**

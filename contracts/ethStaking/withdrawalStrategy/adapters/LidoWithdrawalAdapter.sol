@@ -12,6 +12,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     struct Withdrawal {
         uint256 totalETHAmount;
         uint256 initialETHWithdrawalAmount;
+        uint256 feeAmount;
         address owner;
     }
 
@@ -25,7 +26,8 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
         address indexed owner,
         uint256 indexed requestId,
         uint256 withdrawalAmount,
-        uint256 totalAmount
+        uint256 totalAmount,
+        uint256 feeAmount
     );
     event FinalizeWithdrawal(
         address indexed owner,
@@ -38,6 +40,8 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     error InsufficientETHClaimed();
     error RequestNotFound(uint256 requestId);
     error WithdrawalAmountTooSmall();
+    error FeeTooLarge();
+    error ReceivedAmountBelowMin();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -46,11 +50,12 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
     function initialize(
         address _controller,
+        address _feeAdapter,
         address _wqERC721,
         uint256 _instantAmountBasisPoints,
-        uint256 _feeBasisPoints
+        uint256 _minWithdrawalAmount
     ) public initializer {
-        __WithdrawalAdapter_init(_controller, _instantAmountBasisPoints, _feeBasisPoints);
+        __WithdrawalAdapter_init(_controller, _feeAdapter, _instantAmountBasisPoints, _minWithdrawalAmount);
         wqERC721 = ILidoWQERC721(_wqERC721);
     }
 
@@ -112,7 +117,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
             if (withdrawal.owner == address(0)) revert RequestNotFound(_requestIds[i]);
 
-            uint256 toRemainInPool = withdrawal.initialETHWithdrawalAmount + (claimableETH * feeBasisPoints) / 10000;
+            uint256 toRemainInPool = withdrawal.initialETHWithdrawalAmount + withdrawal.feeAmount;
 
             if (toRemainInPool < claimableETH) {
                 withdrawable[i] = claimableETH - toRemainInPool;
@@ -123,11 +128,13 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     }
 
     /**
-     * @notice swaps a Lido withdrawal for a percentage of it's value in ETH, the remaining value to be
-     * paid out on request finalization
+     * @notice returns the approximate amount of ETH that will be received for a withdrawal request
+     * if a withdrawal is initiated at this time
+     * @dev returns both the total amount and the instant amount
      * @param _requestId Lido withdrawal request id
+     * @return total amount and instant amount
      */
-    function initiateWithdrawal(uint256 _requestId) external notPaused {
+    function getReceivedEther(uint256 _requestId) external view returns (uint256, uint256) {
         if (withdrawals[_requestId].owner != address(0)) revert DuplicateRequestId();
 
         uint256[] memory reqList = new uint256[](1);
@@ -136,17 +143,44 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
         uint256 totalAmount = requestStatus.amountOfStETH;
         uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / 10000;
+        uint256 fee = feeAdapter.getFee(totalAmount, totalAmount);
 
-        if ((totalAmount * feeBasisPoints) / 10000 == 0) revert WithdrawalAmountTooSmall();
+        if (totalAmount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
         if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
+        if (fee > totalAmount - instantWithdrawalAmount) revert FeeTooLarge();
 
-        withdrawals[_requestId] = Withdrawal(totalAmount, instantWithdrawalAmount, msg.sender);
+        return (totalAmount - fee, instantWithdrawalAmount);
+    }
+
+    /**
+     * @notice swaps a Lido withdrawal for a percentage of it's value in ETH, the remaining value to be
+     * paid out on request finalization
+     * @param _requestId Lido withdrawal request id
+     * @param _minimumReceivedAmount the minimum amount of ETH to receive (will revert if condition is not met)
+     */
+    function initiateWithdrawal(uint256 _requestId, uint256 _minimumReceivedAmount) external notPaused {
+        if (withdrawals[_requestId].owner != address(0)) revert DuplicateRequestId();
+
+        uint256[] memory reqList = new uint256[](1);
+        reqList[0] = _requestId;
+        ILidoWQERC721.WithdrawalRequestStatus memory requestStatus = wqERC721.getWithdrawalStatus(reqList)[0];
+
+        uint256 totalAmount = requestStatus.amountOfStETH;
+        uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / 10000;
+        uint256 fee = feeAdapter.getFee(totalAmount, totalAmount);
+
+        if (totalAmount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
+        if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
+        if (fee > totalAmount - instantWithdrawalAmount) revert FeeTooLarge();
+        if (totalAmount - fee < _minimumReceivedAmount) revert ReceivedAmountBelowMin();
+
+        withdrawals[_requestId] = Withdrawal(totalAmount, instantWithdrawalAmount, fee, msg.sender);
         totalOutstandingDeposits += instantWithdrawalAmount;
         ownerRequestIds[msg.sender].push(_requestId);
         wqERC721.transferFrom(msg.sender, address(this), _requestId);
         controller.adapterWithdraw(msg.sender, instantWithdrawalAmount);
 
-        emit InitiateWithdrawal(msg.sender, _requestId, instantWithdrawalAmount, totalAmount);
+        emit InitiateWithdrawal(msg.sender, _requestId, instantWithdrawalAmount, totalAmount, fee);
     }
 
     /**
@@ -172,7 +206,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
             uint256 claimableETH = claimableEther[i];
             Withdrawal memory withdrawal = withdrawals[_requestIds[i]];
 
-            uint256 toRemainInPool = withdrawal.initialETHWithdrawalAmount + (claimableETH * feeBasisPoints) / 10000;
+            uint256 toRemainInPool = withdrawal.initialETHWithdrawalAmount + withdrawal.feeAmount;
 
             uint256 toWithdraw;
             if (toRemainInPool < claimableETH) {

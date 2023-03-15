@@ -16,7 +16,7 @@ contract WithdrawalAdapterMock is WithdrawalAdapter {
     }
 
     function initialize(address _controller) public initializer {
-        __WithdrawalAdapter_init(_controller, 9000, 100);
+        __WithdrawalAdapter_init(_controller, address(1), 9000, 0.1 ether);
     }
 
     function withdrawFromController(uint256 _amount) external {
