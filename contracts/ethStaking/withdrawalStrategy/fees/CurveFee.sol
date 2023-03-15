@@ -20,6 +20,9 @@ contract CurveFee is IFeeAdapter, Ownable {
     uint256 public minFeeBasisPoints;
     uint256 public feeUndercutBasisPoints;
 
+    event SetMinFeeBasisPoints(uint256 minFeeBasisPoints);
+    event SetFeeUndercutBasisPoints(uint256 feeUndercutBasisPoints);
+
     error InvalidMinFeeBasisPoints();
     error InvalidFeeUndercutBasisPoints();
 
@@ -66,6 +69,7 @@ contract CurveFee is IFeeAdapter, Ownable {
     function setMinFeeBasisPoints(uint256 _minFeeBasisPoints) public onlyOwner {
         if (_minFeeBasisPoints > 500) revert InvalidMinFeeBasisPoints();
         minFeeBasisPoints = _minFeeBasisPoints;
+        emit SetMinFeeBasisPoints(_minFeeBasisPoints);
     }
 
     /**
@@ -76,5 +80,6 @@ contract CurveFee is IFeeAdapter, Ownable {
     function setFeeUndercutBasisPoints(uint256 _feeUndercutBasisPoints) public onlyOwner {
         if (_feeUndercutBasisPoints > BASIS_POINTS) revert InvalidFeeUndercutBasisPoints();
         feeUndercutBasisPoints = _feeUndercutBasisPoints;
+        emit SetFeeUndercutBasisPoints(_feeUndercutBasisPoints);
     }
 }
