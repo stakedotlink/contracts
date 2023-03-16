@@ -3,6 +3,7 @@ import { assert, expect } from 'chai'
 import { BigNumber, Signer } from 'ethers'
 import { toEther, deploy, deployUpgradeable, getAccounts, fromEther } from '../../utils/helpers'
 import {
+  ERC677,
   EthWithdrawalStrategy,
   FeeAdapterMock,
   LidoWithdrawalAdapter,
@@ -12,6 +13,7 @@ import {
 
 describe('LidoWithdrawalAdapter', () => {
   let wETH: WrappedETH
+  let stETH: ERC677
   let lidoWQ: LidoWithdrawalQueueMock
   let controller: EthWithdrawalStrategy
   let feeAdapter: FeeAdapterMock
@@ -25,6 +27,7 @@ describe('LidoWithdrawalAdapter', () => {
 
   beforeEach(async () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
+    stETH = (await deploy('ERC677', ['test', 'test', 10000000000])) as ERC677
 
     lidoWQ = (await deploy('LidoWithdrawalQueueMock', [
       [
@@ -37,6 +40,7 @@ describe('LidoWithdrawalAdapter', () => {
         [toEther(50), 0, accounts[0], 0, false, false],
         [10, 0, accounts[0], 0, false, false],
       ],
+      stETH.address,
     ])) as LidoWithdrawalQueueMock
 
     await signers[4].sendTransaction({
@@ -61,12 +65,14 @@ describe('LidoWithdrawalAdapter', () => {
       controller.address,
       feeAdapter.address,
       lidoWQ.address,
+      stETH.address,
       9000,
       toEther(0.1),
     ])) as LidoWithdrawalAdapter
 
     await controller.addAdapter(adapter.address)
 
+    await stETH.approve(adapter.address, ethers.constants.MaxUint256)
     await lidoWQ.approve(adapter.address, 0)
     await lidoWQ.connect(signers[1]).approve(adapter.address, 1)
     await lidoWQ.connect(signers[1]).approve(adapter.address, 3)
@@ -117,21 +123,59 @@ describe('LidoWithdrawalAdapter', () => {
   })
 
   it('getReceivedEther should work correctly', async () => {
-    await expect(adapter.getReceivedEther(5)).to.be.revertedWith('DuplicateRequestId()')
-    await expect(adapter.getReceivedEther(7)).to.be.revertedWith('WithdrawalAmountTooSmall()')
-    await expect(adapter.getReceivedEther(6)).to.be.revertedWith('InsufficientFundsForWithdrawal()')
+    await expect(adapter.getReceivedEther(100)).to.be.revertedWith('WithdrawalAmountTooSmall()')
+    await expect(adapter.getReceivedEther(toEther(30))).to.be.revertedWith(
+      'InsufficientFundsForWithdrawal()'
+    )
     await feeAdapter.setFee(toEther(0.31))
-    await expect(adapter.getReceivedEther(2)).to.be.revertedWith('FeeTooLarge()')
+    await expect(adapter.getReceivedEther(toEther(3))).to.be.revertedWith('FeeTooLarge()')
     await feeAdapter.setFee(toEther(0.1))
     assert.deepEqual(
-      (await adapter.getReceivedEther(2)).map((v) => fromEther(v)),
+      (await adapter.getReceivedEther(toEther(3))).map((v) => fromEther(v)),
       [2.9, 2.7]
     )
     await feeAdapter.setFee(toEther(0.3))
     assert.deepEqual(
-      (await adapter.getReceivedEther(2)).map((v) => fromEther(v)),
+      (await adapter.getReceivedEther(toEther(3))).map((v) => fromEther(v)),
       [2.7, 2.7]
     )
+  })
+
+  it('initiateWithdrawalStETH should work correctly', async () => {
+    await expect(adapter.initiateWithdrawalStETH(100, 0)).to.be.revertedWith(
+      'WithdrawalAmountTooSmall()'
+    )
+    await expect(adapter.initiateWithdrawalStETH(toEther(30), 0)).to.be.revertedWith(
+      'InsufficientFundsForWithdrawal()'
+    )
+    await feeAdapter.setFee(toEther(0.31))
+    await expect(adapter.initiateWithdrawalStETH(toEther(3), 0)).to.be.revertedWith('FeeTooLarge()')
+    await feeAdapter.setFee(toEther(0.3))
+    await expect(adapter.initiateWithdrawalStETH(toEther(3), toEther(2.71))).to.be.revertedWith(
+      'ReceivedAmountBelowMin()'
+    )
+
+    const initialBalance = fromEther(await signers[0].getBalance())
+
+    await adapter.initiateWithdrawalStETH(toEther(3), 0)
+    assert.equal(fromEther(await adapter.getTotalDeposits()), 18.9)
+    assert.deepEqual(
+      (await adapter.getRequestIdsByOwner(accounts[0])).map((n) => n.toNumber()),
+      [0, 5, 8]
+    )
+    assert.deepEqual(await adapter.withdrawals(8), [
+      BigNumber.from(toEther(3)),
+      BigNumber.from(toEther(2.7)),
+      BigNumber.from(toEther(0.3)),
+      accounts[0],
+    ])
+    assert.equal(fromEther(await wETH.balanceOf(controller.address)), 6.1)
+    assert.equal(
+      Number((fromEther(await signers[0].getBalance()) - initialBalance).toFixed(2)),
+      2.7
+    )
+    assert.equal(fromEther(await stETH.balanceOf(adapter.address)), 0)
+    assert.equal(fromEther(await ethers.provider.getBalance(adapter.address)), 0)
   })
 
   it('initiateWithdrawal should work correctly', async () => {
@@ -166,6 +210,8 @@ describe('LidoWithdrawalAdapter', () => {
       Number((fromEther(await signers[0].getBalance()) - initialBalance).toFixed(2)),
       2.7
     )
+    assert.equal(fromEther(await stETH.balanceOf(adapter.address)), 0)
+    assert.equal(fromEther(await ethers.provider.getBalance(adapter.address)), 0)
   })
 
   it('finalizeWithdrawals should work correctly', async () => {

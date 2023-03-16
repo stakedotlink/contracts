@@ -58,4 +58,12 @@ interface ILidoWQERC721 {
         address _to,
         uint256 _requestId
     ) external;
+
+    /// @notice Request the sequence of stETH withdrawals according to passed `withdrawalRequestInputs` data
+    /// @param amounts an array of stETH amount values. The standalone withdrawal request will
+    ///  be created for each item in the passed list.
+    /// @param _owner address that will be able to transfer or claim the request.
+    ///  If `owner` is set to `address(0)`, `msg.sender` will be used as owner.
+    /// @return requestIds an array of the created withdrawal requests
+    function requestWithdrawals(uint256[] calldata amounts, address _owner) external returns (uint256[] memory requestIds);
 }

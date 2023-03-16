@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+
 import "../base/WithdrawalAdapter.sol";
 import "../interfaces/ILidoWQERC721.sol";
 
@@ -9,6 +12,8 @@ import "../interfaces/ILidoWQERC721.sol";
  * @notice Withdrawal adapter for Lido
  */
 contract LidoWithdrawalAdapter is WithdrawalAdapter {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     struct Withdrawal {
         uint256 totalETHAmount;
         uint256 initialETHWithdrawalAmount;
@@ -17,6 +22,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     }
 
     ILidoWQERC721 public wqERC721;
+    IERC20Upgradeable public stETH;
     mapping(uint256 => Withdrawal) public withdrawals;
     mapping(address => uint256[]) private ownerRequestIds;
 
@@ -52,11 +58,14 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
         address _controller,
         address _feeAdapter,
         address _wqERC721,
+        address _stETH,
         uint256 _instantAmountBasisPoints,
         uint256 _minWithdrawalAmount
     ) public initializer {
         __WithdrawalAdapter_init(_controller, _feeAdapter, _instantAmountBasisPoints, _minWithdrawalAmount);
         wqERC721 = ILidoWQERC721(_wqERC721);
+        stETH = IERC20Upgradeable(_stETH);
+        stETH.safeApprove(address(wqERC721), type(uint256).max);
     }
 
     /**
@@ -131,25 +140,46 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
      * @notice returns the approximate amount of ETH that will be received for a withdrawal request
      * if a withdrawal is initiated at this time
      * @dev returns both the total amount and the instant amount
-     * @param _requestId Lido withdrawal request id
+     * @param _amount amount of stETH to swap
      * @return total amount and instant amount
      */
-    function getReceivedEther(uint256 _requestId) external view returns (uint256, uint256) {
-        if (withdrawals[_requestId].owner != address(0)) revert DuplicateRequestId();
+    function getReceivedEther(uint256 _amount) external view notPaused returns (uint256, uint256) {
+        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / 10000;
+        uint256 fee = feeAdapter.getFee(_amount, _amount);
 
-        uint256[] memory reqList = new uint256[](1);
-        reqList[0] = _requestId;
-        ILidoWQERC721.WithdrawalRequestStatus memory requestStatus = wqERC721.getWithdrawalStatus(reqList)[0];
-
-        uint256 totalAmount = requestStatus.amountOfStETH;
-        uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / 10000;
-        uint256 fee = feeAdapter.getFee(totalAmount, totalAmount);
-
-        if (totalAmount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
+        if (_amount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
         if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
-        if (fee > totalAmount - instantWithdrawalAmount) revert FeeTooLarge();
+        if (fee > _amount - instantWithdrawalAmount) revert FeeTooLarge();
 
-        return (totalAmount - fee, instantWithdrawalAmount);
+        return (_amount - fee, instantWithdrawalAmount);
+    }
+
+    /**
+     * @notice swaps stETH for a percentage of it's value in ETH, the remaining value to be
+     * paid out on request finalization
+     * @param _amount amount of stETH to swap
+     * @param _minimumReceivedAmount the minimum amount of ETH to receive (will revert if condition is not met)
+     */
+    function initiateWithdrawalStETH(uint256 _amount, uint256 _minimumReceivedAmount) external notPaused {
+        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / 10000;
+        uint256 fee = feeAdapter.getFee(_amount, _amount);
+
+        if (_amount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
+        if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
+        if (fee > _amount - instantWithdrawalAmount) revert FeeTooLarge();
+        if (_amount - fee < _minimumReceivedAmount) revert ReceivedAmountBelowMin();
+
+        stETH.safeTransferFrom(msg.sender, address(this), _amount);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = _amount;
+        uint256 requestId = wqERC721.requestWithdrawals(amounts, address(this))[0];
+
+        withdrawals[requestId] = Withdrawal(_amount, instantWithdrawalAmount, fee, msg.sender);
+        totalOutstandingDeposits += instantWithdrawalAmount;
+        ownerRequestIds[msg.sender].push(requestId);
+        controller.adapterWithdraw(msg.sender, instantWithdrawalAmount);
+
+        emit InitiateWithdrawal(msg.sender, requestId, instantWithdrawalAmount, _amount, fee);
     }
 
     /**

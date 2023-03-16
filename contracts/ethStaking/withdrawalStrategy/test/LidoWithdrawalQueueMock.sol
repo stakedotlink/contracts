@@ -2,12 +2,16 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title Lido Withdrawal Queue Mock
  * @notice Mocks contract for testing
  */
 contract LidoWithdrawalQueueMock is ERC721 {
+    using SafeERC20 for IERC20;
+
     struct WithdrawalRequest {
         uint256 amountOfStETH;
         uint256 amountOfShares;
@@ -20,11 +24,14 @@ contract LidoWithdrawalQueueMock is ERC721 {
     WithdrawalRequest[] private requests;
     mapping(address => uint256[]) private ownerRequests;
 
-    constructor(WithdrawalRequest[] memory _requests) ERC721("Lido Withdrawal", "LW") {
+    IERC20 public stETH;
+
+    constructor(WithdrawalRequest[] memory _requests, address _stETH) ERC721("Lido Withdrawal", "LW") {
         for (uint256 i = 0; i < _requests.length; ++i) {
             requests.push(_requests[i]);
             _mint(_requests[i].owner, i);
         }
+        stETH = IERC20(_stETH);
     }
 
     receive() external payable {}
@@ -77,6 +84,16 @@ contract LidoWithdrawalQueueMock is ERC721 {
         require(!request.isFinalized, "Already finalized");
         request.isFinalized = true;
         request.amountOfStETH = _finalAmount;
+    }
+
+    function requestWithdrawals(uint256[] calldata _amounts, address _owner) external returns (uint256[] memory requestIds) {
+        requestIds = new uint256[](_amounts.length);
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            requests.push(WithdrawalRequest(_amounts[i], 0, _owner, 0, false, false));
+            requestIds[i] = requests.length - 1;
+            _mint(_owner, requests.length - 1);
+            stETH.safeTransferFrom(msg.sender, address(this), _amounts[i]);
+        }
     }
 
     function _beforeTokenTransfer(
