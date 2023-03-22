@@ -61,7 +61,7 @@ contract DelegatorPool is RewardsPoolController {
      * @notice ERC677 implementation to stake allowance or distribute rewards
      * @param _sender of the stake
      * @param _value of the token transfer
-     * @param _calldata encoded vesting startTimestamp and durationSeconds if applicable
+     * @param _calldata encoded locked allowance amount if applicable
      **/
     function onTokenTransfer(
         address _sender,
@@ -99,13 +99,13 @@ contract DelegatorPool is RewardsPoolController {
 
     /**
      * @notice returns an account's staked amount for use by reward pools
-     * controlled by this contract. If rewards are redirected, it returns the sum of the amount
-     * staked by all of the accounts that have redirected rewards.
+     * controlled by this contract
+     * @dev excludes locked balances for community pools
      * @param _account account address
      * @return account's staked amount
      */
     function staked(address _account) external view override returns (uint256) {
-        return communityPools[msg.sender] ? super.balanceOf(_account) - lockedBalances[_account] : super.balanceOf(_account);
+        return communityPools[msg.sender] ? balanceOf(_account) - lockedBalances[_account] : balanceOf(_account);
     }
 
     /**
@@ -115,7 +115,7 @@ contract DelegatorPool is RewardsPoolController {
      * @return balance accounts balance
      */
     function totalBalanceOf(address _account) public view returns (uint256) {
-        return super.balanceOf(_account);
+        return balanceOf(_account);
     }
 
     /**

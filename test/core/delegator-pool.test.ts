@@ -354,7 +354,7 @@ describe('DelegatorPool', () => {
       assert.equal(fromEther(await delegatorPool.totalLocked()), 500, 'total locked does not match')
     })
 
-    it.only('should be able to burn locked balances', async () => {
+    it('should be able to burn locked balances', async () => {
       await delegatorPool.setLockedApproval(accounts[0], toEther(250))
       await delegatorPool.burnLockedBalance(accounts[0], toEther(500))
       assert.equal(
