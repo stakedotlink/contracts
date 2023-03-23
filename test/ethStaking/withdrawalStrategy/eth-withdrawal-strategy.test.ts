@@ -27,10 +27,11 @@ describe('EthWithdrawalStrategy', () => {
       wETH.address,
       accounts[0],
       toEther(50),
+      4000,
     ])) as EthWithdrawalStrategy
 
-    await wETH.wrap({ value: toEther(100) })
-    await wETH.approve(strategy.address, toEther(100))
+    await wETH.wrap({ value: toEther(1000) })
+    await wETH.approve(strategy.address, toEther(1000))
     await strategy.deposit(toEther(25))
 
     adapters = []
@@ -188,6 +189,7 @@ describe('EthWithdrawalStrategy', () => {
       wETH.address,
       stakingPool.address,
       toEther(50),
+      4000,
     ])) as EthWithdrawalStrategy
 
     await wETH.wrap({ value: toEther(100) })
@@ -200,5 +202,20 @@ describe('EthWithdrawalStrategy', () => {
 
     assert.equal(fromEther(await strategy2.getTotalDeposits()), 30)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[3])), 0.5)
+  })
+
+  it('getMaxDeposits should work correctly', async () => {
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 50)
+    await strategy.deposit(toEther(25))
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 50)
+    await adapters[0].withdrawFromController(toEther(30))
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 75)
+    await wETH.transfer(strategy.address, toEther(40))
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 50)
+    await strategy.updateDeposits()
+    await strategy.setTargetUtilisation(2000)
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 150)
+    await strategy.setMinMaxDeposits(toEther(200))
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 200)
   })
 })

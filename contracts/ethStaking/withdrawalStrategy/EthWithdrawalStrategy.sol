@@ -16,12 +16,14 @@ contract EthWithdrawalStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 private totalDeposits;
-    uint256 private maxDeposits;
+    uint256 public minMaxDeposits;
+    uint256 public targetUtilisation;
 
     address[] private adapters;
     mapping(address => bool) private adaptersMap;
 
-    event SetMaxDeposits(uint256 max);
+    event SetMinMaxDeposits(uint256 minMaxDeposits);
+    event SetTargetUtilisation(uint256 targetUtilisation);
     event AdapterAdded(address adapter);
     event AdapterRemoved(address adapter);
 
@@ -32,6 +34,7 @@ contract EthWithdrawalStrategy is Strategy {
     error AdapterAlreadyExists();
     error AdapterNotFound();
     error AdapterContainsDeposits();
+    error InvalidTargetUtilisation();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -41,10 +44,12 @@ contract EthWithdrawalStrategy is Strategy {
     function initialize(
         address _wETH,
         address _stakingPool,
-        uint256 _maxDeposits
+        uint256 _minMaxDeposits,
+        uint256 _targetUtilisation
     ) public initializer {
         __Strategy_init(_wETH, _stakingPool);
-        maxDeposits = _maxDeposits;
+        minMaxDeposits = _minMaxDeposits;
+        targetUtilisation = _targetUtilisation;
     }
 
     modifier onlyAdapter() {
@@ -145,7 +150,10 @@ contract EthWithdrawalStrategy is Strategy {
      * @return max deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
-        return maxDeposits;
+        uint256 balance = token.balanceOf(address(this));
+        uint256 depositsUtilized = totalDeposits > balance ? totalDeposits - balance : 0;
+        uint256 maxDeposits = (depositsUtilized * 10000) / targetUtilisation;
+        return maxDeposits > minMaxDeposits ? maxDeposits : minMaxDeposits;
     }
 
     /**
@@ -161,12 +169,22 @@ contract EthWithdrawalStrategy is Strategy {
     }
 
     /**
-     * @notice sets the maximum that can be deposited into this strategy
-     * @param _maxDeposits maximum deposits
+     * @notice sets the minimum value for the maximum limit that can be deposited into this strategy
+     * @param _minMaxDeposits min maximum deposits
      */
-    function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
-        maxDeposits = _maxDeposits;
-        emit SetMaxDeposits(_maxDeposits);
+    function setMinMaxDeposits(uint256 _minMaxDeposits) external onlyOwner {
+        minMaxDeposits = _minMaxDeposits;
+        emit SetMinMaxDeposits(_minMaxDeposits);
+    }
+
+    /**
+     * @notice sets the basis point target of total deposits that should be in use at any given time
+     * @param _targetUtilisation target utilisation
+     */
+    function setTargetUtilisation(uint256 _targetUtilisation) external onlyOwner {
+        if (_targetUtilisation > 10000) revert InvalidTargetUtilisation();
+        targetUtilisation = _targetUtilisation;
+        emit SetTargetUtilisation(_targetUtilisation);
     }
 
     /**
