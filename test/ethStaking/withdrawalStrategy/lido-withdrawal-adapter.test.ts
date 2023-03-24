@@ -53,6 +53,7 @@ describe('LidoWithdrawalAdapter', () => {
       wETH.address,
       accounts[4],
       ethers.constants.MaxUint256,
+      5000,
     ])) as EthWithdrawalStrategy
 
     await wETH.connect(signers[4]).wrap({ value: toEther(25) })
