@@ -144,7 +144,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
      * @return total amount and instant amount
      */
     function getReceivedEther(uint256 _amount) external view notPaused returns (uint256, uint256) {
-        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / 10000;
+        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / BASIS_POINTS;
         uint256 fee = feeAdapter.getFee(_amount, _amount);
 
         if (_amount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
@@ -161,7 +161,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
      * @param _minimumReceivedAmount the minimum amount of ETH to receive (will revert if condition is not met)
      */
     function initiateWithdrawalStETH(uint256 _amount, uint256 _minimumReceivedAmount) external notPaused {
-        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / 10000;
+        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / BASIS_POINTS;
         uint256 fee = feeAdapter.getFee(_amount, _amount);
 
         if (_amount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
@@ -196,7 +196,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
         ILidoWQERC721.WithdrawalRequestStatus memory requestStatus = wqERC721.getWithdrawalStatus(reqList)[0];
 
         uint256 totalAmount = requestStatus.amountOfStETH;
-        uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / 10000;
+        uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / BASIS_POINTS;
         uint256 fee = feeAdapter.getFee(totalAmount, totalAmount);
 
         if (totalAmount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();

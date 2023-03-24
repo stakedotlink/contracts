@@ -15,6 +15,8 @@ import "./interfaces/IWithdrawalAdapter.sol";
 contract EthWithdrawalStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint256 internal constant BASIS_POINTS = 10000;
+
     uint256 private totalDeposits;
     uint256 public minMaxDeposits;
     uint256 public targetUtilisation;
@@ -152,7 +154,7 @@ contract EthWithdrawalStrategy is Strategy {
     function getMaxDeposits() public view override returns (uint256) {
         uint256 balance = token.balanceOf(address(this));
         uint256 depositsUtilized = totalDeposits > balance ? totalDeposits - balance : 0;
-        uint256 maxDeposits = (depositsUtilized * 10000) / targetUtilisation;
+        uint256 maxDeposits = (depositsUtilized * BASIS_POINTS) / targetUtilisation;
         return maxDeposits > minMaxDeposits ? maxDeposits : minMaxDeposits;
     }
 
@@ -182,7 +184,7 @@ contract EthWithdrawalStrategy is Strategy {
      * @param _targetUtilisation target utilisation
      */
     function setTargetUtilisation(uint256 _targetUtilisation) external onlyOwner {
-        if (_targetUtilisation > 10000) revert InvalidTargetUtilisation();
+        if (_targetUtilisation > BASIS_POINTS) revert InvalidTargetUtilisation();
         targetUtilisation = _targetUtilisation;
         emit SetTargetUtilisation(_targetUtilisation);
     }

@@ -13,6 +13,8 @@ import "../interfaces/IFeeAdapter.sol";
  * @notice Base adapter contract used to handle withdrawals from an ETH staking protocol
  */
 abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    uint256 internal constant BASIS_POINTS = 10000;
+
     IETHWithdrawalStrategy public controller;
     IFeeAdapter public feeAdapter;
 
@@ -66,7 +68,7 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
      * @param _instantAmountBasisPoints basis point amount
      **/
     function setInstantAmountBasisPoints(uint256 _instantAmountBasisPoints) public onlyOwner {
-        if (_instantAmountBasisPoints >= 10000) revert InvalidInstantAmount();
+        if (_instantAmountBasisPoints >= BASIS_POINTS) revert InvalidInstantAmount();
         instantAmountBasisPoints = _instantAmountBasisPoints;
         emit SetInstantAmountBasisPoints(_instantAmountBasisPoints);
     }
