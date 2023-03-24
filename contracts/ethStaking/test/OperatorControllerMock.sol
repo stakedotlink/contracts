@@ -17,7 +17,7 @@ contract OperatorControllerMock is OperatorController {
     }
 
     function initialize(address _ethStakingStrategy, address _wsdToken) public initializer {
-        __OperatorController_init(_ethStakingStrategy, _wsdToken);
+        __OperatorController_init(_ethStakingStrategy, _wsdToken, 0);
     }
 
     /**
@@ -28,13 +28,6 @@ contract OperatorControllerMock is OperatorController {
         _addOperator(_name);
     }
 
-    /**
-     * @notice Adds a set of new validator pubkey/signature pairs for an operator
-     * @param _operatorId id of operator
-     * @param _quantity number of new pairs to add
-     * @param _pubkeys concatenated set of pubkeys to add
-     * @param _signatures concatenated set of signatures to add
-     */
     function addKeyPairs(
         uint256 _operatorId,
         uint256 _quantity,
@@ -44,17 +37,10 @@ contract OperatorControllerMock is OperatorController {
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
     }
 
-    /**
-     * @notice Assigns the next set of validators in the queue
-     * @param _operatorIds ids of operators that should be assigned validators
-     * @param _validatorCounts number of validators to assign each operator
-     * @return keys concatenated list of pubkeys
-     * @return signatures concatenated list of signatures
-     */
     function assignNextValidators(
+        uint256,
         uint256[] calldata _operatorIds,
-        uint256[] calldata _validatorCounts,
-        uint256
+        uint256[] calldata _validatorCounts
     ) external returns (bytes memory keys, bytes memory signatures) {
         for (uint256 i = 0; i < _operatorIds.length; i++) {
             uint256 operatorId = _operatorIds[i];

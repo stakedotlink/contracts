@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "../interfaces/INWLOperatorController.sol";
+import "../interfaces/IOperatorController.sol";
 
 contract EthStakingStrategyMock {
-    address public nwlOperatorController;
+    address public operatorController;
 
     receive() external payable {}
 
     function depositEther(uint256 _totalValidatorCount) external {
-        INWLOperatorController(nwlOperatorController).assignNextValidators(_totalValidatorCount);
+        uint256[] memory operatorIds;
+        uint256[] memory validatorCounts;
+        IOperatorController(operatorController).assignNextValidators(_totalValidatorCount, operatorIds, validatorCounts);
     }
 
-    function nwlWithdraw(address, uint256) external {
-        require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
+    function operatorControllerWithdraw(address, uint256) external {
+        require(msg.sender == address(operatorController), "Sender is not operator controller");
     }
 
-    function setNWLOperatorController(address _nwlOperatorController) external {
-        nwlOperatorController = _nwlOperatorController;
+    function setOperatorController(address _operatorController) external {
+        operatorController = _operatorController;
     }
 }

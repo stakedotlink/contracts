@@ -26,6 +26,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint64 stoppedValidators;
         uint64 totalKeyPairs;
         uint64 usedKeyPairs;
+        uint256 ethLost;
     }
 
     address public ethStakingStrategy;
@@ -44,12 +45,15 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     uint256 public queueLength;
     bytes32 public currentStateHash;
 
+    uint256 public depositAmount;
+
     event AddOperator(address indexed owner, string name);
     event OperatorOwnerChange(uint256 indexed operatorId, address indexed from, address indexed to);
     event AddKeyPairs(uint256 indexed operatorId, uint256 quantity);
     event SetKeyValidationOracle(address oracle);
     event SetBeaconOracle(address oracle);
     event SetRewardsPool(address pool);
+    event ReportStoppedValidators(uint256 indexed operatorId, uint256 newlyStoppedValidators, uint256 newlyLostEth);
 
     modifier operatorExists(uint256 _id) {
         require(_id < operators.length, "Operator does not exist");
@@ -71,11 +75,16 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         _;
     }
 
-    function __OperatorController_init(address _ethStakingStrategy, address _sdToken) public onlyInitializing {
+    function __OperatorController_init(
+        address _ethStakingStrategy,
+        address _sdToken,
+        uint256 _depositAmount
+    ) public onlyInitializing {
         __UUPSUpgradeable_init();
         __Ownable_init();
         ethStakingStrategy = _ethStakingStrategy;
         sdToken = IERC677(_sdToken);
+        depositAmount = _depositAmount;
         currentStateHash = keccak256("initialized");
     }
 
@@ -102,7 +111,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     /**
      * @notice returns a list of operators
      * @param _operatorIds id list of operators to return
-     * @return operators list of opertors
+     * @return operators list of operators
      */
     function getOperators(uint256[] calldata _operatorIds) external view returns (Operator[] memory) {
         Operator[] memory ret = new Operator[](_operatorIds.length);
@@ -213,6 +222,66 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     }
 
     /**
+     * @notice Reports lifetime stopped validators and ETH lost for a list of operators
+     * @param _operatorIds list of operator ids to report for
+     * @param _stoppedValidators list of lifetime stopped validators for each operator
+     * @param _ethLost list of lifetime lost ETH sum for each operator (leave empty if N/A)
+     */
+    function reportStoppedValidators(
+        uint256[] calldata _operatorIds,
+        uint256[] calldata _stoppedValidators,
+        uint256[] calldata _ethLost
+    ) external onlyBeaconOracle {
+        require(
+            _operatorIds.length == _stoppedValidators.length &&
+                (_ethLost.length == 0 || _operatorIds.length == _ethLost.length),
+            "Inconsistent list lengths"
+        );
+
+        uint256 totalNewlyStoppedValidators;
+
+        for (uint256 i = 0; i < _operatorIds.length; i++) {
+            uint256 operatorId = _operatorIds[i];
+            require(operatorId < operators.length, "Operator does not exist");
+            require(
+                _stoppedValidators[i] > operators[operatorId].stoppedValidators,
+                "Reported negative or zero stopped validators"
+            );
+            require(
+                _stoppedValidators[i] <= operators[operatorId].usedKeyPairs,
+                "Reported more stopped validators than active"
+            );
+
+            rewardsPool.updateReward(operators[operatorId].owner);
+
+            uint256 newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
+            operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
+
+            if (operators[operatorId].active) {
+                activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
+                totalNewlyStoppedValidators += newlyStoppedValidators;
+            }
+
+            if (_ethLost.length != 0) {
+                require(_ethLost[i] >= operators[operatorId].ethLost, "Reported negative lost ETH");
+
+                uint256 newlyLostETH = _ethLost[i] - operators[operatorId].ethLost;
+                require(
+                    newlyLostETH <= newlyStoppedValidators * depositAmount,
+                    "Reported more than max loss of 16 ETH per validator"
+                );
+
+                operators[operatorId].ethLost += newlyLostETH;
+                emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
+            } else {
+                emit ReportStoppedValidators(operatorId, _stoppedValidators[i], 0);
+            }
+        }
+
+        totalActiveValidators -= totalNewlyStoppedValidators;
+    }
+
+    /**
      * @notice Sets the name of an existing operator
      * @param _name new name of operator
      */
@@ -296,7 +365,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _name name of operator
      */
     function _addOperator(string calldata _name) internal {
-        Operator memory operator = Operator(_name, msg.sender, true, false, 0, 0, 0, 0);
+        Operator memory operator = Operator(_name, msg.sender, true, false, 0, 0, 0, 0, 0);
         operators.push(operator);
 
         emit AddOperator(msg.sender, _name);

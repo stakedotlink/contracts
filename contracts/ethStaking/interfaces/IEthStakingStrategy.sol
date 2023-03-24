@@ -2,12 +2,14 @@
 pragma solidity 0.8.15;
 
 interface IEthStakingStrategy {
-    function nwlWithdraw(address _receiver, uint256 _amount) external;
+    function operatorControllerWithdraw(address _receiver, uint256 _amount) external;
 
     function depositEther(
-        uint256 _nwlTotalValidatorCount,
-        uint256 _wlTotalValidatorCount,
-        uint256[] calldata _wlOperatorIds,
-        uint256[] calldata _wlValidatorCounts
+        uint256[] calldata _depositAmounts,
+        uint256[] calldata _totalValidatorCounts,
+        uint256[][] calldata _operatorIds,
+        uint256[][] calldata _validatorCounts
     ) external;
+
+    function getOperatorControllers() external view returns (address[] memory);
 }

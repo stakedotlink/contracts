@@ -25,7 +25,6 @@ contract NWLOperatorController is OperatorController {
 
     event RemoveKeyPairs(uint256 indexed operatorId, uint256 quantity);
     event ReportKeyPairValidation(uint256 indexed operatorId, bool success);
-    event ReportStoppedValidators(uint256 indexed operatorId, uint256 totalStoppedValidators, uint256 totalEthLost);
     event WithdrawStake(uint256 indexed _operatorId, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -33,8 +32,12 @@ contract NWLOperatorController is OperatorController {
         _disableInitializers();
     }
 
-    function initialize(address _ethStakingStrategy, address _wsdToken) public initializer {
-        __OperatorController_init(_ethStakingStrategy, _wsdToken);
+    function initialize(
+        address _ethStakingStrategy,
+        address _wsdToken,
+        uint256 _depositAmount
+    ) public initializer {
+        __OperatorController_init(_ethStakingStrategy, _wsdToken, _depositAmount);
     }
 
     /**
@@ -173,20 +176,20 @@ contract NWLOperatorController is OperatorController {
 
     /**
      * @notice Assigns the next set of validators in the queue
-     * @param _totalValidatorCount total number of validators to assign
+     * @param _validatorCount total number of validators to assign
      * @return keys concatenated list of pubkeys
      * @return signatures concatenated list of signatures
      */
-    function assignNextValidators(uint256 _totalValidatorCount)
-        external
-        onlyEthStakingStrategy
-        returns (bytes memory keys, bytes memory signatures)
-    {
-        require(_totalValidatorCount > 0, "Validator count must be greater than 0");
-        require(_totalValidatorCount <= queueLength, "Cannot assign more than queue length");
+    function assignNextValidators(
+        uint256 _validatorCount,
+        uint256[] calldata,
+        uint256[] calldata
+    ) external onlyEthStakingStrategy returns (bytes memory keys, bytes memory signatures) {
+        require(_validatorCount > 0, "Validator count must be greater than 0");
+        require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
         bytes32 stateHash = currentStateHash;
-        uint256 toAssign = _totalValidatorCount;
+        uint256 toAssign = _validatorCount;
         uint256 index = queueIndex;
 
         while (index < queue.length) {
@@ -230,13 +233,13 @@ contract NWLOperatorController is OperatorController {
             index++;
         }
 
-        (bool success, ) = payable(ethStakingStrategy).call{value: _totalValidatorCount * DEPOSIT_AMOUNT}("");
+        (bool success, ) = payable(ethStakingStrategy).call{value: _validatorCount * DEPOSIT_AMOUNT}("");
         require(success, "ETH transfer failed");
 
         currentStateHash = stateHash;
-        totalAssignedValidators += _totalValidatorCount;
-        totalActiveValidators += _totalValidatorCount;
-        queueLength -= _totalValidatorCount;
+        totalAssignedValidators += _validatorCount;
+        totalActiveValidators += _validatorCount;
+        queueLength -= _validatorCount;
         queueIndex = index;
     }
 
@@ -244,8 +247,18 @@ contract NWLOperatorController is OperatorController {
      * @notice Returns the next set of validator keys to be assigned
      * @param _validatorCount total number of validators to assign
      * @return keys validator keys to be assigned
+     * @return validatorsAssigned actual number of validators to be assigned
      */
-    function getNextValidators(uint256 _validatorCount) external view returns (bytes memory keys) {
+    function getNextValidators(uint256 _validatorCount)
+        external
+        view
+        returns (
+            bytes memory keys,
+            uint256 validatorsAssigned,
+            uint256[] memory,
+            uint256[] memory
+        )
+    {
         require(_validatorCount > 0, "Validator count must be greater than 0");
         require(_validatorCount <= queueLength, "Cannot assign more than queue length");
 
@@ -282,63 +295,8 @@ contract NWLOperatorController is OperatorController {
             }
             index++;
         }
-    }
 
-    /**
-     * @notice Reports lifetime stopped validators and ETH lost for a list of operators
-     * @param _operatorIds list of operator ids to report for
-     * @param _stoppedValidators list of lifetime stopped validators for each operator
-     * @param _ethLost list of lifetime lost ETH sum for each operator
-     */
-    function reportStoppedValidators(
-        uint256[] calldata _operatorIds,
-        uint256[] calldata _stoppedValidators,
-        uint256[] calldata _ethLost
-    ) external onlyBeaconOracle {
-        require(
-            _operatorIds.length == _stoppedValidators.length && _operatorIds.length == _ethLost.length,
-            "Inconsistent list lengths"
-        );
-
-        uint256 totalNewlyStoppedValidators;
-        uint256 totalNewlyLostETH;
-
-        for (uint256 i = 0; i < _operatorIds.length; i++) {
-            uint256 operatorId = _operatorIds[i];
-            require(operatorId < operators.length, "Operator does not exist");
-            require(
-                _stoppedValidators[i] > operators[operatorId].stoppedValidators,
-                "Reported negative or zero stopped validators"
-            );
-            require(_ethLost[i] >= ethLost[operatorId], "Reported negative lost ETH");
-            require(
-                _stoppedValidators[i] <= operators[operatorId].usedKeyPairs,
-                "Reported more stopped validators than active"
-            );
-
-            rewardsPool.updateReward(operators[operatorId].owner);
-
-            uint256 newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
-            uint256 newlyLostETH = _ethLost[i] - ethLost[operatorId];
-
-            require(
-                newlyLostETH <= newlyStoppedValidators * DEPOSIT_AMOUNT,
-                "Reported more than max loss of 16 ETH per validator"
-            );
-
-            operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
-            ethLost[operatorId] += newlyLostETH;
-            totalNewlyLostETH += newlyLostETH;
-
-            if (operators[operatorId].active) {
-                activeValidators[operators[operatorId].owner] -= newlyStoppedValidators;
-                totalNewlyStoppedValidators += newlyStoppedValidators;
-            }
-
-            emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
-        }
-
-        totalActiveValidators -= totalNewlyStoppedValidators;
+        validatorsAssigned = _validatorCount;
     }
 
     /**
@@ -351,7 +309,7 @@ contract NWLOperatorController is OperatorController {
         require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
 
         ethWithdrawn[_operatorId] += _amount;
-        IEthStakingStrategy(ethStakingStrategy).nwlWithdraw(msg.sender, _amount);
+        IEthStakingStrategy(ethStakingStrategy).operatorControllerWithdraw(msg.sender, _amount);
 
         emit WithdrawStake(_operatorId, _amount);
     }
