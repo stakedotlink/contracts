@@ -41,6 +41,7 @@ describe('OperatorController', () => {
     controller = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
       sdToken.address,
+      0,
     ])) as OperatorControllerMock
     rewardsPool = (await deploy('RewardsPool', [
       controller.address,
@@ -122,7 +123,7 @@ describe('OperatorController', () => {
   })
 
   it('rewards distribution should work correctly', async () => {
-    await controller.assignNextValidators([0], [1], 1)
+    await controller.assignNextValidators(1, [0], [1])
     await sdToken.transferAndCall(controller.address, toEther(50), '0x00')
 
     assert.equal(
@@ -156,7 +157,7 @@ describe('OperatorController', () => {
   })
 
   it('getAssignedKeys should work correctly', async () => {
-    await controller.assignNextValidators([0, 2, 4], [3, 2, 1], 6)
+    await controller.assignNextValidators(6, [0, 2, 4], [3, 2, 1])
 
     let keys = await controller.getAssignedKeys(0, 100)
     assert.equal(
@@ -208,6 +209,100 @@ describe('OperatorController', () => {
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
   })
 
+  it('reportStoppedValidators should work correctly with no ETH lost', async () => {
+    await controller.assignNextValidators(7, [0, 2, 4], [3, 2, 2])
+    await controller.reportStoppedValidators([0, 4], [1, 2], [])
+
+    let op = await controller.getOperators([0, 2, 4])
+    assert.equal(op[0][5].toNumber(), 1, 'operator stoppedValidators incorrect')
+    assert.equal(op[1][5].toNumber(), 0, 'operator stoppedValidators incorrect')
+    assert.equal(op[2][5].toNumber(), 2, 'operator stoppedValidators incorrect')
+
+    assert.equal(
+      (await controller.totalActiveValidators()).toNumber(),
+      4,
+      'totalActiveValidators incorrect'
+    )
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
+
+    await expect(controller.reportStoppedValidators([0, 5], [3, 1], [])).to.be.revertedWith(
+      'Operator does not exist'
+    )
+    await expect(
+      controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2], [])
+    ).to.be.revertedWith('Sender is not beacon oracle')
+    await expect(controller.reportStoppedValidators([0, 4], [1, 3], [])).to.be.revertedWith(
+      'Reported negative or zero stopped validators'
+    )
+    await expect(controller.reportStoppedValidators([0, 4], [3, 0], [])).to.be.revertedWith(
+      'Reported negative or zero stopped validators'
+    )
+    await expect(controller.reportStoppedValidators([0, 4], [3, 3], [])).to.be.revertedWith(
+      'Reported more stopped validators than active'
+    )
+  })
+
+  it('reportStoppedValidators should work correctly with ETH lost', async () => {
+    controller = (await deployUpgradeable('OperatorControllerMock', [
+      accounts[0],
+      sdToken.address,
+      toEther(16),
+    ])) as OperatorControllerMock
+
+    await controller.setRewardsPool(rewardsPool.address)
+    await controller.setKeyValidationOracle(accounts[0])
+    await controller.setBeaconOracle(accounts[0])
+
+    for (let i = 0; i < 5; i++) {
+      await controller.addOperator('test')
+      await controller.addKeyPairs(i, 3, keyPairs.keys, keyPairs.signatures)
+      if (i % 2 == 0) {
+        await controller.initiateKeyPairValidation(accounts[0], i)
+        await controller.reportKeyPairValidation(i, true)
+      }
+    }
+
+    await controller.assignNextValidators(7, [0, 2, 4], [3, 2, 2])
+    await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(4), toEther(1)])
+
+    let op = await controller.getOperators([0, 2, 4])
+    assert.equal(op[0][5].toNumber(), 2, 'operator stoppedValidators incorrect')
+    assert.equal(op[1][5].toNumber(), 0, 'operator stoppedValidators incorrect')
+    assert.equal(op[2][5].toNumber(), 1, 'operator stoppedValidators incorrect')
+
+    assert.equal(
+      fromEther((await controller.getOperators([0]))[0][8]),
+      4,
+      'operator ethLost incorrect'
+    )
+    assert.equal(
+      fromEther((await controller.getOperators([2]))[0][8]),
+      0,
+      'operator ethLost incorrect'
+    )
+    assert.equal(
+      fromEther((await controller.getOperators([4]))[0][8]),
+      1,
+      'operator ethLost incorrect'
+    )
+
+    assert.equal(fromEther(await controller.totalActiveStake()), 64, 'totalActiveStake incorrect')
+    assert.equal(
+      (await controller.totalActiveValidators()).toNumber(),
+      4,
+      'totalActiveValidators incorrect'
+    )
+    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
+    assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
+    await expect(controller.reportStoppedValidators([0], [3], [toEther(1)])).to.be.revertedWith(
+      'Reported negative lost ETH'
+    )
+    await expect(controller.reportStoppedValidators([4], [2], [toEther(18)])).to.be.revertedWith(
+      'Reported more than max loss per validator'
+    )
+  })
+
   it('setOperatorName should work correctly', async () => {
     await controller.setOperatorName(0, '1234')
 
@@ -221,7 +316,7 @@ describe('OperatorController', () => {
   })
 
   it('setOperatorOwner should work correctly', async () => {
-    await controller.assignNextValidators([0, 2, 4], [3, 2, 2], 7)
+    await controller.assignNextValidators(7, [0, 2, 4], [3, 2, 2])
     await controller.setOperatorOwner(0, accounts[2])
 
     let op = (await controller.getOperators([0]))[0]
@@ -277,7 +372,7 @@ describe('OperatorController', () => {
   })
 
   it('contract upgradeability should work correctly', async () => {
-    await controller.assignNextValidators([0], [2], 2)
+    await controller.assignNextValidators(2, [0], [2])
 
     let Controller = await ethers.getContractFactory('OperatorControllerMockV2')
     let upgradedImpAddress = (await upgrades.prepareUpgrade(controller.address, Controller, {

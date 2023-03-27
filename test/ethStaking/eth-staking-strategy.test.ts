@@ -103,6 +103,7 @@ describe('EthStakingStrategy', () => {
     nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
       strategy.address,
       stakingPool.address,
+      toEther(16),
     ])) as NWLOperatorController
     await nwlOperatorController.setKeyValidationOracle(accounts[0])
     await nwlOperatorController.setBeaconOracle(accounts[0])
@@ -166,8 +167,8 @@ describe('EthStakingStrategy', () => {
       toEther(5),
     ])) as RewardsReceiver
 
-    await strategy.setNWLOperatorController(nwlOperatorController.address)
-    await strategy.setWLOperatorController(wlOperatorController.address)
+    await strategy.addOperatorController(nwlOperatorController.address)
+    await strategy.addOperatorController(wlOperatorController.address)
     await strategy.setDepositController(accounts[0])
     await strategy.setRewardsReceiver(rewardsReceiver.address)
     await stakingPool.addStrategy(strategy.address)
@@ -190,7 +191,7 @@ describe('EthStakingStrategy', () => {
 
   it('depositEther should work correctly', async () => {
     await stake(1000)
-    await strategy.depositEther(5, 0, [], [])
+    await strategy.depositEther([toEther(16), 0], [5, 0], [[], []], [[], []])
 
     let keys = [...nwlOps.keys, ...nwlOps.keys, nwlOps.keys[0]]
     let signatures = [...nwlOps.signatures, ...nwlOps.signatures, nwlOps.signatures[0]]
@@ -229,7 +230,7 @@ describe('EthStakingStrategy', () => {
     )
     assert.equal(fromEther(await strategy.bufferedETH()), 920)
 
-    await strategy.depositEther(1, 4, [0, 2], [2, 2])
+    await strategy.depositEther([toEther(16), 0], [1, 4], [[], [0, 2]], [[], [2, 2]])
 
     keys = [nwlOps.keys[1], wlOps.keys[0], wlOps.keys[1], wlOps.keys[0], wlOps.keys[1]]
     signatures = [
@@ -274,7 +275,7 @@ describe('EthStakingStrategy', () => {
     )
     assert.equal(fromEther(await strategy.bufferedETH()), 776)
 
-    await strategy.depositEther(0, 4, [4, 0, 2], [2, 1, 1])
+    await strategy.depositEther([toEther(16), 0], [0, 4], [[], [4, 0, 2]], [[], [2, 1, 1]])
 
     keys = [wlOps.keys[0], wlOps.keys[1], wlOps.keys[2], wlOps.keys[2]]
     signatures = [
@@ -322,21 +323,23 @@ describe('EthStakingStrategy', () => {
   it('depositEther validation should work correctly', async () => {
     await stake(100)
 
-    await expect(strategy.connect(signers[1]).depositEther(1, 0, [], [])).to.be.revertedWith(
-      'Sender is not deposit controller'
-    )
-    await expect(strategy.depositEther(0, 0, [], [])).to.be.revertedWith('Cannot deposit 0')
-    await expect(strategy.depositEther(6, 4, [0, 2], [2, 2])).to.be.revertedWith(
-      'Insufficient balance for deposit'
-    )
-    await expect(strategy.depositEther(0, 2, [0], [2])).to.be.revertedWith(
-      'Non-whitelisted queue must be empty to assign whitelisted'
-    )
+    await expect(
+      strategy.connect(signers[1]).depositEther([toEther(16), 0], [1, 0], [[], []], [[], []])
+    ).to.be.revertedWith('Sender is not deposit controller')
+    await expect(
+      strategy.depositEther([toEther(16), 0], [0, 0], [[], []], [[], []])
+    ).to.be.revertedWith('Cannot deposit 0')
+    await expect(
+      strategy.depositEther([toEther(16), 0], [6, 4], [[], [0, 2]], [[], [2, 2]])
+    ).to.be.revertedWith('Insufficient balance for deposit')
+    await expect(
+      strategy.depositEther([toEther(16), 0], [0, 2], [[], [0]], [[], [2]])
+    ).to.be.revertedWith('InvalidQueueOrder()')
   })
 
   it('reportBeaconState should work correctly', async () => {
     await stake(1000)
-    await strategy.depositEther(6, 2, [0], [2])
+    await strategy.depositEther([toEther(16), 0], [6, 2], [[], [0]], [[], [2]])
     await strategy.reportBeaconState(3, toEther(90), toEther(0))
 
     assert.equal((await strategy.beaconValidators()).toNumber(), 3, 'beaconValidators incorrect')
@@ -370,7 +373,7 @@ describe('EthStakingStrategy', () => {
 
   it('reportBeaconState validation should work correctly', async () => {
     await stake(1000)
-    await strategy.depositEther(6, 2, [0], [2])
+    await strategy.depositEther([toEther(16), 0], [6, 2], [[], [0]], [[], [2]])
     await strategy.reportBeaconState(3, toEther(90), toEther(0))
 
     await expect(
@@ -387,7 +390,7 @@ describe('EthStakingStrategy', () => {
   it('updateDeposits should work correctly with positive rewards', async () => {
     await stake(1000)
     await signers[0].sendTransaction({ to: rewardsReceiver.address, value: toEther(8) })
-    await strategy.depositEther(6, 2, [0], [2])
+    await strategy.depositEther([toEther(16), 0], [6, 2], [[], [0]], [[], [2]])
     await strategy.reportBeaconState(3, toEther(196), toEther(0))
 
     assert.equal(fromEther(await strategy.depositChange()), 105, 'depositChange incorrect')
@@ -417,9 +420,82 @@ describe('EthStakingStrategy', () => {
     assert.equal(fromEther(await stakingPool.totalSupply()), 1105, 'totalSupply incorrect')
   })
 
+  it('updateDeposits should work correctly with multiple nwl operator controllers', async () => {
+    let controller = (await deployUpgradeable('NWLOperatorController', [
+      strategy.address,
+      stakingPool.address,
+      toEther(8),
+    ])) as NWLOperatorController
+    await controller.setKeyValidationOracle(accounts[0])
+    await controller.setBeaconOracle(accounts[0])
+    await strategy.addOperatorController(controller.address)
+
+    let rewardsPool = (await deploy('RewardsPoolWSD', [
+      controller.address,
+      stakingPool.address,
+      wsdToken.address,
+    ])) as RewardsPool
+    await controller.setRewardsPool(rewardsPool.address)
+
+    for (let i = 0; i < 5; i++) {
+      await controller.addOperator('test')
+      await controller.addKeyPairs(i, 2, concatBytes(nwlOps.keys), concatBytes(nwlOps.signatures), {
+        value: toEther(8 * 2),
+      })
+
+      if (i % 2 == 0) {
+        await controller.initiateKeyPairValidation(accounts[0], i)
+        await controller.reportKeyPairValidation(i, true)
+      }
+    }
+
+    await stake(1000)
+    await signers[0].sendTransaction({ to: rewardsReceiver.address, value: toEther(8) })
+    await strategy.depositEther(
+      [toEther(16), 0, toEther(8)],
+      [6, 9, 3],
+      [[], [0, 2, 4], []],
+      [[], [3, 3, 3], []]
+    )
+    await strategy.reportBeaconState(3, toEther(196), toEther(0))
+
+    assert.equal(fromEther(await strategy.depositChange()), 105, 'depositChange incorrect')
+
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(
+      fromEther(
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
+      ),
+      12.5,
+      'nwl operator rewards incorrect'
+    )
+    assert.equal(
+      fromEther(
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(rewardsPool.address))
+      ),
+      4,
+      'nwl2 operator rewards incorrect'
+    )
+    assert.equal(
+      fromEther(
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(wlRewardsPool.address))
+      ),
+      5.25,
+      'wl operator rewards incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      10.5,
+      'owners rewards incorrect'
+    )
+    assert.equal(fromEther(await strategy.depositChange()), 0, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1105, 'getTotalDeposits incorrect')
+    assert.equal(fromEther(await stakingPool.totalSupply()), 1105, 'totalSupply incorrect')
+  })
+
   it('updateDeposits should work correctly with negative rewards', async () => {
     await stake(1000)
-    await strategy.depositEther(6, 2, [0], [2])
+    await strategy.depositEther([toEther(16), 0], [6, 2], [[], [0]], [[], [2]])
     await strategy.reportBeaconState(3, toEther(95), toEther(0))
 
     assert.equal(fromEther(await strategy.depositChange()), -1, 'depositChange incorrect')
@@ -452,7 +528,7 @@ describe('EthStakingStrategy', () => {
   it('rewards receiver should work correctly', async () => {
     await signers[0].sendTransaction({ to: rewardsReceiver.address, value: toEther(8) })
     await stake(32)
-    await strategy.depositEther(2, 0, [], [])
+    await strategy.depositEther([toEther(16), 0], [2, 0], [[], []], [[], []])
 
     await strategy.reportBeaconState(2, toEther(64), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 0)
@@ -487,31 +563,49 @@ describe('EthStakingStrategy', () => {
     assert.equal(fromEther(await strategy.bufferedETH()), 8)
   })
 
-  it('setWLOperatorController should work correctly', async () => {
-    await strategy.setWLOperatorController(accounts[2])
+  it('addOperatorController should work correctly', async () => {
+    await strategy.addOperatorController(accounts[2])
 
-    assert.equal(
-      await strategy.wlOperatorController(),
-      accounts[2],
-      'wlOperatorController incorrect'
+    assert.deepEqual(
+      await strategy.getOperatorControllers(),
+      [nwlOperatorController.address, wlOperatorController.address, accounts[2]],
+      'operator controllers incorrect'
     )
 
+    await expect(strategy.addOperatorController(accounts[2])).to.be.revertedWith(
+      'ControllerAlreadyAdded()'
+    )
+    await expect(strategy.addOperatorController(ethers.constants.AddressZero)).to.be.revertedWith(
+      'CannotSetZeroAddress()'
+    )
     await expect(
-      strategy.connect(signers[1]).setWLOperatorController(accounts[2])
+      strategy.connect(signers[1]).addOperatorController(accounts[3])
     ).to.be.revertedWith('Ownable: caller is not the owner')
   })
 
-  it('setNWLOperatorController should work correctly', async () => {
-    await strategy.setNWLOperatorController(accounts[2])
+  it('removeOperatorController should work correctly', async () => {
+    await strategy.addOperatorController(accounts[2])
+    await strategy.removeOperatorController(wlOperatorController.address)
 
-    assert.equal(
-      await strategy.nwlOperatorController(),
-      accounts[2],
-      'nwlOperatorController incorrect'
+    assert.deepEqual(
+      await strategy.getOperatorControllers(),
+      [nwlOperatorController.address, accounts[2]],
+      'operator controllers incorrect'
+    )
+
+    await strategy.removeOperatorController(nwlOperatorController.address)
+
+    assert.deepEqual(
+      await strategy.getOperatorControllers(),
+      [accounts[2]],
+      'operator controllers incorrect'
     )
 
     await expect(
-      strategy.connect(signers[1]).setNWLOperatorController(accounts[2])
+      strategy.removeOperatorController(wlOperatorController.address)
+    ).to.be.revertedWith('ControllerNotFound()')
+    await expect(
+      strategy.connect(signers[1]).removeOperatorController(accounts[2])
     ).to.be.revertedWith('Ownable: caller is not the owner')
   })
 
@@ -535,15 +629,15 @@ describe('EthStakingStrategy', () => {
     )
   })
 
-  it('nwlWithdraw should work correctly', async () => {
-    await strategy.setNWLOperatorController(accounts[1])
+  it('operatorControllerWithdraw should work correctly', async () => {
+    await strategy.addOperatorController(accounts[0])
 
-    await expect(strategy.nwlWithdraw(accounts[2], toEther(1))).to.be.revertedWith(
-      'Sender is not non-whitelisted operator controller'
-    )
     await expect(
-      strategy.connect(signers[1]).nwlWithdraw(accounts[2], toEther(1))
-    ).to.be.revertedWith('Not implemented yet')
+      strategy.connect(signers[3]).operatorControllerWithdraw(accounts[2], toEther(1))
+    ).to.be.revertedWith('OperatorControllerOnly()')
+    await expect(strategy.operatorControllerWithdraw(accounts[2], toEther(1))).to.be.revertedWith(
+      'Not implemented yet'
+    )
   })
 
   it('setMaxDeposits and setMinDeposits should work correctly', async () => {

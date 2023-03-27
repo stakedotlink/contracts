@@ -136,7 +136,7 @@ describe('WLOperatorController', () => {
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures)
     await controller.initiateKeyPairValidation(accounts[0], 2)
     await controller.reportKeyPairValidation(2, true)
-    await controller.assignNextValidators([0, 2], [2, 2], 4)
+    await controller.assignNextValidators(4, [0, 2], [2, 2])
 
     await expect(controller.connect(signers[1]).removeKeyPairs(5, 2)).to.be.revertedWith(
       'Operator does not exist'
@@ -165,7 +165,7 @@ describe('WLOperatorController', () => {
   })
 
   it('assignNextValidators should work correctly', async () => {
-    let vals = await controller.callStatic.assignNextValidators([0, 2], [2, 2], 4)
+    let vals = await controller.callStatic.assignNextValidators(4, [0, 2], [2, 2])
     assert.equal(
       vals[0],
       keyPairs.keys.slice(0, 2 * pubkeyLength + 2) + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
@@ -178,7 +178,7 @@ describe('WLOperatorController', () => {
       'assigned signatures incorrect'
     )
 
-    await controller.assignNextValidators([0, 2], [2, 2], 4)
+    await controller.assignNextValidators(4, [0, 2], [2, 2])
 
     let ops = await controller.getOperators([0, 1, 2, 3, 4])
     assert.equal(ops[0][7].toNumber(), 2, 'Operator0 usedKeyPairs incorrect')
@@ -202,7 +202,7 @@ describe('WLOperatorController', () => {
     assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
 
-    vals = await controller.callStatic.assignNextValidators([4, 0, 2], [2, 1, 1], 4)
+    vals = await controller.callStatic.assignNextValidators(4, [4, 0, 2], [2, 1, 1])
     assert.equal(
       vals[0],
       keyPairs.keys.slice(0, 2 * pubkeyLength + 2) +
@@ -218,7 +218,7 @@ describe('WLOperatorController', () => {
       'assigned signatures incorrect'
     )
 
-    await controller.assignNextValidators([4, 0, 2], [2, 1, 1], 4)
+    await controller.assignNextValidators(4, [4, 0, 2], [2, 1, 1])
 
     ops = await controller.getOperators([0, 1, 2, 3, 4])
     assert.equal(ops[0][7].toNumber(), 3, 'Operator0 usedKeyPairs incorrect')
@@ -238,76 +238,76 @@ describe('WLOperatorController', () => {
     assert.equal((await controller.totalStaked()).toNumber(), 8, 'totalStaked incorrect')
 
     await expect(
-      controller.connect(signers[1]).assignNextValidators([4], [1], 1)
+      controller.connect(signers[1]).assignNextValidators(1, [4], [1])
     ).to.be.revertedWith('Sender is not ETH staking strategy')
   })
 
   it('assignNextValidators first data validation should work correctly', async () => {
-    await expect(controller.assignNextValidators([], [], 0)).to.be.revertedWith('Empty operatorIds')
-    await expect(controller.assignNextValidators([0, 2], [2], 2)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(0, [], [])).to.be.revertedWith('Empty operatorIds')
+    await expect(controller.assignNextValidators(2, [0, 2], [2])).to.be.revertedWith(
       'Inconsistent operatorIds and validatorCounts length'
     )
-    await expect(controller.assignNextValidators([0, 2, 4, 0], [2, 2, 2, 1], 7)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(7, [0, 2, 4, 0], [2, 2, 2, 1])).to.be.revertedWith(
       'Duplicate operator'
     )
-    await expect(controller.assignNextValidators([0, 2], [4, 2], 6)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(6, [0, 2], [4, 2])).to.be.revertedWith(
       'Assigned more keys than validator limit'
     )
-    await expect(controller.assignNextValidators([0, 2], [1, 2], 3)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(3, [0, 2], [1, 2])).to.be.revertedWith(
       'Invalid batching'
     )
-    await expect(controller.assignNextValidators([0, 2], [3, 2], 4)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(4, [0, 2], [3, 2])).to.be.revertedWith(
       'Inconsistent total validator count'
     )
 
     await controller.disableOperator(0)
-    await expect(controller.assignNextValidators([0], [2], 2)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(2, [0], [2])).to.be.revertedWith(
       'Inactive operator'
     )
   })
 
   it('assignNextValidators second data validation should work correctly', async () => {
-    await expect(controller.assignNextValidators([0, 4], [2, 2], 4)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(4, [0, 4], [2, 2])).to.be.revertedWith(
       '1: Validator assignments were skipped'
     )
-    await expect(controller.assignNextValidators([2], [2], 2)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(2, [2], [2])).to.be.revertedWith(
       '3: Validator assignments were skipped'
     )
 
-    await controller.assignNextValidators([0], [2], 2)
+    await controller.assignNextValidators(2, [0], [2])
 
-    await expect(controller.assignNextValidators([0], [1], 1)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(1, [0], [1])).to.be.revertedWith(
       '2: Validator assignments were skipped'
     )
   })
 
   it('assignNextValidators third data validation should work correctly', async () => {
-    await expect(controller.assignNextValidators([0, 2, 4], [2, 2, 3], 7)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(7, [0, 2, 4], [2, 2, 3])).to.be.revertedWith(
       '1: Validator assignments incorrectly split'
     )
     await controller.setBatchSize(1)
-    await expect(controller.assignNextValidators([0, 2, 4], [3, 1, 1], 5)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(5, [0, 2, 4], [3, 1, 1])).to.be.revertedWith(
       '2: Validator assignments incorrectly split'
     )
   })
 
   it('assignNextValidators fourth data validation should work correctly', async () => {
-    await expect(controller.assignNextValidators([0, 2], [3, 2], 6)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(6, [0, 2], [3, 2])).to.be.revertedWith(
       'Inconsistent total validator count'
     )
-    await expect(controller.assignNextValidators([0, 2], [3, 2], 5)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(5, [0, 2], [3, 2])).to.be.revertedWith(
       '5: Validator assignments were skipped'
     )
 
-    await controller.assignNextValidators([0], [2], 2)
+    await controller.assignNextValidators(2, [0], [2])
 
-    await expect(controller.assignNextValidators([2, 4], [3, 3], 6)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(6, [2, 4], [3, 3])).to.be.revertedWith(
       '6: Validator assignments were skipped'
     )
 
-    await controller.assignNextValidators([2], [2], 2)
+    await controller.assignNextValidators(2, [2], [2])
 
-    await expect(controller.assignNextValidators([4, 0], [3, 1], 4)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(4, [4, 0], [3, 1])).to.be.revertedWith(
       '4: Validator assignments were skipped'
     )
   })
@@ -315,61 +315,61 @@ describe('WLOperatorController', () => {
   it('assignmentIndex should always be correct', async () => {
     assert.equal((await controller.assignmentIndex()).toNumber(), 0)
 
-    await controller.assignNextValidators([0], [2], 2)
+    await controller.assignNextValidators(2, [0], [2])
     assert.equal((await controller.assignmentIndex()).toNumber(), 1)
 
-    await controller.assignNextValidators([2, 4], [2, 2], 4)
+    await controller.assignNextValidators(4, [2, 4], [2, 2])
     assert.equal((await controller.assignmentIndex()).toNumber(), 0)
 
-    await controller.assignNextValidators([0, 2], [1, 1], 2)
+    await controller.assignNextValidators(2, [0, 2], [1, 1])
     assert.equal((await controller.assignmentIndex()).toNumber(), 3)
   })
 
   it('getNextValidators should work correctly', async () => {
     let nextValidators = await controller.getNextValidators(2)
     assert.deepEqual(
-      nextValidators[0].map((op) => op.toNumber()),
+      nextValidators[2].map((op) => op.toNumber()),
       [0]
     )
     assert.deepEqual(
-      nextValidators[1].map((v) => v.toNumber()),
+      nextValidators[3].map((v) => v.toNumber()),
       [2]
     )
-    assert.equal(nextValidators[2].toNumber(), 2, 'totalValidatorCount incorrect')
-    assert.equal(nextValidators[3], keyPairs.keys.slice(0, 2 * pubkeyLength + 2), 'keys incorrect')
+    assert.equal(nextValidators[1].toNumber(), 2, 'totalValidatorCount incorrect')
+    assert.equal(nextValidators[0], keyPairs.keys.slice(0, 2 * pubkeyLength + 2), 'keys incorrect')
 
     nextValidators = await controller.getNextValidators(7)
     assert.deepEqual(
-      nextValidators[0].map((op) => op.toNumber()),
+      nextValidators[2].map((op) => op.toNumber()),
       [0, 2, 4]
     )
     assert.deepEqual(
-      nextValidators[1].map((v) => v.toNumber()),
+      nextValidators[3].map((v) => v.toNumber()),
       [3, 2, 2]
     )
-    assert.equal(nextValidators[2].toNumber(), 7, 'totalValidatorCount incorrect')
+    assert.equal(nextValidators[1].toNumber(), 7, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[3],
+      nextValidators[0],
       keyPairs.keys +
         keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
         keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
       'keys incorrect'
     )
 
-    await controller.assignNextValidators([0], [2], 2)
+    await controller.assignNextValidators(2, [0], [2])
 
     nextValidators = await controller.getNextValidators(5)
     assert.deepEqual(
-      nextValidators[0].map((op) => op.toNumber()),
+      nextValidators[2].map((op) => op.toNumber()),
       [2, 4, 0]
     )
     assert.deepEqual(
-      nextValidators[1].map((v) => v.toNumber()),
+      nextValidators[3].map((v) => v.toNumber()),
       [2, 2, 1]
     )
-    assert.equal(nextValidators[2].toNumber(), 5, 'totalValidatorCount incorrect')
+    assert.equal(nextValidators[1].toNumber(), 5, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[3],
+      nextValidators[0],
       keyPairs.keys.slice(0, 2 * pubkeyLength + 2) +
         keyPairs.keys.slice(2, 2 * pubkeyLength + 2) +
         keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2),
@@ -378,16 +378,16 @@ describe('WLOperatorController', () => {
 
     nextValidators = await controller.getNextValidators(4)
     assert.deepEqual(
-      nextValidators[0].map((op) => op.toNumber()),
+      nextValidators[2].map((op) => op.toNumber()),
       [2, 4]
     )
     assert.deepEqual(
-      nextValidators[1].map((v) => v.toNumber()),
+      nextValidators[3].map((v) => v.toNumber()),
       [2, 2]
     )
-    assert.equal(nextValidators[2].toNumber(), 4, 'totalValidatorCount incorrect')
+    assert.equal(nextValidators[1].toNumber(), 4, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[3],
+      nextValidators[0],
       keyPairs.keys.slice(0, 2 * pubkeyLength + 2) + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
       'keys incorrect'
     )
@@ -395,16 +395,16 @@ describe('WLOperatorController', () => {
     await controller.disableOperator(4)
     nextValidators = await controller.getNextValidators(4)
     assert.deepEqual(
-      nextValidators[0].map((op) => op.toNumber()),
+      nextValidators[2].map((op) => op.toNumber()),
       [2, 0]
     )
     assert.deepEqual(
-      nextValidators[1].map((v) => v.toNumber()),
+      nextValidators[3].map((v) => v.toNumber()),
       [3, 1]
     )
-    assert.equal(nextValidators[2].toNumber(), 4, 'totalValidatorCount incorrect')
+    assert.equal(nextValidators[1].toNumber(), 4, 'totalValidatorCount incorrect')
     assert.equal(
-      nextValidators[3],
+      nextValidators[0],
       keyPairs.keys + keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2),
       'keys incorrect'
     )
@@ -412,13 +412,13 @@ describe('WLOperatorController', () => {
 
   it('getNextValidators and assignNextValidators should work together', async () => {
     let nextValidators = await controller.getNextValidators(2)
-    await controller.assignNextValidators(nextValidators[0], nextValidators[1], 2)
+    await controller.assignNextValidators(nextValidators[1], nextValidators[2], nextValidators[3])
 
     nextValidators = await controller.getNextValidators(5)
-    await controller.assignNextValidators(nextValidators[0], nextValidators[1], 5)
+    await controller.assignNextValidators(nextValidators[1], nextValidators[2], nextValidators[3])
 
     nextValidators = await controller.getNextValidators(2)
-    await controller.assignNextValidators(nextValidators[0], nextValidators[1], 2)
+    await controller.assignNextValidators(nextValidators[1], nextValidators[2], nextValidators[3])
 
     assert.equal(
       (await controller.totalActiveValidators()).toNumber(),
@@ -428,8 +428,8 @@ describe('WLOperatorController', () => {
   })
 
   it('reportStoppedValidators should work correctly', async () => {
-    await controller.assignNextValidators([0, 2, 4], [3, 2, 2], 7)
-    await controller.reportStoppedValidators([0, 4], [1, 2])
+    await controller.assignNextValidators(7, [0, 2, 4], [3, 2, 2])
+    await controller.reportStoppedValidators([0, 4], [1, 2], [])
 
     let op = await controller.getOperators([0, 2, 4])
     assert.equal(op[0][5].toNumber(), 1, 'operator stoppedValidators incorrect')
@@ -444,19 +444,19 @@ describe('WLOperatorController', () => {
     assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
 
-    await expect(controller.reportStoppedValidators([0, 5], [3, 1])).to.be.revertedWith(
+    await expect(controller.reportStoppedValidators([0, 5], [3, 1], [])).to.be.revertedWith(
       'Operator does not exist'
     )
     await expect(
-      controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2])
+      controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2], [])
     ).to.be.revertedWith('Sender is not beacon oracle')
-    await expect(controller.reportStoppedValidators([0, 4], [1, 3])).to.be.revertedWith(
+    await expect(controller.reportStoppedValidators([0, 4], [1, 3], [])).to.be.revertedWith(
       'Reported negative or zero stopped validators'
     )
-    await expect(controller.reportStoppedValidators([0, 4], [3, 0])).to.be.revertedWith(
+    await expect(controller.reportStoppedValidators([0, 4], [3, 0], [])).to.be.revertedWith(
       'Reported negative or zero stopped validators'
     )
-    await expect(controller.reportStoppedValidators([0, 4], [3, 3])).to.be.revertedWith(
+    await expect(controller.reportStoppedValidators([0, 4], [3, 3], [])).to.be.revertedWith(
       'Reported more stopped validators than active'
     )
   })
@@ -464,7 +464,7 @@ describe('WLOperatorController', () => {
   it('RewardsPoolController functions should work', async () => {
     await controller.setOperatorOwner(2, accounts[2])
     await controller.setOperatorOwner(4, accounts[4])
-    await controller.assignNextValidators([0, 2, 4], [3, 3, 2], 8)
+    await controller.assignNextValidators(8, [0, 2, 4], [3, 3, 2])
     await wsdToken.transferAndCall(rewardsPool.address, toEther(100), '0x00')
 
     assert.equal(
@@ -483,7 +483,7 @@ describe('WLOperatorController', () => {
       'rewards pool account balance incorrect'
     )
 
-    await controller.reportStoppedValidators([0, 4], [1, 2])
+    await controller.reportStoppedValidators([0, 4], [1, 2], [])
 
     assert.equal(
       fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
@@ -501,7 +501,7 @@ describe('WLOperatorController', () => {
       'rewards pool account balance incorrect'
     )
 
-    await controller.assignNextValidators([4], [1], 1)
+    await controller.assignNextValidators(1, [4], [1])
 
     assert.equal(
       fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
@@ -540,7 +540,7 @@ describe('WLOperatorController', () => {
     )
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
 
-    await controller.assignNextValidators([0, 1], [2, 2], 4)
+    await controller.assignNextValidators(4, [0, 1], [2, 2])
 
     for (let i = 0; i <= 1; i++) {
       for (let j = 0; j < 2; j++) {

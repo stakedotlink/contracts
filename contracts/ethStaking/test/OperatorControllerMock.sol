@@ -16,8 +16,12 @@ contract OperatorControllerMock is OperatorController {
         _disableInitializers();
     }
 
-    function initialize(address _ethStakingStrategy, address _wsdToken) public initializer {
-        __OperatorController_init(_ethStakingStrategy, _wsdToken, 0);
+    function initialize(
+        address _ethStakingStrategy,
+        address _wsdToken,
+        uint256 _depositAmount
+    ) public initializer {
+        __OperatorController_init(_ethStakingStrategy, _wsdToken, _depositAmount);
     }
 
     /**

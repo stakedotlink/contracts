@@ -63,6 +63,14 @@ contract EthStakingStrategy is Strategy {
     error InvalidQueueOrder();
     error ControllerAlreadyAdded();
     error ControllerNotFound();
+    error OperatorControllerOnly();
+
+    modifier onlyOperatorController() {
+        for (uint256 i = 0; i < operatorControllers.length; ++i) {
+            if (msg.sender == operatorControllers[i]) _;
+        }
+        revert OperatorControllerOnly();
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -140,16 +148,18 @@ contract EthStakingStrategy is Strategy {
         uint256[][] calldata _validatorCounts
     ) external {
         require(msg.sender == depositController, "Sender is not deposit controller");
-        uint256 operatorTypes = _totalValidatorCounts.length;
+        uint256 operatorControllerCount = _totalValidatorCounts.length;
         require(
-            operatorTypes == operatorControllers.length &&
-                operatorTypes == _operatorIds.length &&
-                operatorTypes == _validatorCounts.length,
+            operatorControllerCount == operatorControllers.length &&
+                operatorControllerCount == _depositAmounts.length &&
+                operatorControllerCount == _totalValidatorCounts.length &&
+                operatorControllerCount == _operatorIds.length &&
+                operatorControllerCount == _validatorCounts.length,
             "Invalid param lengths"
         );
 
         uint256 totalDepositAmount;
-        for (uint256 i = 0; i < operatorTypes; ++i) {
+        for (uint256 i = 0; i < operatorControllerCount; ++i) {
             totalDepositAmount += _totalValidatorCounts[i] * (DEPOSIT_AMOUNT - _depositAmounts[i]);
         }
 
@@ -159,18 +169,18 @@ contract EthStakingStrategy is Strategy {
         IWrappedETH(address(token)).unwrap(totalDepositAmount);
 
         uint256 totalValidatorCount;
-        for (uint256 i = 0; i < operatorTypes; ++i) {
+        for (uint256 i = 0; i < operatorControllerCount; ++i) {
             uint256 validatorCount = _totalValidatorCounts[i];
             if (validatorCount == 0) continue;
-            if (i != 0 && IOperatorController((operatorControllers)[i - 1]).queueLength() != 0) revert InvalidQueueOrder();
+            if (i != 0 && IOperatorController(operatorControllers[i - 1]).queueLength() != 0) revert InvalidQueueOrder();
 
             (bytes memory pubkeys, bytes memory signatures) = IOperatorController(operatorControllers[i])
                 .assignNextValidators(validatorCount, _operatorIds[i], _validatorCounts[i]);
 
-            require(pubkeys.length / PUBKEY_LENGTH == validatorCount, "Incorrect non-whitelisted pubkeys length");
-            require(signatures.length / SIGNATURE_LENGTH == validatorCount, "Incorrect non-whitelisted signatures length");
-            require(pubkeys.length % PUBKEY_LENGTH == 0, "Invalid non-whitelisted pubkeys");
-            require(signatures.length % SIGNATURE_LENGTH == 0, "Invalid non-whitelisted signatures");
+            require(pubkeys.length / PUBKEY_LENGTH == validatorCount, "Incorrect pubkeys length");
+            require(signatures.length / SIGNATURE_LENGTH == validatorCount, "Incorrect signatures length");
+            require(pubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
+            require(signatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
 
             for (uint256 j = 0; j < validatorCount; ++j) {
                 bytes memory pubkey = BytesLib.slice(pubkeys, j * PUBKEY_LENGTH, PUBKEY_LENGTH);
@@ -212,8 +222,7 @@ contract EthStakingStrategy is Strategy {
      * @param _receiver receiver of ETH
      * @param _amount amount of ETH to withdraw
      */
-    function operatorControllerWithdraw(address _receiver, uint256 _amount) external {
-        //require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
+    function operatorControllerWithdraw(address _receiver, uint256 _amount) external onlyOperatorController {
         revert("Not implemented yet");
     }
 
@@ -224,31 +233,35 @@ contract EthStakingStrategy is Strategy {
         if (depositChange > 0) {
             uint256 rewards = uint256(depositChange);
             uint256 operatorFee = (rewards * operatorFeeBasisPoints) / BASIS_POINTS;
-            uint256 operatorTypes = operatorControllers.length;
+            uint256 operatorControllerCount = operatorControllers.length;
 
             uint256 totalActiveValidators;
-            uint256 totalActiveOperatorTypes;
-            uint256[] memory activeValidators = new uint256[](operatorTypes);
-            uint256[] memory activeStake = new uint256[](operatorTypes);
+            uint256 totalActiveStake;
+            uint256 totalActiveOperatorControllers;
+            uint256[] memory activeValidators = new uint256[](operatorControllerCount);
+            uint256[] memory activeStake = new uint256[](operatorControllerCount);
 
-            for (uint256 i = 0; i < operatorTypes; ++i) {
+            for (uint256 i = 0; i < operatorControllerCount; ++i) {
                 IOperatorController operatorController = IOperatorController(operatorControllers[i]);
                 activeValidators[i] = operatorController.totalActiveValidators();
-                activeStake[i] = operatorController.totalActiveStake();
-                totalActiveValidators += activeValidators[i];
-                if (activeValidators[i] != 0) totalActiveOperatorTypes++;
+
+                if (activeValidators[i] != 0) {
+                    activeStake[i] = operatorController.totalActiveStake();
+                    totalActiveValidators += activeValidators[i];
+                    totalActiveStake += activeStake[i];
+                    totalActiveOperatorControllers++;
+                }
             }
 
             uint256 addedFees;
-            receivers = new address[](totalActiveOperatorTypes);
-            amounts = new uint256[](totalActiveOperatorTypes);
+            receivers = new address[](totalActiveOperatorControllers);
+            amounts = new uint256[](totalActiveOperatorControllers);
 
-            for (uint i = 0; i < operatorTypes; ++i) {
+            for (uint i = 0; i < operatorControllerCount; ++i) {
                 uint256 fee = (operatorFee * activeValidators[i]) / totalActiveValidators;
 
                 if (activeStake[i] != 0) {
-                    uint256 operatorRewardsBasisPoints = (BASIS_POINTS * activeStake[i]) / (totalDeposits + activeStake[i]);
-                    fee += (rewards * operatorRewardsBasisPoints) / BASIS_POINTS;
+                    fee += (rewards * 1e18 * activeStake[i]) / (totalDeposits + totalActiveStake) / 1e18;
                 }
 
                 if (fee != 0) {

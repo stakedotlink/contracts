@@ -63,6 +63,7 @@ describe('NWLOperatorController', () => {
     controller = (await deployUpgradeable('NWLOperatorController', [
       accounts[0],
       wsdToken.address,
+      toEther(16),
     ])) as NWLOperatorController
     await setupController(controller)
   })
@@ -166,7 +167,7 @@ describe('NWLOperatorController', () => {
       value: toEther(3 * 16),
     })
 
-    await controller.assignNextValidators(4)
+    await controller.assignNextValidators(4, [], [])
 
     await expect(controller.removeKeyPairs(5, 2, [5])).to.be.revertedWith('Operator does not exist')
     await expect(controller.connect(signers[1]).removeKeyPairs(4, 2, [4])).to.be.revertedWith(
@@ -213,7 +214,7 @@ describe('NWLOperatorController', () => {
   })
 
   it('assignNextValidators should work correctly', async () => {
-    let vals = await controller.callStatic.assignNextValidators(5)
+    let vals = await controller.callStatic.assignNextValidators(5, [], [])
     assert.equal(
       vals[0],
       keyPairs.keys + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
@@ -225,7 +226,7 @@ describe('NWLOperatorController', () => {
       'assigned signatures incorrect'
     )
 
-    await controller.assignNextValidators(5)
+    await controller.assignNextValidators(5, [], [])
 
     let ops = await controller.getOperators([0, 1, 2, 3, 4])
     assert.equal(ops[0][7].toNumber(), 3, 'Operator0 usedKeyPairs incorrect')
@@ -261,11 +262,11 @@ describe('NWLOperatorController', () => {
       'queue entry incorrect'
     )
 
-    await expect(controller.assignNextValidators(5)).to.be.revertedWith(
+    await expect(controller.assignNextValidators(5, [], [])).to.be.revertedWith(
       'Cannot assign more than queue length'
     )
 
-    vals = await controller.callStatic.assignNextValidators(4)
+    vals = await controller.callStatic.assignNextValidators(4, [], [])
     assert.equal(
       vals[0],
       '0x' + keyPairs.keys.slice(2 * pubkeyLength + 2) + keyPairs.keys.slice(2),
@@ -277,7 +278,7 @@ describe('NWLOperatorController', () => {
       'assigned signatures incorrect'
     )
 
-    await controller.assignNextValidators(4)
+    await controller.assignNextValidators(4, [], [])
 
     ops = await controller.getOperators([0, 1, 2, 3, 4])
     assert.equal(ops[0][7].toNumber(), 3, 'Operator0 usedKeyPairs incorrect')
@@ -306,24 +307,23 @@ describe('NWLOperatorController', () => {
     assert.equal((await controller.staked(accounts[0])).toNumber(), 9, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 9, 'totalStaked incorrect')
 
-    await expect(controller.connect(signers[1]).assignNextValidators(1)).to.be.revertedWith(
+    await expect(controller.connect(signers[1]).assignNextValidators(1, [], [])).to.be.revertedWith(
       'Sender is not ETH staking strategy'
     )
   })
 
   it('getNextValidators should work correctly', async () => {
-    let keys = await controller.getNextValidators(5)
+    let res = await controller.getNextValidators(5)
     assert.equal(
-      keys,
+      res[0],
       keyPairs.keys + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
       'keys incorrect'
     )
 
-    await controller.assignNextValidators(2)
-
-    keys = await controller.getNextValidators(5)
+    await controller.assignNextValidators(2, [], [])
+    res = await controller.getNextValidators(5)
     assert.equal(
-      keys,
+      res[0],
       '0x' +
         keyPairs.keys.slice(2 * pubkeyLength + 2, 3 * pubkeyLength + 2) +
         keyPairs.keys.slice(2) +
@@ -331,11 +331,10 @@ describe('NWLOperatorController', () => {
       'keys incorrect'
     )
 
-    await controller.assignNextValidators(1)
-
-    keys = await controller.getNextValidators(5)
+    await controller.assignNextValidators(1, [], [])
+    res = await controller.getNextValidators(5)
     assert.equal(
-      keys,
+      res[0],
       keyPairs.keys + keyPairs.keys.slice(2, 2 * pubkeyLength + 2),
       'keys incorrect'
     )
@@ -353,9 +352,9 @@ describe('NWLOperatorController', () => {
       value: toEther(3 * 16),
     })
 
-    let keys = await controller.getNextValidators(9)
+    let res = await controller.getNextValidators(9)
     assert.equal(
-      keys,
+      res[0],
       keyPairs.keys +
         keyPairs.keys.slice(2, pubkeyLength + 2) +
         keyPairs.keys.slice(2) +
@@ -365,7 +364,7 @@ describe('NWLOperatorController', () => {
   })
 
   it('reportStoppedValidators should work correctly', async () => {
-    await controller.assignNextValidators(8)
+    await controller.assignNextValidators(8, [], [])
     await controller.reportStoppedValidators([0, 4], [2, 1], [toEther(4), toEther(1)])
 
     let op = await controller.getOperators([0, 2, 4])
@@ -373,9 +372,21 @@ describe('NWLOperatorController', () => {
     assert.equal(op[1][5].toNumber(), 0, 'operator stoppedValidators incorrect')
     assert.equal(op[2][5].toNumber(), 1, 'operator stoppedValidators incorrect')
 
-    assert.equal(fromEther(await controller.ethLost(0)), 4, 'operator ethLost incorrect')
-    assert.equal(fromEther(await controller.ethLost(2)), 0, 'operator ethLost incorrect')
-    assert.equal(fromEther(await controller.ethLost(4)), 1, 'operator ethLost incorrect')
+    assert.equal(
+      fromEther((await controller.getOperators([0]))[0][8]),
+      4,
+      'operator ethLost incorrect'
+    )
+    assert.equal(
+      fromEther((await controller.getOperators([2]))[0][8]),
+      0,
+      'operator ethLost incorrect'
+    )
+    assert.equal(
+      fromEther((await controller.getOperators([4]))[0][8]),
+      1,
+      'operator ethLost incorrect'
+    )
 
     assert.equal(fromEther(await controller.totalActiveStake()), 80, 'totalActiveStake incorrect')
     assert.equal(
@@ -414,7 +425,7 @@ describe('NWLOperatorController', () => {
   it('RewardsPoolController functions should work', async () => {
     await controller.setOperatorOwner(2, accounts[2])
     await controller.setOperatorOwner(4, accounts[4])
-    await controller.assignNextValidators(8)
+    await controller.assignNextValidators(8, [], [])
     await wsdToken.transferAndCall(rewardsPool.address, toEther(100), '0x00')
 
     assert.equal(
@@ -451,7 +462,7 @@ describe('NWLOperatorController', () => {
       'rewards pool account balance incorrect'
     )
 
-    await controller.assignNextValidators(1)
+    await controller.assignNextValidators(1, [], [])
 
     assert.equal(
       fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
@@ -475,8 +486,9 @@ describe('NWLOperatorController', () => {
     const controller = (await deployUpgradeable('NWLOperatorController', [
       strategy.address,
       wsdToken.address,
+      toEther(16),
     ])) as NWLOperatorController
-    await strategy.setNWLOperatorController(controller.address)
+    await strategy.setOperatorController(controller.address)
     await setupController(controller)
 
     await strategy.depositEther(8)
@@ -530,7 +542,7 @@ describe('NWLOperatorController', () => {
     )
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
 
-    await controller.assignNextValidators(4)
+    await controller.assignNextValidators(4, [], [])
 
     for (let i = 0; i < 3; i++) {
       hash = ethers.utils.solidityKeccak256(

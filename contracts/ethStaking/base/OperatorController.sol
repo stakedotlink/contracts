@@ -275,10 +275,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
                 require(_ethLost[i] >= operators[operatorId].ethLost, "Reported negative lost ETH");
 
                 uint256 newlyLostETH = _ethLost[i] - operators[operatorId].ethLost;
-                require(
-                    newlyLostETH <= newlyStoppedValidators * depositAmount,
-                    "Reported more than max loss of 16 ETH per validator"
-                );
+                require(newlyLostETH <= newlyStoppedValidators * depositAmount, "Reported more than max loss per validator");
 
                 operators[operatorId].ethLost += newlyLostETH;
                 emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
