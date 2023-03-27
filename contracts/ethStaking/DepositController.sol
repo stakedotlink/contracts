@@ -42,14 +42,7 @@ contract DepositController is Ownable {
         uint256[][] calldata _validatorCounts
     ) external onlyOwner {
         bytes32 depositRoot = depositContract.get_deposit_root();
-        bytes32 operatorStateHash = keccak256("initialState");
-
-        address[] memory operatorControllers = ethStakingStrategy.getOperatorControllers();
-        for (uint256 i = 0; i < operatorControllers.length; ++i) {
-            operatorStateHash = keccak256(
-                abi.encodePacked(operatorStateHash, IOperatorController(operatorControllers[i]).currentStateHash())
-            );
-        }
+        bytes32 operatorStateHash = _getOperatorStateHash();
 
         require(_depositRoot == depositRoot, "depositRoot has changed");
         require(_operatorStateHash == operatorStateHash, "operatorStateHash has changed");
@@ -87,7 +80,7 @@ contract DepositController is Ownable {
         address[] memory operatorControllers = ethStakingStrategy.getOperatorControllers();
 
         depositRoot = depositContract.get_deposit_root();
-        operatorStateHash = keccak256("initialState");
+        operatorStateHash = _getOperatorStateHash();
         depositAmounts = new uint256[](operatorControllers.length);
         validatorsAssigned = new uint256[](operatorControllers.length);
         operatorIds = new uint256[][](operatorControllers.length);
@@ -115,7 +108,6 @@ contract DepositController is Ownable {
             validatorsAssigned[i] = currentValidatorsAssigned;
             operatorIds[i] = currentOperatorIds;
             validatorCounts[i] = currentValidatorCounts;
-            operatorStateHash = keccak256(abi.encodePacked(operatorStateHash, operatorController.currentStateHash()));
 
             toAssign -= currentValidatorsAssigned;
             if (toAssign == 0) break;
@@ -129,5 +121,16 @@ contract DepositController is Ownable {
             queueLength += IOperatorController(operatorControllers[i]).queueLength();
         }
         return queueLength;
+    }
+
+    function _getOperatorStateHash() internal view returns (bytes32) {
+        address[] memory operatorControllers = ethStakingStrategy.getOperatorControllers();
+        bytes32 operatorStateHash = keccak256("initialState");
+        for (uint256 i = 0; i < operatorControllers.length; ++i) {
+            operatorStateHash = keccak256(
+                abi.encodePacked(operatorStateHash, IOperatorController(operatorControllers[i]).currentStateHash())
+            );
+        }
+        return operatorStateHash;
     }
 }

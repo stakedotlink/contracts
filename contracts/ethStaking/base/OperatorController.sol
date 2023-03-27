@@ -27,6 +27,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint64 totalKeyPairs;
         uint64 usedKeyPairs;
         uint256 ethLost;
+        uint256 ethWithdrawn;
     }
 
     address public ethStakingStrategy;
@@ -106,6 +107,14 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      */
     function totalStaked() public view returns (uint256) {
         return totalActiveValidators;
+    }
+
+    /**
+     * @notice Returns the total active stake across all validators
+     * @return totalActiveStake total active stake
+     */
+    function totalActiveStake() external view returns (uint256) {
+        return totalActiveValidators * depositAmount;
     }
 
     /**
@@ -365,7 +374,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _name name of operator
      */
     function _addOperator(string calldata _name) internal {
-        Operator memory operator = Operator(_name, msg.sender, true, false, 0, 0, 0, 0, 0);
+        Operator memory operator = Operator(_name, msg.sender, true, false, 0, 0, 0, 0, 0, 0);
         operators.push(operator);
 
         emit AddOperator(msg.sender, _name);

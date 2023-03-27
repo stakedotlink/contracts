@@ -10,8 +10,6 @@ import "./interfaces/IEthStakingStrategy.sol";
  * @notice Handles non-whitelisted validator keys, operator stakes, and operator rewards distribution
  */
 contract NWLOperatorController is OperatorController {
-    uint256 public constant DEPOSIT_AMOUNT = 16 ether;
-
     struct QueueEntry {
         uint256 operatorId;
         uint256 numKeyPairs;
@@ -19,9 +17,6 @@ contract NWLOperatorController is OperatorController {
 
     QueueEntry[] private queue;
     uint256 public queueIndex;
-
-    mapping(uint256 => uint256) public ethLost;
-    mapping(uint256 => uint256) public ethWithdrawn;
 
     event RemoveKeyPairs(uint256 indexed operatorId, uint256 quantity);
     event ReportKeyPairValidation(uint256 indexed operatorId, bool success);
@@ -61,14 +56,6 @@ contract NWLOperatorController is OperatorController {
     }
 
     /**
-     * @notice Returns the total active stake across all validators
-     * @return totalActiveStake total active stake
-     */
-    function totalActiveStake() external view returns (uint256) {
-        return totalActiveValidators * DEPOSIT_AMOUNT;
-    }
-
-    /**
      * @notice Adds a new operator
      * @param _name name of operator
      */
@@ -90,7 +77,7 @@ contract NWLOperatorController is OperatorController {
         bytes calldata _signatures
     ) external payable operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
-        require(msg.value == _quantity * DEPOSIT_AMOUNT, "Incorrect stake amount");
+        require(msg.value == _quantity * depositAmount, "Incorrect stake amount");
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
     }
 
@@ -144,7 +131,7 @@ contract NWLOperatorController is OperatorController {
             abi.encodePacked(currentStateHash, "removeKeyPairs", _operatorId, _quantity, _queueEntryIndexes)
         );
 
-        (bool success, ) = payable(msg.sender).call{value: _quantity * DEPOSIT_AMOUNT}("");
+        (bool success, ) = payable(msg.sender).call{value: _quantity * depositAmount}("");
         require(success, "ETH transfer failed");
 
         emit RemoveKeyPairs(_operatorId, _quantity);
@@ -233,7 +220,7 @@ contract NWLOperatorController is OperatorController {
             index++;
         }
 
-        (bool success, ) = payable(ethStakingStrategy).call{value: _validatorCount * DEPOSIT_AMOUNT}("");
+        (bool success, ) = payable(ethStakingStrategy).call{value: _validatorCount * depositAmount}("");
         require(success, "ETH transfer failed");
 
         currentStateHash = stateHash;
@@ -308,7 +295,7 @@ contract NWLOperatorController is OperatorController {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
 
-        ethWithdrawn[_operatorId] += _amount;
+        operators[_operatorId].ethWithdrawn += _amount;
         IEthStakingStrategy(ethStakingStrategy).operatorControllerWithdraw(msg.sender, _amount);
 
         emit WithdrawStake(_operatorId, _amount);
@@ -321,6 +308,8 @@ contract NWLOperatorController is OperatorController {
      */
     function withdrawableStake(uint256 _operatorId) public view returns (uint256) {
         return
-            operators[_operatorId].stoppedValidators * DEPOSIT_AMOUNT - (ethLost[_operatorId] + ethWithdrawn[_operatorId]);
+            operators[_operatorId].stoppedValidators *
+            depositAmount -
+            (operators[_operatorId].ethLost + operators[_operatorId].ethWithdrawn);
     }
 }

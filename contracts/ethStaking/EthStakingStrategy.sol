@@ -150,7 +150,7 @@ contract EthStakingStrategy is Strategy {
 
         uint256 totalDepositAmount;
         for (uint256 i = 0; i < operatorTypes; ++i) {
-            totalDepositAmount += _totalValidatorCounts[i] * _depositAmounts[i];
+            totalDepositAmount += _totalValidatorCounts[i] * (DEPOSIT_AMOUNT - _depositAmounts[i]);
         }
 
         require(totalDepositAmount > 0, "Cannot deposit 0");
@@ -173,8 +173,8 @@ contract EthStakingStrategy is Strategy {
             require(signatures.length % SIGNATURE_LENGTH == 0, "Invalid non-whitelisted signatures");
 
             for (uint256 j = 0; j < validatorCount; ++j) {
-                bytes memory pubkey = BytesLib.slice(pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-                bytes memory signature = BytesLib.slice(signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+                bytes memory pubkey = BytesLib.slice(pubkeys, j * PUBKEY_LENGTH, PUBKEY_LENGTH);
+                bytes memory signature = BytesLib.slice(signatures, j * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
                 _deposit(pubkey, signature);
             }
 
