@@ -4,18 +4,18 @@ import { BigNumber, Signer } from 'ethers'
 import { toEther, deploy, deployUpgradeable, getAccounts, fromEther } from '../../utils/helpers'
 import {
   ERC677,
-  EthWithdrawalStrategy,
+  ETHWithdrawalStrategy,
   FeeAdapterMock,
   LidoWithdrawalAdapter,
-  LidoWithdrawalQueueMock,
+  LidoWQERC721Mock,
   WrappedETH,
 } from '../../../typechain-types'
 
 describe('LidoWithdrawalAdapter', () => {
   let wETH: WrappedETH
   let stETH: ERC677
-  let lidoWQ: LidoWithdrawalQueueMock
-  let controller: EthWithdrawalStrategy
+  let lidoWQ: LidoWQERC721Mock
+  let controller: ETHWithdrawalStrategy
   let feeAdapter: FeeAdapterMock
   let adapter: LidoWithdrawalAdapter
   let signers: Signer[]
@@ -29,7 +29,7 @@ describe('LidoWithdrawalAdapter', () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
     stETH = (await deploy('ERC677', ['test', 'test', 10000000000])) as ERC677
 
-    lidoWQ = (await deploy('LidoWithdrawalQueueMock', [
+    lidoWQ = (await deploy('LidoWQERC721Mock', [
       [
         [toEther(1), 0, accounts[0], 0, true, false],
         [toEther(2), 0, accounts[1], 0, true, false],
@@ -41,7 +41,7 @@ describe('LidoWithdrawalAdapter', () => {
         [10, 0, accounts[0], 0, false, false],
       ],
       stETH.address,
-    ])) as LidoWithdrawalQueueMock
+    ])) as LidoWQERC721Mock
 
     await signers[4].sendTransaction({
       from: accounts[4],
@@ -49,12 +49,12 @@ describe('LidoWithdrawalAdapter', () => {
       value: toEther(21),
     })
 
-    controller = (await deployUpgradeable('EthWithdrawalStrategy', [
+    controller = (await deployUpgradeable('ETHWithdrawalStrategy', [
       wETH.address,
       accounts[4],
       ethers.constants.MaxUint256,
       5000,
-    ])) as EthWithdrawalStrategy
+    ])) as ETHWithdrawalStrategy
 
     await wETH.connect(signers[4]).wrap({ value: toEther(25) })
     await wETH.connect(signers[4]).approve(controller.address, toEther(25))

@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * @title Lido Withdrawal Queue Mock
  * @notice Mocks contract for testing
  */
-contract LidoWithdrawalQueueMock is ERC721 {
+contract LidoWQERC721Mock is ERC721 {
     using SafeERC20 for IERC20;
 
     struct WithdrawalRequest {

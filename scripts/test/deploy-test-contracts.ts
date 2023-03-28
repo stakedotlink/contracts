@@ -1,10 +1,13 @@
 import { network } from 'hardhat'
 import { updateDeployments, deploy } from '../utils/deployment'
+import { getAccounts, toEther } from '../utils/helpers'
 
 async function main() {
   if (network.name != 'localhost' && network.name != 'testnet') {
     throw Error('Test contracts can only be deployed on test networks')
   }
+
+  const { accounts } = await getAccounts()
 
   const lplToken = await deploy('ERC677', ['LinkPool', 'LPL', 100000000])
   console.log('LPLToken deployed: ', lplToken.address)
@@ -40,8 +43,25 @@ async function main() {
   )
   await tx.wait()
 
-  const stETHToken = await deploy('ERC677', ['Lido stETH', 'stETH', 1000000000])
+  // ETH Staking
+  const stETHToken = await deploy('ERC677', ['Lido Staked ETH', 'stETH', 1000000000])
   const rETHToken = await deploy('ERC677', ['RocketPool rETH', 'rETH', 1000000000])
+
+  const lidoWQERC721 = await deploy('LidoWQERC721Mock', [
+    [
+      [toEther(1), 0, accounts[0], 0, true, false],
+      [toEther(3), 0, accounts[1], 0, true, false],
+      [toEther(5), 0, accounts[0], 0, true, false],
+      [toEther(7), 0, accounts[1], 0, false, false],
+      [toEther(8), 0, accounts[2], 0, false, false],
+      [toEther(10), 0, accounts[3], 0, false, false],
+    ],
+    stETHToken.address,
+  ])
+  console.log('lidoWQERC721 deployed: ', stETHToken.address)
+
+  const stETHCurvePool = await deploy('CurvePoolMock', [toEther(5)])
+  console.log('stETH_CurvePool deployed: ', stETHCurvePool.address)
 
   updateDeployments(
     {
@@ -53,13 +73,17 @@ async function main() {
       Multicall3: multicall.address,
       stETHToken: stETHToken.address,
       rETHToken: rETHToken.address,
+      LidoWQERC721: lidoWQERC721.address,
+      stETH_CurvePool: stETHCurvePool.address,
     },
     {
       LPLToken: 'ERC677',
       LINKToken: 'ERC677',
       LINK_OwnersRewardsPoolV1: 'OwnersRewardsPoolV1',
-      stETHToken: 'ERC20',
-      rETHToken: 'ERC20',
+      rETHToken: 'ERC677',
+      stETHToken: 'ERC677',
+      stETH_CurvePool: 'CurvePoolMock',
+      LidoWQERC721: 'LidoWQERC721Mock',
     }
   )
 }

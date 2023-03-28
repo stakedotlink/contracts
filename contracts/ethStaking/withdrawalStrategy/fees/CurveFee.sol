@@ -81,11 +81,11 @@ contract CurveFee is IFeeAdapter, Ownable {
     }
 
     /**
-     * @notice sets the maximum fee basis point fee to be paid on withdrawals
+     * @notice sets the maximum basis point fee to be paid on withdrawals
      * @param _maxFeeBasisPoints maximum basis point fee
      */
     function setMaxFeeBasisPoints(uint256 _maxFeeBasisPoints) public onlyOwner {
-        if (_maxFeeBasisPoints < 1000) revert InvalidMaxFeeBasisPoints();
+        if (_maxFeeBasisPoints > 3000) revert InvalidMaxFeeBasisPoints();
         maxFeeBasisPoints = _maxFeeBasisPoints;
         emit SetMaxFeeBasisPoints(_maxFeeBasisPoints);
     }

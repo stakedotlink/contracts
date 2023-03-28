@@ -3,7 +3,7 @@ import { assert, expect } from 'chai'
 import { Signer } from 'ethers'
 import { toEther, deploy, deployUpgradeable, getAccounts, fromEther } from '../../utils/helpers'
 import {
-  EthWithdrawalStrategy,
+  ETHWithdrawalStrategy,
   StakingPool,
   WithdrawalAdapterMock,
   WrappedETH,
@@ -11,7 +11,7 @@ import {
 
 describe('EthWithdrawalStrategy', () => {
   let wETH: WrappedETH
-  let strategy: EthWithdrawalStrategy
+  let strategy: ETHWithdrawalStrategy
   let adapters: WithdrawalAdapterMock[]
   let signers: Signer[]
   let accounts: string[]
@@ -23,12 +23,12 @@ describe('EthWithdrawalStrategy', () => {
   beforeEach(async () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
 
-    strategy = (await deployUpgradeable('EthWithdrawalStrategy', [
+    strategy = (await deployUpgradeable('ETHWithdrawalStrategy', [
       wETH.address,
       accounts[0],
       toEther(50),
       4000,
-    ])) as EthWithdrawalStrategy
+    ])) as ETHWithdrawalStrategy
 
     await wETH.wrap({ value: toEther(1000) })
     await wETH.approve(strategy.address, toEther(1000))
@@ -185,12 +185,12 @@ describe('EthWithdrawalStrategy', () => {
       accounts[0],
     ])) as StakingPool
 
-    let strategy2 = (await deployUpgradeable('EthWithdrawalStrategy', [
+    let strategy2 = (await deployUpgradeable('ETHWithdrawalStrategy', [
       wETH.address,
       stakingPool.address,
       toEther(50),
       4000,
-    ])) as EthWithdrawalStrategy
+    ])) as ETHWithdrawalStrategy
 
     await wETH.wrap({ value: toEther(100) })
     await wETH.approve(stakingPool.address, toEther(100))

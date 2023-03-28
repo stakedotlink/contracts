@@ -12,7 +12,7 @@ import "./interfaces/IWithdrawalAdapter.sol";
  * @title ETH Withdrawal Strategy
  * @notice Enables holders of ETH withdrawal NFTs to instantly swap them for ETH
  */
-contract EthWithdrawalStrategy is Strategy {
+contract ETHWithdrawalStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 internal constant BASIS_POINTS = 10000;
