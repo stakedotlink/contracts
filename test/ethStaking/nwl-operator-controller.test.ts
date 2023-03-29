@@ -418,7 +418,7 @@ describe('NWLOperatorController', () => {
       controller.reportStoppedValidators([0, 4], [4, 3], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Reported more stopped validators than active')
     await expect(controller.reportStoppedValidators([4], [2], [toEther(18)])).to.be.revertedWith(
-      'Reported more than max loss of 16 ETH per validator'
+      'Reported more than max loss per validator'
     )
   })
 

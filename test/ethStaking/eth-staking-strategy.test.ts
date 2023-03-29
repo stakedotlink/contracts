@@ -397,10 +397,12 @@ describe('EthStakingStrategy', () => {
 
     await stakingPool.updateStrategyRewards([0])
     assert.equal(
-      fromEther(
-        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
+      Number(
+        fromEther(
+          await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
+        ).toFixed(3)
       ),
-      17.0625,
+      17.072,
       'nwl operator rewards incorrect'
     )
     assert.equal(

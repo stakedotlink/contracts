@@ -35,10 +35,12 @@ describe('KeyValidationOracle', () => {
     nwlOpController = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
       wsdToken.address,
+      0,
     ])) as OperatorControllerMock
     wlOpController = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
       wsdToken.address,
+      0,
     ])) as OperatorControllerMock
 
     kvOracle = (await deploy('KeyValidationOracle', [
