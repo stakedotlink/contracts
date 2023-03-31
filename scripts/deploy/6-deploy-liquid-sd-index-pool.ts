@@ -28,7 +28,7 @@ async function main() {
     [[delegatorPool.address, ETH_LSDIndexPool.fee]],
     ETH_LSDIndexPool.withdrawalFee,
   ])) as LiquidSDIndexPool
-  console.log('LiquidSDIndexPool deployed: ', indexPool.address)
+  console.log('ETH_LiquidSDIndexPool deployed: ', indexPool.address)
 
   const wsdToken = await deploy('WrappedSDToken', [
     indexPool.address,
@@ -49,11 +49,12 @@ async function main() {
     {
       iETH_WrappedSDToken: wsdToken.address,
       iETH_DelegatorRewardsPool: iETH_DelegatorRewardsPool.address,
-      LiquidSDIndexPool: indexPool.address,
+      ETH_LiquidSDIndexPool: indexPool.address,
     },
     {
       iETH_WrappedSDToken: 'WrappedSDToken',
       iETH_DelegatorRewardsPool: 'RewardsPoolWSD',
+      ETH_LiquidSDIndexPool: 'LiquidSDIndexPool',
     }
   )
 }
