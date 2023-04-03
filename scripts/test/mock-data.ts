@@ -34,7 +34,7 @@ async function main() {
   const delegatorPool = (await getContract('DelegatorPool')) as any
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as any
   const stLINK_DelegatorRewardsPool = (await getContract('stLINK_DelegatorRewardsPool')) as any
-  const indexPool = (await getContract('LiquidSDIndexPool')) as any
+  const indexPool = (await getContract('ETH_LiquidSDIndexPool')) as any
   const iETH_DelegatorRewardsPool = (await getContract('iETH_DelegatorRewardsPool')) as any
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
