@@ -40,6 +40,9 @@ async function main() {
   )
   await tx.wait()
 
+  const stETHToken = await deploy('ERC677', ['Lido stETH', 'stETH', 1000000000])
+  const rETHToken = await deploy('ERC677', ['RocketPool rETH', 'rETH', 1000000000])
+
   updateDeployments(
     {
       LPLToken: lplToken.address,
@@ -48,8 +51,16 @@ async function main() {
       LINK_OwnersRewardsPoolV1: ownersRewardsPoolV1.address,
       PoolAllowanceV1: poolAllowance.address,
       Multicall3: multicall.address,
+      stETHToken: stETHToken.address,
+      rETHToken: rETHToken.address,
     },
-    { LPLToken: 'ERC677', LINKToken: 'ERC677', LINK_OwnersRewardsPoolV1: 'OwnersRewardsPoolV1' }
+    {
+      LPLToken: 'ERC677',
+      LINKToken: 'ERC677',
+      LINK_OwnersRewardsPoolV1: 'OwnersRewardsPoolV1',
+      stETHToken: 'ERC20',
+      rETHToken: 'ERC20',
+    }
   )
 }
 

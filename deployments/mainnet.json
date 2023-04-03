@@ -42,5 +42,13 @@
   "LINK_OperatorVCS": {
     "address": "0x4852e48215A4785eE99B640CACED5378Cc39D2A4",
     "artifact": "OperatorVCS"
+  },
+  "stETHToken": {
+    "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "artifact": "ERC20"
+  },
+  "rETHToken": {
+    "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+    "artifact": "ERC20"
   }
 }

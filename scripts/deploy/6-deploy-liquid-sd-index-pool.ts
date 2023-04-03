@@ -1,59 +1,47 @@
-import { updateDeployments, deployUpgradeable, deploy, getContract } from '../utils/deployment'
+import { updateDeployments, deployUpgradeable, deploy } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
-import { DelegatorPool, LiquidSDIndexPool } from '../../typechain-types'
+import { LiquidSDIndexPool } from '../../typechain-types'
 
-// ETH LSD Index
+// ETH LSD Index (ixETH)
 const ETH_LSDIndexPool = {
-  name: 'Index ETH', // wrapped staking derivative token name
-  symbol: 'iETH', // wrapped staking derivative token symbol
-  compositionTolerance: 5000, // pool composition tolerance
-  compositionEnforcementThreshold: 10000, // ETH intervals in which composition is enforced
-  fee: 25, // delegator pool fee basis points
-  withdrawalFee: 25, // withdrawal fee that goes to iETH holders
+  name: 'Staked ETH Index', // index token name
+  symbol: 'ixETH', // index token symbol
+  compositionTolerance: 5000, // percentage swing that any lsd can have from its composition target in either direction
+  compositionEnforcementThreshold: 10000, // total amount of deposits required for composition targets to be enforced
+  fees: [['0x6879826450e576B401c4dDeff2B7755B1e85d97c', 25]], // fee receivers & percentage amounts in basis points
+  withdrawalFee: 100, // withdrawal fee that goes to ixETH holders
 }
-// Wrapped iETH
-const iETH_WrappedSDToken = {
-  derivativeTokenName: 'Wrapped iETH', // Wrapped iETH token name
-  derivativeTokenSymbol: 'wiETH', // Wrapped iETH token symbol
+// Wrapped ixETH
+const ixETH_WrappedSDToken = {
+  derivativeTokenName: 'Wrapped ixETH', // Wrapped ixETH token name
+  derivativeTokenSymbol: 'wixETH', // Wrapped ixETH token symbol
 }
 
 async function main() {
-  const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
-
   const indexPool = (await deployUpgradeable('LiquidSDIndexPool', [
     ETH_LSDIndexPool.name,
     ETH_LSDIndexPool.symbol,
     ETH_LSDIndexPool.compositionTolerance,
     toEther(ETH_LSDIndexPool.compositionEnforcementThreshold),
-    [[delegatorPool.address, ETH_LSDIndexPool.fee]],
+    ETH_LSDIndexPool.fees,
     ETH_LSDIndexPool.withdrawalFee,
   ])) as LiquidSDIndexPool
   console.log('ETH_LiquidSDIndexPool deployed: ', indexPool.address)
 
   const wsdToken = await deploy('WrappedSDToken', [
     indexPool.address,
-    iETH_WrappedSDToken.derivativeTokenName,
-    iETH_WrappedSDToken.derivativeTokenSymbol,
+    ixETH_WrappedSDToken.derivativeTokenName,
+    ixETH_WrappedSDToken.derivativeTokenSymbol,
   ])
-  console.log('iETH_WrappedSDToken token deployed: ', wsdToken.address)
-
-  const iETH_DelegatorRewardsPool = await deploy('RewardsPoolWSD', [
-    delegatorPool.address,
-    indexPool.address,
-    wsdToken.address,
-  ])
-  await delegatorPool.addToken(indexPool.address, iETH_DelegatorRewardsPool.address)
-  console.log('iETH_DelegatorRewardsPool deployed: ', iETH_DelegatorRewardsPool.address)
+  console.log('ixETH_WrappedSDToken token deployed: ', wsdToken.address)
 
   updateDeployments(
     {
-      iETH_WrappedSDToken: wsdToken.address,
-      iETH_DelegatorRewardsPool: iETH_DelegatorRewardsPool.address,
+      ixETH_WrappedSDToken: wsdToken.address,
       ETH_LiquidSDIndexPool: indexPool.address,
     },
     {
-      iETH_WrappedSDToken: 'WrappedSDToken',
-      iETH_DelegatorRewardsPool: 'RewardsPoolWSD',
+      ixETH_WrappedSDToken: 'WrappedSDToken',
       ETH_LiquidSDIndexPool: 'LiquidSDIndexPool',
     }
   )

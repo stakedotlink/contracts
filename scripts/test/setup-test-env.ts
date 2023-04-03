@@ -3,6 +3,7 @@ import { getContract, deployUpgradeable, deploy, updateDeployments } from '../ut
 import {
   CurveMock,
   DelegatorPool,
+  ERC20,
   ERC677,
   LiquidSDAdapterMock,
   LiquidSDIndexPool,
@@ -31,6 +32,8 @@ async function main() {
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as StakingPool
   const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
+  const stETHToken = (await getContract('stETHToken')) as ERC20
+  const rETHToken = (await getContract('rETHToken')) as ERC20
 
   // LPL Migration
 
@@ -48,9 +51,6 @@ async function main() {
 
   // ETH Liquid SD Index
 
-  const stETHToken = (await deploy('ERC677', ['Lido stETH', 'stETH', 1000000000])) as ERC677
-  const rETHToken = (await deploy('ERC677', ['RocketPool rETH', 'rETH', 1000000000])) as ERC677
-
   const stETHAdapter = (await deployUpgradeable('LiquidSDAdapterMock', [
     stETHToken.address,
     ETH_LiquidSDIndexPool.address,
@@ -65,11 +65,6 @@ async function main() {
 
   await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, stETHAdapter.address, [10000])
   await ETH_LiquidSDIndexPool.addLSDToken(rETHToken.address, rETHAdapter.address, [7500, 2500])
-
-  updateDeployments({
-    LidostETHToken: stETHToken.address,
-    RockePoolrETHToken: rETHToken.address,
-  })
 
   // Account 2 - holds SDL/LPL/LINK/stETH/rETH with no staked assets
 
