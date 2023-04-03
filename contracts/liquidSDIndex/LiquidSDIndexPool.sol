@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "../core/base/StakingRewardsPool.sol";
-import "./interfaces/ILiquidSDAdapter.sol";
+import "./interfaces/ILSDIndexAdapter.sol";
 
 /**
  * @title Liquid Staking Derivative Index Pool
@@ -23,7 +23,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     uint256 private constant BASIS_POINTS_TOTAL = 10000;
 
     address[] private lsdTokens;
-    mapping(address => ILiquidSDAdapter) public lsdAdapters;
+    mapping(address => ILSDIndexAdapter) public lsdAdapters;
 
     mapping(address => uint256) private compositionTargets;
     uint256 public compositionTolerance;
@@ -187,7 +187,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     function deposit(address _lsdToken, uint256 _amount) external tokenIsSupported(_lsdToken) notPaused {
         require(getDepositRoom(_lsdToken) >= _amount, "Insufficient deposit room for the selected lsd");
 
-        ILiquidSDAdapter lsdAdapter = lsdAdapters[_lsdToken];
+        ILSDIndexAdapter lsdAdapter = lsdAdapters[_lsdToken];
 
         uint256 underlyingAmount = lsdAdapter.getUnderlyingByLSD(_amount);
         require(underlyingAmount != 0, "Deposit amount too small");
@@ -232,7 +232,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
             uint256 targetDepositDiff = targetDepositDiffs[i];
 
             if (targetDepositDiff > 0) {
-                ILiquidSDAdapter lsdAdapter = lsdAdapters[lsdTokens[i]];
+                ILSDIndexAdapter lsdAdapter = lsdAdapters[lsdTokens[i]];
                 uint256 withdrawalAmount = lsdAdapter.getLSDByUnderlying(
                     (amount * ((targetDepositDiff * 1e18) / totalTargetDepositDiffs)) / 1e18
                 );
@@ -334,7 +334,7 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         require(_compositionTargets.length == lsdTokens.length + 1, "Invalid composition targets length");
 
         lsdTokens.push(_lsdToken);
-        lsdAdapters[_lsdToken] = ILiquidSDAdapter(_lsdAdapter);
+        lsdAdapters[_lsdToken] = ILSDIndexAdapter(_lsdAdapter);
 
         uint256 totalComposition;
         for (uint256 i = 0; i < _compositionTargets.length; i++) {

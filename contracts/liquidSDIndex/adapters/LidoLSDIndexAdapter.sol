@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "../base/LiquidSDAdapter.sol";
-import "../interfaces/IRocketPoolRETH.sol";
+import "../base/LSDIndexAdapter.sol";
 
 /**
- * @title RocketPool rETH Adapter
- * @notice Adapter for RocketPool's rETH
+ * @title Lido stETH Adapter
+ * @notice Adapter for Lido's stETH
  */
-contract RocketPoolRETHAdapter is LiquidSDAdapter {
+contract LidoLSDIndexAdapter is LSDIndexAdapter {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -23,6 +22,6 @@ contract RocketPoolRETHAdapter is LiquidSDAdapter {
      * @return exchange rate
      */
     function getExchangeRate() public view override returns (uint256) {
-        return IRocketPoolRETH(address(token)).getExchangeRate();
+        return 1 ether;
     }
 }

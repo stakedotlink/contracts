@@ -1,45 +1,45 @@
-import { LiquidSDIndexPool } from '../../typechain-types'
+import { ERC20, LiquidSDIndexPool } from '../../typechain-types'
 import { deployUpgradeable, getContract, updateDeployments } from '../utils/deployment'
 
 const compositionTargets = [7000, 3000] // basis point index composition targets [stETH,rETH]
 
 async function main() {
-  const ixETHIndexPool = (await getContract('ETH_LiquidSDIndex')) as LiquidSDIndexPool
-  const stETHToken = (await getContract('LidoSTETHToken')) as LiquidSDIndexPool
-  const rETHToken = (await getContract('ETH_LiquidSDIndex')) as LiquidSDIndexPool
+  const ixETHIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
+  const stETHToken = (await getContract('stETHToken')) as ERC20
+  const rETHToken = (await getContract('rETHToken')) as ERC20
 
-  const lidoSTETHAdapter = await deployUpgradeable('LidoSTETHAdapter', [
+  const lidoAdapter = await deployUpgradeable('LidoLSDIndexAdapter', [
     stETHToken.address,
     ixETHIndexPool.address,
   ])
-  console.log('ixETH_LidoSTETHAdapter deployed: ', lidoSTETHAdapter.address)
+  console.log('ixETH_LidoLSDIndexAdapter deployed: ', lidoAdapter.address)
 
-  const rocketPoolRETHAdapter = await deployUpgradeable('RocketPoolRETHAdapter', [
+  const rocketPoolAdapter = await deployUpgradeable('RocketPoolLSDIndexAdapter', [
     rETHToken.address,
     ixETHIndexPool.address,
   ])
-  console.log('ixETH_RocketPoolRETHAdapter deployed: ', rocketPoolRETHAdapter.address)
+  console.log('ixETH_RocketPoolLSDIndexAdapter deployed: ', rocketPoolAdapter.address)
 
-  let tx = await ixETHIndexPool.addLSDToken(stETHToken.address, lidoSTETHAdapter.address, [10000])
+  let tx = await ixETHIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
   await tx.wait()
-  console.log('LidoSTETHAdapter added to LiquidSDIndex')
+  console.log('LidoLSDIndexAdapter added to LiquidSDIndex')
 
   tx = await ixETHIndexPool.addLSDToken(
     rETHToken.address,
-    rocketPoolRETHAdapter.address,
+    rocketPoolAdapter.address,
     compositionTargets
   )
   await tx.wait()
-  console.log('RocketPoolRETHAdapter added to LiquidSDIndex')
+  console.log('RocketPoolLSDIndexAdapter added to LiquidSDIndex')
 
   updateDeployments(
     {
-      ixETH_LidoSTETHAdapter: lidoSTETHAdapter.address,
-      ixETH_RocketPoolRETHAdapter: rocketPoolRETHAdapter.address,
+      ixETH_LidoLSDIndexAdapter: lidoAdapter.address,
+      ixETH_RocketPoolLSDIndexAdapter: rocketPoolAdapter.address,
     },
     {
-      ixETH_LidoSTETHAdapter: 'LidoSTETHAdapter',
-      ixETH_RocketPoolRETHAdapter: 'RocketPoolRETHAdapter',
+      ixETH_LidoLSDIndexAdapter: 'LidoLSDIndexAdapter',
+      ixETH_RocketPoolLSDIndexAdapter: 'RocketPoolLSDIndexAdapter',
     }
   )
 }

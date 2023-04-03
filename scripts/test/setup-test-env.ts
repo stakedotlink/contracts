@@ -51,20 +51,35 @@ async function main() {
 
   // ETH Liquid SD Index
 
-  const stETHAdapter = (await deployUpgradeable('LiquidSDAdapterMock', [
+  const lidoAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
     stETHToken.address,
     ETH_LiquidSDIndexPool.address,
     toEther(1),
   ])) as LiquidSDAdapterMock
 
-  const rETHAdapter = (await deployUpgradeable('LiquidSDAdapterMock', [
+  const rocketPoolAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
     rETHToken.address,
     ETH_LiquidSDIndexPool.address,
     toEther(1.2),
   ])) as LiquidSDAdapterMock
 
-  await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, stETHAdapter.address, [10000])
-  await ETH_LiquidSDIndexPool.addLSDToken(rETHToken.address, rETHAdapter.address, [7500, 2500])
+  await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
+  await ETH_LiquidSDIndexPool.addLSDToken(
+    rETHToken.address,
+    rocketPoolAdapter.address,
+    [7500, 2500]
+  )
+
+  updateDeployments(
+    {
+      ixETH_LidoLSDIndexAdapter: lidoAdapter.address,
+      ixETH_RocketPoolLSDIndexAdapter: rocketPoolAdapter.address,
+    },
+    {
+      ixETH_LidoLSDIndexAdapter: 'LidoLSDIndexAdapter',
+      ixETH_RocketPoolLSDIndexAdapter: 'RocketPoolLSDIndexAdapter',
+    }
+  )
 
   // Account 2 - holds SDL/LPL/LINK/stETH/rETH with no staked assets
 

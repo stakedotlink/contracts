@@ -8,10 +8,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
- * @title Liquid Staking Derivative Adapter
+ * @title Liquid Staking Derivative Index Adapter
  * @notice Base adapter contract used to retrieve information on the LSD tokens held in the index pool
  */
-abstract contract LiquidSDAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+abstract contract LSDIndexAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IERC20Upgradeable public token;
