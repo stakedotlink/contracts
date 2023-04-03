@@ -22,7 +22,7 @@ async function main() {
 
   let tx = await ixETHIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
   await tx.wait()
-  console.log('LidoLSDIndexAdapter added to LiquidSDIndex')
+  console.log('LidoLSDIndexAdapter added to ETH_LiquidSDIndexPool')
 
   tx = await ixETHIndexPool.addLSDToken(
     rETHToken.address,
@@ -30,7 +30,7 @@ async function main() {
     compositionTargets
   )
   await tx.wait()
-  console.log('RocketPoolLSDIndexAdapter added to LiquidSDIndex')
+  console.log('RocketPoolLSDIndexAdapter added to ETH_LiquidSDIndexPool')
 
   updateDeployments(
     {
