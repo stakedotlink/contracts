@@ -1,10 +1,10 @@
 import { assert, expect } from 'chai'
 import { deploy, deployUpgradeable, fromEther, getAccounts, toEther } from '../utils/helpers'
-import { ERC677, LiquidSDAdapterMock } from '../../typechain-types'
+import { ERC677, LSDIndexAdapterMock } from '../../typechain-types'
 import { Signer } from 'ethers'
 
-describe('LiquidSDAdapter', () => {
-  let adapter: LiquidSDAdapterMock
+describe('LSDIndexAdapter', () => {
+  let adapter: LSDIndexAdapterMock
   let lsd: ERC677
   let accounts: string[]
   let signers: Signer[]
@@ -15,11 +15,11 @@ describe('LiquidSDAdapter', () => {
 
   beforeEach(async () => {
     lsd = (await deploy('ERC677', ['Liquid SD Token', 'LSD', 100000000])) as ERC677
-    adapter = (await deployUpgradeable('LiquidSDAdapterMock', [
+    adapter = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd.address,
       accounts[0],
       toEther(2),
-    ])) as LiquidSDAdapterMock
+    ])) as LSDIndexAdapterMock
 
     await lsd.transfer(adapter.address, toEther(1000))
   })
