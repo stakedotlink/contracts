@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "../base/LiquidSDAdapter.sol";
+import "../base/LSDIndexAdapter.sol";
 
 /**
- * @title Liquid Staking Derivative Mock
+ * @title Liquid Staking Derivative Index Adapter Mock
  * @notice Mocks contract for testing
  */
-contract LiquidSDAdapterMock is LiquidSDAdapter {
+contract LSDIndexAdapterMock is LSDIndexAdapter {
     uint256 public exchangeRate;
 
     function initialize(

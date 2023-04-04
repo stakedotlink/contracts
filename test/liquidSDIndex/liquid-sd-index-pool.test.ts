@@ -7,14 +7,14 @@ import {
   setupToken,
   toEther,
 } from '../utils/helpers'
-import { ERC677, LiquidSDAdapterMock, LiquidSDIndexPool } from '../../typechain-types'
+import { ERC677, LiquidSDIndexPool, LSDIndexAdapterMock } from '../../typechain-types'
 import { Signer } from 'ethers'
 import { ethers } from 'hardhat'
 
 describe('LiquidSDIndexPool', () => {
   let pool: LiquidSDIndexPool
-  let adapter1: LiquidSDAdapterMock
-  let adapter2: LiquidSDAdapterMock
+  let adapter1: LSDIndexAdapterMock
+  let adapter2: LSDIndexAdapterMock
   let lsd1: ERC677
   let lsd2: ERC677
   let accounts: string[]
@@ -42,16 +42,16 @@ describe('LiquidSDIndexPool', () => {
       0,
     ])) as LiquidSDIndexPool
 
-    adapter1 = (await deployUpgradeable('LiquidSDAdapterMock', [
+    adapter1 = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd1.address,
       pool.address,
       toEther(1),
-    ])) as LiquidSDAdapterMock
-    adapter2 = (await deployUpgradeable('LiquidSDAdapterMock', [
+    ])) as LSDIndexAdapterMock
+    adapter2 = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd2.address,
       pool.address,
       toEther(2),
-    ])) as LiquidSDAdapterMock
+    ])) as LSDIndexAdapterMock
 
     await pool.addLSDToken(lsd1.address, adapter1.address, [10000])
     await pool.addLSDToken(lsd2.address, adapter2.address, [7000, 3000])
@@ -65,11 +65,11 @@ describe('LiquidSDIndexPool', () => {
 
   it('addLSDToken should work correctly', async () => {
     let lsd3 = (await deploy('ERC677', ['Liquid SD Token 2', 'LSD2', 100000000])) as ERC677
-    let adapter3 = (await deployUpgradeable('LiquidSDAdapterMock', [
+    let adapter3 = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd3.address,
       pool.address,
       toEther(5),
-    ])) as LiquidSDAdapterMock
+    ])) as LSDIndexAdapterMock
 
     await expect(pool.addLSDToken(lsd1.address, adapter1.address, [2000, 8000])).to.be.revertedWith(
       'Token is already supported'
@@ -94,11 +94,11 @@ describe('LiquidSDIndexPool', () => {
 
   it('removeLSDToken should work correctly', async () => {
     let lsd3 = (await deploy('ERC677', ['Liquid SD Token 2', 'LSD2', 100000000])) as ERC677
-    let adapter3 = (await deployUpgradeable('LiquidSDAdapterMock', [
+    let adapter3 = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd3.address,
       pool.address,
       toEther(5),
-    ])) as LiquidSDAdapterMock
+    ])) as LSDIndexAdapterMock
     await pool.addLSDToken(lsd3.address, adapter3.address, [5000, 3000, 2000])
 
     await expect(pool.removeLSDToken(lsd2.address, [2000, 8000])).to.be.revertedWith(

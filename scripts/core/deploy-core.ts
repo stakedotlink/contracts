@@ -31,11 +31,18 @@ async function main() {
   ])
   console.log('DelegatorPool deployed: ', delegatorPool.address)
 
+  const poolRouter = await deployUpgradeable('PoolRouter', [
+    sdlToken.address,
+    delegatorPool.address,
+  ])
+  console.log('PoolRouter deployed: ', poolRouter.address)
+
   updateDeployments(
     {
       SDLToken: sdlToken.address,
       LPLMigration: lplMigration.address,
       DelegatorPool: delegatorPool.address,
+      PoolRouter: poolRouter.address,
     },
     { SDLToken: 'StakingAllowance' }
   )
