@@ -7,8 +7,8 @@ const ETH_LSDIndexPool = {
   name: 'Staked ETH Index', // index token name
   symbol: 'ixETH', // index token symbol
   compositionTolerance: 5000, // percentage swing that any lsd can have from its composition target in either direction
-  compositionEnforcementThreshold: 10000, // total amount of deposits required for composition targets to be enforced
-  fees: [['0x6879826450e576B401c4dDeff2B7755B1e85d97c', 25]], // fee receivers & percentage amounts in basis points
+  compositionEnforcementThreshold: 500, // total amount of deposits required for composition targets to be enforced
+  fees: [['0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D', 25]], // fee receivers & percentage amounts in basis points
   withdrawalFee: 100, // withdrawal fee that goes to ixETH holders
 }
 // Wrapped ixETH
