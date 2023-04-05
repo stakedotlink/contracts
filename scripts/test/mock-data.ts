@@ -6,10 +6,12 @@ import { defaultAbiCoder } from 'ethers/lib/utils'
 import {
   CurveMock,
   ERC677,
-  LidoSTETHAdapter,
+  LidoLSDIndexAdapter,
+  RocketPoolLSDIndexAdapter,
   LiquidSDIndexPool,
   StakingPool,
   StrategyMock,
+  LiquidSDAdapterMock,
 } from '../../typechain-types'
 import { padBytes } from '../../test/utils/helpers'
 
@@ -34,8 +36,7 @@ async function main() {
   const delegatorPool = (await getContract('DelegatorPool')) as any
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as any
   const stLINK_DelegatorRewardsPool = (await getContract('stLINK_DelegatorRewardsPool')) as any
-  const indexPool = (await getContract('ETH_LiquidSDIndexPool')) as any
-  const iETH_DelegatorRewardsPool = (await getContract('iETH_DelegatorRewardsPool')) as any
+  const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as any
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
 
@@ -77,12 +78,6 @@ async function main() {
   // stake SDL
 
   await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x00')
-
-  // const canDepositAddress3 = await poolRouter['canDeposit(address,address,uint16)'](
-  //   accounts[3],
-  //   linkToken.address,
-  //   '0x00'
-  // )
 
   // stake LINK
 
@@ -168,18 +163,20 @@ async function main() {
   await poolRouter.addPool(stakingPoolOne.address, 0, false)
   await poolRouter.addPool(stakingPoolTwo.address, 0, false)
 
-  const adapterOne = (await deployUpgradeable('LidoSTETHAdapter', [
+  const adapterOne = (await deployUpgradeable('LSDIndexAdapterMock', [
     stakingPoolOne.address,
-    indexPool.address,
-  ])) as LidoSTETHAdapter
+    ETH_LiquidSDIndexPool.address,
+    toEther(1),
+  ])) as LiquidSDAdapterMock
 
-  const adapterTwo = (await deployUpgradeable('LidoSTETHAdapter', [
+  const adapterTwo = (await deployUpgradeable('LSDIndexAdapterMock', [
     stakingPoolTwo.address,
-    indexPool.address,
-  ])) as LidoSTETHAdapter
+    ETH_LiquidSDIndexPool.address,
+    toEther(1),
+  ])) as LiquidSDAdapterMock
 
-  await indexPool.addLSDToken(stakingPoolOne.address, adapterOne.address, [10000])
-  await indexPool.addLSDToken(stakingPoolTwo.address, adapterTwo.address, [5000, 5000])
+  await ETH_LiquidSDIndexPool.addLSDToken(stakingPoolOne.address, adapterOne.address, [10000])
+  await ETH_LiquidSDIndexPool.addLSDToken(stakingPoolTwo.address, adapterTwo.address, [5000, 5000])
 
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x0', 32))
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x1', 32))
@@ -187,10 +184,10 @@ async function main() {
   await stakingPoolOne.transfer(accounts[3], toEther(400))
   await stakingPoolTwo.transfer(accounts[3], toEther(600))
 
-  await stakingPoolOne.connect(signers[3]).approve(indexPool.address, toEther(400))
-  await stakingPoolTwo.connect(signers[3]).approve(indexPool.address, toEther(600))
-  await indexPool.connect(signers[3]).deposit(stakingPoolOne.address, toEther(400))
-  await indexPool.connect(signers[3]).deposit(stakingPoolTwo.address, toEther(600))
+  await stakingPoolOne.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(400))
+  await stakingPoolTwo.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(600))
+  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stakingPoolOne.address, toEther(400))
+  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stakingPoolTwo.address, toEther(600))
 
   await stakingPoolOne.transfer(accounts[2], toEther(100))
   await stakingPoolTwo.transfer(accounts[2], toEther(100))
@@ -200,13 +197,9 @@ async function main() {
 
   // send rewards to rewards pool
 
-  await indexPool
-    .connect(signers[3])
-    .transferAndCall(iETH_DelegatorRewardsPool.address, toEther(1), '0x00')
-
   updateDeployments({
-    LidoETH: stakingPoolOne.address,
-    RocketPoolETH: stakingPoolTwo.address,
+    stETHToken: stakingPoolOne.address,
+    rETHToken: stakingPoolTwo.address,
   })
 
   // Basic Curve Mock
