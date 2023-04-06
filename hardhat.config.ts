@@ -35,7 +35,7 @@ const config: HardhatUserConfig = {
       timeout: 600000,
     },
     testnet: {
-      url: '',
+      url: 'https://staking-metrics-monitor-alpha.staging.linkpool.io/dev',
       accounts,
     },
     hardhat: {
