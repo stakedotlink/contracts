@@ -1,7 +1,7 @@
 import { ERC20, LiquidSDIndexPool } from '../../typechain-types'
 import { deployUpgradeable, getContract, updateDeployments } from '../utils/deployment'
 
-const compositionTargets = [7000, 3000] // basis point index composition targets [stETH,rETH]
+const compositionTargets = [7500, 2500] // basis point index composition targets [stETH,rETH]
 
 async function main() {
   const ixETHIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
