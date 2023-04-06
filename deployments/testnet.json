@@ -1,86 +1,82 @@
 {
   "LPLToken": {
-    "address": "0xf608c5a697D9F07ad502bb854cD38C53D5443f9F",
+    "address": "0xbf696449B3d14C1563F30A35C1b22e29e67FecDD",
     "artifact": "ERC677"
   },
   "LINKToken": {
-    "address": "0x63309E64Bc20704D6e4f411aAC3de5E0345F6d69",
+    "address": "0xDEaBB09eA824dBB629F18427CEf1b5B17A0a49D7",
     "artifact": "ERC677"
   },
   "PoolOwnersV1": {
-    "address": "0xBB102106c869CA23f3DdFe337018FD43C3b9FECD",
+    "address": "0x67997Cf9130f64F7482d4f085eafFD7641575Ea0",
     "artifact": "PoolOwnersV1"
   },
   "LINK_OwnersRewardsPoolV1": {
-    "address": "0xDF9F33f83526A110498a22434add350BE89FfAc7",
+    "address": "0xF2E3FDeb8CCC3fA1B9A1749D913Af8bEaAA90B39",
     "artifact": "OwnersRewardsPoolV1"
   },
   "PoolAllowanceV1": {
-    "address": "0x5055D666EF2381261F96FbaB229cf41d386155aa",
+    "address": "0x2ddA459C8EF7fc780E4626eF9DE7268a7A17DAC8",
     "artifact": "PoolAllowanceV1"
   },
   "Multicall3": {
-    "address": "0xA5F9D440028332C06338DC3289a9CBfA42264Bd8",
+    "address": "0xb5A66f6023a2987F2433dCb14cf376455A76C9e7",
     "artifact": "Multicall3"
   },
+  "stETHToken": {
+    "address": "0x5B7FCB3e05ae276D46c63c832B27a345Fb5bA5d1",
+    "artifact": "ERC20"
+  },
+  "rETHToken": {
+    "address": "0x8D5D0AaDc3c607413070fB1C7C2923Cd2923D95F",
+    "artifact": "ERC20"
+  },
   "SDLToken": {
-    "address": "0x9b057dB7e0e165a2B3FdF7d28B6A84F1c9338838",
+    "address": "0x337fD62F06Ef4f29b056065A4A7b22f71115392C",
     "artifact": "StakingAllowance"
   },
   "LPLMigration": {
-    "address": "0x207E1EDcc7E01FEaE5D185B45A555c96F4446ACA",
+    "address": "0x3Ef25c7b4A5De4e5A40f2ee70eE303bd8d9B3710",
     "artifact": "LPLMigration"
   },
-  "FlatFee": {
-    "address": "0xE25A3F9097443e1e333b694645e2D5055b0A7eFd",
-    "artifact": "FlatFee"
-  },
   "DelegatorPool": {
-    "address": "0xeB94f6f9A28DA605089d361cD0Abe580817C3516",
+    "address": "0xF618880897189F96c5415fa3E64577b88889f0d4",
     "artifact": "DelegatorPool"
   },
   "PoolRouter": {
-    "address": "0xE90240992c7E35a32Ba65803Ca47082C0fDd6108",
+    "address": "0x817D37e8dC972e8447db5d25A6867a0396d2cf6c",
     "artifact": "PoolRouter"
   },
   "LINK_StakingPool": {
-    "address": "0x3aD797AeDE5004aBDDCBA18Ff973A74c766893Cc",
+    "address": "0xB7dAB37c7EED437dAfC4Ff6346E4Cc12878aC507",
     "artifact": "StakingPool"
   },
   "LINK_WrappedSDToken": {
-    "address": "0xa42F451635b398bd5bc25B7c729C7b2058BdD4e8",
+    "address": "0x3fea87cBEcE1859Fe3491260c6165b76fE10bdEd",
     "artifact": "WrappedSDToken"
   },
   "stLINK_DelegatorRewardsPool": {
-    "address": "0xe52aaaf97fC94641624F7eA9A202B74e4eb80C4A",
+    "address": "0xEE156393B0cF766630C7722899976Cb3A97C6aa5",
     "artifact": "RewardsPoolWSD"
   },
   "GovernanceController": {
-    "address": "0xbE20bC31F55e02FAB74323f325006B847304C98e",
+    "address": "0x2304a50ABBE2A74C5Cc2f6374375B2f26A6E654D",
     "artifact": "GovernanceController"
   },
   "MerkleDistributor": {
-    "address": "0xFB8D714eEb9065e1352d43975b9B881074d2036E",
+    "address": "0x49caBa7c5b5686D57BAdc91F17FBA82D579CF43F",
     "artifact": "MerkleDistributor"
   },
-  "iETH_WrappedSDToken": {
-    "address": "0x4dDe1b0D435F0f9316CEDfcD0aa69f608Db3B62D",
+  "ixETH_WrappedSDToken": {
+    "address": "0x67140bB2F1B218c0049c99aBbd92A1B5B4D87Be2",
     "artifact": "WrappedSDToken"
   },
-  "iETH_DelegatorRewardsPool": {
-    "address": "0x380e3552fd6Dca5bB5BE082b1865Db2af219c0E6",
-    "artifact": "RewardsPoolWSD"
-  },
-  "LiquidSDIndexPool": {
-    "address": "0xBdf93A71Dc50120bc9Cf3524E5d077481746110b",
+  "ETH_LiquidSDIndexPool": {
+    "address": "0xB1Cda9E66735bCC470CCA886c4a584735F8d59e6",
     "artifact": "LiquidSDIndexPool"
   },
-  "LidoToken": {
-    "address": "0xeAF59ece1D1E900E3b3367f22b2E4EE12efaa385",
-    "artifact": "ERC677"
-  },
-  "RPToken": {
-    "address": "0x66C201D9129B509c0B03B84960Ac8889BBf18AB8",
-    "artifact": "ERC677"
+  "StakedotlinkCouncil": {
+    "address": "0x8A9a652Ee3b8209859a5abD99E863343C3c60B92",
+    "artifact": "StakedotlinkCouncil"
   }
 }
