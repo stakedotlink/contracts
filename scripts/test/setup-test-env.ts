@@ -5,9 +5,9 @@ import {
   DelegatorPool,
   ERC20,
   ERC677,
-  LiquidSDAdapterMock,
   LiquidSDIndexPool,
   LPLMigration,
+  LSDIndexAdapterMock,
   PoolRouter,
   StakingAllowance,
   StakingPool,
@@ -55,13 +55,13 @@ async function main() {
     stETHToken.address,
     ETH_LiquidSDIndexPool.address,
     toEther(1),
-  ])) as LiquidSDAdapterMock
+  ])) as LSDIndexAdapterMock
 
   const rocketPoolAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
     rETHToken.address,
     ETH_LiquidSDIndexPool.address,
     toEther(1.2),
-  ])) as LiquidSDAdapterMock
+  ])) as LSDIndexAdapterMock
 
   await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
   await ETH_LiquidSDIndexPool.addLSDToken(
