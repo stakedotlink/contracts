@@ -50,5 +50,25 @@
   "rETHToken": {
     "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
     "artifact": "ERC20"
+  },
+  "MerkleDistributor": {
+    "address": "0xa0B5795A4A0B467de20D2DA7e7356647753024f5",
+    "artifact": "MerkleDistributor"
+  },
+  "ixETH_WrappedSDToken": {
+    "address": "0x1A72bE10F6E6CF0CA100a407352E50d0ed653dEc",
+    "artifact": "WrappedSDToken"
+  },
+  "ETH_LiquidSDIndexPool": {
+    "address": "0x535321013A1E2D5aF3B1853812a64CA3fc6C1fa1",
+    "artifact": "LiquidSDIndexPool"
+  },
+  "ixETH_LidoLSDIndexAdapter": {
+    "address": "0xEb9f29b6395Db28C0861C24f1cbFCEee1ff0791D",
+    "artifact": "LidoLSDIndexAdapter"
+  },
+  "ixETH_RocketPoolLSDIndexAdapter": {
+    "address": "0x6025533B9E095AB2730E1Ad50219be8293d66220",
+    "artifact": "RocketPoolLSDIndexAdapter"
   }
 }
