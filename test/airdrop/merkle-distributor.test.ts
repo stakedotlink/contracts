@@ -32,7 +32,7 @@ describe('MerkleDistributor', () => {
   describe('#claim', () => {
     it('fails for empty proof', async () => {
       const distributor = (await deploy('MerkleDistributor')) as MerkleDistributor
-      await distributor.addDistribution(token.address, ZERO_BYTES32, BigNumber.from(0))
+      await distributor.addDistribution(token.address, ZERO_BYTES32, BigNumber.from(0), 0)
       await expect(
         distributor.claimDistribution(token.address, 0, wallet0, 10, [])
       ).to.be.revertedWith('MerkleDistributor: Invalid proof.')
@@ -48,7 +48,7 @@ describe('MerkleDistributor', () => {
         ])
         distributor = (await deploy('MerkleDistributor')) as MerkleDistributor
         await token.transfer(distributor.address, BigNumber.from(201))
-        await distributor.addDistribution(token.address, tree.getHexRoot(), BigNumber.from(201))
+        await distributor.addDistribution(token.address, tree.getHexRoot(), BigNumber.from(201), 0)
       })
 
       it('successful claim', async () => {
@@ -161,33 +161,25 @@ describe('MerkleDistributor', () => {
         ).to.be.revertedWith('MerkleDistributor: Distribution does not exist.')
       })
 
-      it('can set timeLimitEnabled', async () => {
-        await distributor.setTimeLimitEnabled(token.address, true)
-        expect((await distributor.distributions(token.address))[1]).to.eq(true)
-        let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        expect((await distributor.distributions(token.address))[3]).to.eq(ts)
-        await expect(distributor.setTimeLimitEnabled(token.address, true)).to.be.revertedWith(
-          'MerkleDistributor: Value already set.'
+      it('can set expiryTimestamp', async () => {
+        await distributor.setExpiryTimestamp(token.address, 100000)
+        expect((await distributor.distributions(token.address))[2]).to.eq(100000)
+        await expect(distributor.setExpiryTimestamp(token.address, 99999)).to.be.revertedWith(
+          'MerkleDistributor: Invalid expiry timestamp.'
         )
-        await distributor.setTimeLimitEnabled(token.address, false)
-        expect((await distributor.distributions(token.address))[1]).to.eq(false)
-        expect((await distributor.distributions(token.address))[3]).to.eq(ts)
-        await expect(distributor.setTimeLimitEnabled(token.address, false)).to.be.revertedWith(
-          'MerkleDistributor: Value already set.'
-        )
+        await distributor.setExpiryTimestamp(token.address, 101000)
+        expect((await distributor.distributions(token.address))[2]).to.eq(101000)
       })
 
       it('can pause for withdrawal', async () => {
+        let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+        await distributor.setExpiryTimestamp(token.address, ts + 10000)
         await expect(distributor.pauseForWithdrawal(token.address)).to.be.revertedWith(
-          'MerkleDistributor: Time limit is not enabled.'
+          'Expiry timestamp not reached.'
         )
-        await distributor.setTimeLimitEnabled(token.address, true)
-        await expect(distributor.pauseForWithdrawal(token.address)).to.be.revertedWith(
-          'Time limit has not been reached.'
-        )
-        await time.increase(91 * 86400)
+        await time.increase(10000)
         await distributor.pauseForWithdrawal(token.address)
-        expect((await distributor.distributions(token.address))[2]).to.eq(true)
+        expect((await distributor.distributions(token.address))[1]).to.eq(true)
       })
 
       it('can withdraw unclaimed tokens', async () => {
@@ -201,14 +193,12 @@ describe('MerkleDistributor', () => {
           101,
           tree.getProof(1, wallet1, BigNumber.from(101))
         )
-        await distributor.setTimeLimitEnabled(token.address, true)
-        await time.increase(91 * 86400)
         await distributor.pauseForWithdrawal(token.address)
         await distributor.withdrawUnclaimedTokens(token.address, tree.getHexRoot(), 101)
         let distribution = await distributor.distributions(token.address)
-        expect(distribution[2]).to.eq(false)
-        expect(distribution[4]).to.eq(tree.getHexRoot())
-        expect(distribution[5]).to.eq(101)
+        expect(distribution[1]).to.eq(false)
+        expect(distribution[3]).to.eq(tree.getHexRoot())
+        expect(distribution[4]).to.eq(101)
         expect(await token.balanceOf(distributor.address)).to.eq(BigNumber.from(0))
       })
     })
@@ -239,7 +229,8 @@ describe('MerkleDistributor', () => {
         await distributor.addDistributions(
           [token.address, token2.address, token3.address],
           [tree.getHexRoot(), tree.getHexRoot(), tree.getHexRoot()],
-          [BigNumber.from(201), BigNumber.from(201), BigNumber.from(201)]
+          [BigNumber.from(201), BigNumber.from(201), BigNumber.from(201)],
+          [0, 0, 0]
         )
       })
 
@@ -304,7 +295,8 @@ describe('MerkleDistributor', () => {
           distributor.addDistributions(
             [token.address, token2.address, token2.address],
             [tree.getHexRoot(), tree.getHexRoot()],
-            [BigNumber.from(201), BigNumber.from(201)]
+            [BigNumber.from(201), BigNumber.from(201)],
+            [0, 0]
           )
         ).to.be.revertedWith('MerkleDistributor: Array lengths need to match.')
       })
@@ -322,12 +314,12 @@ describe('MerkleDistributor', () => {
         await distributor.updateDistributions(
           [token.address, token3.address],
           [newTree.getHexRoot(), newTree.getHexRoot()],
-          [BigNumber.from(200), BigNumber.from(200)]
+          [BigNumber.from(200), BigNumber.from(200)],
+          [100, 0]
         )
 
-        let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-        expect((await distributor.distributions(token.address))[3]).to.eq(ts)
-        expect((await distributor.distributions(token.address))[5]).to.eq(401)
+        expect((await distributor.distributions(token.address))[2]).to.eq(100)
+        expect((await distributor.distributions(token.address))[4]).to.eq(401)
 
         proof0 = newTree.getProof(0, wallet0, BigNumber.from(200))
         let proof1 = newTree.getProof(1, wallet1, BigNumber.from(201))
@@ -351,7 +343,8 @@ describe('MerkleDistributor', () => {
           distributor.updateDistributions(
             [token.address, token2.address, token2.address],
             [tree.getHexRoot(), tree.getHexRoot()],
-            [BigNumber.from(201), BigNumber.from(201)]
+            [BigNumber.from(201), BigNumber.from(201)],
+            [0, 0]
           )
         ).to.be.revertedWith('MerkleDistributor: Array lengths need to match.')
       })
@@ -362,7 +355,8 @@ describe('MerkleDistributor', () => {
           distributor.updateDistributions(
             [token.address, wallet1],
             [tree.getHexRoot(), tree.getHexRoot()],
-            [BigNumber.from(201), BigNumber.from(201)]
+            [BigNumber.from(201), BigNumber.from(201)],
+            [0, 0]
           )
         ).to.be.revertedWith('MerkleDistributor: Distribution does not exist.')
       })
