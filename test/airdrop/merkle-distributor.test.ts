@@ -47,7 +47,7 @@ describe('MerkleDistributor', () => {
           { account: wallet1, amount: BigNumber.from(101) },
         ])
         distributor = (await deploy('MerkleDistributor')) as MerkleDistributor
-        await token.approve(distributor.address, ethers.constants.MaxUint256)
+        await token.transfer(distributor.address, BigNumber.from(201))
         await distributor.addDistribution(token.address, tree.getHexRoot(), BigNumber.from(201))
       })
 
@@ -233,6 +233,9 @@ describe('MerkleDistributor', () => {
         await expect(
           distributor.claimDistribution(wallet1, 0, wallet0, 101, proof0)
         ).to.be.revertedWith('MerkleDistributor: Distribution does not exist.')
+        await token.transfer(distributor.address, BigNumber.from(201))
+        await token2.transfer(distributor.address, BigNumber.from(201))
+        await token3.transfer(distributor.address, BigNumber.from(201))
         await distributor.addDistributions(
           [token.address, token2.address, token3.address],
           [tree.getHexRoot(), tree.getHexRoot(), tree.getHexRoot()],
@@ -314,6 +317,8 @@ describe('MerkleDistributor', () => {
         let proof0 = tree.getProof(0, wallet0, BigNumber.from(100))
 
         await distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
+        await token.transfer(distributor.address, BigNumber.from(200))
+        await token3.transfer(distributor.address, BigNumber.from(200))
         await distributor.updateDistributions(
           [token.address, token3.address],
           [newTree.getHexRoot(), newTree.getHexRoot()],
@@ -352,6 +357,7 @@ describe('MerkleDistributor', () => {
       })
 
       it('cannot update distribution that does not exist', async () => {
+        await token.transfer(distributor.address, BigNumber.from(201))
         await expect(
           distributor.updateDistributions(
             [token.address, wallet1],
