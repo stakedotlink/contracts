@@ -79,6 +79,7 @@ contract MerkleDistributor is Ownable {
         uint256 _totalAmount
     ) public onlyOwner {
         require(distributions[_token].token == address(0), "MerkleDistributor: Distribution is already added.");
+        require(IERC20(_token).balanceOf(address(this)) >= _totalAmount, "MerkleDistributor: Insufficient balance.");
 
         tokens.push(_token);
         distributions[_token].token = _token;
@@ -124,6 +125,8 @@ contract MerkleDistributor is Ownable {
         bytes32 _merkleRoot,
         uint256 _additionalAmount
     ) public onlyOwner distributionExists(_token) {
+        require(IERC20(_token).balanceOf(address(this)) >= _additionalAmount, "MerkleDistributor: Insufficient balance.");
+
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount += _additionalAmount;
         distributions[_token].timeOfLastUpdate = block.timestamp;
