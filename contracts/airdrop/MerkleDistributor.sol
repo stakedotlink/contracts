@@ -14,13 +14,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract MerkleDistributor is Ownable {
     using SafeERC20 for IERC20;
 
-    uint256 public constant TIME_LIMIT = 90 days;
-
     struct Distribution {
         address token;
-        bool timeLimitEnabled;
         bool isPaused;
-        uint256 timeOfLastUpdate;
+        uint256 expiryTimestamp;
         bytes32 merkleRoot;
         uint256 totalAmount;
         mapping(address => uint256) claimed;
@@ -29,8 +26,9 @@ contract MerkleDistributor is Ownable {
     mapping(address => Distribution) public distributions;
 
     event Claimed(address indexed token, uint256 index, address indexed account, uint256 amount);
-    event DistributionAdded(uint256 indexed tokenIndex, address indexed token, uint256 totalAmount);
-    event DistributionUpdated(address indexed token, uint256 additionalAmount);
+    event DistributionAdded(uint256 indexed tokenIndex, address indexed token, uint256 totalAmount, uint256 expiryTimestamp);
+    event DistributionUpdated(address indexed token, uint256 additionalAmount, uint256 expiryTimestamp);
+    event SetExpiryTimestamp(address indexed token, uint256 expiryTimestamp);
 
     modifier distributionExists(address _token) {
         require(distributions[_token].token != address(0), "MerkleDistributor: Distribution does not exist.");
@@ -51,11 +49,13 @@ contract MerkleDistributor is Ownable {
      * @param _tokens the list of token addresses to add
      * @param _merkleRoots list of merkle roots for each distribution
      * @param _totalAmounts list of total distribution amounts for each token
+     * @param _expiryTimestamps list of expiry timestamps for each distribution
      **/
     function addDistributions(
         address[] calldata _tokens,
         bytes32[] calldata _merkleRoots,
-        uint256[] calldata _totalAmounts
+        uint256[] calldata _totalAmounts,
+        uint256[] calldata _expiryTimestamps
     ) external onlyOwner {
         require(
             _tokens.length == _merkleRoots.length && _tokens.length == _totalAmounts.length,
@@ -63,7 +63,7 @@ contract MerkleDistributor is Ownable {
         );
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i]);
+            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i], _expiryTimestamps[i]);
         }
     }
 
@@ -72,11 +72,13 @@ contract MerkleDistributor is Ownable {
      * @param _token token address
      * @param _merkleRoot merkle root for token distribution
      * @param _totalAmount total distribution amount
+     * @param _expiryTimestamp timestamp when unclaimed tokens can be withdrawn
      **/
     function addDistribution(
         address _token,
         bytes32 _merkleRoot,
-        uint256 _totalAmount
+        uint256 _totalAmount,
+        uint256 _expiryTimestamp
     ) public onlyOwner {
         require(distributions[_token].token == address(0), "MerkleDistributor: Distribution is already added.");
         require(IERC20(_token).balanceOf(address(this)) >= _totalAmount, "MerkleDistributor: Insufficient balance.");
@@ -85,9 +87,9 @@ contract MerkleDistributor is Ownable {
         distributions[_token].token = _token;
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount = _totalAmount;
-        distributions[_token].timeOfLastUpdate = block.timestamp;
+        distributions[_token].expiryTimestamp = _expiryTimestamp;
 
-        emit DistributionAdded(tokens.length - 1, _token, _totalAmount);
+        emit DistributionAdded(tokens.length - 1, _token, _totalAmount, _expiryTimestamp);
     }
 
     /**
@@ -95,11 +97,13 @@ contract MerkleDistributor is Ownable {
      * @param _tokens the list of token addresses to update
      * @param _merkleRoots list of updated merkle roots for the distributions
      * @param _additionalAmounts list of total additional distribution amounts for each token
+     * @param _expiryTimestamps list of updated expiry timestamps for each distribution
      **/
     function updateDistributions(
         address[] calldata _tokens,
         bytes32[] calldata _merkleRoots,
-        uint256[] calldata _additionalAmounts
+        uint256[] calldata _additionalAmounts,
+        uint256[] calldata _expiryTimestamps
     ) external onlyOwner {
         require(
             _tokens.length == _merkleRoots.length && _tokens.length == _additionalAmounts.length,
@@ -107,7 +111,7 @@ contract MerkleDistributor is Ownable {
         );
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            updateDistribution(_tokens[i], _merkleRoots[i], _additionalAmounts[i]);
+            updateDistribution(_tokens[i], _merkleRoots[i], _additionalAmounts[i], _expiryTimestamps[i]);
         }
     }
 
@@ -119,19 +123,23 @@ contract MerkleDistributor is Ownable {
      * @param _token token address
      * @param _merkleRoot updated merkle root for token distribution
      * @param _additionalAmount total additional distribution amount
+     * @param _expiryTimestamp timestamp when unclaimed tokens can be withdrawn
      **/
     function updateDistribution(
         address _token,
         bytes32 _merkleRoot,
-        uint256 _additionalAmount
+        uint256 _additionalAmount,
+        uint256 _expiryTimestamp
     ) public onlyOwner distributionExists(_token) {
+        require(!distributions[_token].isPaused, "MerkleDistributor: Distribution is paused.");
         require(IERC20(_token).balanceOf(address(this)) >= _additionalAmount, "MerkleDistributor: Insufficient balance.");
+        require(_expiryTimestamp >= distributions[_token].expiryTimestamp, "MerkleDistributor: Invalid expiry timestamp.");
 
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount += _additionalAmount;
-        distributions[_token].timeOfLastUpdate = block.timestamp;
+        distributions[_token].expiryTimestamp = _expiryTimestamp;
 
-        emit DistributionUpdated(_token, _additionalAmount);
+        emit DistributionUpdated(_token, _additionalAmount, _expiryTimestamp);
     }
 
     /**
@@ -222,25 +230,23 @@ contract MerkleDistributor is Ownable {
      * @param _token token address
      **/
     function pauseForWithdrawal(address _token) external onlyOwner distributionExists(_token) {
-        require(distributions[_token].timeLimitEnabled, "MerkleDistributor: Time limit is not enabled.");
         require(
-            block.timestamp > distributions[_token].timeOfLastUpdate + TIME_LIMIT,
-            "MerkleDistributor: Time limit has not been reached."
+            distributions[_token].expiryTimestamp <= block.timestamp,
+            "MerkleDistributor: Expiry timestamp not reached."
         );
-
+        require(!distributions[_token].isPaused, "MerkleDistributor: Already paused.");
         distributions[_token].isPaused = true;
     }
 
     /**
-     * @notice enables/disables the time limit for a token
-     * @param _token token addresse
-     * @param _enabled whether to enable or disable the limit
+     * @notice sets the timestamp when unclaimed tokens can be withdrawn for a token distribution
+     * @param _token token address
+     * @param _expiryTimestamp expiry timestamp
      **/
-    function setTimeLimitEnabled(address _token, bool _enabled) external onlyOwner distributionExists(_token) {
-        require(distributions[_token].timeLimitEnabled != _enabled, "MerkleDistributor: Value already set.");
-        distributions[_token].timeLimitEnabled = _enabled;
-        if (_enabled) {
-            distributions[_token].timeOfLastUpdate = block.timestamp;
-        }
+    function setExpiryTimestamp(address _token, uint256 _expiryTimestamp) external onlyOwner distributionExists(_token) {
+        require(!distributions[_token].isPaused, "MerkleDistributor: Distribution is paused.");
+        require(_expiryTimestamp >= distributions[_token].expiryTimestamp, "MerkleDistributor: Invalid expiry timestamp.");
+        distributions[_token].expiryTimestamp = _expiryTimestamp;
+        emit SetExpiryTimestamp(_token, _expiryTimestamp);
     }
 }
