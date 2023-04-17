@@ -49,6 +49,7 @@ describe('MerkleDistributor', () => {
         distributor = (await deploy('MerkleDistributor')) as MerkleDistributor
         await token.approve(distributor.address, ethers.constants.MaxUint256)
         await distributor.addDistribution(token.address, tree.getHexRoot(), BigNumber.from(201))
+        await token.transfer(distributor.address, BigNumber.from(201))
       })
 
       it('successful claim', async () => {
@@ -238,6 +239,9 @@ describe('MerkleDistributor', () => {
           [tree.getHexRoot(), tree.getHexRoot(), tree.getHexRoot()],
           [BigNumber.from(201), BigNumber.from(201), BigNumber.from(201)]
         )
+        await token.transfer(distributor.address, BigNumber.from(201))
+        await token2.transfer(distributor.address, BigNumber.from(201))
+        await token3.transfer(distributor.address, BigNumber.from(201))
       })
 
       it('successful claim', async () => {
@@ -314,6 +318,8 @@ describe('MerkleDistributor', () => {
         let proof0 = tree.getProof(0, wallet0, BigNumber.from(100))
 
         await distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
+        await token.transfer(distributor.address, BigNumber.from(200))
+        await token3.transfer(distributor.address, BigNumber.from(200))
         await distributor.updateDistributions(
           [token.address, token3.address],
           [newTree.getHexRoot(), newTree.getHexRoot()],

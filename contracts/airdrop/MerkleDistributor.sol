@@ -80,9 +80,7 @@ contract MerkleDistributor is Ownable {
     ) public onlyOwner {
         require(distributions[_token].token == address(0), "MerkleDistributor: Distribution is already added.");
 
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _totalAmount);
         tokens.push(_token);
-
         distributions[_token].token = _token;
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount = _totalAmount;
@@ -126,8 +124,6 @@ contract MerkleDistributor is Ownable {
         bytes32 _merkleRoot,
         uint256 _additionalAmount
     ) public onlyOwner distributionExists(_token) {
-        IERC20(_token).safeTransferFrom(msg.sender, address(this), _additionalAmount);
-
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount += _additionalAmount;
         distributions[_token].timeOfLastUpdate = block.timestamp;
