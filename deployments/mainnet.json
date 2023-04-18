@@ -52,7 +52,7 @@
     "artifact": "ERC20"
   },
   "MerkleDistributor": {
-    "address": "0xa0B5795A4A0B467de20D2DA7e7356647753024f5",
+    "address": "0xe7Dd77d408920c000C40C35c4c111318Ba8B4767",
     "artifact": "MerkleDistributor"
   },
   "ixETH_WrappedSDToken": {
