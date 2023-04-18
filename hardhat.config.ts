@@ -3,6 +3,7 @@ import '@nomiclabs/hardhat-ethers'
 import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
+import "@nomiclabs/hardhat-etherscan"
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -45,6 +46,9 @@ const config: HardhatUserConfig = {
         interval: 5000,
       },
     },
+  },
+  etherscan: {
+    apiKey: ""
   },
   solidity: {
     compilers: [
