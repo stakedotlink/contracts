@@ -69,7 +69,7 @@ describe('DelegatorPool', () => {
   })
 
   it('should be able to stake allowance', async () => {
-    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x')
 
     assert.equal(fromEther(await delegatorPool.totalSupply()), 1000, 'total supply does not match')
     assert.equal(
@@ -85,19 +85,19 @@ describe('DelegatorPool', () => {
   })
 
   it('should be able to distribute rewards', async () => {
-    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x00')
-    await token.transferAndCall(delegatorPool.address, toEther(100), '0x00')
+    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x')
+    await token.transferAndCall(delegatorPool.address, toEther(100), '0x')
     assert.equal(fromEther(await rewardsPool.totalRewards()), 100, 'total rewards does not match')
   })
 
   it('onTokenTransfer should only be callable by authorized tokens', async () => {
     await expect(
-      delegatorPool.onTokenTransfer(accounts[1], toEther(1001), '0x00')
+      delegatorPool.onTokenTransfer(accounts[1], toEther(1001), '0x')
     ).to.be.revertedWith('Sender must be allowance or rewards token')
   })
 
   it('should be able to withdraw allowance', async () => {
-    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x')
     await delegatorPool.withdrawAllowance(toEther(500))
 
     assert.equal(
@@ -126,10 +126,10 @@ describe('DelegatorPool', () => {
   })
 
   it('should not be able to withdraw more allowance than what is staked', async () => {
-    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+    await allowanceToken.transferAndCall(delegatorPool.address, toEther(1000), '0x')
     await allowanceToken
       .connect(signers[1])
-      .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+      .transferAndCall(delegatorPool.address, toEther(1000), '0x')
 
     await expect(delegatorPool.withdrawAllowance(toEther(1001))).to.be.revertedWith(
       'Withdrawal amount exceeds available balance'
@@ -139,7 +139,7 @@ describe('DelegatorPool', () => {
   it('should not be able to withdraw more allowance than what is available', async () => {
     await allowanceToken
       .connect(signers[1])
-      .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+      .transferAndCall(delegatorPool.address, toEther(1000), '0x')
 
     await expect(delegatorPool.withdrawAllowance(toEther(1000))).to.be.revertedWith(
       'Withdrawal amount exceeds available balance'
@@ -154,7 +154,7 @@ describe('DelegatorPool', () => {
       [],
     ])) as DelegatorPool
 
-    await allowanceToken.transferAndCall(pool.address, toEther(1000), '0x00')
+    await allowanceToken.transferAndCall(pool.address, toEther(1000), '0x')
     assert.equal(
       fromEther(await pool.balanceOf(accounts[0])),
       1000,
@@ -248,8 +248,8 @@ describe('DelegatorPool', () => {
       await delegatorPool.setCommunityPool(token.address, true)
       await allowanceToken
         .connect(signers[2])
-        .transferAndCall(delegatorPool.address, toEther(1000), '0x00')
-      await token.transferAndCall(delegatorPool.address, toEther(100), '0x00')
+        .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+      await token.transferAndCall(delegatorPool.address, toEther(100), '0x')
 
       assert.equal(
         fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
@@ -432,7 +432,7 @@ describe('DelegatorPool', () => {
       'stSTA',
     ])) as DelegatorPoolV1
 
-    await allowanceToken.transferAndCall(delegatorPoolV1.address, toEther(500), '0x00')
+    await allowanceToken.transferAndCall(delegatorPoolV1.address, toEther(500), '0x')
     await allowanceToken.transferAndCall(
       delegatorPoolV1.address,
       toEther(1000),

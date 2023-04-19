@@ -27,7 +27,7 @@ contract DelegatorPool is RewardsPoolController {
     mapping(address => uint256) private lockedBalances;
     mapping(address => uint256) private lockedApprovals;
     mapping(address => bool) public communityPools;
-    uint public totalLocked;
+    uint256 public totalLocked;
 
     event AllowanceStaked(address indexed user, uint256 amount);
     event AllowanceWithdrawn(address indexed user, uint256 amount);
@@ -39,15 +39,15 @@ contract DelegatorPool is RewardsPoolController {
 
     function initialize(
         address _allowanceToken,
-        string memory _dTokenName,
-        string memory _dTokenSymbol,
+        string calldata _dTokenName,
+        string calldata _dTokenSymbol,
         address[] calldata _vestingAddresses
     ) public reinitializer(2) {
         if (address(allowanceToken) == address(0)) {
             __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
             allowanceToken = IERC20Upgradeable(_allowanceToken);
         } else {
-            for (uint i = 0; i < _vestingAddresses.length; i++) {
+            for (uint256 i = 0; i < _vestingAddresses.length; ++i) {
                 address account = _vestingAddresses[i];
                 VestingSchedule memory vestingSchedule = vestingSchedules[account];
                 lockedBalances[account] += vestingSchedule.totalAmount;
@@ -75,7 +75,7 @@ contract DelegatorPool is RewardsPoolController {
 
         if (msg.sender == address(allowanceToken)) {
             _stakeAllowance(_sender, _value);
-            if (_calldata.length > 1) {
+            if (_calldata.length != 0) {
                 uint256 lockedAmount = abi.decode(_calldata, (uint256));
                 require(_value >= lockedAmount, "Cannot lock more than transferred value");
                 lockedBalances[_sender] += lockedAmount;
@@ -114,7 +114,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account address
      * @return balance accounts balance
      */
-    function totalBalanceOf(address _account) public view returns (uint256) {
+    function totalBalanceOf(address _account) external view returns (uint256) {
         return balanceOf(_account);
     }
 
@@ -124,8 +124,7 @@ contract DelegatorPool is RewardsPoolController {
      * @return total staked amount
      */
     function totalStaked() external view override returns (uint256) {
-        bool excludeLocked = communityPools[msg.sender];
-        return excludeLocked ? totalSupply() - totalLocked : totalSupply();
+        return communityPools[msg.sender] ? totalSupply() - totalLocked : totalSupply();
     }
 
     /**
@@ -142,7 +141,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account address
      * @return locked balance
      */
-    function lockedBalanceOf(address _account) public view returns (uint256) {
+    function lockedBalanceOf(address _account) external view returns (uint256) {
         return lockedBalances[_account] - lockedApprovals[_account];
     }
 
@@ -151,7 +150,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account address
      * @return approved locked balance
      */
-    function approvedLockedBalanceOf(address _account) public view returns (uint256) {
+    function approvedLockedBalanceOf(address _account) external view returns (uint256) {
         return lockedApprovals[_account];
     }
 
@@ -159,22 +158,22 @@ contract DelegatorPool is RewardsPoolController {
      * @notice withdraws allowance tokens if no pools are in reserve mode
      * @param _amount amount to withdraw
      **/
-    function withdrawAllowance(uint _amount) external updateRewards(msg.sender) {
+    function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
         require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
         require(availableBalanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds available balance");
 
-        uint unlockedBalance = balanceOf(msg.sender) - lockedBalances[msg.sender];
+        uint256 unlockedBalance = balanceOf(msg.sender) - lockedBalances[msg.sender];
         if (_amount > unlockedBalance) {
-            uint unlockedAmount = _amount - unlockedBalance;
-            lockedApprovals[msg.sender] -= unlockedAmount;
-            lockedBalances[msg.sender] -= unlockedAmount;
-            totalLocked -= unlockedAmount;
+            uint256 approvedAmountToUnlock = _amount - unlockedBalance;
+            lockedApprovals[msg.sender] -= approvedAmountToUnlock;
+            lockedBalances[msg.sender] -= approvedAmountToUnlock;
+            totalLocked -= approvedAmountToUnlock;
         }
 
         _burn(msg.sender, _amount);
-        allowanceToken.safeTransfer(msg.sender, _amount);
-
         emit AllowanceWithdrawn(msg.sender, _amount);
+
+        allowanceToken.safeTransfer(msg.sender, _amount);
     }
 
     /**
@@ -182,7 +181,7 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account to approve locked balance
      * @param _amount account to approve
      */
-    function setLockedApproval(address _account, uint _amount) external onlyOwner {
+    function setLockedApproval(address _account, uint256 _amount) external onlyOwner {
         require(lockedBalances[_account] >= _amount, "Cannot approve more than locked balance");
         lockedApprovals[_account] = _amount;
     }
@@ -192,12 +191,13 @@ contract DelegatorPool is RewardsPoolController {
      * @param _account account to burn tokens
      * @param _amount amount of tokens to burn
      */
-    function burnLockedBalance(address _account, uint _amount) external onlyOwner {
+    function burnLockedBalance(address _account, uint256 _amount) external onlyOwner {
         require(lockedBalances[_account] >= _amount, "Cannot burn more than locked balance");
 
-        if (lockedApprovals[_account] > 0 && _amount >= lockedApprovals[_account]) {
+        uint256 lockedApproval = lockedApprovals[_account];
+        if (lockedApproval != 0 && _amount >= lockedApproval) {
             delete lockedApprovals[_account];
-        } else if (lockedApprovals[_account] > 0) {
+        } else if (lockedApproval != 0) {
             lockedApprovals[_account] -= _amount;
         }
         lockedBalances[_account] -= _amount;
