@@ -106,6 +106,7 @@ describe('PoolRouter', () => {
       allowanceToken.address,
       'Staked Staking Allowance',
       'stSTA',
+      [],
     ])) as DelegatorPool
 
     poolRouter = (await deployUpgradeable('PoolRouter', [
