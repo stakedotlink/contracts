@@ -19,13 +19,13 @@ contract ETHWithdrawalStrategy is Strategy {
 
     uint256 private totalDeposits;
     uint256 public minMaxDeposits;
-    uint256 public targetUtilisation;
+    uint256 public targetUtilization;
 
     address[] private adapters;
-    mapping(address => bool) private adaptersMap;
+    mapping(address => uint256) private adaptersMap;
 
     event SetMinMaxDeposits(uint256 minMaxDeposits);
-    event SetTargetUtilisation(uint256 targetUtilisation);
+    event SetTargetUtilization(uint256 targetUtilization);
     event AdapterAdded(address adapter);
     event AdapterRemoved(address adapter);
 
@@ -36,7 +36,7 @@ contract ETHWithdrawalStrategy is Strategy {
     error AdapterAlreadyExists();
     error AdapterNotFound();
     error AdapterContainsDeposits();
-    error InvalidTargetUtilisation();
+    error InvalidTargetUtilization();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -47,15 +47,15 @@ contract ETHWithdrawalStrategy is Strategy {
         address _wETH,
         address _stakingPool,
         uint256 _minMaxDeposits,
-        uint256 _targetUtilisation
+        uint256 _targetUtilization
     ) public initializer {
         __Strategy_init(_wETH, _stakingPool);
-        minMaxDeposits = _minMaxDeposits;
-        targetUtilisation = _targetUtilisation;
+        setMinMaxDeposits(_minMaxDeposits);
+        setTargetUtilization(_targetUtilization);
     }
 
     modifier onlyAdapter() {
-        if (!adaptersMap[msg.sender]) revert OnlyAdapter();
+        if (adaptersMap[msg.sender] == 0) revert OnlyAdapter();
         _;
     }
 
@@ -154,7 +154,7 @@ contract ETHWithdrawalStrategy is Strategy {
     function getMaxDeposits() public view override returns (uint256) {
         uint256 balance = token.balanceOf(address(this));
         uint256 depositsUtilized = totalDeposits > balance ? totalDeposits - balance : 0;
-        uint256 maxDeposits = (depositsUtilized * BASIS_POINTS) / targetUtilisation;
+        uint256 maxDeposits = (depositsUtilized * BASIS_POINTS) / targetUtilization;
         return maxDeposits > minMaxDeposits ? maxDeposits : minMaxDeposits;
     }
 
@@ -174,19 +174,19 @@ contract ETHWithdrawalStrategy is Strategy {
      * @notice sets the minimum value for the maximum limit that can be deposited into this strategy
      * @param _minMaxDeposits min maximum deposits
      */
-    function setMinMaxDeposits(uint256 _minMaxDeposits) external onlyOwner {
+    function setMinMaxDeposits(uint256 _minMaxDeposits) public onlyOwner {
         minMaxDeposits = _minMaxDeposits;
         emit SetMinMaxDeposits(_minMaxDeposits);
     }
 
     /**
      * @notice sets the basis point target of total deposits that should be in use at any given time
-     * @param _targetUtilisation target utilisation
+     * @param _targetUtilization target utilization
      */
-    function setTargetUtilisation(uint256 _targetUtilisation) external onlyOwner {
-        if (_targetUtilisation > BASIS_POINTS) revert InvalidTargetUtilisation();
-        targetUtilisation = _targetUtilisation;
-        emit SetTargetUtilisation(_targetUtilisation);
+    function setTargetUtilization(uint256 _targetUtilization) public onlyOwner {
+        if (_targetUtilization > BASIS_POINTS) revert InvalidTargetUtilization();
+        targetUtilization = _targetUtilization;
+        emit SetTargetUtilization(_targetUtilization);
     }
 
     /**
@@ -194,8 +194,8 @@ contract ETHWithdrawalStrategy is Strategy {
      * @param _adapter address of adapter
      */
     function addAdapter(address _adapter) external onlyOwner {
-        if (adaptersMap[_adapter]) revert AdapterAlreadyExists();
-        adaptersMap[_adapter] = true;
+        if (adaptersMap[_adapter] == 1) revert AdapterAlreadyExists();
+        adaptersMap[_adapter] = 1;
         adapters.push(_adapter);
         emit AdapterAdded(_adapter);
     }
@@ -205,10 +205,11 @@ contract ETHWithdrawalStrategy is Strategy {
      * @param _adapter address of adapter
      */
     function removeAdapter(address _adapter) external onlyOwner {
-        if (!adaptersMap[_adapter]) revert AdapterNotFound();
+        if (adaptersMap[_adapter] == 0) revert AdapterNotFound();
+        if (IWithdrawalAdapter(_adapter).getTotalDeposits() != 0) revert AdapterContainsDeposits();
+
         for (uint256 i = 0; i < adapters.length; ++i) {
             if (adapters[i] == _adapter) {
-                if (IWithdrawalAdapter(adapters[i]).getTotalDeposits() > 0) revert AdapterContainsDeposits();
                 adapters[i] = adapters[adapters.length - 1];
                 adapters.pop();
                 break;

@@ -40,8 +40,16 @@ contract LidoWQERC721Mock is ERC721 {
         return ownerRequests[_owner];
     }
 
-    function findCheckpointHintsUnbounded(uint256[] calldata _requestIds) external view returns (uint256[] memory) {
+    function findCheckpointHints(
+        uint256[] calldata _requestIds,
+        uint256 _firstIndex,
+        uint256 _lastIndex
+    ) external view returns (uint256[] memory) {
         return _requestIds;
+    }
+
+    function getLastCheckpointIndex() external view returns (uint256) {
+        return 1;
     }
 
     function getClaimableEther(uint256[] calldata _requestIds, uint256[] calldata _hints)

@@ -101,10 +101,10 @@ describe('EthWithdrawalStrategy', () => {
     )
 
     await expect(strategy.connect(signers[1]).deposit(toEther(1))).to.be.revertedWith(
-      'StakingPool only'
+      'OnlyStakingPool()'
     )
     await expect(strategy.connect(signers[1]).withdraw(toEther(1))).to.be.revertedWith(
-      'StakingPool only'
+      'OnlyStakingPool()'
     )
   })
 
@@ -213,7 +213,7 @@ describe('EthWithdrawalStrategy', () => {
     await wETH.transfer(strategy.address, toEther(40))
     assert.equal(fromEther(await strategy.getMaxDeposits()), 50)
     await strategy.updateDeposits()
-    await strategy.setTargetUtilisation(2000)
+    await strategy.setTargetUtilization(2000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 150)
     await strategy.setMinMaxDeposits(toEther(200))
     assert.equal(fromEther(await strategy.getMaxDeposits()), 200)

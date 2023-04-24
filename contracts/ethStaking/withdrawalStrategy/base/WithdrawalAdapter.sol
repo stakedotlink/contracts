@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
 import "../interfaces/IETHWithdrawalStrategy.sol";
 import "../interfaces/IFeeAdapter.sol";
@@ -12,7 +13,7 @@ import "../interfaces/IFeeAdapter.sol";
  * @title Withdrawal Adapter
  * @notice Base adapter contract used to handle withdrawals from an ETH staking protocol
  */
-abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     uint256 internal constant BASIS_POINTS = 10000;
 
     IETHWithdrawalStrategy public controller;
@@ -20,19 +21,16 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
 
     uint256 public instantAmountBasisPoints;
     uint256 public minWithdrawalAmount;
-    bool public isPaused;
 
     event SetInstantAmountBasisPoints(uint256 instantAmountBasisPoints);
     event SetMinWithdrawalAmount(uint256 minWithdrawalAmount);
     event SetFeeAdapter(address feeAdapter);
-    event SetPaused(bool isPaused);
 
     error InsufficientFundsForWithdrawal();
     error ETHTransferFailed();
-    error CannotSetSamePauseStatus();
-    error ContractIsPaused();
     error InvalidInstantAmount();
     error InvalidFeeAdapter();
+    error InvalidMinWithdrawalAmount();
 
     function __WithdrawalAdapter_init(
         address _controller,
@@ -46,11 +44,6 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
         setInstantAmountBasisPoints(_instantAmountBasisPoints);
         setFeeAdapter(_feeAdapter);
         setMinWithdrawalAmount(_minWithdrawalAmount);
-    }
-
-    modifier notPaused() {
-        if (isPaused) revert ContractIsPaused();
-        _;
     }
 
     receive() external payable {}
@@ -78,6 +71,7 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
      * @param _minWithdrawalAmount minimum amount
      **/
     function setMinWithdrawalAmount(uint256 _minWithdrawalAmount) public onlyOwner {
+        if (_minWithdrawalAmount == 0) revert InvalidMinWithdrawalAmount();
         minWithdrawalAmount = _minWithdrawalAmount;
         emit SetMinWithdrawalAmount(_minWithdrawalAmount);
     }
@@ -94,12 +88,14 @@ abstract contract WithdrawalAdapter is Initializable, UUPSUpgradeable, OwnableUp
 
     /**
      * @notice pauses/unpauses the contract
-     * @param _isPaused pause status of the contract
+     * @param _isPaused pause status to set
      **/
     function setPaused(bool _isPaused) external onlyOwner {
-        if (_isPaused == isPaused) revert CannotSetSamePauseStatus();
-        isPaused = _isPaused;
-        emit SetPaused(_isPaused);
+        if (_isPaused) {
+            _pause();
+        } else {
+            _unpause();
+        }
     }
 
     /**
