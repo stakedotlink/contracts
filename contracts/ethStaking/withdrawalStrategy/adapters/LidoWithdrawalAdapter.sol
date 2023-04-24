@@ -97,26 +97,26 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
     /**
      * @notice returns a list of claimable ETH for a list of Lido withdrawal requests owned by this adapter
-     * @dev returns the total claimable ETH amount for each withdrawal request
+     * @dev request ids must be sorted in ascending order, returns the total claimable ETH amount for each withdrawal request
      * @param _requestIds list of request ids
      * @return list of claimable ETH amounts
      */
     function getClaimableEther(uint256[] calldata _requestIds) external view returns (uint256[] memory) {
-        for (uint256 i = 0; i < _requestIds.length; i++) {
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
             if (withdrawals[_requestIds[i]].owner == address(0)) revert RequestNotFound(_requestIds[i]);
         }
-        uint256[] memory hints = wqERC721.findCheckpointHintsUnbounded(_requestIds);
+        uint256[] memory hints = wqERC721.findCheckpointHints(_requestIds, 1, wqERC721.getLastCheckpointIndex());
         return wqERC721.getClaimableEther(_requestIds, hints);
     }
 
     /**
      * @notice returns a list of withdrawable ETH for a list of Lido withdrawal requests owned by this adapter
-     * @dev returns only the withdrawable ETH amount for each withdrawal request
+     * @dev request ids must be sorted in ascending order, returns only the withdrawable ETH amount for each withdrawal request
      * @param _requestIds list of request ids
      * @return list of withdrawable ETH amounts
      */
     function getWithdrawableEther(uint256[] calldata _requestIds) external view returns (uint256[] memory) {
-        uint256[] memory hints = wqERC721.findCheckpointHintsUnbounded(_requestIds);
+        uint256[] memory hints = wqERC721.findCheckpointHints(_requestIds, 1, wqERC721.getLastCheckpointIndex());
         uint256[] memory claimable = wqERC721.getClaimableEther(_requestIds, hints);
         uint256[] memory withdrawable = new uint256[](claimable.length);
 
@@ -137,13 +137,21 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
     }
 
     /**
-     * @notice returns the approximate amount of ETH that will be received for a withdrawal request
-     * if a withdrawal is initiated at this time
-     * @dev returns both the total amount and the instant amount
+     * @notice returns the amount of ETH that will be received and the fee paid for
+     * a withdrawal request if a withdrawal is initiated at this time
      * @param _amount amount of stETH to swap
-     * @return total amount and instant amount
+     * @return total total amount, instant amount, and fee amount
      */
-    function getReceivedEther(uint256 _amount) external view notPaused returns (uint256, uint256) {
+    function getReceivedEther(uint256 _amount)
+        public
+        view
+        whenNotPaused
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / BASIS_POINTS;
         uint256 fee = feeAdapter.getFee(_amount, _amount);
 
@@ -151,7 +159,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
         if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
         if (fee > _amount - instantWithdrawalAmount) revert FeeTooLarge();
 
-        return (_amount - fee, instantWithdrawalAmount);
+        return (_amount - fee, instantWithdrawalAmount, fee);
     }
 
     /**
@@ -160,26 +168,22 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
      * @param _amount amount of stETH to swap
      * @param _minimumReceivedAmount the minimum amount of ETH to receive (will revert if condition is not met)
      */
-    function initiateWithdrawalStETH(uint256 _amount, uint256 _minimumReceivedAmount) external notPaused {
-        uint256 instantWithdrawalAmount = (_amount * instantAmountBasisPoints) / BASIS_POINTS;
-        uint256 fee = feeAdapter.getFee(_amount, _amount);
+    function initiateWithdrawalStETH(uint256 _amount, uint256 _minimumReceivedAmount) external {
+        (uint256 totalWithdrawalAmount, uint256 instantWithdrawalAmount, uint256 fee) = getReceivedEther(_amount);
+        if (totalWithdrawalAmount < _minimumReceivedAmount) revert ReceivedAmountBelowMin();
 
-        if (_amount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
-        if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
-        if (fee > _amount - instantWithdrawalAmount) revert FeeTooLarge();
-        if (_amount - fee < _minimumReceivedAmount) revert ReceivedAmountBelowMin();
-
-        stETH.safeTransferFrom(msg.sender, address(this), _amount);
+        address sender = msg.sender;
+        stETH.safeTransferFrom(sender, address(this), _amount);
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _amount;
         uint256 requestId = wqERC721.requestWithdrawals(amounts, address(this))[0];
 
-        withdrawals[requestId] = Withdrawal(_amount, instantWithdrawalAmount, fee, msg.sender);
+        withdrawals[requestId] = Withdrawal(_amount, instantWithdrawalAmount, fee, sender);
         totalOutstandingDeposits += instantWithdrawalAmount;
-        ownerRequestIds[msg.sender].push(requestId);
-        controller.adapterWithdraw(msg.sender, instantWithdrawalAmount);
+        ownerRequestIds[sender].push(requestId);
+        controller.adapterWithdraw(sender, instantWithdrawalAmount);
 
-        emit InitiateWithdrawal(msg.sender, requestId, instantWithdrawalAmount, _amount, fee);
+        emit InitiateWithdrawal(sender, requestId, instantWithdrawalAmount, _amount, fee);
     }
 
     /**
@@ -188,7 +192,7 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
      * @param _requestId Lido withdrawal request id
      * @param _minimumReceivedAmount the minimum amount of ETH to receive (will revert if condition is not met)
      */
-    function initiateWithdrawal(uint256 _requestId, uint256 _minimumReceivedAmount) external notPaused {
+    function initiateWithdrawal(uint256 _requestId, uint256 _minimumReceivedAmount) external {
         if (withdrawals[_requestId].owner != address(0)) revert DuplicateRequestId();
 
         uint256[] memory reqList = new uint256[](1);
@@ -196,21 +200,17 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
         ILidoWQERC721.WithdrawalRequestStatus memory requestStatus = wqERC721.getWithdrawalStatus(reqList)[0];
 
         uint256 totalAmount = requestStatus.amountOfStETH;
-        uint256 instantWithdrawalAmount = (totalAmount * instantAmountBasisPoints) / BASIS_POINTS;
-        uint256 fee = feeAdapter.getFee(totalAmount, totalAmount);
+        (uint256 totalWithdrawalAmount, uint256 instantWithdrawalAmount, uint256 fee) = getReceivedEther(totalAmount);
+        if (totalWithdrawalAmount < _minimumReceivedAmount) revert ReceivedAmountBelowMin();
 
-        if (totalAmount < minWithdrawalAmount) revert WithdrawalAmountTooSmall();
-        if (instantWithdrawalAmount > controller.availableDeposits()) revert InsufficientFundsForWithdrawal();
-        if (fee > totalAmount - instantWithdrawalAmount) revert FeeTooLarge();
-        if (totalAmount - fee < _minimumReceivedAmount) revert ReceivedAmountBelowMin();
-
-        withdrawals[_requestId] = Withdrawal(totalAmount, instantWithdrawalAmount, fee, msg.sender);
+        address sender = msg.sender;
+        withdrawals[_requestId] = Withdrawal(totalAmount, instantWithdrawalAmount, fee, sender);
         totalOutstandingDeposits += instantWithdrawalAmount;
-        ownerRequestIds[msg.sender].push(_requestId);
-        wqERC721.transferFrom(msg.sender, address(this), _requestId);
-        controller.adapterWithdraw(msg.sender, instantWithdrawalAmount);
+        ownerRequestIds[sender].push(_requestId);
+        wqERC721.transferFrom(sender, address(this), _requestId);
+        controller.adapterWithdraw(sender, instantWithdrawalAmount);
 
-        emit InitiateWithdrawal(msg.sender, _requestId, instantWithdrawalAmount, totalAmount, fee);
+        emit InitiateWithdrawal(sender, _requestId, instantWithdrawalAmount, totalAmount, fee);
     }
 
     /**
@@ -233,6 +233,11 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
 
         uint256 totalFinalizedDeposits;
         for (uint256 i = 0; i < _requestIds.length; ++i) {
+            totalFinalizedDeposits += withdrawals[_requestIds[i]].initialETHWithdrawalAmount;
+        }
+        totalOutstandingDeposits -= totalFinalizedDeposits;
+
+        for (uint256 i = 0; i < _requestIds.length; ++i) {
             uint256 claimableETH = claimableEther[i];
             Withdrawal memory withdrawal = withdrawals[_requestIds[i]];
 
@@ -244,11 +249,9 @@ contract LidoWithdrawalAdapter is WithdrawalAdapter {
                 _sendEther(withdrawal.owner, toWithdraw);
             }
 
-            totalFinalizedDeposits += withdrawal.initialETHWithdrawalAmount;
             emit FinalizeWithdrawal(withdrawal.owner, _requestIds[i], toWithdraw, claimableETH);
         }
 
-        totalOutstandingDeposits -= totalFinalizedDeposits;
         controller.adapterDeposit{value: address(this).balance}();
     }
 }

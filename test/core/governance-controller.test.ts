@@ -210,7 +210,7 @@ describe('GovernanceController', () => {
 
     await expect(
       govController.callFunction(0, strategy2.address, encodeFunctionData('withdraw', ['1']))
-    ).to.be.revertedWith('StakingPool only')
+    ).to.be.reverted
 
     await govController.callFunction(
       0,

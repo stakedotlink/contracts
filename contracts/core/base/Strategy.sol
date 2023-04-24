@@ -17,6 +17,8 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
     IERC20Upgradeable public token;
     IStakingPool public stakingPool;
 
+    error OnlyStakingPool();
+
     function __Strategy_init(address _token, address _stakingPool) public onlyInitializing {
         token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
@@ -25,7 +27,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
     }
 
     modifier onlyStakingPool() {
-        require(address(stakingPool) == msg.sender, "StakingPool only");
+        if (msg.sender != address(stakingPool)) revert OnlyStakingPool();
         _;
     }
 
@@ -35,10 +37,11 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      */
     function canDeposit() public view virtual returns (uint256) {
         uint256 deposits = getTotalDeposits();
-        if (deposits >= getMaxDeposits()) {
+        uint256 max = getMaxDeposits();
+        if (deposits >= max) {
             return 0;
         } else {
-            return getMaxDeposits() - deposits;
+            return max - deposits;
         }
     }
 
@@ -48,10 +51,11 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      */
     function canWithdraw() public view virtual returns (uint256) {
         uint256 deposits = getTotalDeposits();
-        if (deposits <= getMinDeposits()) {
+        uint256 min = getMinDeposits();
+        if (deposits <= min) {
             return 0;
         } else {
-            return deposits - getMinDeposits();
+            return deposits - min;
         }
     }
 

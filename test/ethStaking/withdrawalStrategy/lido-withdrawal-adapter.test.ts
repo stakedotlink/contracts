@@ -94,9 +94,10 @@ describe('LidoWithdrawalAdapter', () => {
 
   it('pausing should work correctly', async () => {
     await adapter.setPaused(true)
-    await expect(adapter.initiateWithdrawal(2, 0)).to.be.revertedWith('ContractIsPaused()')
-    await expect(adapter.setPaused(true)).to.be.revertedWith('CannotSetSamePauseStatus()')
-
+    await expect(adapter.initiateWithdrawal(2, 0)).to.be.revertedWith('Pausable: paused')
+    await expect(adapter.initiateWithdrawalStETH(toEther(1), 0)).to.be.revertedWith(
+      'Pausable: paused'
+    )
     await adapter.setPaused(false)
     await adapter.initiateWithdrawal(2, 0)
   })
@@ -133,12 +134,12 @@ describe('LidoWithdrawalAdapter', () => {
     await feeAdapter.setFee(toEther(0.1))
     assert.deepEqual(
       (await adapter.getReceivedEther(toEther(3))).map((v) => fromEther(v)),
-      [2.9, 2.7]
+      [2.9, 2.7, 0.1]
     )
     await feeAdapter.setFee(toEther(0.3))
     assert.deepEqual(
       (await adapter.getReceivedEther(toEther(3))).map((v) => fromEther(v)),
-      [2.7, 2.7]
+      [2.7, 2.7, 0.3]
     )
   })
 

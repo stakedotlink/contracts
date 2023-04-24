@@ -17,13 +17,13 @@ contract CurveFee is IFeeAdapter, Ownable {
     int128 public fromIndex;
     int128 public toIndex;
 
-    uint256 public minFeeBasisPoints;
-    uint256 public maxFeeBasisPoints;
-    uint256 public feeUndercutBasisPoints;
+    uint32 public minFeeBasisPoints;
+    uint32 public maxFeeBasisPoints;
+    uint32 public feeUndercutBasisPoints;
 
-    event SetMinFeeBasisPoints(uint256 minFeeBasisPoints);
-    event SetMaxFeeBasisPoints(uint256 maxFeeBasisPoints);
-    event SetFeeUndercutBasisPoints(uint256 feeUndercutBasisPoints);
+    event SetMinFeeBasisPoints(uint32 minFeeBasisPoints);
+    event SetMaxFeeBasisPoints(uint32 maxFeeBasisPoints);
+    event SetFeeUndercutBasisPoints(uint32 feeUndercutBasisPoints);
 
     error InvalidMinFeeBasisPoints();
     error InvalidMaxFeeBasisPoints();
@@ -33,9 +33,9 @@ contract CurveFee is IFeeAdapter, Ownable {
         address _curvePool,
         int128 _fromIndex,
         int128 _toIndex,
-        uint256 _minFeeBasisPoints,
-        uint256 _maxFeeBasisPoints,
-        uint256 _feeUndercutBasisPoints
+        uint32 _minFeeBasisPoints,
+        uint32 _maxFeeBasisPoints,
+        uint32 _feeUndercutBasisPoints
     ) {
         curvePool = ICurvePool(_curvePool);
         fromIndex = _fromIndex;
@@ -74,7 +74,7 @@ contract CurveFee is IFeeAdapter, Ownable {
      * @notice sets the minimum fee basis point fee to be paid on withdrawals
      * @param _minFeeBasisPoints minimum basis point fee
      */
-    function setMinFeeBasisPoints(uint256 _minFeeBasisPoints) public onlyOwner {
+    function setMinFeeBasisPoints(uint32 _minFeeBasisPoints) public onlyOwner {
         if (_minFeeBasisPoints > 500) revert InvalidMinFeeBasisPoints();
         minFeeBasisPoints = _minFeeBasisPoints;
         emit SetMinFeeBasisPoints(_minFeeBasisPoints);
@@ -84,7 +84,7 @@ contract CurveFee is IFeeAdapter, Ownable {
      * @notice sets the maximum basis point fee to be paid on withdrawals
      * @param _maxFeeBasisPoints maximum basis point fee
      */
-    function setMaxFeeBasisPoints(uint256 _maxFeeBasisPoints) public onlyOwner {
+    function setMaxFeeBasisPoints(uint32 _maxFeeBasisPoints) public onlyOwner {
         if (_maxFeeBasisPoints > 3000) revert InvalidMaxFeeBasisPoints();
         maxFeeBasisPoints = _maxFeeBasisPoints;
         emit SetMaxFeeBasisPoints(_maxFeeBasisPoints);
@@ -95,7 +95,7 @@ contract CurveFee is IFeeAdapter, Ownable {
      * calculating a withdrawal fee
      * @param _feeUndercutBasisPoints basis point undercut amount
      */
-    function setFeeUndercutBasisPoints(uint256 _feeUndercutBasisPoints) public onlyOwner {
+    function setFeeUndercutBasisPoints(uint32 _feeUndercutBasisPoints) public onlyOwner {
         if (_feeUndercutBasisPoints > BASIS_POINTS) revert InvalidFeeUndercutBasisPoints();
         feeUndercutBasisPoints = _feeUndercutBasisPoints;
         emit SetFeeUndercutBasisPoints(_feeUndercutBasisPoints);
