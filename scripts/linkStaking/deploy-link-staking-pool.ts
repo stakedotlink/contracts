@@ -48,9 +48,6 @@ async function main() {
   tx = await delegatorPool.addToken(stakingPool.address, stLinkDelegatorRewardsPool.address)
   await tx.wait()
 
-  tx = await delegatorPool.setPoolRouter(poolRouter.address)
-  await tx.wait()
-
   updateDeployments(
     {
       LINK_StakingPool: stakingPool.address,

@@ -12,7 +12,7 @@ contract WrappedETH is ERC20 {
     event Wrap(address account, uint256 amount);
     event Unwrap(address account, uint256 amount);
 
-    constructor() ERC20("Wrapped ETH", "WETH") {}
+    constructor() ERC20("Wrapped ETH", "wETH") {}
 
     function wrap() external payable {
         _mint(msg.sender, msg.value);

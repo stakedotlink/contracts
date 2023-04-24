@@ -37,6 +37,9 @@ async function main() {
   ])
   console.log('PoolRouter deployed: ', poolRouter.address)
 
+  let tx = await delegatorPool.setPoolRouter(poolRouter.address)
+  await tx.wait()
+
   updateDeployments(
     {
       SDLToken: sdlToken.address,
