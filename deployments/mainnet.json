@@ -3,10 +3,6 @@
     "address": "0x99295f1141d58a99e939f7be6bbe734916a875b8",
     "artifact": "ERC677"
   },
-  "LINKToken": {
-    "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
-    "artifact": "ERC677"
-  },
   "SDLToken": {
     "address": "0xA95C5ebB86E0dE73B4fB8c47A45B792CFeA28C23",
     "artifact": "StakingAllowance"
@@ -14,10 +10,6 @@
   "LPLMigration": {
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
     "artifact": "LPLMigration"
-  },
-  "FlatFee": {
-    "address": "0x8ef5d844De9bbf52FCacED2ecf66B7FAf0B3AA12",
-    "artifact": "FlatFee"
   },
   "DelegatorPool": {
     "address": "0xAEF186611EC96427d161107fFE14bba8aA1C2284",
@@ -42,14 +34,6 @@
   "LINK_OperatorVCS": {
     "address": "0x4852e48215A4785eE99B640CACED5378Cc39D2A4",
     "artifact": "OperatorVCS"
-  },
-  "stETHToken": {
-    "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
-    "artifact": "ERC20"
-  },
-  "rETHToken": {
-    "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
-    "artifact": "ERC20"
   },
   "MerkleDistributor": {
     "address": "0xe7Dd77d408920c000C40C35c4c111318Ba8B4767",

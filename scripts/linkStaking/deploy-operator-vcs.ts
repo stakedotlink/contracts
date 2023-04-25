@@ -1,11 +1,14 @@
 import { ethers } from 'hardhat'
-import { ERC677, OperatorVCS, StakingPool } from '../../typechain-types'
+import { OperatorVCS, StakingPool } from '../../typechain-types'
 import {
   deployUpgradeable,
   deployImplementation,
   getContract,
   updateDeployments,
 } from '../utils/deployment'
+
+// Tokens
+const linkToken = '0x514910771af9ca656af840dff83e8264ecf986ca'
 
 // Operator Vault Controller Strategy
 const stakeController = '0x3feB1e09b4bb0E7f0387CeE092a52e85797ab889' // address of Chainlink staking contract
@@ -30,7 +33,6 @@ const vaultOperatorAddresses = [
 ] // list of operator addresses that correspond to each vault
 
 async function main() {
-  const linkToken = (await getContract('LINKToken')) as ERC677
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
 
   const vaultImpAddress = (await deployImplementation('OperatorVault')) as string
@@ -38,7 +40,7 @@ async function main() {
   console.log('OperatorVault implementation deployed: ', vaultImpAddress)
 
   const operatorVCS = (await deployUpgradeable('OperatorVCS', [
-    linkToken.address,
+    linkToken,
     stakingPool.address,
     stakeController,
     vaultImpAddress,

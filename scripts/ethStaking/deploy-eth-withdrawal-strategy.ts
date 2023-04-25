@@ -2,6 +2,9 @@ import { ETHWithdrawalStrategy, StakingPool } from '../../typechain-types'
 import { deployUpgradeable, getContract, updateDeployments, deploy } from '../utils/deployment'
 import { toEther } from '../utils/helpers'
 
+// Tokens
+const stETHToken = '0xae7ab96520de3a18e5e111b5eaab095312d7fe84'
+
 // ETH Withdrawal Strategy
 const ETH_WithdrawalStrategy = {
   minMaxDeposits: toEther(500), // minimum value for dynamic max deposit limit
@@ -18,7 +21,7 @@ const CurveFee = {
 }
 // ETH Lido Withdrawal Adapter
 const ETH_LidoWithdrawalAdapter = {
-  lidoWithdrawalQueueERC721: '0x0000000000000000000000000000000000000001', // address of Lido withdrawal queue ERC721
+  lidoWithdrawalQueueERC721: '', // address of Lido withdrawal queue ERC721
   instantAmountBasisPoints: 9000, // basis point amount of ETH instantly received when initiating a withdrawal
   minWithdrawalAmount: toEther(0.1), // minimum ETH withdrawal amount
 }
@@ -26,7 +29,6 @@ const ETH_LidoWithdrawalAdapter = {
 async function main() {
   const wETHToken = await getContract('wETHToken')
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
-  const stETHToken = await getContract('stETHToken')
 
   const ethWithdrawalStrategy = (await deployUpgradeable('ETHWithdrawalStrategy', [
     wETHToken.address,
@@ -50,7 +52,7 @@ async function main() {
     ethWithdrawalStrategy.address,
     curveFee.address,
     ETH_LidoWithdrawalAdapter.lidoWithdrawalQueueERC721,
-    stETHToken.address,
+    stETHToken,
     ETH_LidoWithdrawalAdapter.instantAmountBasisPoints,
     ETH_LidoWithdrawalAdapter.minWithdrawalAmount,
   ])

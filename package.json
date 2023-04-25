@@ -6,7 +6,6 @@
   "scripts": {
     "start": "npx hardhat node --network hardhat",
     "test": "npx hardhat test --network hardhat",
-    "deploy": "ts-node --files scripts/test/deploy-test-contracts.ts && ts-node --files scripts/core/deploy-core.ts && ts-node --files scripts/linkStaking/deploy-link-staking-pool.ts && ts-node --files scripts/governance/deploy-governance-controller.ts && ts-node --files scripts/airdrop/deploy-merkle-distributor.ts && ts-node --files scripts/liquidSDIndex/deploy-ixETH-index-pool.ts && ts-node --files scripts/governance/deploy-stakedotlink-council.ts && ts-node --files scripts/ethStaking/deploy-eth-staking-pool.ts && ts-node --files scripts/ethStaking/deploy-eth-withdrawal-strategy.ts",
     "mock-data": "ts-node --files scripts/test/mock-data.ts",
     "start-mock-data": "node scripts/test/start-mock-data.js",
     "setup-test-env": "ts-node --files scripts/test/setup-test-env.ts",
