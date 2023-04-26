@@ -42,7 +42,7 @@ contract NWLOperatorController is OperatorController {
      * @return entries list of queue entries
      */
     function getQueueEntries(uint256 _startIndex, uint256 _numEntries) external view returns (QueueEntry[] memory entries) {
-        require(_startIndex < queue.length, "startIndex out of range");
+        if (_startIndex >= queue.length) revert IndexOutOfRange(_startIndex);
 
         uint256 endIndex = _startIndex + _numEntries;
         if (endIndex > queue.length) {
@@ -75,8 +75,7 @@ contract NWLOperatorController is OperatorController {
         uint256 _quantity,
         bytes calldata _pubkeys,
         bytes calldata _signatures
-    ) external payable operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+    ) external payable operatorExists(_operatorId) onlyOperatorOwner(_operatorId) {
         require(msg.value == _quantity * depositAmount, "Incorrect stake amount");
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
     }
@@ -91,8 +90,7 @@ contract NWLOperatorController is OperatorController {
         uint256 _operatorId,
         uint256 _quantity,
         uint256[] calldata _queueEntryIndexes
-    ) external operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+    ) external operatorExists(_operatorId) onlyOperatorOwner(_operatorId) {
         require(_quantity > 0, "Quantity must be greater than 0");
         require(
             _quantity <= operators[_operatorId].totalKeyPairs - operators[_operatorId].usedKeyPairs,
@@ -291,8 +289,11 @@ contract NWLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @param _amount amount to withdraw
      */
-    function withdrawStake(uint256 _operatorId, uint256 _amount) external operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+    function withdrawStake(uint256 _operatorId, uint256 _amount)
+        external
+        operatorExists(_operatorId)
+        onlyOperatorOwner(_operatorId)
+    {
         require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
 
         operators[_operatorId].ethWithdrawn += _amount;

@@ -61,8 +61,7 @@ contract WLOperatorController is OperatorController {
         uint256 _quantity,
         bytes calldata _pubkeys,
         bytes calldata _signatures
-    ) external operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+    ) external operatorExists(_operatorId) onlyOperatorOwner(_operatorId) {
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
     }
 
@@ -71,8 +70,11 @@ contract WLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @param _quantity number of pairs to remove
      */
-    function removeKeyPairs(uint256 _operatorId, uint256 _quantity) external operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+    function removeKeyPairs(uint256 _operatorId, uint256 _quantity)
+        external
+        operatorExists(_operatorId)
+        onlyOperatorOwner(_operatorId)
+    {
         require(_quantity > 0, "Quantity must be greater than 0");
         require(_quantity <= operators[_operatorId].totalKeyPairs, "Cannot remove more keys than are added");
         require(
@@ -145,7 +147,7 @@ contract WLOperatorController is OperatorController {
         for (uint256 i = 0; i < _operatorIds.length; i++) {
             uint256 operatorId = _operatorIds[i];
 
-            require(operators[operatorId].active, "Inactive operator");
+            if (!operators[operatorId].active) revert OperatorNotActive(operatorId);
             require(!seenOperatorIds[operatorId], "Duplicate operator");
             seenOperatorIds[operatorId] = true;
 

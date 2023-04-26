@@ -97,8 +97,8 @@ describe('OperatorController', () => {
     assert.equal(pairs[0], '0x' + keyPairs.keys.slice(pubkeyLength + 2))
     assert.equal(pairs[1], '0x' + keyPairs.signatures.slice(signatureLength + 2))
 
-    await expect(controller.getKeyPairs(6, 0, 2)).to.be.revertedWith('Operator does not exist')
-    await expect(controller.getKeyPairs(0, 4, 1)).to.be.revertedWith('startIndex out of range')
+    await expect(controller.getKeyPairs(6, 0, 2)).to.be.revertedWith('OperatorNotFound(6)')
+    await expect(controller.getKeyPairs(0, 4, 1)).to.be.revertedWith('IndexOutOfRange(4)')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys.slice(0, 50), keyPairs.signatures)
     ).to.be.revertedWith('Invalid pubkeys length')
@@ -109,7 +109,7 @@ describe('OperatorController', () => {
 
   it('initiateKeyPairValidation should work correctly', async () => {
     await expect(controller.initiateKeyPairValidation(accounts[1], 3)).to.be.revertedWith(
-      'Sender is not operator owner'
+      'OnlyOperatorOwner()'
     )
 
     await controller.initiateKeyPairValidation(accounts[0], 3)
@@ -152,7 +152,7 @@ describe('OperatorController', () => {
     )
 
     await expect(controller.onTokenTransfer(accounts[0], 10, '0x00')).to.be.revertedWith(
-      'Sender is not sdToken'
+      'OnlySDToken()'
     )
   })
 
@@ -178,7 +178,7 @@ describe('OperatorController', () => {
       'keys incorrect'
     )
 
-    await expect(controller.getAssignedKeys(10, 1)).to.be.revertedWith('startIndex out of range')
+    await expect(controller.getAssignedKeys(10, 1)).to.be.revertedWith('IndexOutOfRange(10)')
   })
 
   it('currentStateHash should be properly updated', async () => {
@@ -227,11 +227,11 @@ describe('OperatorController', () => {
     assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
 
     await expect(controller.reportStoppedValidators([0, 5], [3, 1], [])).to.be.revertedWith(
-      'Operator does not exist'
+      'OperatorNotFound(5)'
     )
     await expect(
       controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2], [])
-    ).to.be.revertedWith('Sender is not beacon oracle')
+    ).to.be.revertedWith('OnlyBeaconOracle()')
     await expect(controller.reportStoppedValidators([0, 4], [1, 3], [])).to.be.revertedWith(
       'Reported negative or zero stopped validators'
     )
@@ -309,9 +309,9 @@ describe('OperatorController', () => {
     let op = (await controller.getOperators([0]))[0]
     assert.equal(op[0], '1234', 'operator name incorrect')
 
-    await expect(controller.setOperatorName(5, '123')).to.be.revertedWith('Operator does not exist')
+    await expect(controller.setOperatorName(5, '123')).to.be.revertedWith('OperatorNotFound(5)')
     await expect(controller.connect(signers[1]).setOperatorName(0, '123')).to.be.revertedWith(
-      'Sender is not operator owner'
+      'OnlyOperatorOwner()'
     )
   })
 
@@ -326,13 +326,13 @@ describe('OperatorController', () => {
     assert.equal((await controller.staked(accounts[2])).toNumber(), 3, 'operator staked incorrect')
 
     await expect(controller.setOperatorOwner(5, accounts[1])).to.be.revertedWith(
-      'Operator does not exist'
+      'OperatorNotFound(5)'
     )
     await expect(
       controller.connect(signers[1]).setOperatorOwner(0, accounts[1])
-    ).to.be.revertedWith('Sender is not operator owner')
+    ).to.be.revertedWith('OnlyOperatorOwner()')
     await expect(controller.setOperatorOwner(1, constants.AddressZero)).to.be.revertedWith(
-      'Owner address cannot be 0'
+      'CannotSetZeroAddress()'
     )
   })
 

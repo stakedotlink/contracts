@@ -100,7 +100,7 @@ describe('NWLOperatorController', () => {
 
     await expect(
       controller.connect(signers[1]).addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
-    ).to.be.revertedWith('Sender is not operator owner')
+    ).to.be.revertedWith('OnlyOperatorOwner()')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures, { value: toEther(16) })
     ).to.be.revertedWith('Incorrect stake amount')
@@ -117,7 +117,7 @@ describe('NWLOperatorController', () => {
 
     await expect(
       controller.connect(signers[1]).reportKeyPairValidation(2, true)
-    ).to.be.revertedWith('Sender is not key validation oracle')
+    ).to.be.revertedWith('OnlyKeyValidationOracle()')
 
     let op = (await controller.getOperators([2]))[0]
 
@@ -169,9 +169,9 @@ describe('NWLOperatorController', () => {
 
     await controller.assignNextValidators(4, [], [])
 
-    await expect(controller.removeKeyPairs(5, 2, [5])).to.be.revertedWith('Operator does not exist')
+    await expect(controller.removeKeyPairs(5, 2, [5])).to.be.revertedWith('OperatorNotFound(5)')
     await expect(controller.connect(signers[1]).removeKeyPairs(4, 2, [4])).to.be.revertedWith(
-      'Sender is not operator owner'
+      'OnlyOperatorOwner()'
     )
     await expect(controller.removeKeyPairs(2, 0, [1])).to.be.revertedWith(
       'Quantity must be greater than 0'
@@ -308,7 +308,7 @@ describe('NWLOperatorController', () => {
     assert.equal((await controller.totalStaked()).toNumber(), 9, 'totalStaked incorrect')
 
     await expect(controller.connect(signers[1]).assignNextValidators(1, [], [])).to.be.revertedWith(
-      'Sender is not ETH staking strategy'
+      'OnlyETHStakingStrategy()'
     )
   })
 
@@ -399,12 +399,12 @@ describe('NWLOperatorController', () => {
 
     await expect(
       controller.reportStoppedValidators([0, 5], [3, 1], [toEther(4), toEther(1)])
-    ).to.be.revertedWith('Operator does not exist')
+    ).to.be.revertedWith('OperatorNotFound(5)')
     await expect(
       controller
         .connect(signers[1])
         .reportStoppedValidators([0, 4], [3, 2], [toEther(4), toEther(1)])
-    ).to.be.revertedWith('Sender is not beacon oracle')
+    ).to.be.revertedWith('OnlyBeaconOracle()')
     await expect(
       controller.reportStoppedValidators([0, 4], [1, 3], [toEther(4), toEther(1)])
     ).to.be.revertedWith('Reported negative or zero stopped validators')
@@ -518,7 +518,7 @@ describe('NWLOperatorController', () => {
       'Cannot withdraw more than available'
     )
     await expect(controller.connect(signers[1]).withdrawStake(0, toEther(1))).to.be.revertedWith(
-      'Sender is not operator owner'
+      'OnlyOperatorOwner()'
     )
   })
 

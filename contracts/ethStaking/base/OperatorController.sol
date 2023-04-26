@@ -56,23 +56,39 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     event SetRewardsPool(address pool);
     event ReportStoppedValidators(uint256 indexed operatorId, uint256 newlyStoppedValidators, uint256 newlyLostEth);
 
-    modifier operatorExists(uint256 _id) {
-        require(_id < operators.length, "Operator does not exist");
+    error OnlyKeyValidationOracle();
+    error OnlyBeaconOracle();
+    error OnlyETHStakingStrategy();
+    error OnlyOperatorOwner();
+    error OnlySDToken();
+    error OperatorNotFound(uint256 id);
+    error OperatorNotActive(uint256 id);
+    error OperatorAlreadyDisabled(uint256 id);
+    error IndexOutOfRange(uint256 index);
+    error CannotSetZeroAddress();
+
+    modifier operatorExists(uint256 _operatorId) {
+        if (_operatorId >= operators.length) revert OperatorNotFound(_operatorId);
         _;
     }
 
     modifier onlyKeyValidationOracle() {
-        require(msg.sender == keyValidationOracle, "Sender is not key validation oracle");
+        if (msg.sender != keyValidationOracle) revert OnlyKeyValidationOracle();
         _;
     }
 
     modifier onlyBeaconOracle() {
-        require(msg.sender == beaconOracle, "Sender is not beacon oracle");
+        if (msg.sender != beaconOracle) revert OnlyBeaconOracle();
         _;
     }
 
     modifier onlyEthStakingStrategy() {
-        require(msg.sender == ethStakingStrategy, "Sender is not ETH staking strategy");
+        if (msg.sender != ethStakingStrategy) revert OnlyETHStakingStrategy();
+        _;
+    }
+
+    modifier onlyOperatorOwner(uint256 _operatorId) {
+        if (msg.sender != operators[_operatorId].owner) revert OnlyOperatorOwner();
         _;
     }
 
@@ -118,6 +134,14 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     }
 
     /**
+     * @notice returns the total number of operators
+     * @return operator count
+     */
+    function getOperatorCount() external view returns (uint256) {
+        return operators.length;
+    }
+
+    /**
      * @notice returns a list of operators
      * @param _operatorIds id list of operators to return
      * @return operators list of operators
@@ -125,7 +149,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     function getOperators(uint256[] calldata _operatorIds) external view returns (Operator[] memory) {
         Operator[] memory ret = new Operator[](_operatorIds.length);
         for (uint256 i = 0; i < _operatorIds.length; i++) {
-            require(_operatorIds[i] < operators.length, "Operator does not exist");
+            if (_operatorIds[i] >= operators.length) revert OperatorNotFound(_operatorIds[i]);
             ret[i] = operators[_operatorIds[i]];
         }
         return ret;
@@ -144,7 +168,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint256 _startIndex,
         uint256 _numPairs
     ) external view operatorExists(_operatorId) returns (bytes memory keys, bytes memory signatures) {
-        require(_startIndex < operators[_operatorId].totalKeyPairs, "startIndex out of range");
+        if (_startIndex >= operators[_operatorId].totalKeyPairs) revert IndexOutOfRange(_startIndex);
 
         uint256 endIndex = _startIndex + _numPairs;
         if (endIndex > operators[_operatorId].totalKeyPairs) {
@@ -165,7 +189,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @return keys concatenated list of pubkeys
      */
     function getAssignedKeys(uint256 _startIndex, uint256 _numKeys) external view returns (bytes memory keys) {
-        require(_startIndex < totalAssignedValidators, "startIndex out of range");
+        if (_startIndex >= totalAssignedValidators) revert IndexOutOfRange(_startIndex);
 
         uint256 endIndex = _startIndex + _numKeys;
         if (endIndex > totalAssignedValidators) {
@@ -196,7 +220,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint256 _value,
         bytes calldata
     ) external {
-        require(msg.sender == address(sdToken), "Sender is not sdToken");
+        if (msg.sender != address(sdToken)) revert OnlySDToken();
         sdToken.transferAndCall(address(rewardsPool), _value, "0x00");
     }
 
@@ -225,8 +249,8 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         onlyKeyValidationOracle
         operatorExists(_operatorId)
     {
-        require(_sender == operators[_operatorId].owner, "Sender is not operator owner");
-        require(operators[_operatorId].active, "Operator is not active");
+        if (_sender != operators[_operatorId].owner) revert OnlyOperatorOwner();
+        if (!operators[_operatorId].active) revert OperatorNotActive(_operatorId);
         operators[_operatorId].keyValidationInProgress = true;
     }
 
@@ -251,7 +275,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
 
         for (uint256 i = 0; i < _operatorIds.length; i++) {
             uint256 operatorId = _operatorIds[i];
-            require(operatorId < operators.length, "Operator does not exist");
+            if (operatorId >= operators.length) revert OperatorNotFound(operatorId);
             require(
                 _stoppedValidators[i] > operators[operatorId].stoppedValidators,
                 "Reported negative or zero stopped validators"
@@ -291,8 +315,11 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @notice Sets the name of an existing operator
      * @param _name new name of operator
      */
-    function setOperatorName(uint256 _operatorId, string calldata _name) external operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
+    function setOperatorName(uint256 _operatorId, string calldata _name)
+        external
+        operatorExists(_operatorId)
+        onlyOperatorOwner(_operatorId)
+    {
         operators[_operatorId].name = _name;
     }
 
@@ -303,9 +330,12 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _operatorId id of operator
      * @param _owner new owner of operator
      */
-    function setOperatorOwner(uint256 _operatorId, address _owner) external operatorExists(_operatorId) {
-        require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
-        require(_owner != address(0), "Owner address cannot be 0");
+    function setOperatorOwner(uint256 _operatorId, address _owner)
+        external
+        operatorExists(_operatorId)
+        onlyOperatorOwner(_operatorId)
+    {
+        if (_owner == address(0)) revert CannotSetZeroAddress();
 
         uint256 operatorActiveValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
         activeValidators[_owner] += operatorActiveValidators;
@@ -321,7 +351,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _operatorId id of operator
      */
     function disableOperator(uint256 _operatorId) external onlyOwner operatorExists(_operatorId) {
-        require(operators[_operatorId].active, "Operator is already disabled");
+        if (!operators[_operatorId].active) revert OperatorAlreadyDisabled(_operatorId);
 
         uint256 unusedKeys = operators[_operatorId].validatorLimit - operators[_operatorId].usedKeyPairs;
         if (unusedKeys > 0) {
@@ -344,6 +374,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _keyValidationOracle oracle address
      */
     function setKeyValidationOracle(address _keyValidationOracle) external onlyOwner {
+        if (_keyValidationOracle == address(0)) revert CannotSetZeroAddress();
         keyValidationOracle = _keyValidationOracle;
         emit SetKeyValidationOracle(_keyValidationOracle);
     }
@@ -353,6 +384,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _beaconOracle oracle address
      */
     function setBeaconOracle(address _beaconOracle) external onlyOwner {
+        if (_beaconOracle == address(0)) revert CannotSetZeroAddress();
         beaconOracle = _beaconOracle;
         emit SetBeaconOracle(_beaconOracle);
     }
@@ -362,6 +394,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _rewardsPool rewards pool address
      */
     function setRewardsPool(address _rewardsPool) external onlyOwner {
+        if (_rewardsPool == address(0)) revert CannotSetZeroAddress();
         rewardsPool = IRewardsPool(_rewardsPool);
         emit SetRewardsPool(_rewardsPool);
     }
