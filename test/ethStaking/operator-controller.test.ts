@@ -101,10 +101,10 @@ describe('OperatorController', () => {
     await expect(controller.getKeyPairs(0, 4, 1)).to.be.revertedWith('IndexOutOfRange(4)')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys.slice(0, 50), keyPairs.signatures)
-    ).to.be.revertedWith('Invalid pubkeys length')
+    ).to.be.revertedWith('InvalidPubkeysLength()')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures.slice(0, 50))
-    ).to.be.revertedWith('Invalid signatures length')
+    ).to.be.revertedWith('InvalidSignaturesLength()')
   })
 
   it('initiateKeyPairValidation should work correctly', async () => {
@@ -119,7 +119,7 @@ describe('OperatorController', () => {
 
     await expect(
       controller.addKeyPairs(3, 3, keyPairs.keys, keyPairs.signatures)
-    ).to.be.revertedWith('Key validation in progress')
+    ).to.be.revertedWith('KeyValidationInProgress()')
   })
 
   it('rewards distribution should work correctly', async () => {
@@ -233,13 +233,13 @@ describe('OperatorController', () => {
       controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2], [])
     ).to.be.revertedWith('OnlyBeaconOracle()')
     await expect(controller.reportStoppedValidators([0, 4], [1, 3], [])).to.be.revertedWith(
-      'Reported negative or zero stopped validators'
+      'NegativeOrZeroValidators()'
     )
     await expect(controller.reportStoppedValidators([0, 4], [3, 0], [])).to.be.revertedWith(
-      'Reported negative or zero stopped validators'
+      'NegativeOrZeroValidators()'
     )
     await expect(controller.reportStoppedValidators([0, 4], [3, 3], [])).to.be.revertedWith(
-      'Reported more stopped validators than active'
+      'MoreValidatorsThanActive()'
     )
   })
 
@@ -296,10 +296,10 @@ describe('OperatorController', () => {
     assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
     assert.equal((await controller.totalStaked()).toNumber(), 4, 'totalStaked incorrect')
     await expect(controller.reportStoppedValidators([0], [3], [toEther(1)])).to.be.revertedWith(
-      'Reported negative lost ETH'
+      'NegativeLostETH()'
     )
     await expect(controller.reportStoppedValidators([4], [2], [toEther(18)])).to.be.revertedWith(
-      'Reported more than max loss per validator'
+      'MaxLossExceeded()'
     )
   })
 

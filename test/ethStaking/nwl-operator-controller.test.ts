@@ -103,10 +103,10 @@ describe('NWLOperatorController', () => {
     ).to.be.revertedWith('OnlyOperatorOwner()')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures, { value: toEther(16) })
-    ).to.be.revertedWith('Incorrect stake amount')
+    ).to.be.revertedWith('IncorrectMsgValue()')
     await expect(
       controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures, { value: toEther(4 * 16) })
-    ).to.be.revertedWith('Incorrect stake amount')
+    ).to.be.revertedWith('IncorrectMsgValue()')
   })
 
   it('reportKeyPairValidation should work correctly', async () => {
@@ -153,7 +153,7 @@ describe('NWLOperatorController', () => {
     assert.equal((await controller.queueLength()).toNumber(), 12, 'queueLength incorrect')
 
     await expect(controller.reportKeyPairValidation(2, true)).to.be.revertedWith(
-      'No key validation in progress'
+      'NoKeyValidationInProgress()'
     )
   })
 
@@ -173,20 +173,14 @@ describe('NWLOperatorController', () => {
     await expect(controller.connect(signers[1]).removeKeyPairs(4, 2, [4])).to.be.revertedWith(
       'OnlyOperatorOwner()'
     )
-    await expect(controller.removeKeyPairs(2, 0, [1])).to.be.revertedWith(
-      'Quantity must be greater than 0'
-    )
-    await expect(controller.removeKeyPairs(2, 10, [1])).to.be.revertedWith(
-      'Cannot remove used key pairs or more keys than are added'
-    )
-    await expect(controller.removeKeyPairs(2, 9, [1])).to.be.revertedWith(
-      'Cannot remove used key pairs or more keys than are added'
-    )
+    await expect(controller.removeKeyPairs(2, 0, [1])).to.be.revertedWith('InvalidQuantity()')
+    await expect(controller.removeKeyPairs(2, 10, [1])).to.be.revertedWith('InvalidQuantity()')
+    await expect(controller.removeKeyPairs(2, 9, [1])).to.be.revertedWith('InvalidQuantity()')
     await expect(controller.removeKeyPairs(2, 4, [0])).to.be.revertedWith(
-      'Cannot remove from queue entry that is already passed by'
+      'QueueEntryAlreadyPassed(0)'
     )
     await expect(controller.removeKeyPairs(2, 7, [1, 4])).to.be.revertedWith(
-      'Cannot remove from queue entry that does not exist'
+      'QueueEntryNotFound(4)'
     )
 
     await controller.removeKeyPairs(2, 7, [1, 3])
@@ -263,7 +257,7 @@ describe('NWLOperatorController', () => {
     )
 
     await expect(controller.assignNextValidators(5, [], [])).to.be.revertedWith(
-      'Cannot assign more than queue length'
+      'InvalidValidatorCount()'
     )
 
     vals = await controller.callStatic.assignNextValidators(4, [], [])
@@ -407,18 +401,18 @@ describe('NWLOperatorController', () => {
     ).to.be.revertedWith('OnlyBeaconOracle()')
     await expect(
       controller.reportStoppedValidators([0, 4], [1, 3], [toEther(4), toEther(1)])
-    ).to.be.revertedWith('Reported negative or zero stopped validators')
+    ).to.be.revertedWith('NegativeOrZeroValidators()')
     await expect(
       controller.reportStoppedValidators([0, 4], [3, 0], [toEther(4), toEther(1)])
-    ).to.be.revertedWith('Reported negative or zero stopped validators')
+    ).to.be.revertedWith('NegativeOrZeroValidators()')
     await expect(controller.reportStoppedValidators([0], [3], [toEther(1)])).to.be.revertedWith(
-      'Reported negative lost ETH'
+      'NegativeLostETH()'
     )
     await expect(
       controller.reportStoppedValidators([0, 4], [4, 3], [toEther(4), toEther(1)])
-    ).to.be.revertedWith('Reported more stopped validators than active')
+    ).to.be.revertedWith('MoreValidatorsThanActive()')
     await expect(controller.reportStoppedValidators([4], [2], [toEther(18)])).to.be.revertedWith(
-      'Reported more than max loss per validator'
+      'MaxLossExceeded()'
     )
   })
 
@@ -515,7 +509,7 @@ describe('NWLOperatorController', () => {
     assert.equal(fromEther(await controller.withdrawableStake(4)), 0, 'withdrawableStake incorrect')
 
     await expect(controller.withdrawStake(0, toEther(7))).to.be.revertedWith(
-      'Cannot withdraw more than available'
+      'InsufficientWithdrawableStake()'
     )
     await expect(controller.connect(signers[1]).withdrawStake(0, toEther(1))).to.be.revertedWith(
       'OnlyOperatorOwner()'

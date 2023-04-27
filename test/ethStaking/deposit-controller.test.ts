@@ -206,7 +206,7 @@ describe('DepositController', () => {
     )
 
     await expect(depositController.getNextValidators(11)).to.be.revertedWith(
-      'not enough validators in queue'
+      'InsufficientValidatorsInQueue()'
     )
   })
 
@@ -222,7 +222,7 @@ describe('DepositController', () => {
 
     await depositController.depositEther(...depositData)
     await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
-      'depositRoot has changed'
+      'DepositRootChanged()'
     )
 
     depositData = (await depositController.getNextValidators(7)).slice(0, -1) as DepositData
@@ -230,13 +230,13 @@ describe('DepositController', () => {
       value: toEther(16 * 2),
     })
     await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
-      'operatorStateHash has changed'
+      'OperatorStateHashChanged()'
     )
 
     depositData = (await depositController.getNextValidators(7)).slice(0, -1) as DepositData
     await wlOperatorController.addKeyPairs(0, 3, wlOps.keys, wlOps.signatures)
     await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
-      'operatorStateHash has changed'
+      'OperatorStateHashChanged()'
     )
     depositData = (await depositController.getNextValidators(7)).slice(0, -1) as DepositData
     await depositController.depositEther(...depositData)

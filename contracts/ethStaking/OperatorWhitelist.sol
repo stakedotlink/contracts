@@ -16,6 +16,11 @@ contract OperatorWhitelist is Ownable {
     address public wlOperatorController;
     mapping(address => WhitelistEntry) private whitelist;
 
+    error OnlyWLOperatorController();
+    error AccountAlreadyWhitelisted(address account);
+    error AccountNotWhitelisted(address _account);
+    error WhitelistSpotAlreadyUsed(address _account);
+
     constructor(address _wlOperatorController, address[] memory _whitelist) {
         wlOperatorController = _wlOperatorController;
 
@@ -39,9 +44,9 @@ contract OperatorWhitelist is Ownable {
      * @param _account account to check whitelist for
      */
     function useWhitelist(address _account) external {
-        require(msg.sender == wlOperatorController, "Sender is not wl operator controller");
-        require(whitelist[_account].isWhitelisted, "Account is not whitelisted");
-        require(!whitelist[_account].isUsed, "Account whitelist spot already used");
+        if (msg.sender != wlOperatorController) revert OnlyWLOperatorController();
+        if (!whitelist[_account].isWhitelisted) revert AccountNotWhitelisted(_account);
+        if (whitelist[_account].isUsed) revert WhitelistSpotAlreadyUsed(_account);
         whitelist[_account].isUsed = true;
     }
 
@@ -52,7 +57,7 @@ contract OperatorWhitelist is Ownable {
     function addWhitelistEntries(address[] calldata _accounts) external onlyOwner {
         for (uint256 i = 0; i < _accounts.length; i++) {
             address account = _accounts[i];
-            require(!whitelist[account].isWhitelisted, "Account already whitelisted");
+            if (whitelist[account].isWhitelisted) revert AccountAlreadyWhitelisted(account);
             whitelist[account] = WhitelistEntry(true, false);
         }
     }
@@ -64,7 +69,7 @@ contract OperatorWhitelist is Ownable {
     function removeWhitelistEntries(address[] calldata _accounts) external onlyOwner {
         for (uint256 i = 0; i < _accounts.length; i++) {
             address account = _accounts[i];
-            require(whitelist[account].isWhitelisted, "Account is not whitelisted");
+            if (!whitelist[account].isWhitelisted) revert AccountNotWhitelisted(account);
             whitelist[account].isWhitelisted = false;
         }
     }

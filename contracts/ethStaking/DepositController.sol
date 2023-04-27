@@ -18,6 +18,10 @@ contract DepositController is Ownable {
     IDepositContract public depositContract;
     IEthStakingStrategy public ethStakingStrategy;
 
+    error DepositRootChanged();
+    error OperatorStateHashChanged();
+    error InsufficientValidatorsInQueue();
+
     constructor(address _depositContract, address _ethStakingStrategy) {
         depositContract = IDepositContract(_depositContract);
         ethStakingStrategy = IEthStakingStrategy(_ethStakingStrategy);
@@ -44,8 +48,8 @@ contract DepositController is Ownable {
         bytes32 depositRoot = depositContract.get_deposit_root();
         bytes32 operatorStateHash = _getOperatorStateHash();
 
-        require(_depositRoot == depositRoot, "depositRoot has changed");
-        require(_operatorStateHash == operatorStateHash, "operatorStateHash has changed");
+        if (_depositRoot != depositRoot) revert DepositRootChanged();
+        if (_operatorStateHash != operatorStateHash) revert OperatorStateHashChanged();
 
         ethStakingStrategy.depositEther(_depositAmounts, _validatorsAssigned, _operatorIds, _validatorCounts);
     }
@@ -75,7 +79,7 @@ contract DepositController is Ownable {
             bytes memory keys
         )
     {
-        require(_validatorCount <= _getTotalQueueLength(), "not enough validators in queue");
+        if (_validatorCount > _getTotalQueueLength()) revert InsufficientValidatorsInQueue();
 
         address[] memory operatorControllers = ethStakingStrategy.getOperatorControllers();
 

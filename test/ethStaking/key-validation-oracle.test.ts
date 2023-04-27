@@ -90,10 +90,10 @@ describe('KeyValidationOracle', () => {
 
   it('should be able be able initiate validation', async () => {
     await expect(kvOracle.onTokenTransfer(accounts[3], toEther(10), '0x00')).to.be.revertedWith(
-      'Sender is not chainlink token'
+      'OnlyChainlinkToken()'
     )
     await expect(token.transferAndCall(kvOracle.address, toEther(10), '0x00')).to.be.revertedWith(
-      'Value is not equal to fee'
+      'ValueNotEqualToFee()'
     )
 
     await token.transferAndCall(

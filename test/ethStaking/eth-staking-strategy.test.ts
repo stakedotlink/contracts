@@ -325,13 +325,13 @@ describe('EthStakingStrategy', () => {
 
     await expect(
       strategy.connect(signers[1]).depositEther([toEther(16), 0], [1, 0], [[], []], [[], []])
-    ).to.be.revertedWith('Sender is not deposit controller')
+    ).to.be.revertedWith('OnlyDepositController()')
     await expect(
       strategy.depositEther([toEther(16), 0], [0, 0], [[], []], [[], []])
-    ).to.be.revertedWith('Cannot deposit 0')
+    ).to.be.revertedWith('InvalidTotalDepositAmount()')
     await expect(
       strategy.depositEther([toEther(16), 0], [6, 4], [[], [0, 2]], [[], [2, 2]])
-    ).to.be.revertedWith('Insufficient balance for deposit')
+    ).to.be.revertedWith('InvalidTotalDepositAmount()')
     await expect(
       strategy.depositEther([toEther(16), 0], [0, 2], [[], [0]], [[], [2]])
     ).to.be.revertedWith('InvalidQueueOrder()')
@@ -378,12 +378,12 @@ describe('EthStakingStrategy', () => {
 
     await expect(
       strategy.connect(signers[1]).reportBeaconState(4, toEther(90), toEther(0))
-    ).to.be.revertedWith('Sender is not beacon oracle')
+    ).to.be.revertedWith('OnlyBeaconOracle()')
     await expect(strategy.reportBeaconState(9, toEther(90), toEther(0))).to.be.revertedWith(
-      'Reported more validators than deposited'
+      'MoreValidatorsThanDeposited()'
     )
     await expect(strategy.reportBeaconState(2, toEther(90), toEther(0))).to.be.revertedWith(
-      'Reported less validators than tracked'
+      'LessValidatorsThanTracked()'
     )
   })
 
@@ -636,7 +636,7 @@ describe('EthStakingStrategy', () => {
 
     await expect(
       strategy.connect(signers[3]).operatorControllerWithdraw(accounts[2], toEther(1))
-    ).to.be.revertedWith('OperatorControllerOnly()')
+    ).to.be.revertedWith('OnlyOperatorController()')
     await expect(strategy.operatorControllerWithdraw(accounts[2], toEther(1))).to.be.revertedWith(
       'Not implemented yet'
     )

@@ -128,7 +128,7 @@ describe('WLOperatorController', () => {
     assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
 
     await expect(controller.reportKeyPairValidation(2, true)).to.be.revertedWith(
-      'No key validation in progress'
+      'NoKeyValidationInProgress()'
     )
   })
 
@@ -144,13 +144,9 @@ describe('WLOperatorController', () => {
     await expect(controller.connect(signers[1]).removeKeyPairs(2, 2)).to.be.revertedWith(
       'OnlyOperatorOwner()'
     )
-    await expect(controller.removeKeyPairs(2, 0)).to.be.revertedWith(
-      'Quantity must be greater than 0'
-    )
-    await expect(controller.removeKeyPairs(2, 7)).to.be.revertedWith(
-      'Cannot remove more keys than are added'
-    )
-    await expect(controller.removeKeyPairs(2, 5)).to.be.revertedWith('Cannot remove used key pairs')
+    await expect(controller.removeKeyPairs(2, 0)).to.be.revertedWith('InvalidQuantity()')
+    await expect(controller.removeKeyPairs(2, 7)).to.be.revertedWith('InvalidQuantity()')
+    await expect(controller.removeKeyPairs(2, 5)).to.be.revertedWith('InvalidQuantity()')
 
     await controller.removeKeyPairs(2, 2)
     await controller.removeKeyPairs(2, 1)
@@ -243,21 +239,23 @@ describe('WLOperatorController', () => {
   })
 
   it('assignNextValidators first data validation should work correctly', async () => {
-    await expect(controller.assignNextValidators(0, [], [])).to.be.revertedWith('Empty operatorIds')
+    await expect(controller.assignNextValidators(0, [], [])).to.be.revertedWith(
+      'EmptyOperatorIds()'
+    )
     await expect(controller.assignNextValidators(2, [0, 2], [2])).to.be.revertedWith(
-      'Inconsistent operatorIds and validatorCounts length'
+      'InconsistentLengths()'
     )
     await expect(controller.assignNextValidators(7, [0, 2, 4, 0], [2, 2, 2, 1])).to.be.revertedWith(
-      'Duplicate operator'
+      'DuplicateOperator(0)'
     )
     await expect(controller.assignNextValidators(6, [0, 2], [4, 2])).to.be.revertedWith(
-      'Assigned more keys than validator limit'
+      'ValidatorLimitExceeded(0)'
     )
     await expect(controller.assignNextValidators(3, [0, 2], [1, 2])).to.be.revertedWith(
-      'Invalid batching'
+      'InvalidBatching()'
     )
     await expect(controller.assignNextValidators(4, [0, 2], [3, 2])).to.be.revertedWith(
-      'Inconsistent total validator count'
+      'InconsistentTotalValidatorCount()'
     )
 
     await controller.disableOperator(0)
@@ -268,47 +266,47 @@ describe('WLOperatorController', () => {
 
   it('assignNextValidators second data validation should work correctly', async () => {
     await expect(controller.assignNextValidators(4, [0, 4], [2, 2])).to.be.revertedWith(
-      '1: Validator assignments were skipped'
+      'SkippedValidatorAssignments(1)'
     )
     await expect(controller.assignNextValidators(2, [2], [2])).to.be.revertedWith(
-      '3: Validator assignments were skipped'
+      'SkippedValidatorAssignments(3)'
     )
 
     await controller.assignNextValidators(2, [0], [2])
 
     await expect(controller.assignNextValidators(1, [0], [1])).to.be.revertedWith(
-      '2: Validator assignments were skipped'
+      'SkippedValidatorAssignments(2)'
     )
   })
 
   it('assignNextValidators third data validation should work correctly', async () => {
     await expect(controller.assignNextValidators(7, [0, 2, 4], [2, 2, 3])).to.be.revertedWith(
-      '1: Validator assignments incorrectly split'
+      'IncorrectlySplitValidatorAssignments(1)'
     )
     await controller.setBatchSize(1)
     await expect(controller.assignNextValidators(5, [0, 2, 4], [3, 1, 1])).to.be.revertedWith(
-      '2: Validator assignments incorrectly split'
+      'IncorrectlySplitValidatorAssignments(2)'
     )
   })
 
   it('assignNextValidators fourth data validation should work correctly', async () => {
     await expect(controller.assignNextValidators(6, [0, 2], [3, 2])).to.be.revertedWith(
-      'Inconsistent total validator count'
+      'InconsistentTotalValidatorCount()'
     )
     await expect(controller.assignNextValidators(5, [0, 2], [3, 2])).to.be.revertedWith(
-      '5: Validator assignments were skipped'
+      'SkippedValidatorAssignments(5)'
     )
 
     await controller.assignNextValidators(2, [0], [2])
 
     await expect(controller.assignNextValidators(6, [2, 4], [3, 3])).to.be.revertedWith(
-      '6: Validator assignments were skipped'
+      'SkippedValidatorAssignments(6)'
     )
 
     await controller.assignNextValidators(2, [2], [2])
 
     await expect(controller.assignNextValidators(4, [4, 0], [3, 1])).to.be.revertedWith(
-      '4: Validator assignments were skipped'
+      'SkippedValidatorAssignments(4)'
     )
   })
 
@@ -451,13 +449,13 @@ describe('WLOperatorController', () => {
       controller.connect(signers[1]).reportStoppedValidators([0, 4], [3, 2], [])
     ).to.be.revertedWith('OnlyBeaconOracle()')
     await expect(controller.reportStoppedValidators([0, 4], [1, 3], [])).to.be.revertedWith(
-      'Reported negative or zero stopped validators'
+      'NegativeOrZeroValidators()'
     )
     await expect(controller.reportStoppedValidators([0, 4], [3, 0], [])).to.be.revertedWith(
-      'Reported negative or zero stopped validators'
+      'NegativeOrZeroValidators()'
     )
     await expect(controller.reportStoppedValidators([0, 4], [3, 3], [])).to.be.revertedWith(
-      'Reported more stopped validators than active'
+      'MoreValidatorsThanActive()'
     )
   })
 

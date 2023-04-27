@@ -22,6 +22,12 @@ contract NWLOperatorController is OperatorController {
     event ReportKeyPairValidation(uint256 indexed operatorId, bool success);
     event WithdrawStake(uint256 indexed _operatorId, uint256 amount);
 
+    error ETHTransferFailed();
+    error IncorrectMsgValue();
+    error QueueEntryAlreadyPassed(uint256 queueEntryIndex);
+    error QueueEntryNotFound(uint256 queueEntryIndex);
+    error InsufficientWithdrawableStake();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -76,7 +82,7 @@ contract NWLOperatorController is OperatorController {
         bytes calldata _pubkeys,
         bytes calldata _signatures
     ) external payable operatorExists(_operatorId) onlyOperatorOwner(_operatorId) {
-        require(msg.value == _quantity * depositAmount, "Incorrect stake amount");
+        if (msg.value != _quantity * depositAmount) revert IncorrectMsgValue();
         _addKeyPairs(_operatorId, _quantity, _pubkeys, _signatures);
     }
 
@@ -91,11 +97,8 @@ contract NWLOperatorController is OperatorController {
         uint256 _quantity,
         uint256[] calldata _queueEntryIndexes
     ) external operatorExists(_operatorId) onlyOperatorOwner(_operatorId) {
-        require(_quantity > 0, "Quantity must be greater than 0");
-        require(
-            _quantity <= operators[_operatorId].totalKeyPairs - operators[_operatorId].usedKeyPairs,
-            "Cannot remove used key pairs or more keys than are added"
-        );
+        if (_quantity == 0 || _quantity > operators[_operatorId].totalKeyPairs - operators[_operatorId].usedKeyPairs)
+            revert InvalidQuantity();
 
         uint256 toRemove = _quantity;
         uint256 unverifiedKeys = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
@@ -104,11 +107,11 @@ contract NWLOperatorController is OperatorController {
             toRemove -= unverifiedKeys;
             queueLength -= toRemove;
             for (uint256 i = 0; i < _queueEntryIndexes.length; i++) {
-                require(_queueEntryIndexes[i] >= queueIndex, "Cannot remove from queue entry that is already passed by");
-                require(_queueEntryIndexes[i] < queue.length, "Cannot remove from queue entry that does not exist");
+                if (_queueEntryIndexes[i] < queueIndex) revert QueueEntryAlreadyPassed(_queueEntryIndexes[i]);
+                if (_queueEntryIndexes[i] >= queue.length) revert QueueEntryNotFound(_queueEntryIndexes[i]);
 
                 QueueEntry memory entry = queue[_queueEntryIndexes[i]];
-                require(entry.operatorId == _operatorId, "Sender is not operator owner of queue entry");
+                if (entry.operatorId != _operatorId) revert OnlyOperatorOwner();
 
                 if (entry.numKeyPairs < toRemove) {
                     queue[_queueEntryIndexes[i]].numKeyPairs = 0;
@@ -130,7 +133,7 @@ contract NWLOperatorController is OperatorController {
         );
 
         (bool success, ) = payable(msg.sender).call{value: _quantity * depositAmount}("");
-        require(success, "ETH transfer failed");
+        if (!success) revert ETHTransferFailed();
 
         emit RemoveKeyPairs(_operatorId, _quantity);
     }
@@ -145,7 +148,7 @@ contract NWLOperatorController is OperatorController {
         onlyKeyValidationOracle
         operatorExists(_operatorId)
     {
-        require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
+        if (!operators[_operatorId].keyValidationInProgress) revert NoKeyValidationInProgress();
 
         if (_success && operators[_operatorId].active) {
             uint256 newKeyPairs = operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
@@ -170,8 +173,7 @@ contract NWLOperatorController is OperatorController {
         uint256[] calldata,
         uint256[] calldata
     ) external onlyEthStakingStrategy returns (bytes memory keys, bytes memory signatures) {
-        require(_validatorCount > 0, "Validator count must be greater than 0");
-        require(_validatorCount <= queueLength, "Cannot assign more than queue length");
+        if (_validatorCount == 0 || _validatorCount > queueLength) revert InvalidValidatorCount();
 
         bytes32 stateHash = currentStateHash;
         uint256 toAssign = _validatorCount;
@@ -219,7 +221,7 @@ contract NWLOperatorController is OperatorController {
         }
 
         (bool success, ) = payable(ethStakingStrategy).call{value: _validatorCount * depositAmount}("");
-        require(success, "ETH transfer failed");
+        if (!success) revert ETHTransferFailed();
 
         currentStateHash = stateHash;
         totalAssignedValidators += _validatorCount;
@@ -244,8 +246,7 @@ contract NWLOperatorController is OperatorController {
             uint256[] memory
         )
     {
-        require(_validatorCount > 0, "Validator count must be greater than 0");
-        require(_validatorCount <= queueLength, "Cannot assign more than queue length");
+        if (_validatorCount == 0 || _validatorCount > queueLength) revert InvalidValidatorCount();
 
         uint256[] memory assignedToOperators = new uint256[](operators.length);
         uint256 toAssign = _validatorCount;
@@ -294,7 +295,7 @@ contract NWLOperatorController is OperatorController {
         operatorExists(_operatorId)
         onlyOperatorOwner(_operatorId)
     {
-        require(_amount <= withdrawableStake(_operatorId), "Cannot withdraw more than available");
+        if (_amount > withdrawableStake(_operatorId)) revert InsufficientWithdrawableStake();
 
         operators[_operatorId].ethWithdrawn += _amount;
         IEthStakingStrategy(ethStakingStrategy).operatorControllerWithdraw(msg.sender, _amount);

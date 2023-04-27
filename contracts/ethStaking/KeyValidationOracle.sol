@@ -22,6 +22,9 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
 
     event SetOracleConfig(address oracleAddress, bytes32 jobId, uint256 fee);
 
+    error OnlyChainlinkToken();
+    error ValueNotEqualToFee();
+
     constructor(
         address _nwlOperatorController,
         address _wlOperatorController,
@@ -50,8 +53,8 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         uint256 _value,
         bytes calldata _calldata
     ) external {
-        require(msg.sender == chainlinkTokenAddress(), "Sender is not chainlink token");
-        require(_value == fee, "Value is not equal to fee");
+        if (msg.sender != chainlinkTokenAddress()) revert OnlyChainlinkToken();
+        if (_value != fee) revert ValueNotEqualToFee();
 
         (uint256 operatorId, bool isWhitelisted) = abi.decode(_calldata, (uint256, bool));
 

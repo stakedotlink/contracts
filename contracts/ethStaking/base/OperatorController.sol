@@ -66,6 +66,18 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     error OperatorAlreadyDisabled(uint256 id);
     error IndexOutOfRange(uint256 index);
     error CannotSetZeroAddress();
+    error InconsistentLengths();
+    error NegativeOrZeroValidators();
+    error MoreValidatorsThanActive();
+    error NegativeLostETH();
+    error MaxLossExceeded();
+    error KeyValidationInProgress();
+    error InvalidPubkeysLength();
+    error InvalidSignaturesLength();
+    error EmptyKey();
+    error InvalidValidatorCount();
+    error NoKeyValidationInProgress();
+    error InvalidQuantity();
 
     modifier operatorExists(uint256 _operatorId) {
         if (_operatorId >= operators.length) revert OperatorNotFound(_operatorId);
@@ -265,25 +277,18 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint256[] calldata _stoppedValidators,
         uint256[] calldata _ethLost
     ) external onlyBeaconOracle {
-        require(
-            _operatorIds.length == _stoppedValidators.length &&
-                (_ethLost.length == 0 || _operatorIds.length == _ethLost.length),
-            "Inconsistent list lengths"
-        );
+        if (
+            _operatorIds.length != _stoppedValidators.length ||
+            (_ethLost.length != 0 && _operatorIds.length != _ethLost.length)
+        ) revert InconsistentLengths();
 
         uint256 totalNewlyStoppedValidators;
 
         for (uint256 i = 0; i < _operatorIds.length; i++) {
             uint256 operatorId = _operatorIds[i];
             if (operatorId >= operators.length) revert OperatorNotFound(operatorId);
-            require(
-                _stoppedValidators[i] > operators[operatorId].stoppedValidators,
-                "Reported negative or zero stopped validators"
-            );
-            require(
-                _stoppedValidators[i] <= operators[operatorId].usedKeyPairs,
-                "Reported more stopped validators than active"
-            );
+            if (_stoppedValidators[i] <= operators[operatorId].stoppedValidators) revert NegativeOrZeroValidators();
+            if (_stoppedValidators[i] > operators[operatorId].usedKeyPairs) revert MoreValidatorsThanActive();
 
             rewardsPool.updateReward(operators[operatorId].owner);
 
@@ -296,10 +301,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
             }
 
             if (_ethLost.length != 0) {
-                require(_ethLost[i] >= operators[operatorId].ethLost, "Reported negative lost ETH");
+                if (_ethLost[i] < operators[operatorId].ethLost) revert NegativeLostETH();
 
                 uint256 newlyLostETH = _ethLost[i] - operators[operatorId].ethLost;
-                require(newlyLostETH <= newlyStoppedValidators * depositAmount, "Reported more than max loss per validator");
+                if (newlyLostETH > newlyStoppedValidators * depositAmount) revert MaxLossExceeded();
 
                 operators[operatorId].ethLost += newlyLostETH;
                 emit ReportStoppedValidators(operatorId, _stoppedValidators[i], _ethLost[i]);
@@ -423,15 +428,15 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         bytes calldata _pubkeys,
         bytes calldata _signatures
     ) internal {
-        require(!operators[_operatorId].keyValidationInProgress, "Key validation in progress");
-        require(_pubkeys.length == _quantity * PUBKEY_LENGTH, "Invalid pubkeys length");
-        require(_signatures.length == _quantity * SIGNATURE_LENGTH, "Invalid signatures length");
+        if (operators[_operatorId].keyValidationInProgress) revert KeyValidationInProgress();
+        if (_pubkeys.length != _quantity * PUBKEY_LENGTH) revert InvalidPubkeysLength();
+        if (_signatures.length != _quantity * SIGNATURE_LENGTH) revert InvalidSignaturesLength();
 
         bytes32 stateHash = currentStateHash;
 
         for (uint256 i = 0; i < _quantity; ++i) {
             bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            require(!_isEmptyKey(key), "Empty key");
+            if (_isEmptyKey(key)) revert EmptyKey();
             bytes memory signature = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
 
             _storeKeyPair(_operatorId, operators[_operatorId].totalKeyPairs + i, key, signature);

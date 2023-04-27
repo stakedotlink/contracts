@@ -30,19 +30,19 @@ describe('OperatorWhitelist', () => {
     assert.deepEqual(await opWhitelist.getWhitelistEntry(accounts[3]), [true, true])
 
     await expect(opWhitelist.connect(signers[1]).useWhitelist(accounts[2])).to.be.revertedWith(
-      'Sender is not wl operator controller'
+      'OnlyWLOperatorController()'
     )
     await expect(opWhitelist.useWhitelist(accounts[1])).to.be.revertedWith(
-      'Account is not whitelisted'
+      `AccountNotWhitelisted("${accounts[1]}")`
     )
     await expect(opWhitelist.useWhitelist(accounts[3])).to.be.revertedWith(
-      'Account whitelist spot already used'
+      `WhitelistSpotAlreadyUsed("${accounts[3]}")`
     )
   })
 
   it('addWhitelistEntries should work correctly', async () => {
     await expect(opWhitelist.addWhitelistEntries([accounts[2]])).to.be.revertedWith(
-      'Account already whitelisted'
+      `AccountAlreadyWhitelisted("${accounts[2]}")`
     )
     await expect(
       opWhitelist.connect(signers[1]).addWhitelistEntries([accounts[0]])
@@ -56,7 +56,7 @@ describe('OperatorWhitelist', () => {
 
   it('removeWhitelistEntries should work correctly', async () => {
     await expect(opWhitelist.removeWhitelistEntries([accounts[0]])).to.be.revertedWith(
-      'Account is not whitelisted'
+      `AccountNotWhitelisted("${accounts[0]}")`
     )
     await expect(
       opWhitelist.connect(signers[1]).removeWhitelistEntries([accounts[2]])

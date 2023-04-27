@@ -63,13 +63,24 @@ contract EthStakingStrategy is Strategy {
     error InvalidQueueOrder();
     error ControllerAlreadyAdded();
     error ControllerNotFound();
-    error OperatorControllerOnly();
+    error OnlyOperatorController();
+    error OnlyBeaconOracle();
+    error MoreValidatorsThanDeposited();
+    error LessValidatorsThanTracked();
+    error OnlyDepositController();
+    error InconsistentLengths();
+    error InvalidTotalDepositAmount();
+    error InvalidPubkeys();
+    error InvalidSignatures();
+    error InsufficientDepositRoom();
+    error EmptyWithdrawalCredentials();
+    error DepositFailed();
 
     modifier onlyOperatorController() {
         for (uint256 i = 0; i < operatorControllers.length; ++i) {
             if (msg.sender == operatorControllers[i]) _;
         }
-        revert OperatorControllerOnly();
+        revert OnlyOperatorController();
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -109,9 +120,9 @@ contract EthStakingStrategy is Strategy {
         uint256 _beaconBalance,
         uint256 _lostOperatorStakes
     ) external {
-        require(msg.sender == beaconOracle, "Sender is not beacon oracle");
-        require(_beaconValidators <= depositedValidators, "Reported more validators than deposited");
-        require(_beaconValidators >= beaconValidators, "Reported less validators than tracked");
+        if (msg.sender != beaconOracle) revert OnlyBeaconOracle();
+        if (_beaconValidators > depositedValidators) revert MoreValidatorsThanDeposited();
+        if (_beaconValidators < beaconValidators) revert LessValidatorsThanTracked();
 
         uint256 newValidators = _beaconValidators - beaconValidators;
         int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance + lostOperatorStakes);
@@ -147,24 +158,22 @@ contract EthStakingStrategy is Strategy {
         uint256[][] calldata _operatorIds,
         uint256[][] calldata _validatorCounts
     ) external {
-        require(msg.sender == depositController, "Sender is not deposit controller");
+        if (msg.sender != depositController) revert OnlyDepositController();
         uint256 operatorControllerCount = _totalValidatorCounts.length;
-        require(
-            operatorControllerCount == operatorControllers.length &&
-                operatorControllerCount == _depositAmounts.length &&
-                operatorControllerCount == _totalValidatorCounts.length &&
-                operatorControllerCount == _operatorIds.length &&
-                operatorControllerCount == _validatorCounts.length,
-            "Invalid param lengths"
-        );
+        if (
+            operatorControllerCount != operatorControllers.length ||
+            operatorControllerCount != _depositAmounts.length ||
+            operatorControllerCount != _totalValidatorCounts.length ||
+            operatorControllerCount != _operatorIds.length ||
+            operatorControllerCount != _validatorCounts.length
+        ) revert InconsistentLengths();
 
         uint256 totalDepositAmount;
         for (uint256 i = 0; i < operatorControllerCount; ++i) {
             totalDepositAmount += _totalValidatorCounts[i] * (DEPOSIT_AMOUNT - _depositAmounts[i]);
         }
 
-        require(totalDepositAmount > 0, "Cannot deposit 0");
-        require(bufferedETH >= totalDepositAmount, "Insufficient balance for deposit");
+        if (totalDepositAmount == 0 || totalDepositAmount > bufferedETH) revert InvalidTotalDepositAmount();
 
         IWrappedETH(address(token)).unwrap(totalDepositAmount);
 
@@ -177,10 +186,10 @@ contract EthStakingStrategy is Strategy {
             (bytes memory pubkeys, bytes memory signatures) = IOperatorController(operatorControllers[i])
                 .assignNextValidators(validatorCount, _operatorIds[i], _validatorCounts[i]);
 
-            require(pubkeys.length / PUBKEY_LENGTH == validatorCount, "Incorrect pubkeys length");
-            require(signatures.length / SIGNATURE_LENGTH == validatorCount, "Incorrect signatures length");
-            require(pubkeys.length % PUBKEY_LENGTH == 0, "Invalid pubkeys");
-            require(signatures.length % SIGNATURE_LENGTH == 0, "Invalid signatures");
+            if (pubkeys.length / PUBKEY_LENGTH != validatorCount || pubkeys.length % PUBKEY_LENGTH != 0)
+                revert InvalidPubkeys();
+            if (signatures.length / SIGNATURE_LENGTH != validatorCount || signatures.length % SIGNATURE_LENGTH != 0)
+                revert InvalidSignatures();
 
             for (uint256 j = 0; j < validatorCount; ++j) {
                 bytes memory pubkey = BytesLib.slice(pubkeys, j * PUBKEY_LENGTH, PUBKEY_LENGTH);
@@ -201,7 +210,7 @@ contract EthStakingStrategy is Strategy {
      * @param _amount amount of wETH to deposit
      */
     function deposit(uint256 _amount) external onlyStakingPool {
-        require(_amount <= canDeposit(), "Insufficient deposit room");
+        if (_amount > canDeposit()) revert InsufficientDepositRoom();
         token.transferFrom(address(stakingPool), address(this), _amount);
         totalDeposits += _amount;
         bufferedETH += _amount;
@@ -392,7 +401,7 @@ contract EthStakingStrategy is Strategy {
      * @param _signature signature of the deposit call
      */
     function _deposit(bytes memory _pubkey, bytes memory _signature) internal {
-        require(withdrawalCredentials != 0, "Empty withdrawal credentials");
+        if (withdrawalCredentials == 0) revert EmptyWithdrawalCredentials();
 
         uint256 depositValue = DEPOSIT_AMOUNT;
         uint256 depositAmount = depositValue / DEPOSIT_AMOUNT_UNIT;
@@ -420,7 +429,7 @@ contract EthStakingStrategy is Strategy {
             depositDataRoot
         );
 
-        require(address(this).balance == targetBalance, "Deposit failed");
+        if (address(this).balance != targetBalance) revert DepositFailed();
     }
 
     /**

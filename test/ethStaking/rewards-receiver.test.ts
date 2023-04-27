@@ -30,7 +30,7 @@ describe('RewardsReceiver', () => {
     )
 
     await expect(rewardsReceiver.connect(signers[1]).withdraw()).to.be.revertedWith(
-      'Sender is not ETH staking strategy'
+      'OnlyETHStakingStrategy()'
     )
 
     let value = await rewardsReceiver.callStatic.withdraw()

@@ -16,6 +16,10 @@ contract RewardsReceiver is Ownable {
     event RewardsWithdrawn(uint256 amount);
     event SetWithdrawalLimits(uint256 min, uint256 max);
 
+    error OnlyETHStakingStrategy();
+    error ETHTransferFailed();
+    error InvalidWithdrawalLimits();
+
     constructor(
         address _ethStakingStrategy,
         uint256 _minWithdrawalAmount,
@@ -34,7 +38,7 @@ contract RewardsReceiver is Ownable {
      * @notice Withdraws rewards to the ETH staking strategy
      */
     function withdraw() external returns (uint256) {
-        require(msg.sender == ethStakingStrategy, "Sender is not ETH staking strategy");
+        if (msg.sender != ethStakingStrategy) revert OnlyETHStakingStrategy();
 
         uint256 balance = address(this).balance;
         uint256 value;
@@ -49,7 +53,7 @@ contract RewardsReceiver is Ownable {
 
         if (value > 0) {
             (bool success, ) = ethStakingStrategy.call{value: value}("");
-            require(success, "ETH transfer failed");
+            if (!success) revert ETHTransferFailed();
             emit RewardsWithdrawn(value);
         }
 
@@ -62,7 +66,7 @@ contract RewardsReceiver is Ownable {
      * @param _maxWithdrawalAmount maximum amount
      */
     function setWithdrawalLimits(uint256 _minWithdrawalAmount, uint256 _maxWithdrawalAmount) external onlyOwner {
-        require(_minWithdrawalAmount <= _maxWithdrawalAmount, "min must be less than or equal to max");
+        if (_minWithdrawalAmount > _maxWithdrawalAmount) revert InvalidWithdrawalLimits();
         minWithdrawalAmount = _minWithdrawalAmount;
         maxWithdrawalAmount = _maxWithdrawalAmount;
         emit SetWithdrawalLimits(_minWithdrawalAmount, _maxWithdrawalAmount);
