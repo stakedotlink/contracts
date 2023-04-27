@@ -28,6 +28,7 @@ async function main() {
     sdlToken.address,
     DelegatorPool.derivativeTokenName,
     DelegatorPool.derivativeTokenSymbol,
+    [],
   ])
   console.log('DelegatorPool deployed: ', delegatorPool.address)
 
