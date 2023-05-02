@@ -77,7 +77,7 @@ async function main() {
 
   // stake SDL
 
-  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x00')
+  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x')
 
   // stake LINK
 
@@ -99,7 +99,7 @@ async function main() {
 
   // stake SDL
 
-  await sdlToken.connect(signers[4]).transferAndCall(delegatorPool.address, toEther(100000), '0x00')
+  await sdlToken.connect(signers[4]).transferAndCall(delegatorPool.address, toEther(100000), '0x')
 
   const canDepositAddress4 = await poolRouter['canDeposit(address,address,uint16)'](
     accounts[4],
