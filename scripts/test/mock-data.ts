@@ -181,13 +181,13 @@ async function main() {
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x0', 32))
   await ethToken.transferAndCall(poolRouter.address, toEther(1000), padBytes('0x1', 32))
 
-  await stakingPoolOne.transfer(accounts[3], toEther(400))
-  await stakingPoolTwo.transfer(accounts[3], toEther(600))
+  await stakingPoolOne.transfer(accounts[3], toEther(200))
+  await stakingPoolTwo.transfer(accounts[3], toEther(250))
 
-  await stakingPoolOne.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(400))
-  await stakingPoolTwo.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(600))
-  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stakingPoolOne.address, toEther(400))
-  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stakingPoolTwo.address, toEther(600))
+  await stakingPoolOne.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(200))
+  await stakingPoolTwo.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(250))
+  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stakingPoolOne.address, toEther(200))
+  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stakingPoolTwo.address, toEther(250))
 
   await stakingPoolOne.transfer(accounts[2], toEther(100))
   await stakingPoolTwo.transfer(accounts[2], toEther(100))
