@@ -40,6 +40,9 @@ async function main() {
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
 
+  // disable reserved mode
+  await poolRouter.setReservedModeActive(linkToken.address, 0, false)
+
   const poolMin = 10
   const poolMax = 1000000
 
@@ -119,7 +122,7 @@ async function main() {
     delegatorPool.address,
     accounts[5],
     toEther(600),
-    defaultAbiCoder.encode(['uint64', 'uint64'], [1685980800, 47347200])
+    defaultAbiCoder.encode(['uint256'], [toEther(400)])
   )
 
   // Liquid SD Index
