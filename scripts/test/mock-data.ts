@@ -40,9 +40,6 @@ async function main() {
 
   await sdlToken.mint(lplMigration.address, toEther(150000))
 
-  // disable reserved mode
-  await poolRouter.setReservedModeActive(linkToken.address, 0, false)
-
   const poolMin = 10
   const poolMax = 1000000
 
