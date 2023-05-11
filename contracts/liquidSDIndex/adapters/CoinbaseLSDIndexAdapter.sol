@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import {LSDIndexAdapter} from "../base/LSDIndexAdapter.sol";
-import {ICoinbaseCBETH} from "../../interfaces/coinbase/ICoinbaseCBETH.sol";
+import {ICoinbaseCBETH} from "../interfaces/ICoinbaseCBETH.sol";
 
 /**
  * @title Coinbase cbETH Adapter

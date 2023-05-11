@@ -2,7 +2,7 @@
 pragma solidity 0.8.15;
 
 import {LSDIndexAdapter} from "../base/LSDIndexAdapter.sol";
-import {ISFRXETH} from "../../interfaces/ISFRXETH.sol";
+import {ISFRXETH} from "../interfaces/ISFRXETH.sol";
 
 /**
  * @title Frax sfrxETH Adapter
