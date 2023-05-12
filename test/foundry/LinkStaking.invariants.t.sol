@@ -17,6 +17,7 @@ import {StakingPool} from "../../contracts/core/StakingPool.sol";
 import {RewardsPoolWSD} from "../../contracts/core/RewardsPoolWSD.sol";
 import {WrappedSDToken} from "../../contracts/core/tokens/WrappedSDToken.sol";
 import {PoolRouter} from "../../contracts/core/PoolRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TestContract is Test {
     address public admin;
@@ -36,17 +37,20 @@ contract TestContract is Test {
     WrappedSDToken public wrappedSDToken;
     UUPSProxy public stakingPoolProxy;
     UUPSProxy public poolRouterProxy;
-    UUPSProxy delegatorPoolProxy;
+    UUPSProxy public delegatorPoolProxy;
 
     function setUp() public {
         admin = makeAddr("admin");
         _initSetUp();
-        handler = new Handler();
+        handler = new Handler(admin, delegatorPool);
         bytes4[] memory selectors = new bytes4[](1);
-        // selectors[0] = Handler.makeSwap.selector;
+        selectors[0] = Handler.stakeSDL.selector;
+
+        targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
+        targetContract(address(handler));
     }
 
-    function test_Contract() external {
+    function test_stakeSDL() external {
         assertTrue(1 + 1 == 2);
     }
 
@@ -68,7 +72,7 @@ contract TestContract is Test {
         poolOwners.addRewardToken(address(linkToken), address(poolAllowance), address(ownersRewardsPool));
 
         sdlToken = new StakingAllowance("stake.link", "SDL");
-
+        IERC20(address(sdlToken)).balanceOf(admin);
         migration = new LPLMigration(
             address(lplToken),
             address(sdlToken)
