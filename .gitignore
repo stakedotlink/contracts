@@ -1,8 +1,12 @@
 node_modules
 
 cache
+forge-cache
 artifacts
 typechain-types
 deployments/localhost.json
 .openzeppelin/unknown-31337.json
 .openzeppelin/unknown-7777.json
+
+.envrc
+.vscode

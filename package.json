@@ -14,7 +14,9 @@
     "tsc": "tsc",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
     "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
-    "solhint": "solhint contracts/**/*.sol"
+    "solhint": "solhint contracts/**/*.sol",
+    "test-foundry": "forge test -vvv",
+    "test-foundry-invariants": "forge test --match-test invariant -vv --ffi"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
@@ -47,6 +49,7 @@
     "@openzeppelin/contracts": "^4.7.0",
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "@prb/math": "^2.5.0",
+    "forge-std": "https://github.com/foundry-rs/forge-std.git#v1.5.5",
     "solidity-bytes-utils": "^0.8.0"
   }
 }

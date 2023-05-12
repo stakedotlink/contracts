@@ -1,7 +1,7 @@
 [profile.default]
-src = "src"
+src = "contracts"
 out = "artifacts"
-libs = ["node_modules", "lib"]
+libs = ["node_modules"]
 remappings = [
     "@chainlink/=node_modules/@chainlink/",
     "@ensdomains/=node_modules/@ensdomains/",
@@ -10,6 +10,19 @@ remappings = [
     "@prb/=node_modules/@prb/",
     "hardhat/=node_modules/hardhat/",
     "solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+    "forge-std/=node_modules/forge-std/src/",
 ]
+test = 'test/foundry'
+cache_path  = 'forge-cache'
 
-# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+[rpc_endpoints]
+mainnet = "${MAINNET_RPC_URL}"
+
+[invariant]
+runs = 20
+depth = 25
+fail_on_revert = true
+call_override = false
+dictionary_weight = 80
+include_storage = true
+include_push_bytes = true
