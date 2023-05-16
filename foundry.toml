@@ -19,7 +19,7 @@ cache_path  = 'forge-cache'
 mainnet = "${MAINNET_RPC_URL}"
 
 [invariant]
-runs = 20
+runs = 1000
 depth = 25
 fail_on_revert = true
 call_override = false

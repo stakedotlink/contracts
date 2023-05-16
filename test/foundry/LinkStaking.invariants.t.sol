@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {LinkStakingHandler as Handler} from "./handlers/LinkStakingHandler.sol";
 import {Utils} from "./utils/Utils.sol";
 import {ERC677} from "../../contracts/core/tokens/base/ERC677.sol";
@@ -42,16 +43,36 @@ contract TestContract is Test {
     function setUp() public {
         admin = makeAddr("admin");
         _initSetUp();
-        handler = new Handler(admin, delegatorPool);
-        bytes4[] memory selectors = new bytes4[](1);
+        handler = new Handler(admin, delegatorPool, sdlToken);
+        bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = Handler.stakeSDL.selector;
+        selectors[1] = Handler.withdrawAllowance.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
         targetContract(address(handler));
     }
 
-    function test_stakeSDL() external {
-        assertTrue(1 + 1 == 2);
+    function invariant_stakeSDL() external {
+        assertGe(sdlToken.totalSupply(), IERC20(sdlToken).balanceOf(address(delegatorPool)));
+        address[] memory userAddresses = handler.getUserAddresses();
+        // for (uint256 i = 0; i < userAddresses.length; i++) {
+        //     if (userAddresses[i] != address(0)) {
+        //         assertTrue(IERC20(address(sdlToken)).balanceOf(userAddresses[i]) == 0);
+        //     }
+        // }
+    }
+
+    // No individual account balance can exceed the
+    // SDL totalSupply().
+    function invariant_depositorBalances() public {
+        handler.forEachActor(this._assertAccountBalanceLteTotalSupply);
+    }
+
+    /**
+     * @notice Used to log different state variables during invariant testing
+     */
+    function invariant_callSummary() public view {
+        handler.callSummary();
     }
 
     function _initSetUp() internal {
@@ -72,7 +93,7 @@ contract TestContract is Test {
         poolOwners.addRewardToken(address(linkToken), address(poolAllowance), address(ownersRewardsPool));
 
         sdlToken = new StakingAllowance("stake.link", "SDL");
-        IERC20(address(sdlToken)).balanceOf(admin);
+
         migration = new LPLMigration(
             address(lplToken),
             address(sdlToken)
@@ -92,7 +113,7 @@ contract TestContract is Test {
             address(wrappedSDToken)
         );
         PoolRouter(payable(address(poolRouterProxy))).addPool(
-            address(stakingPoolProxy), PoolRouter.PoolStatus.OPEN, true
+            address(stakingPoolProxy), PoolRouter.PoolStatus.OPEN, false
         );
 
         delegatorPool.addToken(address(stakingPoolProxy), address(stLinkDelegatorRewardsPool));
@@ -148,5 +169,9 @@ contract TestContract is Test {
             )
         );
         stakingPool = StakingPool(address(stakingPoolProxy));
+    }
+
+    function _assertAccountBalanceLteTotalSupply(address account) external {
+        assertLe(sdlToken.balanceOf(account), sdlToken.totalSupply());
     }
 }
