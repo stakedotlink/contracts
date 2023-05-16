@@ -34,6 +34,8 @@ async function main() {
   const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
   const stETHToken = (await getContract('stETHToken')) as ERC20
   const rETHToken = (await getContract('rETHToken')) as ERC20
+  const cbETHToken = (await getContract('cbETHToken')) as ERC20
+  const sfrxETHToken = (await getContract('sfrxETHToken')) as ERC20
 
   // LPL Migration
 
@@ -63,39 +65,65 @@ async function main() {
     toEther(1.2),
   ])) as LSDIndexAdapterMock
 
+  const coinbaseAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
+    cbETHToken.address,
+    ETH_LiquidSDIndexPool.address,
+    toEther(1.03),
+  ])) as LSDIndexAdapterMock
+
+  const fraxAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
+    sfrxETHToken.address,
+    ETH_LiquidSDIndexPool.address,
+    toEther(1.03),
+  ])) as LSDIndexAdapterMock
+
   await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
   await ETH_LiquidSDIndexPool.addLSDToken(
     rETHToken.address,
     rocketPoolAdapter.address,
     [7500, 2500]
   )
+  await ETH_LiquidSDIndexPool.addLSDToken(
+    cbETHToken.address,
+    coinbaseAdapter.address,
+    [5200, 1800, 3000]
+  )
+  await ETH_LiquidSDIndexPool.addLSDToken(
+    sfrxETHToken.address,
+    fraxAdapter.address,
+    [4600, 1600, 2700, 1100]
+  )
 
   updateDeployments(
     {
-      ixETH_LidoLSDIndexAdapter: lidoAdapter.address,
-      ixETH_RocketPoolLSDIndexAdapter: rocketPoolAdapter.address,
+      ixETH_CoinbaseLSDIndexAdapter: coinbaseAdapter.address,
+      ixETH_FraxLSDIndexAdapter: fraxAdapter.address,
     },
     {
-      ixETH_LidoLSDIndexAdapter: 'LidoLSDIndexAdapter',
-      ixETH_RocketPoolLSDIndexAdapter: 'RocketPoolLSDIndexAdapter',
+      ixETH_CoinbaseLSDIndexAdapter: 'CoinbaseLSDIndexAdapter',
+      ixETH_FraxLSDIndexAdapter: 'FraxLSDIndexAdapter',
     }
   )
 
-  // Account 2 - holds SDL/LPL/LINK/stETH/rETH with no staked assets
+  // Account 2 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH with no staked assets
 
   await sdlToken.mint(accounts[2], toEther(10000))
   await lplToken.transfer(accounts[2], toEther(10000))
   await linkToken.transfer(accounts[2], toEther(10000))
   await stETHToken.transfer(accounts[2], toEther(10000))
   await rETHToken.transfer(accounts[2], toEther(10000))
+  await cbETHToken.transfer(accounts[2], toEther(10000))
+  await sfrxETHToken.transfer(accounts[2], toEther(10000))
 
-  // Account 3 - holds SDL/LPL/LINK/stETH/rETH and stSDL/stLINK/ixETH and has stLINK rewards
+  // Account 3 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH and stSDL/stLINK/ixETH and has stLINK rewards
 
   await sdlToken.mint(accounts[3], toEther(10000))
   await lplToken.transfer(accounts[3], toEther(10000))
   await linkToken.transfer(accounts[3], toEther(10000))
   await stETHToken.transfer(accounts[3], toEther(10000))
   await rETHToken.transfer(accounts[3], toEther(10000))
+  await cbETHToken.transfer(accounts[3], toEther(10000))
+  await sfrxETHToken.transfer(accounts[3], toEther(10000))
 
   await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x00')
   await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(100), '0x00')
@@ -103,6 +131,10 @@ async function main() {
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(100))
   await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(rETHToken.address, toEther(50))
+  await cbETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
+  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(cbETHToken.address, toEther(50))
+  await sfrxETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
+  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(sfrxETHToken.address, toEther(50))
 
   await linkToken.transfer(strategyMockLINK.address, toEther(100))
   await LINK_StakingPool.updateStrategyRewards([0])
