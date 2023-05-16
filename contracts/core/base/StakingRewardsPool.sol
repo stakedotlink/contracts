@@ -103,7 +103,11 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @param _amount amount to transfer
      *
      */
-    function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
+    function _transfer(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) internal override {
         uint256 sharesToTransfer = getSharesByStake(_amount);
 
         require(_sender != address(0), "Transfer from the zero address");
