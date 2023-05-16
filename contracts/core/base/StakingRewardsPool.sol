@@ -40,7 +40,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice returns an account's stake balance
      * @param _account account address
      * @return account's stake balance
-     *
      */
     function balanceOf(address _account) public view override returns (uint256) {
         uint256 balance = getStakeByShares(shares[_account]);
@@ -55,7 +54,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice returns an account's share balance
      * @param _account account address
      * @return account's share balance
-     *
      */
     function sharesOf(address _account) public view returns (uint256) {
         return shares[_account];
@@ -65,7 +63,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice returns the amount of shares that corresponds to a staked amount
      * @param _amount staked amount
      * @return amount of shares
-     *
      */
     function getSharesByStake(uint256 _amount) public view returns (uint256) {
         uint256 totalStaked = _totalStaked();
@@ -80,7 +77,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice returns the amount of stake that corresponds to an amount of shares
      * @param _amount shares amount
      * @return amount of stake
-     *
      */
     function getStakeByShares(uint256 _amount) public view returns (uint256) {
         if (totalShares == 0) {
@@ -101,7 +97,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @param _sender account to transfer from
      * @param _recipient account to transfer to
      * @param _amount amount to transfer
-     *
      */
     function _transfer(
         address _sender,
@@ -125,7 +120,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @dev takes a stake amount and calculates the amount of shares it corresponds to
      * @param _recipient account to mint shares for
      * @param _amount stake amount
-     *
      */
     function _mint(address _recipient, uint256 _amount) internal override {
         uint256 sharesToMint = getSharesByStake(_amount);
@@ -142,7 +136,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @notice mints new shares to an account
      * @param _recipient account to mint shares for
      * @param _amount shares amount
-     *
      */
     function _mintShares(address _recipient, uint256 _amount) internal {
         require(_recipient != address(0), "Mint to the zero address");
@@ -156,7 +149,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @dev takes a stake amount and calculates the amount of shares it corresponds to
      * @param _account account to burn shares for
      * @param _amount stake amount
-     *
      */
     function _burn(address _account, uint256 _amount) internal override {
         uint256 sharesToBurn = getSharesByStake(_amount);
