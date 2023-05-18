@@ -136,6 +136,7 @@ async function main() {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
   //await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(100), '0x00')
+  //await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x')
   await stETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(100))
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(100))
   await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
