@@ -96,10 +96,14 @@ async function main() {
 
   updateDeployments(
     {
+      ixETH_LidoLSDIndexAdapter: lidoAdapter.address,
+      ixETH_RocketPoolLSDIndexAdapter: rocketPoolAdapter.address,
       ixETH_CoinbaseLSDIndexAdapter: coinbaseAdapter.address,
       ixETH_FraxLSDIndexAdapter: fraxAdapter.address,
     },
     {
+      ixETH_LidoLSDIndexAdapter: 'LidoLSDIndexAdapter',
+      ixETH_RocketPoolLSDIndexAdapter: 'RocketPoolLSDIndexAdapter',
       ixETH_CoinbaseLSDIndexAdapter: 'CoinbaseLSDIndexAdapter',
       ixETH_FraxLSDIndexAdapter: 'FraxLSDIndexAdapter',
     }
