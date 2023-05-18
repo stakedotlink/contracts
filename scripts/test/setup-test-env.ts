@@ -125,8 +125,8 @@ async function main() {
   await cbETHToken.transfer(accounts[3], toEther(10000))
   await sfrxETHToken.transfer(accounts[3], toEther(10000))
 
-  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x00')
-  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(100), '0x00')
+  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(100), '0x')
   await stETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(100))
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(100))
   await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
