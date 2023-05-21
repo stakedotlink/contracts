@@ -164,8 +164,8 @@ async function main() {
     [5200, 1800, 3000]
   )
   await ETH_LiquidSDIndexPool.addLSDToken(
+    sfrxETHToken.address,
     fraxAdapter.address,
-    adapterFour.address,
     [4600, 1600, 2700, 1100]
   )
 
