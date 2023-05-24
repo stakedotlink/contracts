@@ -7,31 +7,22 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../interfaces/IRewardsPool.sol";
 import "../RewardsPool.sol";
-import "../tokens/base/ERC677Upgradeable.sol";
 
 /**
  * @title Rewards Pool Controller
  * @notice Acts as a proxy for any number of rewards pools
  */
-abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, ERC677Upgradeable {
+abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     mapping(address => IRewardsPool) public tokenPools;
     address[] private tokens;
 
-    mapping(address => address) public rewardRedirects; // deprecated
-    mapping(address => uint256) public redirectedStakes; // deprecated
-    mapping(address => address) public redirectApprovals; // deprecated
-
     event WithdrawRewards(address indexed account);
     event AddToken(address indexed token, address rewardsPool);
     event RemoveToken(address indexed token, address rewardsPool);
 
-    function __RewardsPoolController_init(string memory _derivativeTokenName, string memory _derivativeTokenSymbol)
-        public
-        onlyInitializing
-    {
-        __ERC677_init(_derivativeTokenName, _derivativeTokenSymbol, 0);
+    function __RewardsPoolController_init() public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
     }
@@ -92,32 +83,14 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable, 
      * @param _account account address
      * @return account's staked amount
      */
-    function staked(address _account) external view virtual returns (uint256) {
-        return balanceOf(_account);
-    }
+    function staked(address _account) external view virtual returns (uint256);
 
     /**
      * @notice returns the total staked amount for use by reward pools
      * controlled by this contract
      * @return total staked amount
      */
-    function totalStaked() external view virtual returns (uint256) {
-        return totalSupply();
-    }
-
-    /**
-     * @dev updates the rewards of the sender and receiver
-     * @param _from account sending from
-     * @param _to account sending to
-     * @param _amount amount being sent
-     */
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) internal virtual override updateRewards(_from) updateRewards(_to) {
-        super._transfer(_from, _to, _amount);
-    }
+    function totalStaked() external view virtual returns (uint256);
 
     /**
      * @notice distributes token balances to their respective rewards pools
