@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IRewardsPoolController.sol";
+import "./interfaces/IERC677.sol";
 
 /**
  * @title RewardsPool
