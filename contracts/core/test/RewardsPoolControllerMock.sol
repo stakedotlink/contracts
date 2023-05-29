@@ -20,12 +20,8 @@ contract RewardsPoolControllerMock is RewardsPoolController {
         _disableInitializers();
     }
 
-    function initialize(
-        address _token,
-        string memory _dTokenName,
-        string memory _dTokenSymbol
-    ) public initializer {
-        __RewardsPoolController_init(_dTokenName, _dTokenSymbol);
+    function initialize(address _token) public initializer {
+        __RewardsPoolController_init();
         token = IERC20Upgradeable(_token);
     }
 
