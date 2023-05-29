@@ -15,18 +15,18 @@ import {
   StrategyMock,
   StakingPool,
   WrappedSDToken,
-  DelegatorPoolMock,
+  ERC677ReceiverMock,
 } from '../../typechain-types'
 
 describe('StakingPool', () => {
   let token: ERC677
   let wsdToken: WrappedSDToken
-  let delegatorPool: DelegatorPoolMock
   let stakingPool: StakingPool
   let strategy1: StrategyMock
   let strategy2: StrategyMock
   let strategy3: StrategyMock
   let ownersRewards: string
+  let erc677Receiver: ERC677ReceiverMock
   let signers: Signer[]
   let accounts: string[]
 
@@ -48,7 +48,7 @@ describe('StakingPool', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    delegatorPool = (await deploy('DelegatorPoolMock', [token.address, 0])) as DelegatorPoolMock
+    erc677Receiver = (await deploy('ERC677ReceiverMock')) as ERC677ReceiverMock
 
     stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,
@@ -56,10 +56,9 @@ describe('StakingPool', () => {
       'lpLINK',
       [
         [ownersRewards, 1000],
-        [delegatorPool.address, 2000],
+        [erc677Receiver.address, 2000],
       ],
       accounts[0],
-      delegatorPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
@@ -106,7 +105,7 @@ describe('StakingPool', () => {
       JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
       JSON.stringify([
         [ownersRewards, BigNumber.from(1000)],
-        [delegatorPool.address, BigNumber.from(2000)],
+        [erc677Receiver.address, BigNumber.from(2000)],
         [accounts[1], BigNumber.from(500)],
       ]),
       'fees incorrect'
@@ -119,7 +118,7 @@ describe('StakingPool', () => {
       JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
       JSON.stringify([
         [accounts[1], BigNumber.from(100)],
-        [delegatorPool.address, BigNumber.from(2000)],
+        [erc677Receiver.address, BigNumber.from(2000)],
       ]),
       'fees incorrect'
     )
@@ -381,12 +380,12 @@ describe('StakingPool', () => {
       'Owners rewards balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await stakingPool.balanceOf(delegatorPool.address))),
+      Number(fromEther(await stakingPool.balanceOf(erc677Receiver.address))),
       240,
       'Delegator pool balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await delegatorPool.totalRewards()).toFixed(2)),
+      Number(fromEther(await erc677Receiver.totalRewards()).toFixed(2)),
       240,
       'Delegator pool rewards incorrect'
     )
@@ -433,7 +432,7 @@ describe('StakingPool', () => {
       'Strategy fee balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(delegatorPool.address)),
+      fromEther(await stakingPool.balanceOf(erc677Receiver.address)),
       260,
       'Delegation fee balance incorrect'
     )

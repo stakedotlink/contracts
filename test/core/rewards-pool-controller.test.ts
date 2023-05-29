@@ -50,8 +50,6 @@ describe('RewardsPoolController', () => {
 
     controller = (await deployUpgradeable('RewardsPoolControllerMock', [
       stakingToken.address,
-      'lSTA',
-      'Lent Staking Allowance',
     ])) as RewardsPoolControllerMock
 
     rewardsPool1 = (await deploy('RewardsPool', [

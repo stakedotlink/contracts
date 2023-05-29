@@ -9,13 +9,7 @@ import {
   setupToken,
   fromEther,
 } from '../utils/helpers'
-import {
-  ERC677,
-  StrategyMock,
-  StakingPool,
-  WrappedSDToken,
-  DelegatorPoolMock,
-} from '../../typechain-types'
+import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../typechain-types'
 
 describe('WrappedSDToken', () => {
   let token: ERC677
@@ -40,15 +34,12 @@ describe('WrappedSDToken', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    let delegatorPool = (await deploy('DelegatorPoolMock', [token.address, 0])) as DelegatorPoolMock
-
     stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lplLINK',
       [[ownersRewards, 0]],
       accounts[0],
-      delegatorPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
