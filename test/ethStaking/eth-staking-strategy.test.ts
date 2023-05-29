@@ -21,7 +21,7 @@ import {
   OperatorWhitelistMock,
   RewardsPool,
   RewardsReceiver,
-  DelegatorPoolMock,
+  ERC677ReceiverMock,
 } from '../../typechain-types'
 import { Signer } from 'ethers'
 
@@ -51,6 +51,7 @@ describe('EthStakingStrategy', () => {
   let wlRewardsPool: RewardsPool
   let strategy: EthStakingStrategy
   let ownersRewards: string
+  let erc677Receiver: ERC677ReceiverMock
   let accounts: string[]
   let signers: Signer[]
 
@@ -67,7 +68,7 @@ describe('EthStakingStrategy', () => {
   beforeEach(async () => {
     wETH = (await deploy('WrappedETH')) as WrappedETH
 
-    let delegatorPool = (await deploy('DelegatorPoolMock', [wETH.address, 0])) as DelegatorPoolMock
+    erc677Receiver = (await deploy('ERC677ReceiverMock')) as ERC677ReceiverMock
 
     stakingPool = (await deployUpgradeable('StakingPool', [
       wETH.address,
@@ -75,10 +76,9 @@ describe('EthStakingStrategy', () => {
       'lplETH',
       [
         [ownersRewards, 1000],
-        [delegatorPool.address, 2000],
+        [erc677Receiver.address, 2000],
       ],
       accounts[0],
-      delegatorPool.address,
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [

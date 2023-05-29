@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
-import "./interfaces/IDelegatorPool.sol";
 
 /**
  * @title Staking Pool
@@ -27,7 +26,7 @@ contract StakingPool is StakingRewardsPool {
     Fee[] private fees;
 
     address public poolRouter;
-    address public delegatorPool;
+    address public delegatorPool; // deprecated
     uint16 public poolIndex;
 
     event Stake(address indexed account, uint256 amount);
@@ -44,12 +43,10 @@ contract StakingPool is StakingRewardsPool {
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
         Fee[] memory _fees,
-        address _poolRouter,
-        address _delegatorPool
+        address _poolRouter
     ) public initializer {
         __StakingRewardsPool_init(_token, _derivativeTokenName, _derivativeTokenSymbol);
         poolRouter = _poolRouter;
-        delegatorPool = _delegatorPool;
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
