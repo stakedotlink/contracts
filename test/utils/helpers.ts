@@ -1,7 +1,6 @@
 import { ethers, upgrades } from 'hardhat'
 import { assert } from 'chai'
-import { BigNumber } from 'ethers'
-import { ERC677 } from '../../typechain-types'
+import { BigNumber, Contract } from 'ethers'
 
 export const toEther = (amount: string | number) => {
   return ethers.utils.parseEther(amount.toString()).toHexString()
@@ -50,7 +49,7 @@ export const getAccounts = async () => {
   return { signers, accounts }
 }
 
-export const setupToken = async (token: ERC677, accounts: string[]) => {
+export const setupToken = async (token: Contract, accounts: string[]) => {
   return Promise.all(
     accounts.map((account, index) => token.transfer(account, toEther(index < 4 ? 10000 : 0)))
   )
