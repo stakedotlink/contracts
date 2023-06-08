@@ -97,7 +97,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns the effective stake balance (including boost) of an account
+     * @notice returns the effective stake balance (including boost) of an account
      * @param _account address of account
      * @return effective stake balance
      **/
@@ -106,7 +106,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns the number of locks owned by an account
+     * @notice returns the number of locks owned by an account
      * @param _account address of account
      * @return total number of locks owned by account
      **/
@@ -115,7 +115,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns the owner of a lock
+     * @notice returns the owner of a lock
      * @param _lockId id of the lock
      * @return lock owner
      **/
@@ -126,7 +126,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns a list of locks corresponding to a list of lock ids
+     * @notice returns a list of locks corresponding to a list of lock ids
      * @param _lockIds list of lock ids
      * @return list of locks
      **/
@@ -144,7 +144,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns a list of lock ids owned by an account
+     * @notice returns a list of lock ids owned by an account
      * @param _owner address of account
      * @return list of lock ids
      **/
@@ -195,7 +195,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Extends the locking duration of a lock
+     * @notice extends the locking duration of a lock
      * @param _lockId id of lock
      * @param _lockingDuration new locking duration to set
      **/
@@ -205,7 +205,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Initiates the unlock period for a lock
+     * @notice initiates the unlock period for a lock
      * @dev at least half of a lock's duration must have elapsed to initiate an unlock - the unlock period
      * also consists of half of the duration
      * @param _lockId id of lock
@@ -226,7 +226,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Withdraws unlocked SDL
+     * @notice withdraws unlocked SDL
      * @dev SDL can only be withdrawn once the unlock period has expired
      * @param _lockId id of the lock
      * @param _amount amount to withdraw from the lock
@@ -261,7 +261,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Transfers a lock between accounts
+     * @notice transfers a lock between accounts
      * @param _from address to transfer from
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
@@ -276,7 +276,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Transfers a lock between accounts and validates that the receiver supports ERC721
+     * @notice transfers a lock between accounts and validates that the receiver supports ERC721
      * @dev calls onERC721Received on the receiver contract if applicable
      * @param _from address to transfer from
      * @param _to address to transfer to
@@ -291,7 +291,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Transfers a lock between accounts and validates that the receiver supports ERC721
+     * @notice transfers a lock between accounts and validates that the receiver supports ERC721
      * @dev calls onERC721Received on the receiver contract if applicable
      * @param _from address to transfer from
      * @param _to address to transfer to
@@ -310,7 +310,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Approves _to to transfer _lockId to another address
+     * @notice approves _to to transfer _lockId to another address
      * @dev approval is revoked on transfer, can also be revoked by approving zero address
      * @param _to address approved to transfer
      * @param _lockId id of lock
@@ -326,7 +326,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns the address approved to transfer a lock
+     * @notice returns the address approved to transfer a lock
      * @param _lockId id of lock
      * @return approved address
      **/
@@ -337,7 +337,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Approves _operator to transfer all tokens owned by sender
+     * @notice approves _operator to transfer all tokens owned by sender
      * @dev approval will not be revoked until this function is called again with
      * _approved set to false
      * @param _operator address approved to transfer
@@ -352,7 +352,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns whether _operator is approved to transfer all tokens owned by _owner
+     * @notice returns whether _operator is approved to transfer all tokens owned by _owner
      * @param _owner owner of tokens
      * @param _operator address approved to transfer
      * @return whether address is approved or not
@@ -362,7 +362,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns an account's staked amount for use by reward pools
+     * @notice returns an account's staked amount for use by reward pools
      * controlled by this contract
      * @param _account account address
      * @return account's staked amount
@@ -372,7 +372,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns the total staked amount for use by reward pools
+     * @notice returns the total staked amount for use by reward pools
      * controlled by this contract
      * @return total staked amount
      */
@@ -381,7 +381,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Returns whether this contract supports an interface
+     * @notice returns whether this contract supports an interface
      * @param _interfaceId id of interface
      * @return whether contract supports interface or not
      */
@@ -393,14 +393,14 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Required to conform to IERC721Metadata
+     * @notice required to conform to IERC721Metadata
      */
     function tokenURI(uint256) external view returns (string memory) {
         return "";
     }
 
     /**
-     * @notice Sets the boost controller
+     * @notice sets the boost controller
      * @param _boostController address of boost controller
      */
     function setBoostController(address _boostController) external onlyOwner {
@@ -408,7 +408,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Creates a new lock
+     * @notice creates a new lock
      * @param _sender owner of lock
      * @param _amount amount to stake
      * @param _lockingDuration duration of lock
@@ -436,7 +436,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Updates an existing lock
+     * @notice updates an existing lock
      * @param _sender owner of lock
      * @param _lockId id of lock
      * @param _amount additional amount to stake
@@ -518,7 +518,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice Verifies that an address supports ERC721 and calls onERC721Received if applicable
+     * @notice verifies that an address supports ERC721 and calls onERC721Received if applicable
      * @dev called after a lock is safe transferred
      * @param _from address that lock is being transferred from
      * @param _to address that lock is being transferred to

@@ -89,6 +89,10 @@ contract OperatorVault is Vault {
         emit AlertRaised();
     }
 
+    /**
+     * @notice returns the total amount of unclaimed rewards for this vault
+     * @return total unclaimed rewards
+     */
     function getRewards() public view returns (uint256) {
         uint256 curTotalDeposits = getTotalDeposits();
         uint256 totalRewards = rewards;
@@ -102,6 +106,11 @@ contract OperatorVault is Vault {
         return totalRewards;
     }
 
+    /**
+     * @notice withdraws the unclaimed rewards for this vault
+     * @dev will attempt to withdraw all rewards but will partially withdraw if
+     * there are not enough rewards available
+     */
     function withdrawRewards() external onlyRewardsReceiver {
         uint256 curTotalDeposits = getTotalDeposits();
         uint256 newRewards;
@@ -129,6 +138,11 @@ contract OperatorVault is Vault {
         operator = _operator;
     }
 
+    /**
+     * @notice sets the rewards receiver
+     * @dev this address is authorized to withdraw rewards for this vault
+     * @param _rewardsReceiver rewards receiver address
+     */
     function setRewardsReceiver(address _rewardsReceiver) public {
         if (rewardsReceiver != address(0) && msg.sender != rewardsReceiver) revert OnlyRewardsReceiver();
         if (rewardsReceiver == address(0) && msg.sender != owner()) revert OnlyRewardsReceiver();
