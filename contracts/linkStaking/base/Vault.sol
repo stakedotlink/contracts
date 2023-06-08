@@ -43,7 +43,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice deposits tokens into the Chainlink staking contract
      * @param _amount amount to deposit
      */
-    function deposit(uint256 _amount) external onlyVaultController {
+    function deposit(uint256 _amount) external virtual onlyVaultController {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x00");
     }
