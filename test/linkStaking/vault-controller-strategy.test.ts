@@ -1,6 +1,5 @@
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { BigNumber } from 'ethers'
 import {
   toEther,
   deploy,
@@ -56,6 +55,7 @@ describe('VaultControllerStrategy', () => {
         token.address,
         strategy.address,
         staking.address,
+        accounts[0],
         accounts[0],
       ])) as OperatorVault
       vaultContracts.push(vault)
@@ -268,6 +268,7 @@ describe('VaultControllerStrategy', () => {
           token.address,
           strategy.address,
           staking.address,
+          accounts[i],
           accounts[i],
         ])
       )

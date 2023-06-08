@@ -31,6 +31,7 @@ describe('Vault', () => {
       accounts[0],
       staking.address,
       accounts[0],
+      accounts[0],
     ])) as OperatorVault
 
     await token.approve(vault.address, ethers.constants.MaxUint256)
