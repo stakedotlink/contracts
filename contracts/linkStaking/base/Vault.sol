@@ -77,5 +77,8 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         stakeController = IStaking(stakeController.getMigrationTarget());
     }
 
+    /**
+     * @dev Checks authorization for contract upgrades
+     */
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }

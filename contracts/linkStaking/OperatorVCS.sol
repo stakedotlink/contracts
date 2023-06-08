@@ -170,6 +170,11 @@ contract OperatorVCS is VaultControllerStrategy {
         emit VaultAdded(_operator);
     }
 
+    /**
+     * @notice returns the amount of extra rewards held by this contract
+     * @dev extra rewards consist of the yield earned on unclaimed operator rewards
+     * @return extra rewards
+     */
     function getExtraRewards() external view returns (uint256) {
         uint256 vaultCount = vaults.length;
         uint256 operatorRewards;
@@ -189,6 +194,10 @@ contract OperatorVCS is VaultControllerStrategy {
         return 0;
     }
 
+    /**
+     * @notice withdraws all extra rewards held by this contract
+     * @param _receiver address to receive rewards
+     */
     function withdrawExtraRewards(address _receiver) external onlyOwner {
         uint256 vaultCount = vaults.length;
         uint256 operatorRewards;
@@ -218,6 +227,11 @@ contract OperatorVCS is VaultControllerStrategy {
         vaults[_index].setOperator(_operator);
     }
 
+    /**
+     * @notice sets a vault's rewards receiver address
+     * @param _index index of vault
+     * @param _rewardsReceiver address of rewards receiver for the vault
+     */
     function setRewardsReceiver(uint256 _index, address _rewardsReceiver) external onlyOwner {
         vaults[_index].setRewardsReceiver(_rewardsReceiver);
     }
@@ -253,6 +267,9 @@ contract OperatorVCS is VaultControllerStrategy {
         emit DepositBufferedTokens(deposited);
     }
 
+    /**
+     * @notice updates rewards for all strategies controlled by the staking pool
+     */
     function _updateStrategyRewards() private {
         address[] memory strategies = stakingPool.getStrategies();
         uint256[] memory strategyIdxs = new uint256[](strategies.length);
