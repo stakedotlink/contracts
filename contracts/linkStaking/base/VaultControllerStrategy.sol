@@ -162,7 +162,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice returns the  total amount of fees that will be paid on the next update
      * @return total fees
      */
-    function pendingFees() external view override returns (uint256) {
+    function pendingFees() external view virtual override returns (uint256) {
         int256 balanceChange = depositChange();
         uint256 totalFees;
 
@@ -179,7 +179,12 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
+    function updateDeposits()
+        external
+        virtual
+        onlyStakingPool
+        returns (address[] memory receivers, uint256[] memory amounts)
+    {
         int balanceChange = depositChange();
 
         if (balanceChange > 0) {
