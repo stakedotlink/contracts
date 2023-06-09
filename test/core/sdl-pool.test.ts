@@ -9,6 +9,7 @@ import {
   deployUpgradeable,
 } from '../utils/helpers'
 import {
+  DelegatorPool,
   ERC677,
   LinearBoostController,
   RewardsPool,
@@ -35,6 +36,7 @@ describe('SDLPool', () => {
   let rewardsPool: RewardsPool
   let boostController: LinearBoostController
   let sdlPool: SDLPool
+  let delegatorPool: DelegatorPool
   let signers: Signer[]
   let accounts: string[]
 
@@ -49,6 +51,13 @@ describe('SDLPool', () => {
     await sdlToken.mint(accounts[0], toEther(1000000))
     await setupToken(sdlToken, accounts)
 
+    delegatorPool = (await deployUpgradeable('DelegatorPool', [
+      sdlToken.address,
+      'Staked SDL',
+      'stSDL',
+      [],
+    ])) as DelegatorPool
+
     boostController = (await deploy('LinearBoostController', [
       4 * 365 * DAY,
       4,
@@ -59,6 +68,7 @@ describe('SDLPool', () => {
       'reSDL',
       sdlToken.address,
       boostController.address,
+      delegatorPool.address,
     ])) as SDLPool
 
     rewardsPool = (await deploy('RewardsPool', [
@@ -1039,5 +1049,77 @@ describe('SDLPool', () => {
     await sdlPool.transferFrom(accounts[0], accounts[1], 1)
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 5500)
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[1])), 500)
+  })
+
+  it('migration from delegator pool should work correctly', async () => {
+    let dpRewardsPool = (await deploy('RewardsPool', [
+      delegatorPool.address,
+      rewardToken.address,
+    ])) as RewardsPool
+
+    await delegatorPool.addToken(rewardToken.address, dpRewardsPool.address)
+
+    for (let i = 0; i < 2; i++) {
+      await sdlToken.connect(signers[i]).transferAndCall(delegatorPool.address, toEther(250), '0x')
+      assert.equal(fromEther(await delegatorPool.balanceOf(accounts[i])), 250)
+      assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[i])), 250)
+      assert.equal(fromEther(await delegatorPool.lockedBalanceOf(accounts[i])), 0)
+    }
+    for (let i = 2; i < 4; i++) {
+      await sdlToken
+        .connect(signers[i])
+        .transferAndCall(
+          delegatorPool.address,
+          toEther(1000),
+          ethers.utils.defaultAbiCoder.encode(['uint256'], [toEther(400)])
+        )
+      assert.equal(fromEther(await delegatorPool.balanceOf(accounts[i])), 1000)
+      assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[i])), 600)
+      assert.equal(fromEther(await delegatorPool.lockedBalanceOf(accounts[i])), 400)
+    }
+    await rewardToken.transferAndCall(delegatorPool.address, toEther(1000), '0x')
+    await rewardToken.transfer(accounts[5], await rewardToken.balanceOf(accounts[0]))
+    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 2500)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 0)
+
+    await expect(delegatorPool.migrate(0)).to.be.revertedWith(
+      'Cannot migrate until contract is retired'
+    )
+    await expect(sdlPool.migrate(accounts[2], toEther(100), 0)).to.be.revertedWith(
+      'SenderNotAuthorized()'
+    )
+
+    await delegatorPool.retireDelegatorPool([accounts[2], accounts[3]], sdlPool.address)
+    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 500)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1200)
+    assert.equal(fromEther(await delegatorPool.totalSupply()), 500)
+    for (let i = 2; i < 4; i++) {
+      assert.equal(fromEther(await delegatorPool.balanceOf(accounts[i])), 0)
+      assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[i])), 0)
+      assert.equal(fromEther(await delegatorPool.lockedBalanceOf(accounts[i])), 0)
+      assert.equal(fromEther(await delegatorPool.approvedLockedBalanceOf(accounts[i])), 0)
+      assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[i])), 600)
+      assert.equal(fromEther(await rewardToken.balanceOf(accounts[i])), 400)
+    }
+
+    await delegatorPool.migrate(0)
+    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 250)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1450)
+    assert.equal(fromEther(await delegatorPool.totalSupply()), 250)
+    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[0])), 0)
+    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[0])), 0)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 250)
+    assert.equal(fromEther(await rewardToken.balanceOf(accounts[0])), 100)
+
+    await expect(delegatorPool.migrate(0)).to.be.revertedWith('Nothing to migrate')
+
+    await delegatorPool.connect(signers[1]).migrate(365 * DAY)
+    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 0)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1700)
+    assert.equal(fromEther(await delegatorPool.totalSupply()), 0)
+    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[1])), 0)
+    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[1])), 0)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 500)
+    assert.equal(fromEther(await rewardToken.balanceOf(accounts[1])), 100)
   })
 })
