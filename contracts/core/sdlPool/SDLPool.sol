@@ -40,6 +40,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     uint256 public totalEffectiveBalance;
     mapping(address => uint256) private effectiveBalances;
 
+    address public delegatorPool;
+
     event InitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event Withdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
     event CreateLock(
@@ -82,13 +84,15 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         string memory _name,
         string memory _symbol,
         address _sdlToken,
-        address _boostController
+        address _boostController,
+        address _delegatorPool
     ) public initializer {
         __RewardsPoolController_init();
         name = _name;
         symbol = _symbol;
         sdlToken = IERC20Upgradeable(_sdlToken);
         boostController = IBoostController(_boostController);
+        delegatorPool = _delegatorPool;
     }
 
     modifier onlyLockOwner(uint256 _lockId, address _owner) {
@@ -405,6 +409,16 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      */
     function setBoostController(address _boostController) external onlyOwner {
         boostController = IBoostController(_boostController);
+    }
+
+    function migrate(
+        address _account,
+        uint256 _amount,
+        uint64 _lockingDuration
+    ) external {
+        if (msg.sender != delegatorPool) revert SenderNotAuthorized();
+        sdlToken.safeTransferFrom(delegatorPool, address(this), _amount);
+        _createLock(_account, _amount, _lockingDuration);
     }
 
     /**
