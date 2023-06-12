@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 
 import "./base/VaultControllerStrategy.sol";
+import "./interfaces/IOperatorVault.sol";
 
 /**
  * @title Operator Vault Controller Strategy
@@ -11,14 +12,14 @@ contract OperatorVCS is VaultControllerStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 private totalPrincipalDeposits;
-
     uint256 public operatorRewardPercentage;
-    uint256 public unclaimedOperatorRewards;
 
     mapping(address => bool) private vaultMapping;
 
     event VaultAdded(address indexed operator);
     event DepositBufferedTokens(uint256 depositedAmount);
+    event WithdrawExtraRewards(address indexed receiver, uint256 amount);
+    event SetOperatorRewardPercentage(uint256 rewardPercentage);
 
     error InvalidPercentage();
     error SenderNotAuthorized();
@@ -94,12 +95,19 @@ contract OperatorVCS is VaultControllerStrategy {
         if (msg.sender != address(stakingPool)) revert UnauthorizedToken();
     }
 
+    /**
+     * @notice withdraws operator rewards for a vault
+     * @param _receiver address to receive rewards
+     * @param _amount amount to withdraw
+     */
     function withdrawVaultRewards(address _receiver, uint256 _amount) external returns (uint256) {
         if (!vaultMapping[msg.sender]) revert SenderNotAuthorized();
 
-        uint256 amountToWithdraw = _amount > unclaimedOperatorRewards ? unclaimedOperatorRewards : _amount;
-        IERC20Upgradeable(address(stakingPool)).safeTransfer(_receiver, amountToWithdraw);
-        unclaimedOperatorRewards -= amountToWithdraw;
+        IERC20Upgradeable lsdToken = IERC20Upgradeable(address(stakingPool));
+        uint256 withdrawableRewards = lsdToken.balanceOf(address(this));
+        uint256 amountToWithdraw = _amount > withdrawableRewards ? withdrawableRewards : _amount;
+
+        lsdToken.safeTransfer(_receiver, amountToWithdraw);
         return amountToWithdraw;
     }
 
@@ -141,7 +149,6 @@ contract OperatorVCS is VaultControllerStrategy {
 
             receivers[0] = address(this);
             amounts[0] = (uint256(balanceChange) * operatorRewardPercentage) / 10000;
-            unclaimedOperatorRewards += amounts[0];
 
             for (uint256 i = 1; i < receivers.length; i++) {
                 receivers[i] = fees[i - 1].receiver;
@@ -171,17 +178,26 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice returns the total amount of unclaimed operator rewards across all vaults
+     * @return operator rewards
+     */
+    function getOperatorRewards() public view returns (uint256) {
+        uint256 vaultCount = vaults.length;
+        uint256 operatorRewards;
+        for (uint256 i = 0; i < vaultCount; i++) {
+            operatorRewards += IOperatorVault(address(vaults[i])).getRewards();
+        }
+
+        return operatorRewards;
+    }
+
+    /**
      * @notice returns the amount of extra rewards held by this contract
      * @dev extra rewards consist of the yield earned on unclaimed operator rewards
      * @return extra rewards
      */
-    function getExtraRewards() external view returns (uint256) {
-        uint256 vaultCount = vaults.length;
-        uint256 operatorRewards;
-        for (uint256 i = 0; i < vaultCount; i++) {
-            operatorRewards += vaults[i].getRewards();
-        }
-
+    function getExtraRewards() public view returns (uint256) {
+        uint256 operatorRewards = getOperatorRewards();
         uint256 totalRewards = IERC20Upgradeable(address(stakingPool)).balanceOf(address(this));
 
         if (totalRewards > operatorRewards) {
@@ -199,23 +215,14 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _receiver address to receive rewards
      */
     function withdrawExtraRewards(address _receiver) external onlyOwner {
-        uint256 vaultCount = vaults.length;
-        uint256 operatorRewards;
-        for (uint256 i = 0; i < vaultCount; i++) {
-            operatorRewards += vaults[i].getRewards();
+        uint256 extraRewards = getExtraRewards();
+
+        if (extraRewards == 0) {
+            revert NoExtraRewards();
         }
 
-        uint256 totalRewards = IERC20Upgradeable(address(stakingPool)).balanceOf(address(this));
-
-        if (totalRewards > operatorRewards) {
-            uint256 extraRewards = totalRewards - operatorRewards;
-            if (extraRewards >= 100) {
-                IERC20Upgradeable(address(stakingPool)).safeTransfer(_receiver, totalRewards - operatorRewards);
-                return;
-            }
-        }
-
-        revert NoExtraRewards();
+        IERC20Upgradeable(address(stakingPool)).safeTransfer(_receiver, extraRewards);
+        emit WithdrawExtraRewards(_receiver, extraRewards);
     }
 
     /**
@@ -224,7 +231,7 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _operator address of operator that the vault represents
      */
     function setOperator(uint256 _index, address _operator) external onlyOwner {
-        vaults[_index].setOperator(_operator);
+        IOperatorVault(address(vaults[_index])).setOperator(_operator);
     }
 
     /**
@@ -233,19 +240,27 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _rewardsReceiver address of rewards receiver for the vault
      */
     function setRewardsReceiver(uint256 _index, address _rewardsReceiver) external onlyOwner {
-        vaults[_index].setRewardsReceiver(_rewardsReceiver);
+        IOperatorVault(address(vaults[_index])).setRewardsReceiver(_rewardsReceiver);
     }
 
     /**
      * @notice sets the percentage of earned rewards an operator receives
-     * @dev stakingPool.updateStrategyRewards is called to mint all previous operator
-     * rewards before the reward percentage changes
+     * @dev stakingPool.updateStrategyRewards and vault.updateRewards are called to account for
+     *  all previous operator rewards before the reward percentage changes
      * @param _operatorRewardPercentage basis point amount
      */
     function setOperatorRewardPercentage(uint256 _operatorRewardPercentage) public onlyOwner {
         if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
+
         _updateStrategyRewards();
+
+        uint256 vaultCount = vaults.length;
+        for (uint256 i = 0; i < vaultCount; ++i) {
+            IOperatorVault(address(vaults[i])).updateRewards();
+        }
+
         operatorRewardPercentage = _operatorRewardPercentage;
+        emit SetOperatorRewardPercentage(_operatorRewardPercentage);
     }
 
     /**
