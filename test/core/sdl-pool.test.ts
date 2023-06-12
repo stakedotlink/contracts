@@ -325,14 +325,14 @@ describe('SDLPool', () => {
         0,
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
       )
-    ).to.be.revertedWith('InvalidAmount()')
+    ).to.be.revertedWith('InvalidValue()')
     await expect(
       sdlToken.transferAndCall(
         sdlPool.address,
         0,
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
       )
-    ).to.be.revertedWith('InvalidAmount()')
+    ).to.be.revertedWith('InvalidValue()')
 
     await sdlToken.transferAndCall(
       sdlPool.address,
@@ -345,14 +345,14 @@ describe('SDLPool', () => {
         0,
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
       )
-    ).to.be.revertedWith('InvalidAmount()')
+    ).to.be.revertedWith('InvalidValue()')
     await expect(
       sdlToken.transferAndCall(
         sdlPool.address,
         0,
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 365 * DAY])
       )
-    ).to.be.revertedWith('InvalidAmount()')
+    ).to.be.revertedWith('InvalidValue()')
   })
 
   it('should not be able to decrease the duration of a lock', async () => {
