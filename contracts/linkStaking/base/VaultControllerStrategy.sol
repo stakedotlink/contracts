@@ -58,7 +58,7 @@ abstract contract VaultControllerStrategy is Strategy {
         require(_minDepositThreshold >= vaultMinDeposits, "Invalid min deposit threshold");
 
         minDepositThreshold = _minDepositThreshold;
-        for (uint256 i = 0; i < _fees.length; i++) {
+        for (uint256 i = 0; i < _fees.length; ++i) {
             fees.push(_fees[i]);
         }
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
@@ -106,7 +106,7 @@ abstract contract VaultControllerStrategy is Strategy {
         (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
         uint256 firstNonFullVault;
 
-        for (uint256 i = 0; i < vaults.length; i++) {
+        for (uint256 i = 0; i < vaults.length; ++i) {
             uint256 vaultDeposits = vaults[i].getPrincipalDeposits();
 
             if (vaultDeposits < vaultMaxDeposits) {
@@ -152,7 +152,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function depositChange() public view returns (int) {
         uint256 totalBalance = token.balanceOf(address(this));
-        for (uint256 i = 0; i < vaults.length; i++) {
+        for (uint256 i = 0; i < vaults.length; ++i) {
             totalBalance += vaults[i].getTotalDeposits();
         }
         return int(totalBalance) - int(totalDeposits);
@@ -167,7 +167,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 totalFees;
 
         if (balanceChange > 0) {
-            for (uint256 i = 0; i < fees.length; i++) {
+            for (uint256 i = 0; i < fees.length; ++i) {
                 totalFees += (uint256(balanceChange) * fees[i].basisPoints) / 10000;
             }
         }
@@ -193,7 +193,7 @@ abstract contract VaultControllerStrategy is Strategy {
             receivers = new address[](fees.length);
             amounts = new uint256[](fees.length);
 
-            for (uint256 i = 0; i < fees.length; i++) {
+            for (uint256 i = 0; i < fees.length; ++i) {
                 receivers[i] = fees[i].receiver;
                 amounts[i] = (uint256(balanceChange) * fees[i].basisPoints) / 10000;
             }
@@ -228,7 +228,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _numVaults,
         bytes calldata _data
     ) external onlyOwner {
-        for (uint256 i = _startIndex; i < _startIndex + _numVaults; i++) {
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
             vaults[i].migrate(_data);
         }
         emit MigratedVaults(_startIndex, _numVaults, _data);
@@ -245,7 +245,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _numVaults,
         bytes memory _data
     ) external onlyOwner {
-        for (uint256 i = _startIndex; i < _startIndex + _numVaults; i++) {
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
             _upgradeVault(i, _data);
         }
         emit UpgradedVaults(_startIndex, _numVaults, _data);
@@ -343,7 +343,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _maxDeposits
     ) internal returns (uint256) {
         uint256 toDeposit = _toDeposit;
-        for (uint256 i = _startIndex; i < vaults.length; i++) {
+        for (uint256 i = _startIndex; i < vaults.length; ++i) {
             IVault vault = vaults[i];
             uint256 deposits = vault.getPrincipalDeposits();
             uint256 canDeposit = _maxDeposits - deposits;
@@ -392,7 +392,7 @@ abstract contract VaultControllerStrategy is Strategy {
      **/
     function _totalFeesBasisPoints() private view returns (uint256) {
         uint256 totalFees;
-        for (uint i = 0; i < fees.length; i++) {
+        for (uint i = 0; i < fees.length; ++i) {
             totalFees += fees[i].basisPoints;
         }
         return totalFees;
