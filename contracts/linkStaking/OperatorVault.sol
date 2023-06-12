@@ -18,6 +18,7 @@ contract OperatorVault is Vault {
     uint256 private rewards;
 
     event AlertRaised();
+    event WithdrawRewards(address indexed receiver, uint256 amount);
 
     error OnlyOperator();
     error OnlyRewardsReceiver();
@@ -113,18 +114,27 @@ contract OperatorVault is Vault {
      */
     function withdrawRewards() external onlyRewardsReceiver {
         uint256 curTotalDeposits = getTotalDeposits();
-        uint256 newRewards;
+        uint256 curRewards = getRewards();
 
-        if (curTotalDeposits > totalDeposits) {
-            newRewards =
-                ((curTotalDeposits - totalDeposits) * IOperatorVCS(vaultController).operatorRewardPercentage()) /
-                10000;
-        }
-
-        uint256 curRewards = rewards + newRewards;
         uint256 withdrawnRewards = IOperatorVCS(vaultController).withdrawVaultRewards(rewardsReceiver, curRewards);
 
         rewards = curRewards - withdrawnRewards;
+        totalDeposits = curTotalDeposits;
+
+        emit WithdrawRewards(rewardsReceiver, withdrawnRewards);
+    }
+
+    /**
+     * @notice updates the unclaimed rewards for this vault
+     */
+    function updateRewards() external {
+        uint256 curTotalDeposits = getTotalDeposits();
+        uint256 curRewards = getRewards();
+
+        if (curRewards != rewards) {
+            rewards = curRewards;
+        }
+
         totalDeposits = curTotalDeposits;
     }
 

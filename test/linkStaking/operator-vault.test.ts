@@ -102,6 +102,23 @@ describe('OperatorVault', () => {
     await expect(vault.withdrawRewards()).to.be.revertedWith('OnlyRewardsReceiver()')
   })
 
+  it('updateRewards should work correctly', async () => {
+    await staking.setBaseReward(toEther(10))
+    assert.equal(fromEther(await vault.getRewards()), 1)
+    await staking.setBaseReward(toEther(0))
+    assert.equal(fromEther(await vault.getRewards()), 0)
+
+    await staking.setBaseReward(toEther(10))
+    await vault.updateRewards()
+    await staking.setBaseReward(toEther(0))
+    assert.equal(fromEther(await vault.getRewards()), 1)
+
+    await staking.setDelegationReward(toEther(20))
+    assert.equal(fromEther(await vault.getRewards()), 2)
+    await vault.updateRewards()
+    assert.equal(fromEther(await vault.getRewards()), 2)
+  })
+
   it('setRewardsReceiver should work correctly', async () => {
     let newVault = (await deployUpgradeable('OperatorVault', [
       token.address,
