@@ -61,7 +61,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     error SenderNotAuthorized();
     error InvalidLockId();
-    error InvalidAmount();
+    error InvalidValue();
     error InvalidLockingDuration();
     error InvalidParams();
     error TransferFromIncorrectOwner();
@@ -175,7 +175,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * set lockingDuration to 0 to stake without locking
      * @param _sender of the stake
      * @param _value of the token transfer
-     * @param _calldata encoded lockId and lockingDuration
+     * @param _calldata encoded lockId (uint256) and lockingDuration (uint64)
      **/
     function onTokenTransfer(
         address _sender,
@@ -184,7 +184,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     ) external override {
         if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender)) revert UnauthorizedToken();
 
-        if (_value == 0) revert InvalidAmount();
+        if (_value == 0) revert InvalidValue();
 
         if (msg.sender == address(sdlToken)) {
             (uint256 lockId, uint64 lockingDuration) = abi.decode(_calldata, (uint256, uint64));
@@ -211,7 +211,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     /**
      * @notice initiates the unlock period for a lock
      * @dev at least half of a lock's duration must have elapsed to initiate an unlock - the unlock period
-     * also consists of half of the duration
+     * consists of half of the duration
      * @param _lockId id of lock
      **/
     function initiateUnlock(uint256 _lockId) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
@@ -253,6 +253,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
             delete locks[_lockId];
             delete lockOwners[_lockId];
             balances[msg.sender] -= 1;
+            if (tokenApprovals[_lockId] != address(0)) delete tokenApprovals[_lockId];
             emit Transfer(msg.sender, address(0), _lockId);
         } else {
             locks[_lockId].amount = baseAmount - _amount;
