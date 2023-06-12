@@ -57,7 +57,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
     function tokenBalances() external view returns (address[] memory, uint256[] memory) {
         uint256[] memory balances = new uint256[](tokens.length);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
             balances[i] = IERC20Upgradeable(tokens[i]).balanceOf(address(this));
         }
 
@@ -97,7 +97,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _tokens list of token addresses
      */
     function distributeTokens(address[] memory _tokens) public {
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        for (uint256 i = 0; i < _tokens.length; ++i) {
             distributeToken(_tokens[i]);
         }
     }
@@ -125,7 +125,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
     function withdrawableRewards(address _account) external view returns (uint256[] memory) {
         uint256[] memory withdrawable = new uint256[](tokens.length);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
             withdrawable[i] = tokenPools[tokens[i]].withdrawableRewards(_account);
         }
 
@@ -137,7 +137,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _tokens list of token addresses to withdraw rewards from
      **/
     function withdrawRewards(address[] memory _tokens) public {
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        for (uint256 i = 0; i < _tokens.length; ++i) {
             tokenPools[_tokens[i]].withdraw(msg.sender);
         }
         emit WithdrawRewards(msg.sender);
@@ -170,7 +170,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
 
         IRewardsPool rewardsPool = tokenPools[_token];
         delete (tokenPools[_token]);
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
             if (tokens[i] == _token) {
                 tokens[i] = tokens[tokens.length - 1];
                 tokens.pop();
@@ -186,7 +186,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _account account to update rewards for
      */
     function _updateRewards(address _account) internal {
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; ++i) {
             tokenPools[tokens[i]].updateReward(_account);
         }
     }
