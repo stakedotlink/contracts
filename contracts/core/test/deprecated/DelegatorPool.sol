@@ -250,11 +250,13 @@ contract DelegatorPool is RewardsPoolControllerV1 {
         require(_sdlPool != address(0), "Invalid address");
         allowanceToken.approve(_sdlPool, type(uint256).max);
 
+        IRewardsPool rewardsPool = tokenPools[tokens[0]];
+
         for (uint256 i = 0; i < _lockedAddresses.length; ++i) {
             address account = _lockedAddresses[i];
             uint256 unlockedBalance = availableBalanceOf(account);
 
-            tokenPools[tokens[0]].withdraw(account);
+            rewardsPool.withdraw(account);
 
             _burn(account, balanceOf(account));
             delete lockedBalances[account];
@@ -271,6 +273,10 @@ contract DelegatorPool is RewardsPoolControllerV1 {
         sdlPool = _sdlPool;
     }
 
+    /**
+     * @notice migrates a stake to the new SDL pool
+     * @param _lockingDuration duration of the lock in the SDL pool
+     */
     function migrate(uint64 _lockingDuration) external {
         require(sdlPool != address(0), "Cannot migrate until contract is retired");
 
