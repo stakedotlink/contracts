@@ -113,13 +113,11 @@ contract OperatorVault is Vault {
      * there are not enough rewards available
      */
     function withdrawRewards() external onlyRewardsReceiver {
-        uint256 curTotalDeposits = getTotalDeposits();
         uint256 curRewards = getRewards();
-
         uint256 withdrawnRewards = IOperatorVCS(vaultController).withdrawVaultRewards(rewardsReceiver, curRewards);
 
         rewards = curRewards - withdrawnRewards;
-        totalDeposits = curTotalDeposits;
+        totalDeposits = getTotalDeposits();
 
         emit WithdrawRewards(rewardsReceiver, withdrawnRewards);
     }
@@ -128,14 +126,8 @@ contract OperatorVault is Vault {
      * @notice updates the unclaimed rewards for this vault
      */
     function updateRewards() external {
-        uint256 curTotalDeposits = getTotalDeposits();
-        uint256 curRewards = getRewards();
-
-        if (curRewards != rewards) {
-            rewards = curRewards;
-        }
-
-        totalDeposits = curTotalDeposits;
+        rewards = getRewards();
+        totalDeposits = getTotalDeposits();
     }
 
     /**

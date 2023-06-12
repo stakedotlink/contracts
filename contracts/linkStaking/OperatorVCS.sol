@@ -53,7 +53,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
         if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
         operatorRewardPercentage = _operatorRewardPercentage;
-        for (uint256 i = 0; i < vaults.length; i++) {
+        for (uint256 i = 0; i < vaults.length; ++i) {
             vaultMapping[address(vaults[i])] = true;
         }
     }
@@ -121,7 +121,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
         if (balanceChange > 0) {
             totalFees = (uint256(balanceChange) * operatorRewardPercentage) / 10000;
-            for (uint256 i = 0; i < fees.length; i++) {
+            for (uint256 i = 0; i < fees.length; ++i) {
                 totalFees += (uint256(balanceChange) * fees[i].basisPoints) / 10000;
             }
         }
@@ -150,7 +150,7 @@ contract OperatorVCS is VaultControllerStrategy {
             receivers[0] = address(this);
             amounts[0] = (uint256(balanceChange) * operatorRewardPercentage) / 10000;
 
-            for (uint256 i = 1; i < receivers.length; i++) {
+            for (uint256 i = 1; i < receivers.length; ++i) {
                 receivers[i] = fees[i - 1].receiver;
                 amounts[i] = (uint256(balanceChange) * fees[i - 1].basisPoints) / 10000;
             }
@@ -184,7 +184,7 @@ contract OperatorVCS is VaultControllerStrategy {
     function getOperatorRewards() public view returns (uint256) {
         uint256 vaultCount = vaults.length;
         uint256 operatorRewards;
-        for (uint256 i = 0; i < vaultCount; i++) {
+        for (uint256 i = 0; i < vaultCount; ++i) {
             operatorRewards += IOperatorVault(address(vaults[i])).getRewards();
         }
 
@@ -288,7 +288,7 @@ contract OperatorVCS is VaultControllerStrategy {
     function _updateStrategyRewards() private {
         address[] memory strategies = stakingPool.getStrategies();
         uint256[] memory strategyIdxs = new uint256[](strategies.length);
-        for (uint256 i = 0; i < strategies.length; i++) {
+        for (uint256 i = 0; i < strategies.length; ++i) {
             strategyIdxs[i] = i;
         }
         stakingPool.updateStrategyRewards(strategyIdxs);
