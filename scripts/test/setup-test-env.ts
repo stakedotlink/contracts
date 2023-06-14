@@ -2,17 +2,17 @@ import { getAccounts, toEther } from '../utils/helpers'
 import { getContract, deployUpgradeable, deploy, updateDeployments } from '../utils/deployment'
 import {
   CurveMock,
-  DelegatorPool,
   ERC20,
   ERC677,
   LiquidSDIndexPool,
   LPLMigration,
   LSDIndexAdapterMock,
-  PoolRouter,
+  SDLPool,
   StakingAllowance,
   StakingPool,
   StrategyMock,
 } from '../../typechain-types'
+import { ethers } from 'hardhat'
 
 /*
 Accounts:
@@ -27,9 +27,8 @@ async function main() {
   const linkToken = (await getContract('LINKToken')) as ERC677
   const lplToken = (await getContract('LPLToken')) as ERC677
   const sdlToken = (await getContract('SDLToken')) as StakingAllowance
-  const poolRouter = (await getContract('PoolRouter')) as PoolRouter
   const lplMigration = (await getContract('LPLMigration')) as LPLMigration
-  const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
+  const sdlPool = (await getContract('SDLPool')) as SDLPool
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as StakingPool
   const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
   const stETHToken = (await getContract('stETHToken')) as ERC20
@@ -129,8 +128,14 @@ async function main() {
   await cbETHToken.transfer(accounts[3], toEther(10000))
   await sfrxETHToken.transfer(accounts[3], toEther(10000))
 
-  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x')
-  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(100), '0x')
+  await sdlToken
+    .connect(signers[3])
+    .transferAndCall(
+      sdlPool.address,
+      toEther(1000),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+  //await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(100), '0x00')
   await stETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(100))
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(100))
   await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))

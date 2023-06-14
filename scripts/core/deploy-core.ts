@@ -6,10 +6,20 @@ const StakingAllowance = {
   name: 'stake.link', // SDL token name
   symbol: 'SDL', // SDL token symbol
 }
-// Delegator Pool (SDL staking)
+// Delegator Pool (deprecated)
 const DelegatorPool = {
   derivativeTokenName: 'Staked SDL', // SDL staking derivative token name
   derivativeTokenSymbol: 'stSDL', // SDL staking derivative token symbol
+}
+// Linear Boost Controller
+const LinearBoostController = {
+  maxLockingDuration: 4 * 365 * 86400, // maximum locking duration
+  maxBoost: 3, // maximum boost amount
+}
+// SDL Pool
+const SDLPool = {
+  derivativeTokenName: 'Reward Escrowed SDL', // SDL staking derivative token name
+  derivativeTokenSymbol: 'reSDL', // SDL staking derivative token symbol
 }
 
 async function main() {
@@ -32,18 +42,28 @@ async function main() {
   ])
   console.log('DelegatorPool deployed: ', delegatorPool.address)
 
-  const poolRouter = await deployUpgradeable('PoolRouter', [
+  const lbc = await deploy('LinearBoostController', [
+    LinearBoostController.maxLockingDuration,
+    LinearBoostController.maxBoost,
+  ])
+  console.log('LinearBoostController deployed: ', lbc.address)
+
+  const sdlPool = await deployUpgradeable('SDLPool', [
+    SDLPool.derivativeTokenName,
+    SDLPool.derivativeTokenSymbol,
     sdlToken.address,
+    lbc.address,
     delegatorPool.address,
   ])
-  console.log('PoolRouter deployed: ', poolRouter.address)
+  console.log('SDLPool deployed: ', sdlPool.address)
 
   updateDeployments(
     {
       SDLToken: sdlToken.address,
       LPLMigration: lplMigration.address,
       DelegatorPool: delegatorPool.address,
-      PoolRouter: poolRouter.address,
+      LinearBoostController: lbc.address,
+      SDLPool: sdlPool.address,
     },
     { SDLToken: 'StakingAllowance' }
   )
