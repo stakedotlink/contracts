@@ -462,9 +462,9 @@ describe('DelegatorPool', () => {
 
     await allowanceToken.transferAndCall(delegatorPoolV2.address, toEther(500), '0x')
     assert.equal(
-        fromEther(await delegatorPoolV2.balanceOf(accounts[0])),
-        2000,
-        'balance of account does not match'
+      fromEther(await delegatorPoolV2.balanceOf(accounts[0])),
+      2000,
+      'balance of account does not match'
     )
   })
 })
