@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721Metad
 import "../base/RewardsPoolController.sol";
 import "../interfaces/IBoostController.sol";
 import "../interfaces/IERC721Receiver.sol";
+import "../interfaces/ISDLDependent.sol";
 
 /**
  * @title SDL Pool
@@ -39,6 +40,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     uint256 public totalEffectiveBalance;
     mapping(address => uint256) private effectiveBalances;
+
+    address[] private dependentContracts;
 
     address public delegatorPool;
 
@@ -74,6 +77,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error HalfDurationNotElapsed();
     error InsufficientBalance();
     error UnlockNotInitiated();
+    error DuplicateContract();
+    error ContractNotFound();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -226,6 +231,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         effectiveBalances[msg.sender] -= boostAmount;
         totalEffectiveBalance -= boostAmount;
 
+        _updateDependentContracts(msg.sender);
+
         emit InitiateUnlock(msg.sender, _lockId, expiry);
     }
 
@@ -240,9 +247,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         onlyLockOwner(_lockId, msg.sender)
         updateRewards(msg.sender)
     {
-        uint64 expiry = locks[_lockId].expiry;
-        if (expiry == 0) revert UnlockNotInitiated();
-        if (expiry > block.timestamp) revert TotalDurationNotElapsed();
+        if (locks[_lockId].startTime != 0) {
+            uint64 expiry = locks[_lockId].expiry;
+            if (expiry == 0) revert UnlockNotInitiated();
+            if (expiry > block.timestamp) revert TotalDurationNotElapsed();
+        }
 
         uint256 baseAmount = locks[_lockId].amount;
         if (_amount > baseAmount) revert InsufficientBalance();
@@ -261,6 +270,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
         effectiveBalances[msg.sender] -= _amount;
         totalEffectiveBalance -= _amount;
+
+        _updateDependentContracts(msg.sender);
 
         sdlToken.safeTransfer(msg.sender, _amount);
     }
@@ -412,6 +423,28 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         boostController = IBoostController(_boostController);
     }
 
+    function getDependentContracts() external view returns (address[] memory) {
+        return dependentContracts;
+    }
+
+    function addDependentContract(address _contract) external onlyOwner {
+        for (uint256 i = 0; i < dependentContracts.length; ++i) {
+            if (dependentContracts[i] == _contract) revert DuplicateContract();
+        }
+        dependentContracts.push(_contract);
+    }
+
+    function removeDependentContract(address _contract) external onlyOwner {
+        for (uint256 i = 0; i < dependentContracts.length; ++i) {
+            if (dependentContracts[i] == _contract) {
+                dependentContracts[i] = dependentContracts[dependentContracts.length - 1];
+                dependentContracts.pop();
+                return;
+            }
+        }
+        revert ContractNotFound();
+    }
+
     function migrate(
         address _account,
         uint256 _amount,
@@ -464,7 +497,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         uint64 _lockingDuration
     ) private onlyLockOwner(_lockId, _sender) updateRewards(_sender) {
         uint64 curLockingDuration = locks[_lockId].duration;
-        if (_lockingDuration < curLockingDuration) revert InvalidLockingDuration();
+        uint64 curExpiry = locks[_lockId].expiry;
+        if ((curExpiry == 0 || curExpiry > block.timestamp) && _lockingDuration < curLockingDuration) {
+            revert InvalidLockingDuration();
+        }
 
         uint256 curBaseAmount = locks[_lockId].amount;
 
@@ -481,6 +517,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
         if (_lockingDuration != 0) {
             locks[_lockId].startTime = uint64(block.timestamp);
+        } else if (curLockingDuration != 0) {
+            delete locks[_lockId].startTime;
         }
 
         if (locks[_lockId].expiry != 0) {
@@ -494,11 +532,24 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         } else if (diffTotalAmount < 0) {
             effectiveBalances[_sender] -= uint256(-1 * diffTotalAmount);
             totalEffectiveBalance -= uint256(-1 * diffTotalAmount);
+            _updateDependentContracts(_sender);
         }
 
         locks[_lockId].boostAmount = boostAmount;
 
         emit UpdateLock(_sender, _lockId, baseAmount, boostAmount, _lockingDuration);
+    }
+
+    /**
+     * @notice sends a balance update to all SDL dependent contracts for an account
+     * @dev should be called whenever an account's effective balance decreases
+     * @param _account address to update for
+     **/
+    function _updateDependentContracts(address _account) internal {
+        uint256 effectiveBalance = effectiveBalances[_account];
+        for (uint256 i = 0; i < dependentContracts.length; ++i) {
+            ISDLDependent(dependentContracts[i]).updateSDLBalance(_account, effectiveBalance);
+        }
     }
 
     /**
@@ -528,6 +579,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         balances[_to] += 1;
 
         lockOwners[_lockId] = _to;
+
+        _updateDependentContracts(_from);
 
         emit Transfer(_from, _to, _lockId);
     }

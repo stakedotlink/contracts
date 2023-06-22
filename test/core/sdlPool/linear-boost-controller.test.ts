@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai'
-import { toEther, deploy, fromEther } from '../utils/helpers'
-import { LinearBoostController } from '../../typechain-types'
+import { toEther, deploy, fromEther } from '../../utils/helpers'
+import { LinearBoostController } from '../../../typechain-types'
 
 const DAY = 86400
 
