@@ -39,6 +39,15 @@ abstract contract VaultControllerStrategy is Strategy {
     event SetMinDepositThreshold(uint256 minDepositThreshold);
     event SetVaultImplementation(address vaultImplementation);
 
+    /**
+     * @notice initializes contract
+     * @param _token address of LINK token
+     * @param _stakingPool address of the staking pool that controls this strategy
+     * @param _stakeController address of Chainlink staking contract
+     * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
+     * @param _minDepositThreshold min amount of LINK deposits needed to initiate a deposit into vaults
+     * @param _fees list of fees to be paid on rewards
+     **/
     function __VaultControllerStrategy_init(
         address _token,
         address _stakingPool,
@@ -65,7 +74,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns a list of all vaults
+     * @notice returns a list of all vaults controlled by this contract
      * @return  list of vault addresses
      */
     function getVaults() external view returns (IVault[] memory) {
@@ -73,7 +82,8 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deposits tokens into this strategy
+     * @notice deposits tokens into this strategy from the staking pool
+     * @dev reverts if sender is not stakingPool
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyStakingPool {
@@ -92,6 +102,10 @@ abstract contract VaultControllerStrategy is Strategy {
     /**
      * @notice returns whether there are enough buffered tokens to initiate a deposit and the index
      * of the first non-full vault
+     * @dev will return true if all of the following are true:
+     * - amount of buffered tokens is >= minDepositThreshold
+     * - chainlink staking contract is active
+     * - chainlink staking contract is not paused
      * @return whether a deposit should be initiated
      * @return encoded index of first non-full vault
      */
@@ -119,7 +133,10 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deposits buffered tokens into vaults if buffered balance exceeds minDepositThreshold
+     * @notice deposits buffered tokens into vaults
+     * @dev
+     * - reverts if amount of buffered tokens is < minDepositThreshold
+     * - reverts if index is invalid
      * @param _performData encoded index of first non-full vault
      */
     function performUpkeep(bytes calldata _performData) external {
@@ -130,6 +147,9 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice deposits buffered tokens into vaults
+     * @dev reverts if `_startIndex` is invalid - index is invalid if:
+     * - vaults[index] is full and vaults[index] is not the last vault in the list
+     * - vaults[index - 1] is not full and vaults[index] is not the first vault in the list
      * @param _startIndex index of first non-full vault
      */
     function depositBufferedTokens(uint256 _startIndex) public {
@@ -147,7 +167,9 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the deposit change (positive/negative) since deposits were last updated
+     * @notice returns the deposit change since deposits were last updated
+     * @dev deposit change could be positive or negative depending on reward rate and whether
+     * any slashing occurred
      * @return deposit change
      */
     function depositChange() public view returns (int) {
@@ -159,7 +181,8 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the  total amount of fees that will be paid on the next update
+     * @notice returns the total amount of fees that will be paid on the next call to updateDeposits()
+     * @dev fees are only paid when the depositChange since the last update is positive
      * @return total fees
      */
     function pendingFees() external view virtual override returns (uint256) {
@@ -175,7 +198,8 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice updates the total amount deposited for reward distribution
+     * @notice updates deposit accounting and calculates fees on newly earned rewards
+     * @dev reverts if sender is not stakingPool
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
@@ -203,22 +227,23 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice the total amount of deposits as tracked in this strategy
-     * @return total deposited
+     * @notice returns the total amount of deposits as tracked in this strategy
+     * @return total deposits
      */
     function getTotalDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
     /**
-     * @notice returns the vault deposit limits
+     * @notice returns the vault deposit limits for vaults controlled by this strategy
      * @return minimum amount of deposits that a vault can hold
      * @return maximum amount of deposits that a vault can hold
      */
     function getVaultDepositLimits() public view virtual returns (uint256, uint256);
 
     /**
-     * @notice migrates vaults to a new stake controller
+     * @notice migrates vaults to a new chainlink staking controller
+     * @dev reverts if sender is not owner
      * @param _startIndex index of first vault to migrate
      * @param _numVaults number of vaults to migrate starting at _startIndex
      * @param _data migration data
@@ -236,6 +261,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice upgrades vaults to a new implementation contract
+     * @dev reverts if sender is not owner
      * @param _startIndex index of first vault to upgrade
      * @param _numVaults number of vaults to upgrade starting at _startIndex
      * @param _data optional encoded function call to be executed after upgrade
@@ -252,7 +278,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns a list of all fees
+     * @notice returns a list of all fees and fee receivers
      * @return list of fees
      */
     function getFees() external view returns (Fee[] memory) {
@@ -261,6 +287,9 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice adds a new fee
+     * @dev
+     * - reverts if sender is not owner
+     * - reverts if total fees exceed 50%
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
@@ -271,6 +300,9 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice updates an existing fee
+     * @dev
+     * - reverts if sender is not owner
+     * - reverts if total fees exceed 50%
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -295,6 +327,9 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice sets the minimum buffered token balance needed to initiate a deposit into vaults
+     * @dev
+     * - reverts if sender is not owner
+     * - reverts if `_minDepositThreshold` < vaultMinDeposits
      * @dev should always be >= to minimum vault deposit limit
      * @param _minDepositThreshold mimumum token balance
      **/
@@ -307,6 +342,9 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
+     * @dev
+     * - reverts if sender is not owner
+     * - reverts if `_vaultImplementation` is not a contract
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
@@ -318,7 +356,7 @@ abstract contract VaultControllerStrategy is Strategy {
     /**
      * @notice deposits buffered tokens into vaults
      * @param _startIndex index of first vault to deposit into
-     * @param _toDeposit amount to deposit
+     * @param _toDeposit total amount to deposit
      * @param _vaultMinDeposits minimum amount of deposits that a vault can hold
      * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
      */
@@ -331,6 +369,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice deposits tokens into vaults
+     * @dev vaults will be deposited into in ascending order starting with `_startIndex`
      * @param _startIndex index of first vault to deposit into
      * @param _toDeposit amount to deposit
      * @param _minDeposits minimum amount of deposits that a vault can hold
@@ -363,7 +402,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deploys a new vault
+     * @notice deploys a new vault and adds it this strategy
      * @param _data optional encoded function call to be executed after deployment
      */
     function _deployVault(bytes memory _data) internal {
@@ -373,7 +412,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice upgrades a vault
+     * @notice upgrades a vault controlled by this strategy
      * @param _vaultIdx index of vault to upgrade
      * @param _data optional encoded function call to be executed after upgrade
      */
