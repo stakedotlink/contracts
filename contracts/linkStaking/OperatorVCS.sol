@@ -31,6 +31,16 @@ contract OperatorVCS is VaultControllerStrategy {
         _disableInitializers();
     }
 
+    /**
+     * @notice initializes contract
+     * @param _token address of LINK token
+     * @param _stakingPool address of the staking pool that controls this strategy
+     * @param _stakeController address of Chainlink staking contract
+     * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
+     * @param _minDepositThreshold min amount of LINK deposits needed to initiate a deposit into vaults
+     * @param _fees list of fees to be paid on rewards
+     * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
+     **/
     function initialize(
         address _token,
         address _stakingPool,
@@ -76,7 +86,7 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns the vault deposit limits
+     * @notice returns the vault deposit limits for vaults controlled by this strategy
      * @return minimum amount of deposits that a vault can hold
      * @return maximum amount of deposits that a vault can hold
      */
@@ -86,6 +96,9 @@ contract OperatorVCS is VaultControllerStrategy {
 
     /**
      * @notice ERC677 implementation to receive operator rewards
+     * @dev
+     * - rewards are paid in the stakingPool LSD token
+     * - reverts if transferred token is not stakingPool LSD
      **/
     function onTokenTransfer(
         address,
@@ -96,7 +109,8 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice withdraws operator rewards for a vault
+     * @notice used by vaults to withdraw operator rewards
+     * @dev reverts if sender is not an authorized vault
      * @param _receiver address to receive rewards
      * @param _amount amount to withdraw
      */
@@ -112,7 +126,8 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns the  total amount of fees that will be paid on the next update
+     * @notice returns the total amount of fees that will be paid on the next call to updateDeposits()
+     * @dev fees are only paid when the depositChange since the last update is positive
      * @return total fees
      */
     function pendingFees() external view override returns (uint256) {
@@ -129,7 +144,8 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice updates the total amount deposited for reward distribution
+     * @notice updates deposit accounting and calculates fees on newly earned rewards
+     * @dev reverts if sender is not stakingPool
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
@@ -160,8 +176,10 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice deploys a new vault
+     * @notice deploys a new vault and adds it this strategy
+     * @dev reverts if sender is not owner
      * @param _operator address of operator that the vault represents
+     * @param _rewardsReceiver address authorized to claim rewards for the vault
      */
     function addVault(address _operator, address _rewardsReceiver) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
@@ -212,6 +230,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
     /**
      * @notice withdraws all extra rewards held by this contract
+     * @dev reverts if sender is not owner
      * @param _receiver address to receive rewards
      */
     function withdrawExtraRewards(address _receiver) external onlyOwner {
@@ -227,6 +246,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
     /**
      * @notice sets a vault's operator address
+     * @dev reverts if sender is not owner
      * @param _index index of vault
      * @param _operator address of operator that the vault represents
      */
@@ -235,7 +255,8 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice sets a vault's rewards receiver address
+     * @notice sets the address authorized to claim rewards for a vault
+     * @dev reverts if sender is not owner
      * @param _index index of vault
      * @param _rewardsReceiver address of rewards receiver for the vault
      */
@@ -244,9 +265,12 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice sets the percentage of earned rewards an operator receives
-     * @dev stakingPool.updateStrategyRewards and vault.updateRewards are called to account for
-     *  all previous operator rewards before the reward percentage changes
+     * @notice sets the basis point amount of an operator's earned rewards that they receive
+     * @dev
+     * - stakingPool.updateStrategyRewards and vault.updateRewards are called to credit
+     *   all past operator rewards at the old rate before the reward percentage changes
+     * - reverts if sender is not owner
+     * - reverts if `_operatorRewardPercentage` is > 10000
      * @param _operatorRewardPercentage basis point amount
      */
     function setOperatorRewardPercentage(uint256 _operatorRewardPercentage) public onlyOwner {
@@ -284,6 +308,8 @@ contract OperatorVCS is VaultControllerStrategy {
 
     /**
      * @notice updates rewards for all strategies controlled by the staking pool
+     * @dev called before operatorRewardPercentage is changed to
+     * credit any past rewards at the old rate
      */
     function _updateStrategyRewards() private {
         address[] memory strategies = stakingPool.getStrategies();

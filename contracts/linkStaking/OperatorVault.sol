@@ -6,7 +6,8 @@ import "./interfaces/IOperatorVCS.sol";
 
 /**
  * @title Operator Vault
- * @notice Vault contract for depositing LINK collateral into the Chainlink staking controller as an operator
+ * @notice Vault contract for depositing LINK collateral into the Chainlink staking controller as an operator -
+ * each vault represent a single operator
  */
 contract OperatorVault is Vault {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -30,6 +31,14 @@ contract OperatorVault is Vault {
         _disableInitializers();
     }
 
+    /**
+     * @notice initializes contract
+     * @param _token address of LINK token
+     * @param _vaultController address of the strategy that controls this vault
+     * @param _stakeController address of Chainlink staking contract
+     * @param _operator address of operator represented by this vault
+     * @param _rewardsReceiver address authorized to claim rewards from this vault
+     **/
     function initialize(
         address _token,
         address _vaultController,
@@ -46,18 +55,25 @@ contract OperatorVault is Vault {
         rewardsReceiver = _rewardsReceiver;
     }
 
+    /**
+     * @notice reverts if sender is not operator
+     **/
     modifier onlyOperator() {
         if (msg.sender != operator) revert OnlyOperator();
         _;
     }
 
+    /**
+     * @notice reverts if sender is not rewardsReceiver
+     **/
     modifier onlyRewardsReceiver() {
         if (msg.sender != rewardsReceiver) revert OnlyRewardsReceiver();
         _;
     }
 
     /**
-     * @notice deposits tokens into the Chainlink staking contract
+     * @notice deposits tokens from the vaultController into the Chainlink staking contract
+     * @dev reverts if sender is not vaultController
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external override onlyVaultController {
@@ -68,6 +84,7 @@ contract OperatorVault is Vault {
 
     /**
      * @notice returns the total balance of this contract in the Chainlink staking contract
+     * @dev includes principal plus any rewards
      * @return total balance
      */
     function getTotalDeposits() public view override returns (uint256) {
@@ -79,6 +96,7 @@ contract OperatorVault is Vault {
 
     /**
      * @notice raises an alert in the Chainlink staking contract
+     * @dev reverts if sender is not operator
      */
     function raiseAlert() external onlyOperator {
         stakeController.raiseAlert();
@@ -91,7 +109,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice returns the total amount of unclaimed rewards for this vault
+     * @notice returns the total amount of unclaimed operator rewards for this vault
      * @return total unclaimed rewards
      */
     function getRewards() public view returns (uint256) {
@@ -108,9 +126,11 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice withdraws the unclaimed rewards for this vault
-     * @dev will attempt to withdraw all rewards but will partially withdraw if
-     * there are not enough rewards available
+     * @notice withdraws the unclaimed operator rewards for this vault
+     * @dev
+     * - will attempt to withdraw all rewards but will partially withdraw if
+     *   there are not enough rewards available in vaultController
+     * - reverts if sender is not rewardsReceiver
      */
     function withdrawRewards() external onlyRewardsReceiver {
         uint256 curRewards = getRewards();
@@ -123,7 +143,9 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice updates the unclaimed rewards for this vault
+     * @notice updates the operator rewards accounting for this vault
+     * @dev called by vaultController before operatorRewardPercentage is changed to
+     * credit any past rewards at the old rate
      */
     function updateRewards() external {
         rewards = getRewards();
@@ -132,6 +154,11 @@ contract OperatorVault is Vault {
 
     /**
      * @notice sets the operator address if not already set
+     * @dev
+     * - only used for original vaults that are already deployed and don't have an operator set
+     * - reverts is operator is already set
+     * - reverts if `_operator` is zero adddress
+     * - reverts if sender is not owner
      * @param _operator operator address
      */
     function setOperator(address _operator) public onlyOwner {
@@ -142,7 +169,12 @@ contract OperatorVault is Vault {
 
     /**
      * @notice sets the rewards receiver
-     * @dev this address is authorized to withdraw rewards for this vault
+     * @dev
+     * - this address is authorized to withdraw rewards for this vault and/or change the rewardsReceiver
+     * to a new a address
+     * - reverts if rewardsReceiver is set and sender is not rewardsReceiver
+     * - reverts if rewardsReceiver is not set and sender is not owner
+     * - reverts if `_rewardsReceiver` is zero address
      * @param _rewardsReceiver rewards receiver address
      */
     function setRewardsReceiver(address _rewardsReceiver) public {

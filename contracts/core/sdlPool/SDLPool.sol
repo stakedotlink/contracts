@@ -85,6 +85,13 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         _disableInitializers();
     }
 
+    /**
+     * @notice initializes contract
+     * @param _name name of the staking derivative token
+     * @param _symbol symbol of the staking derivative token
+     * @param _boostController address of the boost controller
+     * @param _delegatorPool address of the old contract this one will replace
+     **/
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -100,13 +107,18 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         delegatorPool = _delegatorPool;
     }
 
+    /**
+     * @notice reverts if `_owner` is not the owner of `_lockId`
+     **/
     modifier onlyLockOwner(uint256 _lockId, address _owner) {
         if (_owner != ownerOf(_lockId)) revert SenderNotAuthorized();
         _;
     }
 
     /**
-     * @notice returns the effective stake balance (including boost) of an account
+     * @notice returns the effective stake balance of an account
+     * @dev the effective stake balance includes the actual amount of tokens an
+     * account has staked across all locks plus any applicable boost gained by locking
      * @param _account address of account
      * @return effective stake balance
      **/
@@ -125,6 +137,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice returns the owner of a lock
+     * @dev reverts if `_lockId` is invalid
      * @param _lockId id of the lock
      * @return lock owner
      **/
@@ -135,7 +148,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice returns a list of locks corresponding to a list of lock ids
+     * @notice returns the list of locks that corresponds to `_lockIds`
+     * @dev reverts if any lockId is invalid
      * @param _lockIds list of lock ids
      * @return list of locks
      **/
@@ -153,9 +167,9 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice returns a list of lock ids owned by an account
+     * @notice returns a list of lockIds owned by an account
      * @param _owner address of account
-     * @return list of lock ids
+     * @return list of lockIds
      **/
     function getLockIdsByOwner(address _owner) external view returns (uint256[] memory) {
         uint256 maxLockId = lastLockId;
@@ -176,8 +190,18 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice ERC677 implementation to stake/lock SDL tokens or distribute rewards
-     * @dev set lockId to 0 to create a new lock or > 0 to stake more into an existing lock,
-     * set lockingDuration to 0 to stake without locking
+     * @dev
+     * - will update/create a lock if the token transferred is SDL or will distribute rewards otherwise
+     *
+     * For Non-SDL:
+     * - reverts if token is unsupported
+     *
+     * For SDL:
+     * - set lockId to 0 to create a new lock or set lockId to > 0 to stake more into an existing lock
+     * - set lockingDuration to 0 to stake without locking or set lockingDuration to > 0 to lock for an amount
+     *   time in seconds
+     * - see _updateLock() for more details on updating an existing lock or _createLock() for more details on
+     *   creating a new lock
      * @param _sender of the stake
      * @param _value of the token transfer
      * @param _calldata encoded lockId (uint256) and lockingDuration (uint64)
@@ -205,6 +229,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice extends the locking duration of a lock
+     * @dev
+     * - reverts if `_lockId` is invalid or sender is not owner of lock
+     * - reverts if `_lockingDuration` is less than current locking duration of lock
+     * - reverts if `_lockingDuration` is 0 or exceeds the maximum
      * @param _lockId id of lock
      * @param _lockingDuration new locking duration to set
      **/
@@ -215,8 +243,13 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice initiates the unlock period for a lock
-     * @dev at least half of a lock's duration must have elapsed to initiate an unlock - the unlock period
-     * consists of half of the duration
+     * @dev
+     * - at least half of the locking duration must have elapsed to initiate the unlock period
+     * - the unlock period consists of half of the locking duration
+     * - boost will be set to 0 upon initiation of the unlock period
+     *
+     * - reverts if `_lockId` is invalid or sender is not owner of lock
+     * - reverts if a minimum of half the locking duration has not elapsed
      * @param _lockId id of lock
      **/
     function initiateUnlock(uint256 _lockId) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
@@ -238,7 +271,12 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice withdraws unlocked SDL
-     * @dev SDL can only be withdrawn once the unlock period has expired
+     * @dev
+     * - SDL can only be withdrawn if unlocked (once the unlock period has elapsed or if it was never
+     *   locked in the first place)
+     * - reverts if `_lockId` is invalid or sender is not owner of lock
+     * - reverts if not unlocked
+     * - reverts if `_amount` exceeds the amount staked in the lock
      * @param _lockId id of the lock
      * @param _amount amount to withdraw from the lock
      **/
@@ -278,6 +316,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice transfers a lock between accounts
+     * @dev reverts if sender is not the owner of and not approved to transfer the lock
      * @param _from address to transfer from
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
@@ -293,7 +332,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice transfers a lock between accounts and validates that the receiver supports ERC721
-     * @dev calls onERC721Received on the receiver contract if applicable
+     * @dev
+     * - calls onERC721Received on `_to` if it is a contract or reverts if it is a contract
+     *   and does not implemement onERC721Received
+     * - reverts if sender is not the owner of and not approved to transfer the lock
+     * - reverts if `_lockId` is invalid
      * @param _from address to transfer from
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
@@ -308,7 +351,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice transfers a lock between accounts and validates that the receiver supports ERC721
-     * @dev calls onERC721Received on the receiver contract if applicable
+     * @dev
+     * - calls onERC721Received on `_to` if it is a contract or reverts if it is a contract
+     *   and does not implemement onERC721Received
+     * - reverts if sender is not the owner of and not approved to transfer the lock
+     * - reverts if `_lockId` is invalid
      * @param _from address to transfer from
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
@@ -326,8 +373,12 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice approves _to to transfer _lockId to another address
-     * @dev approval is revoked on transfer, can also be revoked by approving zero address
+     * @notice approves `_to` to transfer `_lockId` to another address
+     * @dev
+     * - approval is revoked on transfer and can also be revoked by approving zero address
+     * - reverts if sender is not owner of lock and not an approved operator for the owner
+     * - reverts if `_to` is owner of lock
+     * - reverts if `_lockId` is invalid
      * @param _to address approved to transfer
      * @param _lockId id of lock
      **/
@@ -354,9 +405,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice approves _operator to transfer all tokens owned by sender
-     * @dev approval will not be revoked until this function is called again with
-     * _approved set to false
-     * @param _operator address approved to transfer
+     * @dev
+     * - approval will not be revoked until this function is called again with
+     *   `_approved` set to false
+     * - reverts if sender is `_operator`
+     * @param _operator address to approve/unapprove
      * @param _approved whether address is approved or not
      **/
     function setApprovalForAll(address _operator, bool _approved) external {
@@ -368,7 +421,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice returns whether _operator is approved to transfer all tokens owned by _owner
+     * @notice returns whether `_operator` is approved to transfer all tokens owned by `_owner`
      * @param _owner owner of tokens
      * @param _operator address approved to transfer
      * @return whether address is approved or not
@@ -409,7 +462,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice required to conform to IERC721Metadata
+     * @dev required to conform to IERC721Metadata
      */
     function tokenURI(uint256) external view returns (string memory) {
         return "";
@@ -417,16 +470,26 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice sets the boost controller
+     * @dev this contract handles boost calculations for locking SDL
      * @param _boostController address of boost controller
      */
     function setBoostController(address _boostController) external onlyOwner {
         boostController = IBoostController(_boostController);
     }
 
+    /**
+     * @notice returns a list of all external contracts that depend on staked SDL balances
+     * @return list of dependent contracts
+     */
     function getDependentContracts() external view returns (address[] memory) {
         return dependentContracts;
     }
 
+    /**
+     * @notice adds a new dependent contract
+     * @dev reverts if contract is already added
+     * @param _contract address of contract
+     */
     function addDependentContract(address _contract) external onlyOwner {
         for (uint256 i = 0; i < dependentContracts.length; ++i) {
             if (dependentContracts[i] == _contract) revert DuplicateContract();
@@ -434,6 +497,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         dependentContracts.push(_contract);
     }
 
+    /**
+     * @notice removes a dependent contract
+     * @dev reverts if contract cannot be found
+     * @param _contract address of contract
+     */
     function removeDependentContract(address _contract) external onlyOwner {
         for (uint256 i = 0; i < dependentContracts.length; ++i) {
             if (dependentContracts[i] == _contract) {
@@ -445,18 +513,28 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         revert ContractNotFound();
     }
 
+    /**
+     * @notice used by the delegator pool to migrate user stakes to this contract
+     * @dev
+     * - creates a new lock to represent the migrated stake
+     * - reverts if `_lockingDuration` exceeds maximum
+     * @param _sender owner of lock
+     * @param _amount amount to stake
+     * @param _lockingDuration duration of lock
+     */
     function migrate(
-        address _account,
+        address _sender,
         uint256 _amount,
         uint64 _lockingDuration
     ) external {
         if (msg.sender != delegatorPool) revert SenderNotAuthorized();
         sdlToken.safeTransferFrom(delegatorPool, address(this), _amount);
-        _createLock(_account, _amount, _lockingDuration);
+        _createLock(_sender, _amount, _lockingDuration);
     }
 
     /**
      * @notice creates a new lock
+     * @dev reverts if `_lockingDuration` exceeds maximum
      * @param _sender owner of lock
      * @param _amount amount to stake
      * @param _lockingDuration duration of lock
@@ -485,6 +563,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice updates an existing lock
+     * @dev
+     * - reverts if `_lockId` is invalid
+     * - reverts if `_lockingDuration` is less than current locking duration of lock
+     * - reverts if `_lockingDuration` exceeds maximum
      * @param _sender owner of lock
      * @param _lockId id of lock
      * @param _amount additional amount to stake
@@ -545,7 +627,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @dev should be called whenever an account's effective balance decreases
      * @param _account address to update for
      **/
-    function _updateDependentContracts(address _account) internal {
+    function _updateDependentContracts(address _account) private {
         uint256 effectiveBalance = effectiveBalances[_account];
         for (uint256 i = 0; i < dependentContracts.length; ++i) {
             ISDLDependent(dependentContracts[i]).updateSDLBalance(_account, effectiveBalance);
@@ -554,6 +636,9 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice transfers a lock between accounts
+     * @dev
+     * - reverts if `_from` is not the owner of the lock
+     * - reverts if `to` is zero address
      * @param _from address to transfer from
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
@@ -587,7 +672,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice verifies that an address supports ERC721 and calls onERC721Received if applicable
-     * @dev called after a lock is safe transferred
+     * @dev
+     * - called after a lock is safe transferred
+     * - calls onERC721Received on `_to` if it is a contract or reverts if it is a contract
+     *   and does not implemement onERC721Received
      * @param _from address that lock is being transferred from
      * @param _to address that lock is being transferred to
      * @param _lockId id of lock
@@ -618,6 +706,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     /**
      * @notice returns whether an account is authorized to transfer a lock
+     * @dev returns true if `_spender` is approved to transfer `_lockId` or if `_spender` is
+     * approved to transfer all locks owned by the owner of `_lockId`
      * @param _spender address of account
      * @param _lockId id of lock
      * @return whether address is authorized ot not
