@@ -22,6 +22,14 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     uint256[10] private __gap;
 
+    error OnlyVaultController();
+
+    /**
+     * @notice initializes contract
+     * @param _token address of LINK token
+     * @param _vaultController address of the strategy that controls this vault
+     * @param _stakeController address of Chainlink staking contract
+     **/
     function __Vault_init(
         address _token,
         address _vaultController,
@@ -34,13 +42,16 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         stakeController = IStaking(_stakeController);
     }
 
+    /**
+     * @notice reverts if sender is not vaultController
+     **/
     modifier onlyVaultController() {
-        require(vaultController == msg.sender, "Vault controller only");
+        if (msg.sender != vaultController) revert OnlyVaultController();
         _;
     }
 
     /**
-     * @notice deposits tokens into the Chainlink staking contract
+     * @notice deposits tokens from the vaultController into the Chainlink staking contract
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external virtual onlyVaultController {
@@ -57,6 +68,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice returns the total balance of this contract in the Chainlink staking contract
+     * @dev includes principal plus any rewards
      * @return total balance
      */
     function getTotalDeposits() public view virtual returns (uint256);
@@ -70,7 +82,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice migrates the deposited tokens into a new stake controller
+     * @notice migrates the deposited tokens into a new Chainlink staking contract
      */
     function migrate(bytes calldata data) external onlyVaultController {
         stakeController.migrate(data);
