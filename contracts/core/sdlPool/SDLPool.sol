@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721Metad
 import "../base/RewardsPoolController.sol";
 import "../interfaces/IBoostController.sol";
 import "../interfaces/IERC721Receiver.sol";
-import "../interfaces/ISDLDependent.sol";
 
 /**
  * @title SDL Pool
@@ -40,8 +39,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     uint256 public totalEffectiveBalance;
     mapping(address => uint256) private effectiveBalances;
-
-    address[] private dependentContracts;
 
     address public delegatorPool;
 
@@ -264,8 +261,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         effectiveBalances[msg.sender] -= boostAmount;
         totalEffectiveBalance -= boostAmount;
 
-        _updateDependentContracts(msg.sender);
-
         emit InitiateUnlock(msg.sender, _lockId, expiry);
     }
 
@@ -308,8 +303,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
         effectiveBalances[msg.sender] -= _amount;
         totalEffectiveBalance -= _amount;
-
-        _updateDependentContracts(msg.sender);
 
         sdlToken.safeTransfer(msg.sender, _amount);
     }
@@ -478,42 +471,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice returns a list of all external contracts that depend on staked SDL balances
-     * @return list of dependent contracts
-     */
-    function getDependentContracts() external view returns (address[] memory) {
-        return dependentContracts;
-    }
-
-    /**
-     * @notice adds a new dependent contract
-     * @dev reverts if contract is already added
-     * @param _contract address of contract
-     */
-    function addDependentContract(address _contract) external onlyOwner {
-        for (uint256 i = 0; i < dependentContracts.length; ++i) {
-            if (dependentContracts[i] == _contract) revert DuplicateContract();
-        }
-        dependentContracts.push(_contract);
-    }
-
-    /**
-     * @notice removes a dependent contract
-     * @dev reverts if contract cannot be found
-     * @param _contract address of contract
-     */
-    function removeDependentContract(address _contract) external onlyOwner {
-        for (uint256 i = 0; i < dependentContracts.length; ++i) {
-            if (dependentContracts[i] == _contract) {
-                dependentContracts[i] = dependentContracts[dependentContracts.length - 1];
-                dependentContracts.pop();
-                return;
-            }
-        }
-        revert ContractNotFound();
-    }
-
-    /**
      * @notice used by the delegator pool to migrate user stakes to this contract
      * @dev
      * - creates a new lock to represent the migrated stake
@@ -614,24 +571,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         } else if (diffTotalAmount < 0) {
             effectiveBalances[_sender] -= uint256(-1 * diffTotalAmount);
             totalEffectiveBalance -= uint256(-1 * diffTotalAmount);
-            _updateDependentContracts(_sender);
         }
 
         locks[_lockId].boostAmount = boostAmount;
 
         emit UpdateLock(_sender, _lockId, baseAmount, boostAmount, _lockingDuration);
-    }
-
-    /**
-     * @notice sends a balance update to all SDL dependent contracts for an account
-     * @dev should be called whenever an account's effective balance decreases
-     * @param _account address to update for
-     **/
-    function _updateDependentContracts(address _account) private {
-        uint256 effectiveBalance = effectiveBalances[_account];
-        for (uint256 i = 0; i < dependentContracts.length; ++i) {
-            ISDLDependent(dependentContracts[i]).updateSDLBalance(_account, effectiveBalance);
-        }
     }
 
     /**
@@ -662,10 +606,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
         balances[_from] -= 1;
         balances[_to] += 1;
-
         lockOwners[_lockId] = _to;
-
-        _updateDependentContracts(_from);
 
         emit Transfer(_from, _to, _lockId);
     }
