@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "./IStakingRewardsPool.sol";
 
 interface IStakingPool is IStakingRewardsPool {
-    function stake(address _account, uint256 _amount) external;
+    function deposit(address _account, uint256 _amount) external;
 
     function withdraw(
         address _account,
@@ -35,4 +35,6 @@ interface IStakingPool is IStakingRewardsPool {
     function token() external view returns (address);
 
     function poolIndex() external view returns (uint16);
+
+    function canWithdraw() external view returns (uint256);
 }
