@@ -22,7 +22,7 @@ describe('WrappedSDToken', () => {
 
   async function stake(account: number, amount: number) {
     await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-    await stakingPool.stake(accounts[account], toEther(amount))
+    await stakingPool.deposit(accounts[account], toEther(amount))
   }
 
   before(async () => {
@@ -39,7 +39,6 @@ describe('WrappedSDToken', () => {
       'LinkPool LINK',
       'lplLINK',
       [[ownersRewards, 0]],
-      accounts[0],
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
@@ -56,6 +55,7 @@ describe('WrappedSDToken', () => {
     ])) as StrategyMock
 
     await stakingPool.addStrategy(strategy1.address)
+    await stakingPool.setStakingQueue(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
   })

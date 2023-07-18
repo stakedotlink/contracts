@@ -37,7 +37,6 @@ describe('OperatorVCS', () => {
       'Staked LINK',
       'stLINK',
       [],
-      accounts[0],
     ])) as StakingPool
 
     strategy = (await deployUpgradeable('OperatorVCS', [
@@ -51,6 +50,7 @@ describe('OperatorVCS', () => {
     ])) as OperatorVCS
 
     await stakingPool.addStrategy(strategy.address)
+    await stakingPool.setStakingQueue(accounts[0])
 
     for (let i = 0; i < 10; i++) {
       await strategy.addVault(accounts[0], accounts[1])
@@ -78,16 +78,16 @@ describe('OperatorVCS', () => {
   })
 
   it('depositBufferedTokens should work correctly', async () => {
-    await stakingPool.stake(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000))
     await strategy.performUpkeep(encode(0))
     assert.equal(fromEther(await staking.getStake(vaults[0])), 1000)
 
-    await stakingPool.stake(accounts[0], toEther(50000))
+    await stakingPool.deposit(accounts[0], toEther(50000))
     await strategy.performUpkeep(encode(0))
     assert.equal(fromEther(await staking.getStake(vaults[0])), 50000)
     assert.equal(fromEther(await staking.getStake(vaults[1])), 1000)
 
-    await stakingPool.stake(accounts[0], toEther(99009))
+    await stakingPool.deposit(accounts[0], toEther(99009))
     await strategy.performUpkeep(encode(1))
     assert.equal(fromEther(await staking.getStake(vaults[1])), 50000)
     assert.equal(fromEther(await staking.getStake(vaults[2])), 50000)
@@ -97,14 +97,14 @@ describe('OperatorVCS', () => {
   })
 
   it('getMinDeposits should work correctly', async () => {
-    await stakingPool.stake(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000))
     token.transfer(strategy.address, toEther(100))
     assert.equal(fromEther(await strategy.getMinDeposits()), 1000)
 
     await strategy.performUpkeep(encode(0))
     assert.equal(fromEther(await strategy.getMinDeposits()), 1000)
 
-    await stakingPool.stake(accounts[0], toEther(50000))
+    await stakingPool.deposit(accounts[0], toEther(50000))
     assert.equal(fromEther(await strategy.getMinDeposits()), 51000)
 
     await staking.setBaseReward(toEther(10))
@@ -120,14 +120,14 @@ describe('OperatorVCS', () => {
   })
 
   it('getMaxDeposits should work correctly', async () => {
-    await stakingPool.stake(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000))
     token.transfer(strategy.address, toEther(100))
     assert.equal(fromEther(await strategy.getMaxDeposits()), 500000)
 
     await strategy.performUpkeep(encode(0))
     assert.equal(fromEther(await strategy.getMaxDeposits()), 500000)
 
-    await stakingPool.stake(accounts[0], toEther(50000))
+    await stakingPool.deposit(accounts[0], toEther(50000))
     assert.equal(fromEther(await strategy.getMaxDeposits()), 500000)
 
     await staking.setBaseReward(toEther(10))
@@ -151,9 +151,9 @@ describe('OperatorVCS', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
-    await stakingPool.stake(accounts[0], toEther(300))
+    await stakingPool.deposit(accounts[0], toEther(300))
     await strategy.depositBufferedTokens(0)
-    await stakingPool.stake(accounts[0], toEther(100))
+    await stakingPool.deposit(accounts[0], toEther(100))
 
     await stakingPool.updateStrategyRewards([0])
     assert.equal(fromEther(await strategy.getTotalDeposits()), 400)
@@ -185,9 +185,9 @@ describe('OperatorVCS', () => {
   })
 
   it('withdrawVaultRewards should work correctly', async () => {
-    await stakingPool.stake(accounts[0], toEther(300))
+    await stakingPool.deposit(accounts[0], toEther(300))
     await strategy.depositBufferedTokens(0)
-    await stakingPool.stake(accounts[0], toEther(100))
+    await stakingPool.deposit(accounts[0], toEther(100))
 
     let vault = (await ethers.getContractAt('OperatorVault', vaults[0])) as OperatorVault
 
@@ -225,7 +225,7 @@ describe('OperatorVCS', () => {
   })
 
   it('withdrawExtraRewards should work correctly', async () => {
-    await stakingPool.stake(accounts[0], toEther(100))
+    await stakingPool.deposit(accounts[0], toEther(100))
     await strategy.depositBufferedTokens(0)
 
     assert.equal(fromEther(await strategy.getExtraRewards()), 0)
@@ -249,7 +249,7 @@ describe('OperatorVCS', () => {
     await expect(strategy.setOperatorRewardPercentage(10001)).to.be.revertedWith(
       'InvalidPercentage()'
     )
-    await stakingPool.stake(accounts[0], toEther(300))
+    await stakingPool.deposit(accounts[0], toEther(300))
     await strategy.depositBufferedTokens(0)
     await staking.setBaseReward(toEther(10))
     await strategy.setOperatorRewardPercentage(5000)
