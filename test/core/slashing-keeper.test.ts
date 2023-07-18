@@ -44,7 +44,6 @@ describe('SlashingKeeper', () => {
       'LinkPool LINK',
       'lpLINK',
       [[ownersRewards, 1000]],
-      accounts[0],
     ])) as StakingPool
 
     slashingKeeper = (await deploy('SlashingKeeper', [stakingPool.address])) as SlashingKeeper
@@ -77,9 +76,10 @@ describe('SlashingKeeper', () => {
     await stakingPool.addStrategy(strategy1.address)
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
+    await stakingPool.setStakingQueue(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
-    await stakingPool.stake(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000))
   })
 
   it('checkUpkeep should work correctly', async () => {

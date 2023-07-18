@@ -57,7 +57,7 @@ describe('EthStakingStrategy', () => {
 
   async function stake(amount: number) {
     await wETH.wrap({ value: toEther(amount) })
-    await stakingPool.stake(accounts[0], toEther(amount))
+    await stakingPool.deposit(accounts[0], toEther(amount))
   }
 
   before(async () => {
@@ -78,7 +78,6 @@ describe('EthStakingStrategy', () => {
         [ownersRewards, 1000],
         [erc677Receiver.address, 2000],
       ],
-      accounts[0],
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
@@ -171,6 +170,7 @@ describe('EthStakingStrategy', () => {
     await strategy.setDepositController(accounts[0])
     await strategy.setRewardsReceiver(rewardsReceiver.address)
     await stakingPool.addStrategy(strategy.address)
+    await stakingPool.setStakingQueue(accounts[0])
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
 
