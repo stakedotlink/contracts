@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 import { BigNumber, Signer } from 'ethers'
-import { assert } from 'chai'
+import { assert, expect } from 'chai'
 import {
   toEther,
   assertThrowsAsync,
@@ -10,17 +10,10 @@ import {
   setupToken,
   fromEther,
 } from '../utils/helpers'
-import {
-  ERC677,
-  StrategyMock,
-  StakingPool,
-  WrappedSDToken,
-  ERC677ReceiverMock,
-} from '../../typechain-types'
+import { ERC677, StrategyMock, StakingPool, ERC677ReceiverMock } from '../../typechain-types'
 
 describe('StakingPool', () => {
   let token: ERC677
-  let wsdToken: WrappedSDToken
   let stakingPool: StakingPool
   let strategy1: StrategyMock
   let strategy2: StrategyMock
@@ -32,7 +25,7 @@ describe('StakingPool', () => {
 
   async function stake(account: number, amount: number) {
     await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-    await stakingPool.stake(accounts[account], toEther(amount))
+    await stakingPool.deposit(accounts[account], toEther(amount))
   }
 
   async function withdraw(account: number, amount: number) {
@@ -58,14 +51,7 @@ describe('StakingPool', () => {
         [ownersRewards, 1000],
         [erc677Receiver.address, 2000],
       ],
-      accounts[0],
     ])) as StakingPool
-
-    wsdToken = (await deploy('WrappedSDToken', [
-      stakingPool.address,
-      'Wrapped LinkPool LINK',
-      'wlplLINK',
-    ])) as WrappedSDToken
 
     strategy1 = (await deployUpgradeable('StrategyMock', [
       token.address,
@@ -89,6 +75,7 @@ describe('StakingPool', () => {
     await stakingPool.addStrategy(strategy1.address)
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
+    await stakingPool.setStakingQueue(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
@@ -546,6 +533,65 @@ describe('StakingPool', () => {
     )
   })
 
+  it('should be able to transfer shares', async () => {
+    await stakingPool.updateFee(0, accounts[0], 0)
+    await stakingPool.updateFee(0, accounts[0], 0)
+    await stake(1, 1000)
+    await stake(2, 1000)
+
+    await token.transfer(strategy1.address, toEther(1000))
+    await stakingPool.updateStrategyRewards([0])
+
+    await stakingPool.connect(signers[1]).transferShares(accounts[3], toEther(100))
+    await stakingPool.connect(signers[3]).transferShares(accounts[0], toEther(50))
+
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[1])),
+      1350,
+      'account-1 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[2])),
+      1500,
+      'account-2 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[3])),
+      75,
+      'account-3 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[0])),
+      75,
+      'account-0 balance incorrect'
+    )
+
+    await expect(
+      stakingPool.transferShares(ethers.constants.AddressZero, toEther(10))
+    ).to.be.revertedWith('Transfer to the zero address')
+    await expect(stakingPool.transferShares(accounts[1], toEther(51))).to.be.revertedWith(
+      'Transfer amount exceeds balance'
+    )
+
+    await stakingPool.connect(signers[1]).approve(accounts[0], toEther(50))
+    await stakingPool.transferSharesFrom(accounts[1], accounts[0], toEther(10))
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[1])),
+      1335,
+      'account-1 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[0])),
+      90,
+      'account-0 balance incorrect'
+    )
+    assert.equal(fromEther(await stakingPool.allowance(accounts[1], accounts[0])), 35)
+
+    await expect(
+      stakingPool.transferSharesFrom(accounts[1], accounts[0], toEther(25))
+    ).to.be.revertedWith('ERC20: insufficient allowance')
+  })
+
   it('should be able to correctly calculate staking limits', async () => {
     let stakingLimit = await stakingPool.getMaxDeposits()
     assert.equal(fromEther(stakingLimit), 13000, 'staking limit is not correct')
@@ -557,19 +603,5 @@ describe('StakingPool', () => {
     await strategy1.setMaxDeposits(toEther(2000))
     stakingLimit = await stakingPool.getMaxDeposits()
     assert.equal(fromEther(stakingLimit), 14000, 'staking limit is not correct')
-  })
-
-  it('should be able to correct calculate staking limits with a liquidity buffer', async () => {
-    await stakingPool.setLiquidityBuffer(2000) // 20%
-    let stakingLimit = await stakingPool.getMaxDeposits()
-    assert.equal(fromEther(stakingLimit), 15600, 'staking limit is not correct')
-
-    await stakingPool.setLiquidityBuffer(100000) // 1000%
-    stakingLimit = await stakingPool.getMaxDeposits()
-    assert.equal(fromEther(stakingLimit), 143000, 'staking limit is not correct')
-
-    await stakingPool.setLiquidityBuffer(toEther(1)) // 10001 tokens
-    stakingLimit = await stakingPool.getMaxDeposits()
-    assert.equal(fromEther(stakingLimit), 13001, 'staking limit is not correct')
   })
 })

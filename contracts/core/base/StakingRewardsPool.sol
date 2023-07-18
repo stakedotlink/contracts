@@ -87,6 +87,33 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
+     * @notice transfers shares from one account to another
+     * @param _recipient account to transfer to
+     * @param _sharesAmount amount of shares to transfer
+     */
+    function transferShares(address _recipient, uint256 _sharesAmount) external returns (bool) {
+        _transferShares(msg.sender, _recipient, _sharesAmount);
+        return true;
+    }
+
+    /**
+     * @notice transfers shares from one account to another
+     * @param _sender account to transfer from
+     * @param _recipient account to transfer to
+     * @param _sharesAmount amount of shares to transfer
+     */
+    function transferSharesFrom(
+        address _sender,
+        address _recipient,
+        uint256 _sharesAmount
+    ) external returns (bool) {
+        uint256 tokensAmount = getStakeByShares(_sharesAmount);
+        _spendAllowance(_sender, msg.sender, tokensAmount);
+        _transferShares(_sender, _recipient, _sharesAmount);
+        return true;
+    }
+
+    /**
      * @notice returns the total amount of assets staked in the pool
      * @return total staked amount
      */
@@ -113,6 +140,27 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         shares[_recipient] += sharesToTransfer;
 
         emit Transfer(_sender, _recipient, _amount);
+    }
+
+    /**
+     * @notice transfers shares from one account to another
+     * @param _sender account to transfer from
+     * @param _recipient account to transfer to
+     * @param _sharesAmount amount of shares to transfer
+     */
+    function _transferShares(
+        address _sender,
+        address _recipient,
+        uint256 _sharesAmount
+    ) internal {
+        require(_sender != address(0), "Transfer from the zero address");
+        require(_recipient != address(0), "Transfer to the zero address");
+        require(shares[_sender] >= _sharesAmount, "Transfer amount exceeds balance");
+
+        shares[_sender] -= _sharesAmount;
+        shares[_recipient] += _sharesAmount;
+
+        emit Transfer(_sender, _recipient, getStakeByShares(_sharesAmount));
     }
 
     /**
