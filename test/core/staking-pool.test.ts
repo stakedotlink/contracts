@@ -456,6 +456,74 @@ describe('StakingPool', () => {
     assert.equal(fromEther(await stakingPool.totalSupply()), 4800, 'totalSupply incorrect')
   })
 
+  it('fees should be distributed regardless of deposit change', async () => {
+    await stake(1, 2000)
+    await stake(2, 1000)
+    await stake(3, 2000)
+    await strategy3.simulateSlash(toEther(200))
+    await strategy2.setFeeBasisPoints(1000)
+    await token.transfer(strategy2.address, toEther(200))
+    await stakingPool.updateStrategyRewards([0, 1, 2])
+
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[0])),
+      20,
+      'Account-0 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[1])),
+      1992,
+      'Account-1 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[2])),
+      996,
+      'Account-2 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[3])),
+      1992,
+      'Account-3 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      0,
+      'Owners rewards balance incorrect'
+    )
+    assert.equal(fromEther(await stakingPool.totalSupply()), 5000, 'totalSupply incorrect')
+
+    await strategy1.simulateSlash(toEther(290))
+    await token.transfer(strategy2.address, toEther(100))
+    await stakingPool.updateStrategyRewards([0, 1, 2])
+
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[0])),
+      29.2,
+      'Account-0 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[1])),
+      1912.32,
+      'Account-1 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[2])),
+      956.16,
+      'Account-2 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(accounts[3])),
+      1912.32,
+      'Account-3 balance incorrect'
+    )
+    assert.equal(
+      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      0,
+      'Owners rewards balance incorrect'
+    )
+    assert.equal(fromEther(await stakingPool.totalSupply()), 4810, 'totalSupply incorrect')
+  })
+
   it('getStakeByShares and getSharesByStake should work correctly', async () => {
     await stake(1, 1000)
     await stake(2, 1000)

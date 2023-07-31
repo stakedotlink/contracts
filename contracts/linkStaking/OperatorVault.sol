@@ -15,8 +15,8 @@ contract OperatorVault is Vault {
     address public operator;
     address public rewardsReceiver;
 
-    uint256 private totalDeposits;
-    uint256 private rewards;
+    uint128 public trackedTotalDeposits;
+    uint128 private unclaimedRewards;
 
     event AlertRaised();
     event WithdrawRewards(address indexed receiver, uint256 amount);
@@ -50,7 +50,7 @@ contract OperatorVault is Vault {
             __Vault_init(_token, _vaultController, _stakeController);
             setOperator(_operator);
         } else {
-            totalDeposits = getTotalDeposits();
+            trackedTotalDeposits = uint128(getTotalDeposits());
         }
         rewardsReceiver = _rewardsReceiver;
     }
@@ -77,7 +77,7 @@ contract OperatorVault is Vault {
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external override onlyVaultController {
-        totalDeposits += _amount;
+        trackedTotalDeposits += uint128(_amount);
         token.safeTransferFrom(msg.sender, address(this), _amount);
         IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x00");
     }
@@ -99,57 +99,61 @@ contract OperatorVault is Vault {
      * @dev reverts if sender is not operator
      */
     function raiseAlert() external onlyOperator {
+        uint256 prevBalance = token.balanceOf(address(this));
+
         stakeController.raiseAlert();
 
-        uint256 rewardAmount = token.balanceOf(address(this));
-        token.safeTransfer(vaultController, rewardAmount);
-        rewards += (rewardAmount * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+        uint256 rewards = token.balanceOf(address(this)) - prevBalance;
+        uint256 opRewards = (rewards * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+        token.safeTransfer(vaultController, rewards - opRewards);
 
         emit AlertRaised();
     }
 
-    /**
-     * @notice returns the total amount of unclaimed operator rewards for this vault
-     * @return total unclaimed rewards
-     */
-    function getRewards() public view returns (uint256) {
-        uint256 curTotalDeposits = getTotalDeposits();
-        uint256 totalRewards = rewards;
-
-        if (curTotalDeposits > totalDeposits) {
-            totalRewards +=
-                ((curTotalDeposits - totalDeposits) * IOperatorVCS(vaultController).operatorRewardPercentage()) /
-                10000;
-        }
-
-        return totalRewards;
+    function getUnclaimedRewards() public view returns (uint256) {
+        return unclaimedRewards + token.balanceOf(address(this));
     }
 
     /**
      * @notice withdraws the unclaimed operator rewards for this vault
-     * @dev
-     * - will attempt to withdraw all rewards but will partially withdraw if
-     *   there are not enough rewards available in vaultController
-     * - reverts if sender is not rewardsReceiver
+     * @dev reverts if sender is not rewardsReceiver
      */
     function withdrawRewards() external onlyRewardsReceiver {
-        uint256 curRewards = getRewards();
-        uint256 withdrawnRewards = IOperatorVCS(vaultController).withdrawVaultRewards(rewardsReceiver, curRewards);
+        uint256 rewards = getUnclaimedRewards();
+        uint256 balance = token.balanceOf(address(this));
 
-        rewards = curRewards - withdrawnRewards;
-        totalDeposits = getTotalDeposits();
+        uint256 amountWithdrawn = IOperatorVCS(vaultController).withdrawOperatorRewards(rewardsReceiver, rewards - balance);
+        unclaimedRewards -= uint128(amountWithdrawn);
 
-        emit WithdrawRewards(rewardsReceiver, withdrawnRewards);
+        if (balance != 0) {
+            token.safeTransfer(rewardsReceiver, balance);
+        }
+
+        emit WithdrawRewards(rewardsReceiver, amountWithdrawn + balance);
     }
 
-    /**
-     * @notice updates the operator rewards accounting for this vault
-     * @dev called by vaultController before operatorRewardPercentage is changed to
-     * credit any past rewards at the old rate
-     */
-    function updateRewards() external {
-        rewards = getRewards();
-        totalDeposits = getTotalDeposits();
+    function getPendingRewards() public view returns (uint256) {
+        int256 depositChange = int256(getTotalDeposits()) - int256(uint256(trackedTotalDeposits));
+
+        if (depositChange > 0) {
+            return (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+        }
+
+        return 0;
+    }
+
+    function updateDeposits() external onlyVaultController returns (uint256, uint256) {
+        uint256 totalDeposits = getTotalDeposits();
+        int256 depositChange = int256(totalDeposits) - int256(uint256(trackedTotalDeposits));
+
+        if (depositChange > 0) {
+            uint256 rewards = (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+            unclaimedRewards += uint128(rewards);
+            trackedTotalDeposits = uint128(totalDeposits);
+            return (totalDeposits, rewards);
+        }
+
+        return (totalDeposits, 0);
     }
 
     /**

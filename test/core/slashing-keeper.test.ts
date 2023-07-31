@@ -114,13 +114,21 @@ describe('SlashingKeeper', () => {
 
     let data = await slashingKeeper.checkUpkeep('0x00')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
-    assert.equal(fromEther(await strategy1.depositChange()), 0, 'strategy1 depositChange incorrect')
     assert.equal(
-      fromEther(await strategy2.depositChange()),
+      fromEther(await strategy1.getDepositChange()),
+      0,
+      'strategy1 depositChange incorrect'
+    )
+    assert.equal(
+      fromEther(await strategy2.getDepositChange()),
       100,
       'strategy2 depositChange incorrect'
     )
-    assert.equal(fromEther(await strategy3.depositChange()), 0, 'strategy3 depositChange incorrect')
+    assert.equal(
+      fromEther(await strategy3.getDepositChange()),
+      0,
+      'strategy3 depositChange incorrect'
+    )
 
     await strategy3.simulateSlash(toEther(10))
 

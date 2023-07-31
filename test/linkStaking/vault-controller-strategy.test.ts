@@ -194,16 +194,16 @@ describe('VaultControllerStrategy', () => {
     await strategy.depositToVaults(0, toEther(300), toEther(10), toEther(100))
     await strategy.deposit(toEther(100))
 
-    assert.equal(fromEther(await strategy.depositChange()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     await staking.setBaseReward(toEther(10))
-    assert.equal(fromEther(await strategy.depositChange()), 100)
+    assert.equal(fromEther(await strategy.getDepositChange()), 100)
 
     await staking.setDelegationReward(toEther(5))
-    assert.equal(fromEther(await strategy.depositChange()), 150)
+    assert.equal(fromEther(await strategy.getDepositChange()), 150)
 
     await token.transfer(strategy.address, toEther(50))
-    assert.equal(fromEther(await strategy.depositChange()), 200)
+    assert.equal(fromEther(await strategy.getDepositChange()), 200)
   })
 
   it('updateDeposits should work correctly', async () => {
@@ -213,22 +213,22 @@ describe('VaultControllerStrategy', () => {
 
     await strategy.updateDeposits()
     assert.equal(fromEther(await strategy.getTotalDeposits()), 400)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     await staking.setBaseReward(toEther(10))
     await strategy.updateDeposits()
     assert.equal(fromEther(await strategy.getTotalDeposits()), 500)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     await staking.setDelegationReward(toEther(5))
     await strategy.updateDeposits()
     assert.equal(fromEther(await strategy.getTotalDeposits()), 550)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     await token.transfer(strategy.address, toEther(20))
     await strategy.updateDeposits()
     assert.equal(fromEther(await strategy.getTotalDeposits()), 570)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
   })
 
   it('fees should be properly calculated in updateDeposits', async () => {
@@ -237,8 +237,9 @@ describe('VaultControllerStrategy', () => {
 
     await staking.setBaseReward(toEther(10))
     await strategy.addFee(accounts[3], 1000)
-    let [receivers, amounts] = await strategy.callStatic.updateDeposits()
+    let [depositChange, receivers, amounts] = await strategy.callStatic.updateDeposits()
 
+    assert.equal(fromEther(depositChange), 100)
     assert.equal(receivers[0], accounts[4])
     assert.equal(receivers[1], accounts[3])
     assert.equal(fromEther(amounts[0]), 5)
