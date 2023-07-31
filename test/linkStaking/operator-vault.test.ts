@@ -54,13 +54,16 @@ describe('OperatorVault', () => {
     await strategy.deposit(toEther(100))
     assert.equal(fromEther(await token.balanceOf(staking.address)), 1200)
     assert.equal(fromEther(await staking.getStake(vault.address)), 200)
-    assert.equal(fromEther(await vault.getRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 200)
   })
 
   it('raiseAlert should work correctly', async () => {
     await vault.connect(signers[1]).raiseAlert()
-    assert.equal(fromEther(await token.balanceOf(strategy.address)), 10000)
-    assert.equal(fromEther(await vault.getRewards()), 10)
+    assert.equal(fromEther(await token.balanceOf(strategy.address)), 9990)
+    assert.equal(fromEther(await token.balanceOf(vault.address)), 10)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 10)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 100)
     await expect(vault.raiseAlert()).to.be.revertedWith('OnlyOperator()')
   })
 
@@ -74,49 +77,88 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getTotalDeposits()), 215)
   })
 
-  it('getRewards and withdrawRewards should work correctly', async () => {
-    assert.equal(fromEther(await vault.getRewards()), 0)
+  it('getPendingRewards should work correctly', async () => {
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
     await staking.setBaseReward(toEther(10))
-    assert.equal(fromEther(await vault.getRewards()), 1)
+    assert.equal(fromEther(await vault.getPendingRewards()), 1)
     await staking.setDelegationReward(toEther(5))
-    assert.equal(fromEther(await vault.getRewards()), 1.5)
+    assert.equal(fromEther(await vault.getPendingRewards()), 1.5)
     await strategy.deposit(toEther(100))
-    assert.equal(fromEther(await vault.getRewards()), 1.5)
+    assert.equal(fromEther(await vault.getPendingRewards()), 1.5)
     await staking.setDelegationReward(toEther(0))
-    assert.equal(fromEther(await vault.getRewards()), 1)
+    assert.equal(fromEther(await vault.getPendingRewards()), 1)
 
-    await vault.connect(signers[2]).withdrawRewards()
-    assert.equal(fromEther(await token.balanceOf(accounts[2])), 0.5)
-    assert.equal(fromEther(await vault.getRewards()), 0.5)
-    await staking.setDelegationReward(toEther(5))
-    assert.equal(fromEther(await vault.getRewards()), 1)
-    await staking.setDelegationReward(toEther(0))
-    assert.equal(fromEther(await vault.getRewards()), 0.5)
-
-    await staking.setBaseReward(toEther(20))
-    await strategy.setWithdrawalPercentage(10000)
-    await vault.connect(signers[2]).withdrawRewards()
-    assert.equal(fromEther(await token.balanceOf(accounts[2])), 2)
-    assert.equal(fromEther(await vault.getRewards()), 0)
-
-    await expect(vault.withdrawRewards()).to.be.revertedWith('OnlyRewardsReceiver()')
+    await strategy.updateDeposits()
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    await staking.setDelegationReward(toEther(1))
+    assert.equal(fromEther(await vault.getPendingRewards()), 0.1)
+    await staking.setBaseReward(toEther(5))
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
   })
 
-  it('updateRewards should work correctly', async () => {
+  it('updateDeposits should work correctly', async () => {
     await staking.setBaseReward(toEther(10))
-    assert.equal(fromEther(await vault.getRewards()), 1)
-    await staking.setBaseReward(toEther(0))
-    assert.equal(fromEther(await vault.getRewards()), 0)
+    assert.deepEqual(
+      (await strategy.callStatic.updateDeposits()).map((v) => fromEther(v)),
+      [110, 1]
+    )
+    await strategy.updateDeposits()
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 110)
 
+    await staking.setBaseReward(toEther(5))
+    assert.deepEqual(
+      (await strategy.callStatic.updateDeposits()).map((v) => fromEther(v)),
+      [105, 0]
+    )
+    await strategy.updateDeposits()
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 110)
+
+    await staking.setBaseReward(toEther(8))
+    assert.deepEqual(
+      (await strategy.callStatic.updateDeposits()).map((v) => fromEther(v)),
+      [108, 0]
+    )
+    await strategy.updateDeposits()
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 110)
+
+    await staking.setBaseReward(toEther(11))
+    assert.deepEqual(
+      (await strategy.callStatic.updateDeposits()).map((v) => fromEther(v)),
+      [111, 0.1]
+    )
+    await strategy.updateDeposits()
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1.1)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 111)
+
+    await expect(vault.updateDeposits()).to.be.revertedWith('OnlyVaultController()')
+  })
+
+  it('withdrawRewards should work correctly', async () => {
     await staking.setBaseReward(toEther(10))
-    await vault.updateRewards()
-    await staking.setBaseReward(toEther(0))
-    assert.equal(fromEther(await vault.getRewards()), 1)
+    await strategy.updateDeposits()
 
-    await staking.setDelegationReward(toEther(20))
-    assert.equal(fromEther(await vault.getRewards()), 2)
-    await vault.updateRewards()
-    assert.equal(fromEther(await vault.getRewards()), 2)
+    await expect(vault.withdrawRewards()).to.be.revertedWith('OnlyRewardsReceiver()')
+
+    await vault.connect(signers[2]).withdrawRewards()
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0.5)
+
+    await vault.connect(signers[1]).raiseAlert()
+    await vault.connect(signers[2]).withdrawRewards()
+
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0.25)
+    assert.equal(fromEther(await token.balanceOf(accounts[2])), 10)
+
+    await strategy.setWithdrawalPercentage(10000)
+    await vault.connect(signers[2]).withdrawRewards()
+
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
   })
 
   it('setRewardsReceiver should work correctly', async () => {

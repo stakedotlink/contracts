@@ -341,31 +341,31 @@ describe('EthStakingStrategy', () => {
 
     assert.equal((await strategy.beaconValidators()).toNumber(), 3, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 90, 'beaconBalance incorrect')
-    assert.equal(fromEther(await strategy.depositChange()), -6, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), -6, 'depositChange incorrect')
 
     await strategy.reportBeaconState(4, toEther(132), toEther(0))
 
     assert.equal((await strategy.beaconValidators()).toNumber(), 4, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 132, 'beaconBalance incorrect')
-    assert.equal(fromEther(await strategy.depositChange()), 4, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), 4, 'depositChange incorrect')
 
     await strategy.reportBeaconState(5, toEther(163), toEther(2))
 
     assert.equal((await strategy.beaconValidators()).toNumber(), 5, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 163, 'beaconBalance incorrect')
-    assert.equal(fromEther(await strategy.depositChange()), 5, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), 5, 'depositChange incorrect')
 
     await strategy.reportBeaconState(5, toEther(155), toEther(2))
 
     assert.equal((await strategy.beaconValidators()).toNumber(), 5, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 155, 'beaconBalance incorrect')
-    assert.equal(fromEther(await strategy.depositChange()), -3, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), -3, 'depositChange incorrect')
 
     await strategy.reportBeaconState(5, toEther(156), toEther(1))
 
     assert.equal((await strategy.beaconValidators()).toNumber(), 5, 'beaconValidators incorrect')
     assert.equal(fromEther(await strategy.beaconBalance()), 156, 'beaconBalance incorrect')
-    assert.equal(fromEther(await strategy.depositChange()), -3, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), -3, 'depositChange incorrect')
   })
 
   it('reportBeaconState validation should work correctly', async () => {
@@ -390,7 +390,7 @@ describe('EthStakingStrategy', () => {
     await strategy.depositEther(6, 2, [0], [2])
     await strategy.reportBeaconState(3, toEther(196), toEther(0))
 
-    assert.equal(fromEther(await strategy.depositChange()), 105, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), 105, 'depositChange incorrect')
 
     await stakingPool.updateStrategyRewards([0])
     assert.equal(
@@ -412,7 +412,7 @@ describe('EthStakingStrategy', () => {
       10.5,
       'owners rewards incorrect'
     )
-    assert.equal(fromEther(await strategy.depositChange()), 0, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), 0, 'depositChange incorrect')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1105, 'getTotalDeposits incorrect')
     assert.equal(fromEther(await stakingPool.totalSupply()), 1105, 'totalSupply incorrect')
   })
@@ -422,7 +422,7 @@ describe('EthStakingStrategy', () => {
     await strategy.depositEther(6, 2, [0], [2])
     await strategy.reportBeaconState(3, toEther(95), toEther(0))
 
-    assert.equal(fromEther(await strategy.depositChange()), -1, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), -1, 'depositChange incorrect')
 
     await stakingPool.updateStrategyRewards([0])
     assert.equal(
@@ -444,7 +444,7 @@ describe('EthStakingStrategy', () => {
       0,
       'owners rewards incorrect'
     )
-    assert.equal(fromEther(await strategy.depositChange()), 0, 'depositChange incorrect')
+    assert.equal(fromEther(await strategy.getDepositChange()), 0, 'depositChange incorrect')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 999, 'getTotalDeposits incorrect')
     assert.equal(fromEther(await stakingPool.totalSupply()), 999, 'totalSupply incorrect')
   })
@@ -456,34 +456,34 @@ describe('EthStakingStrategy', () => {
 
     await strategy.reportBeaconState(2, toEther(64), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 0)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await strategy.bufferedETH()), 0)
 
     await strategy.reportBeaconState(2, toEther(63), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 0)
-    assert.equal(fromEther(await strategy.depositChange()), -1)
+    assert.equal(fromEther(await strategy.getDepositChange()), -1)
     assert.equal(fromEther(await strategy.bufferedETH()), 0)
 
     await strategy.reportBeaconState(2, toEther(65), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 5)
-    assert.equal(fromEther(await strategy.depositChange()), 6)
+    assert.equal(fromEther(await strategy.getDepositChange()), 6)
     assert.equal(fromEther(await strategy.bufferedETH()), 5)
 
     await strategy.reportBeaconState(2, toEther(66), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 5)
-    assert.equal(fromEther(await strategy.depositChange()), 7)
+    assert.equal(fromEther(await strategy.getDepositChange()), 7)
     assert.equal(fromEther(await strategy.bufferedETH()), 5)
 
     await rewardsReceiver.setWithdrawalLimits(toEther(0), toEther(4))
 
     await strategy.reportBeaconState(2, toEther(67), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 8)
-    assert.equal(fromEther(await strategy.depositChange()), 11)
+    assert.equal(fromEther(await strategy.getDepositChange()), 11)
     assert.equal(fromEther(await strategy.bufferedETH()), 8)
 
     await strategy.reportBeaconState(2, toEther(68), toEther(0))
     assert.equal(fromEther(await wETH.balanceOf(strategy.address)), 8)
-    assert.equal(fromEther(await strategy.depositChange()), 12)
+    assert.equal(fromEther(await strategy.getDepositChange()), 12)
     assert.equal(fromEther(await strategy.bufferedETH()), 8)
   })
 

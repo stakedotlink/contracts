@@ -59,7 +59,7 @@ abstract contract Strategy is IStrategy, Initializable, UUPSUpgradeable, Ownable
      * @notice returns the  total amount of fees that will be paid on the next update
      * @return total fees
      */
-    function pendingFees() external view virtual returns (uint256) {
+    function getPendingFees() external view virtual returns (uint256) {
         return 0;
     }
 

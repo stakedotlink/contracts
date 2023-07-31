@@ -172,7 +172,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * any slashing occurred
      * @return deposit change
      */
-    function depositChange() public view returns (int) {
+    function getDepositChange() public view returns (int) {
         uint256 totalBalance = token.balanceOf(address(this));
         for (uint256 i = 0; i < vaults.length; ++i) {
             totalBalance += vaults[i].getTotalDeposits();
@@ -185,13 +185,13 @@ abstract contract VaultControllerStrategy is Strategy {
      * @dev fees are only paid when the depositChange since the last update is positive
      * @return total fees
      */
-    function pendingFees() external view virtual override returns (uint256) {
-        int256 balanceChange = depositChange();
+    function getPendingFees() external view virtual override returns (uint256) {
+        int256 depositChange = getDepositChange();
         uint256 totalFees;
 
-        if (balanceChange > 0) {
+        if (depositChange > 0) {
             for (uint256 i = 0; i < fees.length; ++i) {
-                totalFees += (uint256(balanceChange) * fees[i].basisPoints) / 10000;
+                totalFees += (uint256(depositChange) * fees[i].basisPoints) / 10000;
             }
         }
         return totalFees;
@@ -200,6 +200,7 @@ abstract contract VaultControllerStrategy is Strategy {
     /**
      * @notice updates deposit accounting and calculates fees on newly earned rewards
      * @dev reverts if sender is not stakingPool
+     * @return depositChange change in deposits since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
@@ -207,22 +208,26 @@ abstract contract VaultControllerStrategy is Strategy {
         external
         virtual
         onlyStakingPool
-        returns (address[] memory receivers, uint256[] memory amounts)
+        returns (
+            int256 depositChange,
+            address[] memory receivers,
+            uint256[] memory amounts
+        )
     {
-        int balanceChange = depositChange();
+        depositChange = getDepositChange();
 
-        if (balanceChange > 0) {
-            totalDeposits += uint256(balanceChange);
+        if (depositChange > 0) {
+            totalDeposits += uint256(depositChange);
 
             receivers = new address[](fees.length);
             amounts = new uint256[](fees.length);
 
             for (uint256 i = 0; i < fees.length; ++i) {
                 receivers[i] = fees[i].receiver;
-                amounts[i] = (uint256(balanceChange) * fees[i].basisPoints) / 10000;
+                amounts[i] = (uint256(depositChange) * fees[i].basisPoints) / 10000;
             }
-        } else if (balanceChange < 0) {
-            totalDeposits -= uint256(balanceChange * -1);
+        } else if (depositChange < 0) {
+            totalDeposits -= uint256(depositChange * -1);
         }
     }
 

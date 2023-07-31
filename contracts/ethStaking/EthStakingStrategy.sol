@@ -44,7 +44,7 @@ contract EthStakingStrategy is Strategy {
     uint256 public beaconBalance;
     uint256 public nwlLostOperatorStakes;
 
-    int public depositChange;
+    int256 private depositChange;
     uint256 public totalDeposits;
     uint256 public bufferedETH;
 
@@ -236,12 +236,25 @@ contract EthStakingStrategy is Strategy {
         revert("Not implemented yet");
     }
 
+    function getDepositChange() external view override returns (int256) {
+        return depositChange;
+    }
+
     /**
      * @notice updates deposit accounting and calculates reward distribution
      */
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
-        if (depositChange > 0) {
-            uint256 rewards = uint256(depositChange);
+    function updateDeposits()
+        external
+        onlyStakingPool
+        returns (
+            int256 depChange,
+            address[] memory receivers,
+            uint256[] memory amounts
+        )
+    {
+        depChange = depositChange;
+        if (depChange > 0) {
+            uint256 rewards = uint256(depChange);
 
             uint256 nwlOperatorDeposits = nwlOperatorController.totalActiveStake();
             uint256 nwlOperatorRewardsBasisPoints = (BASIS_POINTS * nwlOperatorDeposits) /
@@ -262,7 +275,7 @@ contract EthStakingStrategy is Strategy {
             amounts[0] = wlOperatorFee;
             amounts[1] = nwlOperatorFee;
         }
-        totalDeposits = uint256(int(totalDeposits) + depositChange);
+        totalDeposits = uint256(int(totalDeposits) + depChange);
         depositChange = 0;
     }
 

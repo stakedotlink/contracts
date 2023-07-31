@@ -13,6 +13,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
     uint256 private totalPrincipalDeposits;
     uint256 public operatorRewardPercentage;
+    uint256 private unclaimedOperatorRewards;
 
     mapping(address => bool) private vaultMapping;
 
@@ -108,36 +109,45 @@ contract OperatorVCS is VaultControllerStrategy {
         if (msg.sender != address(stakingPool)) revert UnauthorizedToken();
     }
 
+    function getOperatorRewards() external view returns (uint256, uint256) {
+        return (unclaimedOperatorRewards, IERC20Upgradeable(address(stakingPool)).balanceOf(address(this)));
+    }
+
     /**
      * @notice used by vaults to withdraw operator rewards
      * @dev reverts if sender is not an authorized vault
      * @param _receiver address to receive rewards
      * @param _amount amount to withdraw
      */
-    function withdrawVaultRewards(address _receiver, uint256 _amount) external returns (uint256) {
+    function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
         if (!vaultMapping[msg.sender]) revert SenderNotAuthorized();
 
         IERC20Upgradeable lsdToken = IERC20Upgradeable(address(stakingPool));
         uint256 withdrawableRewards = lsdToken.balanceOf(address(this));
         uint256 amountToWithdraw = _amount > withdrawableRewards ? withdrawableRewards : _amount;
 
+        unclaimedOperatorRewards -= amountToWithdraw;
         lsdToken.safeTransfer(_receiver, amountToWithdraw);
+
         return amountToWithdraw;
     }
 
     /**
      * @notice returns the total amount of fees that will be paid on the next call to updateDeposits()
-     * @dev fees are only paid when the depositChange since the last update is positive
      * @return total fees
      */
-    function pendingFees() external view override returns (uint256) {
-        int256 balanceChange = depositChange();
+    function getPendingFees() external view override returns (uint256) {
         uint256 totalFees;
 
-        if (balanceChange > 0) {
-            totalFees = (uint256(balanceChange) * operatorRewardPercentage) / 10000;
+        uint256 vaultCount = vaults.length;
+        for (uint256 i = 0; i < vaultCount; ++i) {
+            totalFees += IOperatorVault(address(vaults[i])).getPendingRewards();
+        }
+
+        int256 depositChange = getDepositChange();
+        if (depositChange > 0) {
             for (uint256 i = 0; i < fees.length; ++i) {
-                totalFees += (uint256(balanceChange) * fees[i].basisPoints) / 10000;
+                totalFees += (uint256(depositChange) * fees[i].basisPoints) / 10000;
             }
         }
         return totalFees;
@@ -146,6 +156,7 @@ contract OperatorVCS is VaultControllerStrategy {
     /**
      * @notice updates deposit accounting and calculates fees on newly earned rewards
      * @dev reverts if sender is not stakingPool
+     * @return depositChange change in deposits since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
@@ -153,25 +164,51 @@ contract OperatorVCS is VaultControllerStrategy {
         external
         override
         onlyStakingPool
-        returns (address[] memory receivers, uint256[] memory amounts)
+        returns (
+            int256 depositChange,
+            address[] memory receivers,
+            uint256[] memory amounts
+        )
     {
-        int256 balanceChange = depositChange();
+        uint256 vaultDeposits;
+        uint256 operatorRewards;
 
-        if (balanceChange > 0) {
-            totalDeposits += uint256(balanceChange);
+        uint256 vaultCount = vaults.length;
+        for (uint256 i = 0; i < vaultCount; ++i) {
+            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits();
+            vaultDeposits += deposits;
+            operatorRewards += rewards;
+        }
 
-            receivers = new address[](fees.length + 1);
-            amounts = new uint256[](fees.length + 1);
+        depositChange = int256(vaultDeposits + token.balanceOf(address(this))) - int256(totalDeposits);
 
+        if (operatorRewards != 0) {
+            receivers = new address[](1 + (depositChange > 0 ? fees.length : 0));
+            amounts = new uint256[](receivers.length);
             receivers[0] = address(this);
-            amounts[0] = (uint256(balanceChange) * operatorRewardPercentage) / 10000;
+            amounts[0] = operatorRewards;
+            unclaimedOperatorRewards += operatorRewards;
+        }
 
-            for (uint256 i = 1; i < receivers.length; ++i) {
-                receivers[i] = fees[i - 1].receiver;
-                amounts[i] = (uint256(balanceChange) * fees[i - 1].basisPoints) / 10000;
+        if (depositChange > 0) {
+            totalDeposits += uint256(depositChange);
+
+            if (receivers.length == 0) {
+                receivers = new address[](fees.length);
+                amounts = new uint256[](receivers.length);
+
+                for (uint256 i = 0; i < receivers.length; ++i) {
+                    receivers[i] = fees[i].receiver;
+                    amounts[i] = (uint256(depositChange) * fees[i].basisPoints) / 10000;
+                }
+            } else {
+                for (uint256 i = 1; i < receivers.length; ++i) {
+                    receivers[i] = fees[i - 1].receiver;
+                    amounts[i] = (uint256(depositChange) * fees[i - 1].basisPoints) / 10000;
+                }
             }
-        } else if (balanceChange < 0) {
-            totalDeposits -= uint256(balanceChange * -1);
+        } else if (depositChange < 0) {
+            totalDeposits -= uint256(depositChange * -1);
         }
     }
 
@@ -193,55 +230,6 @@ contract OperatorVCS is VaultControllerStrategy {
         _deployVault(data);
         vaultMapping[address(vaults[vaults.length - 1])] = true;
         emit VaultAdded(_operator);
-    }
-
-    /**
-     * @notice returns the total amount of unclaimed operator rewards across all vaults
-     * @return operator rewards
-     */
-    function getOperatorRewards() public view returns (uint256) {
-        uint256 vaultCount = vaults.length;
-        uint256 operatorRewards;
-        for (uint256 i = 0; i < vaultCount; ++i) {
-            operatorRewards += IOperatorVault(address(vaults[i])).getRewards();
-        }
-
-        return operatorRewards;
-    }
-
-    /**
-     * @notice returns the amount of extra rewards held by this contract
-     * @dev extra rewards consist of the yield earned on unclaimed operator rewards
-     * @return extra rewards
-     */
-    function getExtraRewards() public view returns (uint256) {
-        uint256 operatorRewards = getOperatorRewards();
-        uint256 totalRewards = IERC20Upgradeable(address(stakingPool)).balanceOf(address(this));
-
-        if (totalRewards > operatorRewards) {
-            uint256 extraRewards = totalRewards - operatorRewards;
-            if (extraRewards >= 100) {
-                return extraRewards;
-            }
-        }
-
-        return 0;
-    }
-
-    /**
-     * @notice withdraws all extra rewards held by this contract
-     * @dev reverts if sender is not owner
-     * @param _receiver address to receive rewards
-     */
-    function withdrawExtraRewards(address _receiver) external onlyOwner {
-        uint256 extraRewards = getExtraRewards();
-
-        if (extraRewards == 0) {
-            revert NoExtraRewards();
-        }
-
-        IERC20Upgradeable(address(stakingPool)).safeTransfer(_receiver, extraRewards);
-        emit WithdrawExtraRewards(_receiver, extraRewards);
     }
 
     /**
@@ -267,8 +255,8 @@ contract OperatorVCS is VaultControllerStrategy {
     /**
      * @notice sets the basis point amount of an operator's earned rewards that they receive
      * @dev
-     * - stakingPool.updateStrategyRewards and vault.updateRewards are called to credit
-     *   all past operator rewards at the old rate before the reward percentage changes
+     * - stakingPool.updateStrategyRewards is called to credit all past operator rewards at
+     *   the old rate before the reward percentage changes
      * - reverts if sender is not owner
      * - reverts if `_operatorRewardPercentage` is > 10000
      * @param _operatorRewardPercentage basis point amount
@@ -277,11 +265,6 @@ contract OperatorVCS is VaultControllerStrategy {
         if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
 
         _updateStrategyRewards();
-
-        uint256 vaultCount = vaults.length;
-        for (uint256 i = 0; i < vaultCount; ++i) {
-            IOperatorVault(address(vaults[i])).updateRewards();
-        }
 
         operatorRewardPercentage = _operatorRewardPercentage;
         emit SetOperatorRewardPercentage(_operatorRewardPercentage);

@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/IVault.sol";
+import "../interfaces/IOperatorVault.sol";
 
 /**
  * @title Operator VCS Mock
@@ -18,7 +18,7 @@ contract OperatorVCSMock {
     uint256 public operatorRewardPercentage;
     uint256 public withdrawalPercentage;
 
-    IVault public vault;
+    IOperatorVault public vault;
 
     constructor(
         address _token,
@@ -34,14 +34,17 @@ contract OperatorVCSMock {
         vault.deposit(_amount);
     }
 
-    function withdrawVaultRewards(address _receiver, uint256 _amount) external returns (uint256) {
+    function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
         uint256 withdrawalAmount = (_amount * withdrawalPercentage) / 10000;
-        token.safeTransfer(_receiver, withdrawalAmount);
         return withdrawalAmount;
     }
 
+    function updateDeposits() external returns (uint256, uint256) {
+        return vault.updateDeposits();
+    }
+
     function addVault(address _vault) external {
-        vault = IVault(_vault);
+        vault = IOperatorVault(_vault);
         token.approve(_vault, type(uint256).max);
     }
 

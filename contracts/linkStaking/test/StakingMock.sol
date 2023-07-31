@@ -20,6 +20,8 @@ contract StakingMock is IStaking, IERC677Receiver {
     uint256 public baseReward;
     uint256 public delegationReward;
 
+    mapping(address => uint256) public perVaultBaseReward;
+
     bool public active;
     bool public paused;
 
@@ -81,8 +83,12 @@ contract StakingMock is IStaking, IERC677Receiver {
         baseReward = _amount;
     }
 
-    function getBaseReward(address) external view returns (uint256) {
-        return baseReward;
+    function setVaultBaseReward(address _vault, uint256 _amount) external {
+        perVaultBaseReward[_vault] = _amount;
+    }
+
+    function getBaseReward(address _account) external view returns (uint256) {
+        return perVaultBaseReward[_account] != 0 ? perVaultBaseReward[_account] : baseReward;
     }
 
     function setDelegationReward(uint256 _amount) external {
