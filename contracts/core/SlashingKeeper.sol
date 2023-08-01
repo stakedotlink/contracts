@@ -49,7 +49,7 @@ contract SlashingKeeper is KeeperCompatibleInterface {
             return (true, abi.encode(strategyIdxs));
         }
 
-        return (false, "0x00");
+        return (false, "0x");
     }
 
     /**

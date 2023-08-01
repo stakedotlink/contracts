@@ -308,9 +308,9 @@ contract LiquidSDIndexPool is StakingRewardsPool {
 
                 for (uint256 i = 0; i < fees.length; i++) {
                     if (i == fees.length - 1) {
-                        transferAndCallFrom(address(this), fees[i].receiver, balanceOf(address(this)), "0x00");
+                        transferAndCallFrom(address(this), fees[i].receiver, balanceOf(address(this)), "0x");
                     } else {
-                        transferAndCallFrom(address(this), fees[i].receiver, feeAmounts[i], "0x00");
+                        transferAndCallFrom(address(this), fees[i].receiver, feeAmounts[i], "0x");
                     }
                 }
             }

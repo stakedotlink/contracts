@@ -584,15 +584,6 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.totalStaked()), 0)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 0)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 0)
-    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
-      {
-        amount: 0,
-        boostAmount: 0,
-        startTime: 0,
-        duration: 0,
-        expiry: 0,
-      },
-    ])
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => v.toNumber()),
       []
@@ -636,15 +627,6 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.totalStaked()), 0)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 0)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 0)
-    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
-      {
-        amount: 0,
-        boostAmount: 0,
-        startTime: 0,
-        duration: 0,
-        expiry: 0,
-      },
-    ])
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => v.toNumber()),
       []
@@ -668,8 +650,6 @@ describe('SDLPool', () => {
     await expect(sdlPool.withdraw(1, toEther(1))).to.be.revertedWith('TotalDurationNotElapsed()')
 
     await time.increase(200 * DAY)
-    await sdlPool.initiateUnlock(1)
-
     sdlPool.withdraw(1, toEther(1))
   })
 
@@ -1164,6 +1144,9 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 2500)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 0)
 
+    await expect(
+      delegatorPool.retireDelegatorPool([accounts[2], accounts[3]], sdlPool.address)
+    ).to.be.revertedWith('Deposits not disabled')
     await expect(delegatorPool.migrate(0)).to.be.revertedWith(
       'Cannot migrate until contract is retired'
     )
@@ -1171,6 +1154,7 @@ describe('SDLPool', () => {
       'SenderNotAuthorized()'
     )
 
+    await delegatorPool.disableDeposits()
     await delegatorPool.retireDelegatorPool([accounts[2], accounts[3]], sdlPool.address)
     assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 500)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1200)

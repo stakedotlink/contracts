@@ -44,6 +44,8 @@ contract DelegatorPool is RewardsPoolControllerV1 {
 
     address public sdlPool;
 
+    bool public depositsDisabled;
+
     event AllowanceStaked(address indexed user, uint256 amount);
     event AllowanceWithdrawn(address indexed user, uint256 amount);
     event Migration(address indexed user, uint256 amount);
@@ -84,6 +86,7 @@ contract DelegatorPool is RewardsPoolControllerV1 {
         uint256 _value,
         bytes calldata _calldata
     ) external override {
+        require(!depositsDisabled, "Deposits disabled");
         require(
             msg.sender == address(allowanceToken) || isTokenSupported(msg.sender),
             "Sender must be allowance or rewards token"
@@ -243,10 +246,19 @@ contract DelegatorPool is RewardsPoolControllerV1 {
     }
 
     /**
+     * @notice disables deposits
+     * @dev must be called before generating _lockedAddresses for retireDelegatorPool
+     */
+    function disableDeposits() external onlyOwner {
+        depositsDisabled = true;
+    }
+
+    /**
      * @notice retires the contract
      * @param _lockedAddresses list of all addresses with a locked balance
      */
     function retireDelegatorPool(address[] calldata _lockedAddresses, address _sdlPool) external onlyOwner {
+        require(depositsDisabled, "Deposits not disabled");
         require(_sdlPool != address(0), "Invalid address");
         allowanceToken.approve(_sdlPool, type(uint256).max);
 

@@ -361,9 +361,9 @@ contract StakingPool is StakingRewardsPool {
             for (uint256 i = 0; i < receivers.length; i++) {
                 for (uint256 j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x");
                     } else {
-                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x");
                         feesPaidCount++;
                     }
                 }
