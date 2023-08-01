@@ -76,6 +76,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error UnlockNotInitiated();
     error DuplicateContract();
     error ContractNotFound();
+    error UnlockAlreadyInitiated();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -151,12 +152,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @return list of locks
      **/
     function getLocks(uint256[] calldata _lockIds) external view returns (Lock[] memory) {
-        uint256 maxLockId = lastLockId;
         Lock[] memory retLocks = new Lock[](_lockIds.length);
 
         for (uint256 i = 0; i < _lockIds.length; ++i) {
             uint256 lockId = _lockIds[i];
-            if (lockId == 0 || lockId > maxLockId) revert InvalidLockId();
+            if (lockOwners[lockId] == address(0)) revert InvalidLockId();
             retLocks[i] = locks[lockId];
         }
 
@@ -181,6 +181,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
                 if (lockIdsFound == lockCount) break;
             }
         }
+
+        assert(lockIdsFound == lockCount);
 
         return lockIds;
     }
@@ -250,6 +252,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _lockId id of lock
      **/
     function initiateUnlock(uint256 _lockId) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
+        if (locks[_lockId].expiry != 0) revert UnlockAlreadyInitiated();
         uint64 halfDuration = locks[_lockId].duration / 2;
         if (locks[_lockId].startTime + halfDuration > block.timestamp) revert HalfDurationNotElapsed();
 
@@ -612,6 +615,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
+     * taken from https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol
      * @notice verifies that an address supports ERC721 and calls onERC721Received if applicable
      * @dev
      * - called after a lock is safe transferred

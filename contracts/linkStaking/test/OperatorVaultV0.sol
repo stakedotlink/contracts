@@ -48,7 +48,7 @@ contract OperatorVaultV0 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function deposit(uint256 _amount) external onlyVaultController {
         IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), _amount);
-        IERC677(token).transferAndCall(address(stakeController), _amount, "0x00");
+        IERC677(token).transferAndCall(address(stakeController), _amount, "0x");
     }
 
     /**

@@ -50,7 +50,7 @@ contract RewardsPoolWSD is RewardsPool {
         require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
 
         uint256 balance = token.balanceOf(address(this));
-        token.transferAndCall(address(wsdToken), balance, "0x00");
+        token.transferAndCall(address(wsdToken), balance, "0x");
 
         uint256 toDistribute = wsdToken.balanceOf(address(this)) - totalRewards;
         totalRewards += toDistribute;

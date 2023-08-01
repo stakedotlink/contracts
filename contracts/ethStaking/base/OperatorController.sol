@@ -179,7 +179,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         bytes calldata
     ) external {
         require(msg.sender == address(sdToken), "Sender is not sdToken");
-        sdToken.transferAndCall(address(rewardsPool), _value, "0x00");
+        sdToken.transferAndCall(address(rewardsPool), _value, "0x");
     }
 
     /**
