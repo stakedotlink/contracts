@@ -110,6 +110,11 @@ contract OperatorVault is Vault {
         emit AlertRaised();
     }
 
+    /**
+     * @notice returns the total unclaimed operator rewards for this vault
+     * @dev includes LSD tokens and asset tokens
+     * @return total rewards
+     */
     function getUnclaimedRewards() public view returns (uint256) {
         return unclaimedRewards + token.balanceOf(address(this));
     }
@@ -132,6 +137,10 @@ contract OperatorVault is Vault {
         emit WithdrawRewards(rewardsReceiver, amountWithdrawn + balance);
     }
 
+    /**
+     * @notice returns the amount of rewards that will be earned by this vault on the next update
+     * @return newly earned rewards
+     */
     function getPendingRewards() public view returns (uint256) {
         int256 depositChange = int256(getTotalDeposits()) - int256(uint256(trackedTotalDeposits));
 
@@ -142,6 +151,12 @@ contract OperatorVault is Vault {
         return 0;
     }
 
+    /**
+     * @notice updates the deposit and reward accounting for this vault
+     * @dev will only pay out rewards if the vault is net positive when accounting for lost deposits
+     * @return totalDeposits the current total deposits in this vault
+     * @return rewards the rewards earned by this vault since the last update
+     */
     function updateDeposits() external onlyVaultController returns (uint256, uint256) {
         uint256 totalDeposits = getTotalDeposits();
         int256 depositChange = int256(totalDeposits) - int256(uint256(trackedTotalDeposits));
