@@ -1144,17 +1144,13 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 2500)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 0)
 
-    await expect(
-      delegatorPool.retireDelegatorPool([accounts[2], accounts[3]], sdlPool.address)
-    ).to.be.revertedWith('Deposits not disabled')
-    await expect(delegatorPool.migrate(0)).to.be.revertedWith(
+    await expect(delegatorPool.migrate(toEther(10), 0)).to.be.revertedWith(
       'Cannot migrate until contract is retired'
     )
     await expect(sdlPool.migrate(accounts[2], toEther(100), 0)).to.be.revertedWith(
       'SenderNotAuthorized()'
     )
 
-    await delegatorPool.disableDeposits()
     await delegatorPool.retireDelegatorPool([accounts[2], accounts[3]], sdlPool.address)
     assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 500)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1200)
@@ -1168,7 +1164,19 @@ describe('SDLPool', () => {
       assert.equal(fromEther(await rewardToken.balanceOf(accounts[i])), 400)
     }
 
-    await delegatorPool.migrate(0)
+    await delegatorPool.migrate(toEther(100), 0)
+    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 400)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1300)
+    assert.equal(fromEther(await delegatorPool.totalSupply()), 400)
+    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[0])), 150)
+    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[0])), 150)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 100)
+    assert.equal(fromEther(await rewardToken.balanceOf(accounts[0])), 100)
+
+    await expect(delegatorPool.migrate(toEther(200), 0)).to.be.revertedWith('Insufficient balance')
+    await expect(delegatorPool.migrate(0, 0)).to.be.revertedWith('Invalid amount')
+
+    await delegatorPool.migrate(toEther(150), 0)
     assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 250)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1450)
     assert.equal(fromEther(await delegatorPool.totalSupply()), 250)
@@ -1177,15 +1185,22 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 250)
     assert.equal(fromEther(await rewardToken.balanceOf(accounts[0])), 100)
 
-    await expect(delegatorPool.migrate(0)).to.be.revertedWith('Nothing to migrate')
+    await delegatorPool.connect(signers[1]).migrate(toEther(100), 365 * DAY)
+    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 150)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1550)
+    assert.equal(fromEther(await delegatorPool.totalSupply()), 150)
+    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[1])), 150)
+    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[1])), 150)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 200)
+    assert.equal(fromEther(await rewardToken.balanceOf(accounts[1])), 100)
 
-    await delegatorPool.connect(signers[1]).migrate(365 * DAY)
+    await delegatorPool.connect(signers[1]).migrate(toEther(150), 2 * 365 * DAY)
     assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 0)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1700)
     assert.equal(fromEther(await delegatorPool.totalSupply()), 0)
     assert.equal(fromEther(await delegatorPool.balanceOf(accounts[1])), 0)
     assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[1])), 0)
-    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 500)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 650)
     assert.equal(fromEther(await rewardToken.balanceOf(accounts[1])), 100)
   })
 })

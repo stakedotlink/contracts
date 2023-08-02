@@ -44,8 +44,6 @@ contract DelegatorPool is RewardsPoolControllerV1 {
 
     address public sdlPool;
 
-    bool public depositsDisabled;
-
     event AllowanceStaked(address indexed user, uint256 amount);
     event AllowanceWithdrawn(address indexed user, uint256 amount);
     event Migration(address indexed user, uint256 amount);
@@ -86,7 +84,7 @@ contract DelegatorPool is RewardsPoolControllerV1 {
         uint256 _value,
         bytes calldata _calldata
     ) external override {
-        require(!depositsDisabled, "Deposits disabled");
+        require(sdlPool == address(0), "Deposits disabled");
         require(
             msg.sender == address(allowanceToken) || isTokenSupported(msg.sender),
             "Sender must be allowance or rewards token"
@@ -160,7 +158,7 @@ contract DelegatorPool is RewardsPoolControllerV1 {
      * @param _account account address
      * @return locked balance
      */
-    function lockedBalanceOf(address _account) external view returns (uint256) {
+    function lockedBalanceOf(address _account) public view returns (uint256) {
         return lockedBalances[_account] - lockedApprovals[_account];
     }
 
@@ -178,7 +176,6 @@ contract DelegatorPool is RewardsPoolControllerV1 {
      * @param _amount amount to withdraw
      **/
     function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
-        require(!poolRouter.isReservedMode(), "Allowance cannot be withdrawn when pools are reserved");
         require(availableBalanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds available balance");
 
         uint256 unlockedBalance = balanceOf(msg.sender) - lockedBalances[msg.sender];
@@ -246,27 +243,20 @@ contract DelegatorPool is RewardsPoolControllerV1 {
     }
 
     /**
-     * @notice disables deposits
-     * @dev must be called before generating _lockedAddresses for retireDelegatorPool
-     */
-    function disableDeposits() external onlyOwner {
-        depositsDisabled = true;
-    }
-
-    /**
      * @notice retires the contract
-     * @param _lockedAddresses list of all addresses with a locked balance
+     * @param _lockedAddresses list of all operator addresses with a locked balance
      */
     function retireDelegatorPool(address[] calldata _lockedAddresses, address _sdlPool) external onlyOwner {
-        require(depositsDisabled, "Deposits not disabled");
         require(_sdlPool != address(0), "Invalid address");
         allowanceToken.approve(_sdlPool, type(uint256).max);
 
         IRewardsPool rewardsPool = tokenPools[tokens[0]];
+        uint256 toBurn;
 
         for (uint256 i = 0; i < _lockedAddresses.length; ++i) {
             address account = _lockedAddresses[i];
             uint256 unlockedBalance = availableBalanceOf(account);
+            toBurn += lockedBalanceOf(account);
 
             rewardsPool.withdraw(account);
 
@@ -280,27 +270,27 @@ contract DelegatorPool is RewardsPoolControllerV1 {
             }
         }
 
-        IStakingAllowance(address(allowanceToken)).burn(totalLocked);
-        totalLocked = 0;
+        IStakingAllowance(address(allowanceToken)).burn(toBurn);
+        totalLocked -= toBurn;
         sdlPool = _sdlPool;
     }
 
     /**
      * @notice migrates a stake to the new SDL pool
+     * @param _amount amount of tokens to migrate
      * @param _lockingDuration duration of the lock in the SDL pool
      */
-    function migrate(uint64 _lockingDuration) external {
+    function migrate(uint256 _amount, uint64 _lockingDuration) external {
         require(sdlPool != address(0), "Cannot migrate until contract is retired");
-
-        uint256 amount = balanceOf(msg.sender);
-        require(amount != 0, "Nothing to migrate");
+        require(_amount != 0, "Invalid amount");
+        require(_amount <= availableBalanceOf(msg.sender), "Insufficient balance");
 
         tokenPools[tokens[0]].withdraw(msg.sender);
 
-        _burn(msg.sender, amount);
-        ISDLPool(sdlPool).migrate(msg.sender, amount, _lockingDuration);
+        _burn(msg.sender, _amount);
+        ISDLPool(sdlPool).migrate(msg.sender, _amount, _lockingDuration);
 
-        emit Migration(msg.sender, amount);
+        emit Migration(msg.sender, _amount);
     }
 
     /**
