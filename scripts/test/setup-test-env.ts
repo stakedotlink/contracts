@@ -147,7 +147,7 @@ async function main() {
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(sfrxETHToken.address, toEther(50))
 
   await linkToken.transfer(strategyMockLINK.address, toEther(100))
-  
+
   await linkToken.connect(signers[3]).transfer(accounts[0], toEther(10))
   // await LINK_StakingPool.deposit(accounts[3], toEther(10))
 
