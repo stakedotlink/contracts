@@ -10,6 +10,7 @@
     "mock-data": "ts-node --files scripts/test/mock-data.ts",
     "start-mock-data": "node scripts/test/start-mock-data.js",
     "setup-test-env": "ts-node --files scripts/test/setup-test-env.ts",
+    "setup-test-env-migrations": "ts-node --files scripts/test/setup-test-env-migrations.ts",
     "compile": "npx hardhat compile",
     "tsc": "tsc",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
