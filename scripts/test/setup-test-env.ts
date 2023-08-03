@@ -5,7 +5,7 @@ import {
   ERC20,
   ERC677,
   LiquidSDIndexPool,
-  LPLMigration,
+  // LPLMigration,
   LSDIndexAdapterMock,
   SDLPool,
   StakingAllowance,
@@ -25,9 +25,9 @@ Accounts:
 async function main() {
   const { signers, accounts } = await getAccounts()
   const linkToken = (await getContract('LINKToken')) as ERC677
-  const lplToken = (await getContract('LPLToken')) as ERC677
+  // const lplToken = (await getContract('LPLToken')) as ERC677
   const sdlToken = (await getContract('SDLToken')) as StakingAllowance
-  const lplMigration = (await getContract('LPLMigration')) as LPLMigration
+  // const lplMigration = (await getContract('LPLMigration')) as LPLMigration
   const sdlPool = (await getContract('SDLPool')) as SDLPool
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as StakingPool
   const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
@@ -38,7 +38,7 @@ async function main() {
 
   // LPL Migration
 
-  await sdlToken.mint(lplMigration.address, toEther(150000))
+  // await sdlToken.mint(lplMigration.address, toEther(150000))
 
   // LINK Staking
 
@@ -111,7 +111,7 @@ async function main() {
   // Account 2 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH with no staked assets
 
   await sdlToken.mint(accounts[2], toEther(10000))
-  await lplToken.transfer(accounts[2], toEther(10000))
+  // await lplToken.transfer(accounts[2], toEther(10000))
   await linkToken.transfer(accounts[2], toEther(10000))
   await stETHToken.transfer(accounts[2], toEther(10000))
   await rETHToken.transfer(accounts[2], toEther(10000))
@@ -121,7 +121,7 @@ async function main() {
   // Account 3 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH and stSDL/stLINK/ixETH and has stLINK rewards
 
   await sdlToken.mint(accounts[3], toEther(10000))
-  await lplToken.transfer(accounts[3], toEther(10000))
+  // await lplToken.transfer(accounts[3], toEther(10000))
   await linkToken.transfer(accounts[3], toEther(10000))
   await stETHToken.transfer(accounts[3], toEther(10000))
   await rETHToken.transfer(accounts[3], toEther(10000))
@@ -147,6 +147,10 @@ async function main() {
   await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(sfrxETHToken.address, toEther(50))
 
   await linkToken.transfer(strategyMockLINK.address, toEther(100))
+  
+  await linkToken.connect(signers[3]).transfer(accounts[0], toEther(10))
+  // await LINK_StakingPool.deposit(accounts[3], toEther(10))
+
   await LINK_StakingPool.updateStrategyRewards([0])
 
   // Basic Curve Mock

@@ -14,7 +14,7 @@ const DelegatorPool = {
 // Linear Boost Controller
 const LinearBoostController = {
   maxLockingDuration: 4 * 365 * 86400, // maximum locking duration
-  maxBoost: 3, // maximum boost amount
+  maxBoost: 8, // maximum boost amount
 }
 // SDL Pool
 const SDLPool = {

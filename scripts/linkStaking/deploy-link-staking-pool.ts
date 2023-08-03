@@ -66,7 +66,7 @@ async function main() {
     },
     {
       LINK_StakingPool: 'StakingPool',
-      LINK_StakinQueue: 'StakingQueue',
+      LINK_StakingQueue: 'StakingQueue',
       LINK_WrappedSDToken: 'WrappedSDToken',
       stLINK_SDLRewardsPool: 'RewardsPoolWSD',
     }
