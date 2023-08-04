@@ -9,7 +9,7 @@
     "deploy": "ts-node --files scripts/test/deploy-test-contracts.ts && ts-node --files scripts/core/deploy-core.ts && ts-node --files scripts/linkStaking/deploy-link-staking-pool.ts && ts-node --files scripts/governance/deploy-governance-controller.ts && ts-node --files scripts/airdrop/deploy-merkle-distributor.ts && ts-node --files scripts/liquidSDIndex/deploy-ixETH-index-pool.ts && ts-node --files scripts/governance/deploy-stakedotlink-council.ts",
     "mock-data": "ts-node --files scripts/test/mock-data.ts",
     "geth-dev-fund": "ts-node --files scripts/test/geth-dev-fund.ts",
-    "start-mock-data": "node scripts/test/start-mock-data.js",
+    "start-test-env": "node scripts/test/start-test-envs.js",
     "setup-test-env": "ts-node --files scripts/test/setup-test-env.ts",
     "setup-test-env-migrations": "ts-node --files scripts/test/setup-test-env-migrations.ts",
     "compile": "npx hardhat compile",
