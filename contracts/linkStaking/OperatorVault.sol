@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 import "./base/Vault.sol";
 import "./interfaces/IOperatorVCS.sol";
 
@@ -50,7 +52,7 @@ contract OperatorVault is Vault {
             __Vault_init(_token, _vaultController, _stakeController);
             setOperator(_operator);
         } else {
-            trackedTotalDeposits = uint128(getTotalDeposits());
+            trackedTotalDeposits = SafeCast.toUint128(getTotalDeposits());
         }
         rewardsReceiver = _rewardsReceiver;
     }
@@ -77,7 +79,7 @@ contract OperatorVault is Vault {
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external override onlyVaultController {
-        trackedTotalDeposits += uint128(_amount);
+        trackedTotalDeposits += SafeCast.toUint128(_amount);
         token.safeTransferFrom(msg.sender, address(this), _amount);
         IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x");
     }
@@ -128,7 +130,7 @@ contract OperatorVault is Vault {
         uint256 balance = token.balanceOf(address(this));
 
         uint256 amountWithdrawn = IOperatorVCS(vaultController).withdrawOperatorRewards(rewardsReceiver, rewards - balance);
-        unclaimedRewards -= uint128(amountWithdrawn);
+        unclaimedRewards -= SafeCast.toUint128(amountWithdrawn);
 
         if (balance != 0) {
             token.safeTransfer(rewardsReceiver, balance);
@@ -163,8 +165,8 @@ contract OperatorVault is Vault {
 
         if (depositChange > 0) {
             uint256 rewards = (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
-            unclaimedRewards += uint128(rewards);
-            trackedTotalDeposits = uint128(totalDeposits);
+            unclaimedRewards += SafeCast.toUint128(rewards);
+            trackedTotalDeposits = SafeCast.toUint128(totalDeposits);
             return (totalDeposits, rewards);
         }
 
