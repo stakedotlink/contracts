@@ -38,7 +38,7 @@ contract StrategyMock is Strategy {
     }
 
     // should return the change in deposits since updateRewards was last called (can be positive or negative)
-    function depositChange() public view returns (int) {
+    function getDepositChange() public view returns (int) {
         return int(token.balanceOf(address(this))) - int(totalDeposits);
     }
 
@@ -55,18 +55,26 @@ contract StrategyMock is Strategy {
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
-        int256 balanceChange = depositChange();
-        if (balanceChange > 0) {
-            totalDeposits += uint256(balanceChange);
+    function updateDeposits()
+        external
+        onlyStakingPool
+        returns (
+            int256 depositChange,
+            address[] memory receivers,
+            uint256[] memory amounts
+        )
+    {
+        depositChange = getDepositChange();
+        if (depositChange > 0) {
+            totalDeposits += uint256(depositChange);
             if (feeBasisPoints > 0) {
                 receivers = new address[](1);
                 amounts = new uint256[](1);
                 receivers[0] = owner();
-                amounts[0] = (feeBasisPoints * uint256(balanceChange)) / 10000;
+                amounts[0] = (feeBasisPoints * uint256(depositChange)) / 10000;
             }
-        } else if (balanceChange < 0) {
-            totalDeposits -= uint256(balanceChange * -1);
+        } else if (depositChange < 0) {
+            totalDeposits -= uint256(depositChange * -1);
         }
     }
 

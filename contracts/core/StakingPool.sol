@@ -292,8 +292,8 @@ contract StakingPool is StakingRewardsPool {
 
         for (uint256 i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
-            totalRewards += strategy.depositChange();
-            totalFees += strategy.pendingFees();
+            totalRewards += strategy.getDepositChange();
+            totalFees += strategy.getPendingFees();
         }
 
         if (totalRewards > 0) {
@@ -316,19 +316,19 @@ contract StakingPool is StakingRewardsPool {
         address[][] memory receivers = new address[][](strategies.length + 1);
         uint256[][] memory feeAmounts = new uint256[][](strategies.length + 1);
 
-        for (uint256 i = 0; i < _strategyIdxs.length; i++) {
+        for (uint256 i = 0; i < _strategyIdxs.length; ++i) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
-            int rewards = strategy.depositChange();
-            if (rewards != 0) {
-                (address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy.updateDeposits();
-                totalRewards += rewards;
-                if (rewards > 0) {
-                    receivers[i] = (strategyReceivers);
-                    feeAmounts[i] = (strategyFeeAmounts);
-                    totalFeeCount += receivers[i].length;
-                    for (uint256 j = 0; j < strategyReceivers.length; j++) {
-                        totalFeeAmounts += strategyFeeAmounts[j];
-                    }
+
+            (int256 depositChange, address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy
+                .updateDeposits();
+            totalRewards += depositChange;
+
+            if (strategyReceivers.length != 0) {
+                receivers[i] = strategyReceivers;
+                feeAmounts[i] = strategyFeeAmounts;
+                totalFeeCount += receivers[i].length;
+                for (uint256 j = 0; j < strategyReceivers.length; ++j) {
+                    totalFeeAmounts += strategyFeeAmounts[j];
                 }
             }
         }
@@ -361,9 +361,9 @@ contract StakingPool is StakingRewardsPool {
             for (uint256 i = 0; i < receivers.length; i++) {
                 for (uint256 j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x");
                     } else {
-                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x");
                         feesPaidCount++;
                     }
                 }

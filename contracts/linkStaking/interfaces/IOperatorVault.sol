@@ -4,9 +4,9 @@ pragma solidity 0.8.15;
 import "./IVault.sol";
 
 interface IOperatorVault is IVault {
-    function getRewards() external view returns (uint256);
+    function getPendingRewards() external view returns (uint256);
 
-    function updateRewards() external;
+    function updateDeposits() external returns (uint256, uint256);
 
     function setOperator(address _operator) external;
 

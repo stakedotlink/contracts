@@ -67,6 +67,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error InsufficientDepositRoom();
     error CannotSetClosedStatus();
     error SenderNotAuthorized();
+    error InvalidAmount();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -194,6 +195,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _shouldQueue whether tokens should be queued if there's no room in the staking pool
      */
     function deposit(uint256 _amount, bool _shouldQueue) external {
+        if (_amount == 0) revert InvalidAmount();
         token.safeTransferFrom(msg.sender, address(this), _amount);
         _deposit(msg.sender, _amount, _shouldQueue);
     }
@@ -203,6 +205,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _amount amount to withdraw
      */
     function withdraw(uint256 _amount) external {
+        if (_amount == 0) revert InvalidAmount();
         IERC20Upgradeable(address(stakingPool)).safeTransferFrom(msg.sender, address(this), _amount);
         _withdraw(msg.sender, _amount);
     }
@@ -220,6 +223,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         bytes32[] calldata _merkleProof,
         uint256 _amountToUnqueue
     ) external whenNotPaused {
+        if (_amountToUnqueue == 0) revert InvalidAmount();
         if (_amountToUnqueue > totalQueued) revert InsufficientQueuedTokens();
 
         address account = msg.sender;
@@ -413,9 +417,11 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         if (totalQueued == 0) {
             uint256 canDeposit = stakingPool.canDeposit();
-            uint256 toDepositIntoPool = toDeposit <= canDeposit ? toDeposit : canDeposit;
-            stakingPool.deposit(_account, toDepositIntoPool);
-            toDeposit -= toDepositIntoPool;
+            if (canDeposit != 0) {
+                uint256 toDepositIntoPool = toDeposit <= canDeposit ? toDeposit : canDeposit;
+                stakingPool.deposit(_account, toDepositIntoPool);
+                toDeposit -= toDepositIntoPool;
+            }
         }
 
         if (toDeposit != 0 && _shouldQueue) {

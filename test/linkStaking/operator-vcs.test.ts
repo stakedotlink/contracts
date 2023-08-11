@@ -141,13 +141,30 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther(await strategy.getMaxDeposits()), 500250)
   })
 
-  it('pendingFees should work correctly', async () => {
+  it('getPendingFees should work correctly', async () => {
     await staking.setBaseReward(toEther(10))
-    assert.equal(fromEther(await strategy.pendingFees()), 15)
+    assert.equal(fromEther(await strategy.getPendingFees()), 15)
+
+    await staking.setVaultBaseReward(vaults[1], toEther(20))
+    assert.equal(fromEther(await strategy.getPendingFees()), 16.5)
+
     await token.transfer(strategy.address, toEther(50))
-    assert.equal(fromEther(await strategy.pendingFees()), 22.5)
+    assert.equal(fromEther(await strategy.getPendingFees()), 19)
+
     await staking.setBaseReward(toEther(0))
-    assert.equal(fromEther(await strategy.pendingFees()), 7.5)
+    assert.equal(fromEther(await strategy.getPendingFees()), 5.5)
+
+    await staking.setBaseReward(toEther(5))
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(fromEther(await strategy.getPendingFees()), 0)
+
+    await staking.setVaultBaseReward(vaults[3], toEther(15))
+    await staking.setBaseReward(toEther(0))
+    assert.equal(fromEther(await strategy.getPendingFees()), 1)
+
+    await stakingPool.updateStrategyRewards([0])
+    await staking.setBaseReward(toEther(5))
+    assert.equal(fromEther(await strategy.getPendingFees()), 2)
   })
 
   it('updateDeposits should work correctly', async () => {
@@ -157,37 +174,70 @@ describe('OperatorVCS', () => {
 
     await stakingPool.updateStrategyRewards([0])
     assert.equal(fromEther(await strategy.getTotalDeposits()), 400)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 0)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 0)
 
     await staking.setBaseReward(toEther(10))
     await stakingPool.updateStrategyRewards([0])
     assert.equal(fromEther(await strategy.getTotalDeposits()), 500)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 10)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 10)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 5)
 
     await staking.setDelegationReward(toEther(5))
     await stakingPool.updateStrategyRewards([0])
     assert.equal(fromEther(await strategy.getTotalDeposits()), 550)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 15)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 15.85)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 7.925)
 
     let vault = (await ethers.getContractAt('OperatorVault', vaults[0])) as OperatorVault
     await vault.raiseAlert()
     await stakingPool.updateStrategyRewards([0])
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 650)
-    assert.equal(fromEther(await strategy.depositChange()), 0)
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 25)
-    assert.equal(Number(fromEther(await stakingPool.balanceOf(strategy.address)).toFixed(2)), 28.3)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 640)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(strategy.address)).toFixed(2)), 18.31)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[4])).toFixed(2)), 13.66)
   })
 
-  it('withdrawVaultRewards should work correctly', async () => {
+  it('updateDeposits should work correctly with slashing', async () => {
     await stakingPool.deposit(accounts[0], toEther(300))
     await strategy.depositBufferedTokens(0)
     await stakingPool.deposit(accounts[0], toEther(100))
+    await staking.setBaseReward(toEther(10))
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 500)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 10)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 5)
+
+    await staking.setBaseReward(toEther(5))
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 450)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 9)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 4.5)
+
+    await staking.setBaseReward(toEther(0))
+    await staking.setVaultBaseReward(vaults[1], toEther(15))
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 415)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(strategy.address)).toFixed(2)), 8.79)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[4])).toFixed(2)), 4.14)
+
+    await staking.setBaseReward(toEther(10))
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 505)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(strategy.address)).toFixed(2)), 10.6)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[4])).toFixed(2)), 9.5)
+  })
+
+  it('withdrawVaultRewards should work correctly', async () => {
+    await stakingPool.deposit(accounts[0], toEther(10))
+    await strategy.depositBufferedTokens(0)
 
     let vault = (await ethers.getContractAt('OperatorVault', vaults[0])) as OperatorVault
 
@@ -195,54 +245,29 @@ describe('OperatorVCS', () => {
 
     await staking.setBaseReward(toEther(10))
     await stakingPool.updateStrategyRewards([0])
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 10)
-    assert.equal(fromEther(await vault.getRewards()), 1)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
     await vault.connect(signers[1]).withdrawRewards()
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 9)
-    assert.equal(fromEther(await vault.getRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
+    assert.deepEqual(
+      (await strategy.getOperatorRewards()).map((v) => fromEther(v)),
+      [9, 9]
+    )
     assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 9)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 1)
 
     vault = (await ethers.getContractAt('OperatorVault', vaults[1])) as OperatorVault
 
-    await staking.setDelegationReward(toEther(100))
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 109)
-    assert.equal(fromEther(await vault.getRewards()), 11)
+    await staking.setBaseReward(toEther(0))
+    await stakingPool.updateStrategyRewards([0])
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
     await vault.connect(signers[1]).withdrawRewards()
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 100)
-    assert.equal(fromEther(await vault.getRewards()), 2)
-    assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 0)
-    assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 10)
-
-    await stakingPool.updateStrategyRewards([0])
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 100)
-    assert.equal(fromEther(await vault.getRewards()), 2)
-    await vault.connect(signers[1]).withdrawRewards()
-    assert.equal(fromEther(await strategy.getOperatorRewards()), 98)
-    assert.equal(fromEther(await vault.getRewards()), 0)
-    assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 98)
-    assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 29)
-  })
-
-  it('withdrawExtraRewards should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(100))
-    await strategy.depositBufferedTokens(0)
-
-    assert.equal(fromEther(await strategy.getExtraRewards()), 0)
-
-    await staking.setBaseReward(toEther(10))
-    await stakingPool.updateStrategyRewards([0])
-    assert.equal(fromEther(await strategy.getExtraRewards()), 0)
-
-    await staking.setDelegationReward(toEther(20))
-    await stakingPool.updateStrategyRewards([0])
-    assert.equal(fromEther(await strategy.getExtraRewards()), 8.5)
-
-    await strategy.withdrawExtraRewards(accounts[3])
-    assert.equal(fromEther(await stakingPool.balanceOf(strategy.address)), 30)
-    assert.equal(fromEther(await stakingPool.balanceOf(accounts[3])), 8.5)
-    assert.equal(fromEther(await strategy.getExtraRewards()), 0)
-    await expect(strategy.withdrawExtraRewards(accounts[3])).to.be.revertedWith('NoExtraRewards()')
+    assert.equal(Number(fromEther(await vault.getUnclaimedRewards()).toFixed(2)), 0.18)
+    assert.deepEqual(
+      (await strategy.getOperatorRewards()).map((v) => Number(fromEther(v).toFixed(2))),
+      [8.18, 0]
+    )
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(strategy.address)).toFixed(2)), 0)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[1])).toFixed(2)), 0.91)
   })
 
   it('setOperatorRewardPercentage should work correctly', async () => {

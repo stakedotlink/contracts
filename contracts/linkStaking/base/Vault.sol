@@ -56,7 +56,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function deposit(uint256 _amount) external virtual onlyVaultController {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x00");
+        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x");
     }
 
     /**
