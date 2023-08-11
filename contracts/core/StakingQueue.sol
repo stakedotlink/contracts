@@ -28,13 +28,13 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     IERC20Upgradeable public token;
     IStakingPool public stakingPool;
     ISDLPool public sdlPool;
-
     address public distributionOracle;
 
     uint256 public queueDepositThreshold;
     PoolStatus public poolStatus;
 
     bytes32 public merkleRoot;
+    bytes32 public ipfsHash;
     uint256 public totalDistributed;
     uint256 public totalSharesDistributed;
 
@@ -51,7 +51,12 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
     event Deposit(address indexed account, uint256 poolAmount, uint256 queueAmount);
     event Withdraw(address indexed account, uint256 poolAmount, uint256 queueAmount);
-    event UpdateDistribution(bytes32 merkleRoot, uint256 incrementalAmount, uint256 incrementalSharesAmount);
+    event UpdateDistribution(
+        bytes32 merkleRoot,
+        bytes32 ipfsHash,
+        uint256 incrementalAmount,
+        uint256 incrementalSharesAmount
+    );
     event SetPoolStatus(PoolStatus status);
     event SetQueueDepositThreshold(uint256 threshold);
     event DepositQueuedTokens(uint256 amount);
@@ -126,28 +131,24 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice returns an account's current amount of queued tokens
-     * @dev _distributionAmounts is stored off-chain with the merkle tree
+     * @dev _distributionAmount is stored on IPFS
      * @param _account account address
-     * @param _distributionAmounts list of distribution amounts from the latest distribution
+     * @param _distributionAmount account's distribution amount from the latest distribution
      * @return amount of queued tokens for an account
      */
-    function getQueuedTokens(address _account, uint256[] calldata _distributionAmounts) external view returns (uint256) {
-        uint256 index = accountIndexes[_account];
-        return accountQueuedTokens[_account] - (index < _distributionAmounts.length ? _distributionAmounts[index] : 0);
+    function getQueuedTokens(address _account, uint256 _distributionAmount) external view returns (uint256) {
+        return accountQueuedTokens[_account] - _distributionAmount;
     }
 
     /**
      * @notice returns an account's current amount of withdrawable LSD tokens
-     * @dev _distributionShareAmounts is stored off-chain wit the merkle tree
+     * @dev _distributionShareAmount is stored on IPFS
      * @param _account account address
-     * @param _distributionShareAmounts list of distribution share amounts from the latest distribution
+     * @param _distributionShareAmount account's distribution share amounts from the latest distribution
      * @return withdrawable LSD tokens for account
      */
-    function getLSDTokens(address _account, uint256[] calldata _distributionShareAmounts) external view returns (uint256) {
-        uint256 index = accountIndexes[_account];
-        uint256 sharesToClaim = index < _distributionShareAmounts.length
-            ? _distributionShareAmounts[index] - accountSharesClaimed[_account]
-            : 0;
+    function getLSDTokens(address _account, uint256 _distributionShareAmount) external view returns (uint256) {
+        uint256 sharesToClaim = _distributionShareAmount - accountSharesClaimed[_account];
         return stakingPool.getStakeByShares(sharesToClaim);
     }
 
@@ -286,10 +287,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         uint256 canDeposit = stakingPool.canDeposit();
         return (
-            poolStatus == PoolStatus.OPEN &&
-                !paused() &&
-                totalQueued >= queueDepositThreshold &&
-                canDeposit >= queueDepositThreshold,
+            poolStatus == PoolStatus.OPEN && totalQueued >= queueDepositThreshold && canDeposit >= queueDepositThreshold,
             bytes("")
         );
     }
@@ -305,7 +303,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice returns account data used for calculating a new merkle tree
-     * @dev merkle tree is calculated based on users' reSDL balance and the number of tokens the have queued,
+     * @dev merkle tree is calculated based on users' reSDL balance and the number of tokens they have queued,
      * the index of an account in this contract is equal to their index in the tree
      * @return accounts list of all accounts that have ever queued tokens
      * @return sdlBalances list of SDL balances for each account
@@ -333,13 +331,15 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice distributes a new batch of LSD tokens to users with queued tokens
+     * @notice distributes a new batch of LSD tokens to users that have queued tokens
      * @param _merkleRoot new merkle root for the distribution tree
+     * @param _ipfsHash new ipfs hash for the distribution tree (CIDv0, no prefix - only hash)
      * @param _totalAmount lifetime amount of LSD tokens distributed
      * @param _totalSharesAmount lifetime amount of LSD shares distributed
      */
     function updateDistribution(
         bytes32 _merkleRoot,
+        bytes32 _ipfsHash,
         uint256 _totalAmount,
         uint256 _totalSharesAmount
     ) external onlyDistributionOracle {
@@ -348,12 +348,13 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 incrementalAmount = _totalAmount - totalDistributed;
         uint256 incrementalSharesAmount = _totalSharesAmount - totalSharesDistributed;
 
-        emit UpdateDistribution(_merkleRoot, incrementalAmount, incrementalSharesAmount);
-
         depositsSinceLastUpdate -= incrementalAmount;
         merkleRoot = _merkleRoot;
+        ipfsHash = _ipfsHash;
         totalDistributed = _totalAmount;
         totalSharesDistributed = _totalSharesAmount;
+
+        emit UpdateDistribution(_merkleRoot, _ipfsHash, incrementalAmount, incrementalSharesAmount);
     }
 
     /**
@@ -442,14 +443,14 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice withdraws asset tokens
      * @dev will swap LSD tokens for queued tokens if possible followed by withdrawing
-     * from the staking pool if necessary
+     * from the staking pool if necessary (assumes staking pool will revert if there is insufficient withdrawal room)
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
     function _withdraw(address _account, uint256 _amount) internal {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
-        uint256 toWithdrawFromQueue = paused() ? 0 : (_amount <= totalQueued ? _amount : totalQueued);
+        uint256 toWithdrawFromQueue = _amount <= totalQueued ? _amount : totalQueued;
         uint256 toWithdrawFromPool = _amount - toWithdrawFromQueue;
 
         if (toWithdrawFromQueue != 0) {
@@ -469,7 +470,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice deposits queued tokens
      * @param _depositThreshold min amount of tokens required for successful deposit
      **/
-    function _depositQueuedTokens(uint256 _depositThreshold) internal whenNotPaused {
+    function _depositQueuedTokens(uint256 _depositThreshold) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
         uint256 canDeposit = stakingPool.canDeposit();
