@@ -5,7 +5,6 @@ import {
   ERC20,
   ERC677,
   LiquidSDIndexPool,
-  // LPLMigration,
   LSDIndexAdapterMock,
   SDLPool,
   StakingAllowance,
@@ -25,9 +24,7 @@ Accounts:
 async function main() {
   const { signers, accounts } = await getAccounts()
   const linkToken = (await getContract('LINKToken')) as ERC677
-  // const lplToken = (await getContract('LPLToken')) as ERC677
   const sdlToken = (await getContract('SDLToken')) as StakingAllowance
-  // const lplMigration = (await getContract('LPLMigration')) as LPLMigration
   const sdlPool = (await getContract('SDLPool')) as SDLPool
   const LINK_StakingPool = (await getContract('LINK_StakingPool')) as StakingPool
   const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
@@ -35,10 +32,7 @@ async function main() {
   const rETHToken = (await getContract('rETHToken')) as ERC20
   const cbETHToken = (await getContract('cbETHToken')) as ERC20
   const sfrxETHToken = (await getContract('sfrxETHToken')) as ERC20
-
-  // LPL Migration
-
-  // await sdlToken.mint(lplMigration.address, toEther(150000))
+  const LINK_StakingQueue = (await getContract('LINK_StakingQueue')) as any
 
   // LINK Staking
 
@@ -149,7 +143,6 @@ async function main() {
   await linkToken.transfer(strategyMockLINK.address, toEther(100))
 
   await linkToken.connect(signers[3]).transfer(accounts[0], toEther(10))
-  // await LINK_StakingPool.deposit(accounts[3], toEther(10))
 
   await LINK_StakingPool.updateStrategyRewards([0])
 
@@ -164,6 +157,19 @@ async function main() {
   updateDeployments({
     CurvePool: curveMock.address,
   })
+
+  // Staking Queue
+
+  await linkToken.transfer(accounts[1], toEther(2000000))
+  await linkToken.transfer(accounts[0], toEther(1000000))
+  await linkToken
+    .connect(signers[0])
+    .approve(LINK_StakingQueue.address, ethers.constants.MaxUint256)
+  await linkToken
+    .connect(signers[1])
+    .approve(LINK_StakingQueue.address, ethers.constants.MaxUint256)
+  await LINK_StakingQueue.connect(signers[0]).deposit(toEther(1000000), true)
+  await LINK_StakingQueue.connect(signers[1]).deposit(toEther(10), true)
 }
 
 main()
