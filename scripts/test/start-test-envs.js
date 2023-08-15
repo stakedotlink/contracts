@@ -60,26 +60,11 @@ async function testnEnv() {
   })
 }
 
-async function testnEnvMigration() {
-  const child = child_process.spawn('npx', ['yarn', 'setup-test-env-migrations'])
-
-  child.stdout.on('data', (data) => {
-    console.log('yarn setup-test-env-migrations - process (' + child.pid + '): ' + data)
-  })
-
-  return await new Promise((resolve) => {
-    child.on('close', () => {
-      resolve('success')
-    })
-  })
-}
-
 async function run() {
   await compile()
   await startHardhat()
   await deploy()
   await testnEnv()
-  await testnEnvMigration()
 }
 
 run().catch((error) => {
