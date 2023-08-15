@@ -42,7 +42,10 @@ async function main() {
   const cbETHToken = (await getContract('cbETHToken')) as ERC20
   const sfrxETHToken = (await getContract('sfrxETHToken')) as ERC20
 
-  await sdlToken.mint(lplMigration.address, toEther(150000))
+  let tx
+
+  tx = await sdlToken.mint(lplMigration.address, toEther(150000))
+  await tx.wait()
 
   const poolMin = 10
   const poolMax = 1000000
@@ -53,57 +56,83 @@ async function main() {
     toEther(poolMax),
     toEther(poolMin),
   ])
-  await LINK_StakingPool.addStrategy(strategyMock.address)
+  tx = await LINK_StakingPool.addStrategy(strategyMock.address)
+  await tx.wait()
 
   // account 5 lpl rewards
 
-  await lplToken.transfer(accounts[5], toEther(1))
-  await lplToken.connect(signers[5]).transferAndCall(poolOwnersV1.address, toEther(1), '0x00')
-  await linkToken.transfer(ownersRewardsPoolV1.address, toEther(1))
-  await ownersRewardsPoolV1.distributeRewards()
-  await poolOwnersV1.connect(signers[5]).withdraw(toEther(1))
-  await lplToken.connect(signers[5]).transferAndCall(lplMigration.address, toEther(1), '0x00')
+  tx = await lplToken.transfer(accounts[5], toEther(1))
+  await tx.wait()
+  tx = await lplToken.connect(signers[5]).transferAndCall(poolOwnersV1.address, toEther(1), '0x00')
+  await tx.wait()
+  tx = await linkToken.transfer(ownersRewardsPoolV1.address, toEther(1))
+  await tx.wait()
+  tx = await ownersRewardsPoolV1.distributeRewards()
+  await tx.wait()
+  tx = await poolOwnersV1.connect(signers[5]).withdraw(toEther(1))
+  await tx.wait()
+  tx = await lplToken.connect(signers[5]).transferAndCall(lplMigration.address, toEther(1), '0x00')
+  await tx.wait()
   // await lplToken.connect(signers[5]).transferAndCall(accounts[0].address, toEther(1), '0x00')
 
   // account 2
 
-  await linkToken.transfer(accounts[2], toEther(10000))
-  await lplToken.transfer(accounts[2], toEther(10000))
-  await sdlToken.mint(accounts[2], toEther(10000))
-  await lplToken.connect(signers[2]).transferAndCall(poolOwnersV1.address, toEther(1), '0x00')
-  await linkToken.transfer(ownersRewardsPoolV1.address, toEther(10))
-  await ownersRewardsPoolV1.distributeRewards()
+  tx = await linkToken.transfer(accounts[2], toEther(10000))
+  await tx.wait()
+  tx = await lplToken.transfer(accounts[2], toEther(10000))
+  await tx.wait()
+  tx = await sdlToken.mint(accounts[2], toEther(10000))
+  await tx.wait()
+  tx = await lplToken.connect(signers[2]).transferAndCall(poolOwnersV1.address, toEther(1), '0x00')
+  await tx.wait()
+  tx = await linkToken.transfer(ownersRewardsPoolV1.address, toEther(10))
+  await tx.wait()
+  tx = await ownersRewardsPoolV1.distributeRewards()
+  await tx.wait()
 
   // account 3
 
-  await linkToken.transfer(accounts[3], toEther(10000))
-  await sdlToken.mint(accounts[3], toEther(40000))
+  tx = await linkToken.transfer(accounts[3], toEther(10000))
+  await tx.wait()
+  tx = await sdlToken.mint(accounts[3], toEther(40000))
+  await tx.wait()
 
   // stake SDL
 
-  await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  tx = await sdlToken
+    .connect(signers[3])
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await tx.wait()
 
   // stake LINK
 
-  await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(1), '0x00')
+  tx = await linkToken.connect(signers[3]).transferAndCall(poolRouter.address, toEther(1), '0x00')
+  await tx.wait()
 
   // send stLINK rewards to rewards pool
 
-  await LINK_StakingPool.connect(signers[3]).transferAndCall(
+  tx = await LINK_StakingPool.connect(signers[3]).transferAndCall(
     stLINK_DelegatorRewardsPool.address,
     toEther(1),
     '0x00'
   )
+  await tx.wait()
 
   // account 4
 
-  await linkToken.transfer(accounts[4], toEther(10000000))
-  await lplToken.transfer(accounts[4], toEther(10000))
-  await sdlToken.mint(accounts[4], toEther(100000))
+  tx = await linkToken.transfer(accounts[4], toEther(10000000))
+  await tx.wait()
+  tx = await lplToken.transfer(accounts[4], toEther(10000))
+  await tx.wait()
+  tx = await sdlToken.mint(accounts[4], toEther(100000))
+  await tx.wait()
 
   // stake SDL
 
-  await sdlToken.connect(signers[4]).transferAndCall(delegatorPool.address, toEther(100000), '0x')
+  tx = await sdlToken
+    .connect(signers[4])
+    .transferAndCall(delegatorPool.address, toEther(100000), '0x')
+  await tx.wait()
 
   const canDepositAddress4 = await poolRouter['canDeposit(address,address,uint16)'](
     accounts[4],
@@ -113,18 +142,20 @@ async function main() {
 
   // stake LINK
 
-  await linkToken
+  tx = await linkToken
     .connect(signers[4])
     .transferAndCall(poolRouter.address, canDepositAddress4, '0x00')
+  await tx.wait()
 
   // account 5
 
-  await sdlToken.mintToContract(
+  tx = await sdlToken.mintToContract(
     delegatorPool.address,
     accounts[5],
     toEther(600),
     defaultAbiCoder.encode(['uint256'], [toEther(400)])
   )
+  await tx.wait()
 
   // Liquid SD Index
 
@@ -152,42 +183,62 @@ async function main() {
     toEther(1.03),
   ])) as LSDIndexAdapterMock
 
-  await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
-  await ETH_LiquidSDIndexPool.addLSDToken(
+  tx = await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.addLSDToken(
     rETHToken.address,
     rocketPoolAdapter.address,
     [7500, 2500]
   )
-  await ETH_LiquidSDIndexPool.addLSDToken(
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.addLSDToken(
     cbETHToken.address,
     coinbaseAdapter.address,
     [5200, 1800, 3000]
   )
-  await ETH_LiquidSDIndexPool.addLSDToken(
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.addLSDToken(
     sfrxETHToken.address,
     fraxAdapter.address,
     [4600, 1600, 2700, 1100]
   )
+  await tx.wait()
 
-  await stETHToken.transfer(accounts[3], toEther(100))
-  await rETHToken.transfer(accounts[3], toEther(100))
-  await cbETHToken.transfer(accounts[3], toEther(100))
-  await sfrxETHToken.transfer(accounts[3], toEther(100))
+  tx = await stETHToken.transfer(accounts[3], toEther(100))
+  await tx.wait()
+  tx = await rETHToken.transfer(accounts[3], toEther(100))
+  await tx.wait()
+  tx = await cbETHToken.transfer(accounts[3], toEther(100))
+  await tx.wait()
+  tx = await sfrxETHToken.transfer(accounts[3], toEther(100))
+  await tx.wait()
 
-  await stETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
-  await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
-  await cbETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
-  await sfrxETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
+  tx = await stETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
+  await tx.wait()
+  tx = await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
+  await tx.wait()
+  tx = await cbETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
+  await tx.wait()
+  tx = await sfrxETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(10))
+  await tx.wait()
 
-  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(10))
-  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(rETHToken.address, toEther(10))
-  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(cbETHToken.address, toEther(10))
-  await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(sfrxETHToken.address, toEther(10))
+  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(10))
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(rETHToken.address, toEther(10))
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(cbETHToken.address, toEther(10))
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(sfrxETHToken.address, toEther(10))
+  await tx.wait()
 
-  await stETHToken.transfer(accounts[2], toEther(100))
-  await rETHToken.transfer(accounts[2], toEther(100))
-  await cbETHToken.transfer(accounts[2], toEther(100))
-  await sfrxETHToken.transfer(accounts[2], toEther(100))
+  tx = await stETHToken.transfer(accounts[2], toEther(100))
+  await tx.wait()
+  tx = await rETHToken.transfer(accounts[2], toEther(100))
+  await tx.wait()
+  tx = await cbETHToken.transfer(accounts[2], toEther(100))
+  await tx.wait()
+  tx = await sfrxETHToken.transfer(accounts[2], toEther(100))
+  await tx.wait()
 
   // Basic Curve Mock
 
@@ -195,7 +246,8 @@ async function main() {
     LINK_StakingPool.address,
     linkToken.address,
   ])) as CurveMock
-  await linkToken.transfer(curveMock.address, toEther(1000))
+  tx = await linkToken.transfer(curveMock.address, toEther(1000))
+  await tx.wait()
 
   updateDeployments({
     CurvePool: curveMock.address,
