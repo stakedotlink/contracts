@@ -1,5 +1,11 @@
 import { getAccounts, toEther } from '../utils/helpers'
-import { getContract, deployUpgradeable, deploy, updateDeployments } from '../utils/deployment'
+import {
+  getContract,
+  deployUpgradeable,
+  deploy,
+  updateDeployments,
+  printDeployments,
+} from '../utils/deployment'
 import {
   CurveMock,
   DelegatorPool,
@@ -326,6 +332,8 @@ async function main() {
     toEther(100)
   )
   await tx.wait()
+
+  printDeployments()
 }
 
 main()

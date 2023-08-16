@@ -79,3 +79,18 @@ export const getContract = async (contractName: string): Promise<Contract> => {
 
   return ethers.getContractAt(contract.artifact, contract.address)
 }
+
+export const printDeployments = () => {
+  fse.ensureFileSync(`deployments/${network.name}.json`)
+  const deployments = fse.readJSONSync(`deployments/${network.name}.json`, { throws: false })
+
+  if (!deployments) {
+    console.log('Deployments: Nothing to print')
+  }
+
+  Object.keys(deployments).map((deploy) => {
+    console.log(`Deployed: ${deploy} ${deployments[deploy].address}`)
+  })
+
+  return deployments
+}
