@@ -10,6 +10,7 @@
     "geth-dev-fund": "ts-node --files scripts/test/geth-dev-fund.ts",
     "start-test-env": "node scripts/test/start-test-envs.js",
     "setup-test-env": "ts-node --files scripts/test/setup-test-env.ts",
+    "geth-dev-fund": "ts-node --files scripts/test/geth-dev-fund.ts",
     "compile": "npx hardhat compile",
     "tsc": "tsc",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
