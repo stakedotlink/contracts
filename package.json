@@ -9,6 +9,7 @@
     "deploy": "ts-node --files scripts/test/deploy-test-contracts.ts && ts-node --files scripts/core/deploy-core.ts && ts-node --files scripts/linkStaking/deploy-link-staking-pool.ts && ts-node --files scripts/governance/deploy-governance-controller.ts && ts-node --files scripts/airdrop/deploy-merkle-distributor.ts && ts-node --files scripts/liquidSDIndex/deploy-ixETH-index-pool.ts && ts-node --files scripts/governance/deploy-stakedotlink-council.ts",
     "start-test-env": "node scripts/test/start-test-envs.js",
     "setup-test-env": "ts-node --files scripts/test/setup-test-env.ts",
+    "geth-dev-fund": "ts-node --files scripts/test/geth-dev-fund.ts",
     "compile": "npx hardhat compile",
     "tsc": "tsc",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
