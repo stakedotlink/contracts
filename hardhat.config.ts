@@ -42,6 +42,7 @@ const config: HardhatUserConfig = {
       accounts,
     },
     hardhat: {
+      chainId: 1337,
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
       mining: {
         auto: true,
