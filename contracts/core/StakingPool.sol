@@ -25,7 +25,7 @@ contract StakingPool is StakingRewardsPool {
 
     Fee[] private fees;
 
-    address public stakingQueue;
+    address public priorityPool;
     address private delegatorPool; // deprecated
     uint16 private poolIndex; // deprecated
 
@@ -49,8 +49,8 @@ contract StakingPool is StakingRewardsPool {
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
-    modifier onlyStakingQueue() {
-        require(stakingQueue == msg.sender, "StakingQueue only");
+    modifier onlyPriorityPool() {
+        require(priorityPool == msg.sender, "PriorityPool only");
         _;
     }
 
@@ -75,7 +75,7 @@ contract StakingPool is StakingRewardsPool {
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function deposit(address _account, uint256 _amount) external onlyStakingQueue {
+    function deposit(address _account, uint256 _amount) external onlyPriorityPool {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -96,7 +96,7 @@ contract StakingPool is StakingRewardsPool {
         address _account,
         address _receiver,
         uint256 _amount
-    ) external onlyStakingQueue {
+    ) external onlyPriorityPool {
         uint256 toWithdraw = _amount;
         if (_amount == type(uint256).max) {
             toWithdraw = balanceOf(_account);
@@ -395,11 +395,11 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice Sets the staking queue
-     * @param _stakingQueue address of staking queue
+     * @notice Sets the priority pool
+     * @param _priorityPool address of priority pool
      **/
-    function setStakingQueue(address _stakingQueue) external onlyOwner {
-        stakingQueue = _stakingQueue;
+    function setPriorityPool(address _priorityPool) external onlyOwner {
+        priorityPool = _priorityPool;
     }
 
     /**

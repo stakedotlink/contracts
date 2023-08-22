@@ -13,8 +13,8 @@ const LINK_StakingPool = {
   derivativeTokenSymbol: 'stLINK', // LINK staking derivative token symbol
   fees: [['0x6879826450e576B401c4dDeff2B7755B1e85d97c', 300]], // fee receivers & percentage amounts in basis points
 }
-// LINK Staking Queue
-const LINK_StakingQueue = {
+// LINK Priority Pool
+const LINK_PriorityPool = {
   queueDepositThreshold: toEther(1000), // min amount of tokens neede to execute deposit
 }
 
@@ -30,13 +30,13 @@ async function main() {
   ])
   console.log('LINK_StakingPool deployed: ', stakingPool.address)
 
-  const stakingQueue = await deployUpgradeable('StakingQueue', [
+  const priorityPool = await deployUpgradeable('PriorityPool', [
     linkToken.address,
     stakingPool.address,
     sdlPool.address,
-    LINK_StakingQueue.queueDepositThreshold,
+    LINK_PriorityPool.queueDepositThreshold,
   ])
-  console.log('LINK_StakingQueue deployed: ', stakingQueue.address)
+  console.log('LINK_PriorityPool deployed: ', priorityPool.address)
 
   const wsdToken = await deploy('WrappedSDToken', [
     stakingPool.address,
@@ -54,19 +54,19 @@ async function main() {
 
   let tx = await sdlPool.addToken(stakingPool.address, stLinkSDLRewardsPool.address)
   await tx.wait()
-  tx = await stakingPool.setStakingQueue(stakingQueue.address)
+  tx = await stakingPool.setPriorityPool(priorityPool.address)
   await tx.wait()
 
   updateDeployments(
     {
       LINK_StakingPool: stakingPool.address,
-      LINK_StakingQueue: stakingQueue.address,
+      LINK_PriorityPool: priorityPool.address,
       LINK_WrappedSDToken: wsdToken.address,
       stLINK_SDLRewardsPool: stLinkSDLRewardsPool.address,
     },
     {
       LINK_StakingPool: 'StakingPool',
-      LINK_StakingQueue: 'StakingQueue',
+      LINK_PriorityPool: 'PriorityPool',
       LINK_WrappedSDToken: 'WrappedSDToken',
       stLINK_SDLRewardsPool: 'RewardsPoolWSD',
     }

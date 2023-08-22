@@ -50,7 +50,7 @@ describe('OperatorVCS', () => {
     ])) as OperatorVCS
 
     await stakingPool.addStrategy(strategy.address)
-    await stakingPool.setStakingQueue(accounts[0])
+    await stakingPool.setPriorityPool(accounts[0])
 
     for (let i = 0; i < 10; i++) {
       await strategy.addVault(accounts[0], accounts[1])

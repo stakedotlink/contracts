@@ -7,13 +7,13 @@ import {
   getAccounts,
   setupToken,
 } from '../utils/helpers'
-import { ERC677, SDLPoolMock, StakingPool, StakingQueue, StrategyMock } from '../../typechain-types'
+import { ERC677, SDLPoolMock, StakingPool, PriorityPool, StrategyMock } from '../../typechain-types'
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
 
-describe('StakingQueue', () => {
-  let sq: StakingQueue
+describe('PriorityPool', () => {
+  let sq: PriorityPool
   let stakingPool: StakingPool
   let strategy: StrategyMock
   let token: ERC677
@@ -45,15 +45,15 @@ describe('StakingQueue', () => {
 
     sdlPool = (await deploy('SDLPoolMock')) as SDLPoolMock
 
-    sq = (await deployUpgradeable('StakingQueue', [
+    sq = (await deployUpgradeable('PriorityPool', [
       token.address,
       stakingPool.address,
       sdlPool.address,
       toEther(100),
-    ])) as StakingQueue
+    ])) as PriorityPool
 
     await stakingPool.addStrategy(strategy.address)
-    await stakingPool.setStakingQueue(sq.address)
+    await stakingPool.setPriorityPool(sq.address)
     await sq.setDistributionOracle(accounts[0])
 
     for (let i = 0; i < signers.length; i++) {
@@ -475,7 +475,7 @@ describe('StakingQueue', () => {
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
   })
 
-  it.only('withdraw should work correctly with queued tokens', async () => {
+  it('withdraw should work correctly with queued tokens', async () => {
     await stakingPool.connect(signers[1]).approve(sq.address, ethers.constants.MaxUint256)
     await stakingPool.connect(signers[2]).approve(sq.address, ethers.constants.MaxUint256)
     await sq.deposit(toEther(1000), true)
