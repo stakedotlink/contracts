@@ -277,9 +277,6 @@ async function main() {
       toEther(200),
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
-  await tx.wait()
-  tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(100), '0x')
-  await tx.wait()
 
   // Account 6
 
@@ -311,12 +308,33 @@ async function main() {
     )
   await tx.wait()
 
-  // Staking Queue
+  // Reward Distributions
 
-  tx = await linkToken.transfer(strategyMockLINK.address, toEther(1000))
+  await tx.wait()
+  tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')
+  await tx.wait()
+  tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')
+  await tx.wait()
+
+  tx = await stETHToken.transfer(lidoAdapter.address, toEther(10))
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.updateRewards()
+  await tx.wait()
+  tx = await stETHToken.transfer(lidoAdapter.address, toEther(10))
+  await tx.wait()
+  tx = await ETH_LiquidSDIndexPool.updateRewards()
+  await tx.wait()
+
+  tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
   tx = await LINK_StakingPool.updateStrategyRewards([0])
   await tx.wait()
+  tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
+  await tx.wait()
+  tx = await LINK_StakingPool.updateStrategyRewards([0])
+  await tx.wait()
+
+  // Staking Queue
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(2200))
   await tx.wait()
