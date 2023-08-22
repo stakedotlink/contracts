@@ -14,10 +14,10 @@ import {
   LiquidSDIndexPool,
   LPLMigration,
   LSDIndexAdapterMock,
+  PriorityPool,
   SDLPool,
   StakingAllowance,
   StakingPool,
-  StakingQueue,
   StrategyMock,
 } from '../../typechain-types'
 import { ethers } from 'hardhat'
@@ -77,7 +77,7 @@ async function main() {
   const rETHToken = (await getContract('rETHToken')) as ERC20
   const cbETHToken = (await getContract('cbETHToken')) as ERC20
   const sfrxETHToken = (await getContract('sfrxETHToken')) as ERC20
-  const LINK_StakingQueue = (await getContract('LINK_StakingQueue')) as StakingQueue
+  const LINK_PriorityPool = (await getContract('LINK_PriorityPool')) as PriorityPool
 
   // LPL migration
 
@@ -94,7 +94,7 @@ async function main() {
   ])) as StrategyMock
   tx = await LINK_StakingPool.addStrategy(strategyMockLINK.address)
   await tx.wait()
-  tx = await LINK_StakingQueue.setDistributionOracle(accounts[0])
+  tx = await LINK_PriorityPool.setDistributionOracle(accounts[0])
   await tx.wait()
 
   let stLINK_DelegatorRewardsPool = await deploy('RewardsPool', [
@@ -199,7 +199,7 @@ async function main() {
   }
 
   tx = await linkToken.transferAndCall(
-    LINK_StakingQueue.address,
+    LINK_PriorityPool.address,
     toEther(500),
     ethers.utils.defaultAbiCoder.encode(['bool'], [false])
   )
@@ -223,7 +223,7 @@ async function main() {
   tx = await linkToken
     .connect(signers[3])
     .transferAndCall(
-      LINK_StakingQueue.address,
+      LINK_PriorityPool.address,
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['bool'], [false])
     )
@@ -254,7 +254,7 @@ async function main() {
   tx = await linkToken
     .connect(signers[4])
     .transferAndCall(
-      LINK_StakingQueue.address,
+      LINK_PriorityPool.address,
       toEther(500),
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
@@ -273,7 +273,7 @@ async function main() {
   tx = await linkToken
     .connect(signers[5])
     .transferAndCall(
-      LINK_StakingQueue.address,
+      LINK_PriorityPool.address,
       toEther(200),
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
@@ -291,7 +291,7 @@ async function main() {
   tx = await linkToken
     .connect(signers[6])
     .transferAndCall(
-      LINK_StakingQueue.address,
+      LINK_PriorityPool.address,
       toEther(300),
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
@@ -302,7 +302,7 @@ async function main() {
   tx = await linkToken
     .connect(signers[7])
     .transferAndCall(
-      LINK_StakingQueue.address,
+      LINK_PriorityPool.address,
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
@@ -338,12 +338,12 @@ async function main() {
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(2200))
   await tx.wait()
-  tx = await LINK_StakingQueue.depositQueuedTokens()
+  tx = await LINK_PriorityPool.depositQueuedTokens()
   await tx.wait()
 
-  tx = await LINK_StakingQueue.pauseForUpdate()
+  tx = await LINK_PriorityPool.pauseForUpdate()
   await tx.wait()
-  tx = await LINK_StakingQueue.updateDistribution(
+  tx = await LINK_PriorityPool.updateDistribution(
     '0x794ac3c2cbc6a9906a16ea840fd9141feae35bef8632e4ff7f8b5fcda81042db',
     '0xF70DA54C680F900AC326B6835AE00DC95CFB78C964D8BFCE17A774DFBC548E37',
     toEther(200),

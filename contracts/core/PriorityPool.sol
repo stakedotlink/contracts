@@ -12,11 +12,11 @@ import "./interfaces/IStakingPool.sol";
 import "./interfaces/ISDLPool.sol";
 
 /**
- * @title Staking Queue
+ * @title Priority Pool
  * @notice Allows users to queue asset tokens which are eventually deposited into a staking pool when space becomes available -
  * liquid staking derivative tokens minted by the staking pool are then distributed using a merkle tree
  */
-contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
+contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum PoolStatus {
