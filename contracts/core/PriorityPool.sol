@@ -73,6 +73,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error CannotSetClosedStatus();
     error SenderNotAuthorized();
     error InvalidAmount();
+    error StatusAlreadySet();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -100,7 +101,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         sdlPool = ISDLPool(_sdlPool);
         queueDepositThreshold = _queueDepositThreshold;
         accounts.push(address(0));
-        token.safeApprove(_stakingPool, type(uint256).max);
+        token.safeIncreaseAllowance(_stakingPool, type(uint256).max);
     }
 
     /**
@@ -314,7 +315,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice deposits queued tokens into the staking pool
      * @dev bypasses queueDepositThreshold
      */
-    function depositQueuedTokens() public {
+    function depositQueuedTokens() external {
         _depositQueuedTokens(0);
     }
 
@@ -409,6 +410,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setPoolStatus(PoolStatus _status) external onlyOwner {
         if (_status == PoolStatus.CLOSED) revert CannotSetClosedStatus();
+        if (_status == poolStatus) revert StatusAlreadySet();
         poolStatus = _status;
         emit SetPoolStatus(_status);
     }
@@ -417,6 +419,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice sets the pool's status to CLOSED
      */
     function setPoolStatusClosed() external onlyOwner {
+        if (poolStatus == PoolStatus.CLOSED) revert StatusAlreadySet();
         poolStatus = PoolStatus.CLOSED;
         emit SetPoolStatus(PoolStatus.CLOSED);
     }
