@@ -36,7 +36,7 @@ Accounts:
 
 /*
 Staking Queue IPFS mock data
-CID: QmUqfP4hNTtb7W5FSeksD5u1SBUrt9z6urs9LNMaNjgp7N
+CID: Qmey3UkJzL4ZKAeQ1XR1BYJBPQfSjjDKgPQv3DFEY3HWSz
 data:
 {
   "merkleRoot": "0x794ac3c2cbc6a9906a16ea840fd9141feae35bef8632e4ff7f8b5fcda81042db",
@@ -327,7 +327,7 @@ async function main() {
   await tx.wait()
   tx = await LINK_StakingQueue.updateDistribution(
     '0x794ac3c2cbc6a9906a16ea840fd9141feae35bef8632e4ff7f8b5fcda81042db',
-    '0x6094B978EA54880F1CE3C43E397203F47C7D4131FE40001CB3A893BA81E41525',
+    '0xF70DA54C680F900AC326B6835AE00DC95CFB78C964D8BFCE17A774DFBC548E37',
     toEther(200),
     toEther(100)
   )
