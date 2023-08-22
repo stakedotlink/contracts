@@ -12,11 +12,11 @@ import "./interfaces/IStakingPool.sol";
 import "./interfaces/ISDLPool.sol";
 
 /**
- * @title Staking Queue
+ * @title Priority Pool
  * @notice Allows users to queue asset tokens which are eventually deposited into a staking pool when space becomes available -
  * liquid staking derivative tokens minted by the staking pool are then distributed using a merkle tree
  */
-contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
+contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     enum PoolStatus {
@@ -50,7 +50,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
     event Deposit(address indexed account, uint256 poolAmount, uint256 queueAmount);
-    event Withdraw(address indexed account, uint256 poolAmount, uint256 queueAmount);
+    event Withdraw(address indexed account, uint256 amount);
     event UpdateDistribution(
         bytes32 merkleRoot,
         bytes32 ipfsHash,
@@ -73,6 +73,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error CannotSetClosedStatus();
     error SenderNotAuthorized();
     error InvalidAmount();
+    error StatusAlreadySet();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -100,7 +101,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         sdlPool = ISDLPool(_sdlPool);
         queueDepositThreshold = _queueDepositThreshold;
         accounts.push(address(0));
-        token.safeApprove(_stakingPool, type(uint256).max);
+        token.safeIncreaseAllowance(_stakingPool, type(uint256).max);
     }
 
     /**
@@ -184,7 +185,9 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             bool shouldQueue = abi.decode(_calldata, (bool));
             _deposit(_sender, _value, shouldQueue);
         } else if (msg.sender == address(stakingPool)) {
-            _withdraw(_sender, _value);
+            _withdraw(_value);
+            token.safeTransfer(_sender, _value);
+            emit Withdraw(_sender, _value);
         } else {
             revert UnauthorizedToken();
         }
@@ -203,26 +206,63 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice withdraws asset tokens
-     * @param _amount amount to withdraw
+     * @dev will unqueue sender's tokens before taking LSD tokens if possible and
+     * if merkle args are set
+     * @param _amountToWithdraw amount of tokens to withdraw
+     * @param _amount amount as recorded in sender's merkle tree entry
+     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
+     * @param _merkleProof merkle proof for sender's merkle tree entry
      */
-    function withdraw(uint256 _amount) external {
-        if (_amount == 0) revert InvalidAmount();
-        IERC20Upgradeable(address(stakingPool)).safeTransferFrom(msg.sender, address(this), _amount);
-        _withdraw(msg.sender, _amount);
+    function withdraw(
+        uint256 _amountToWithdraw,
+        uint256 _amount,
+        uint256 _sharesAmount,
+        bytes32[] calldata _merkleProof
+    ) external {
+        if (_amountToWithdraw == 0) revert InvalidAmount();
+
+        uint256 toWithdraw = _amountToWithdraw;
+        address account = msg.sender;
+
+        if (_amount != 0) {
+            _requireNotPaused();
+
+            bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
+            if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
+
+            uint256 queuedTokens = accountQueuedTokens[account] - _amount;
+            uint256 canUnqueue = queuedTokens <= totalQueued ? queuedTokens : totalQueued;
+            uint256 amountToUnqueue = toWithdraw <= canUnqueue ? toWithdraw : canUnqueue;
+
+            if (amountToUnqueue != 0) {
+                accountQueuedTokens[account] -= amountToUnqueue;
+                totalQueued -= amountToUnqueue;
+                toWithdraw -= amountToUnqueue;
+                emit UnqueueTokens(account, amountToUnqueue);
+            }
+        }
+
+        if (toWithdraw != 0) {
+            IERC20Upgradeable(address(stakingPool)).safeTransferFrom(account, address(this), toWithdraw);
+            _withdraw(toWithdraw);
+            emit Withdraw(account, toWithdraw);
+        }
+
+        token.safeTransfer(account, _amountToWithdraw);
     }
 
     /**
      * @notice Unqueues queued tokens
+     * @param _amountToUnqueue amount of tokens to unqueue
      * @param _amount amount as recorded in sender's merkle tree entry
      * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
      * @param _merkleProof merkle proof for sender's merkle tree entry
-     * @param _amountToUnqueue amount of tokens to unqueue
      */
     function unqueueTokens(
+        uint256 _amountToUnqueue,
         uint256 _amount,
         uint256 _sharesAmount,
-        bytes32[] calldata _merkleProof,
-        uint256 _amountToUnqueue
+        bytes32[] calldata _merkleProof
     ) external whenNotPaused {
         if (_amountToUnqueue == 0) revert InvalidAmount();
         if (_amountToUnqueue > totalQueued) revert InsufficientQueuedTokens();
@@ -275,7 +315,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice deposits queued tokens into the staking pool
      * @dev bypasses queueDepositThreshold
      */
-    function depositQueuedTokens() public {
+    function depositQueuedTokens() external {
         _depositQueuedTokens(0);
     }
 
@@ -358,7 +398,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice pauses queue deposits/withdrawals so a new merkle tree can be generated
+     * @notice pauses queueing and unqueueing so a new merkle tree can be generated
      */
     function pauseForUpdate() external onlyDistributionOracle {
         _pause();
@@ -370,6 +410,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setPoolStatus(PoolStatus _status) external onlyOwner {
         if (_status == PoolStatus.CLOSED) revert CannotSetClosedStatus();
+        if (_status == poolStatus) revert StatusAlreadySet();
         poolStatus = _status;
         emit SetPoolStatus(_status);
     }
@@ -378,6 +419,7 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice sets the pool's status to CLOSED
      */
     function setPoolStatusClosed() external onlyOwner {
+        if (poolStatus == PoolStatus.CLOSED) revert StatusAlreadySet();
         poolStatus = PoolStatus.CLOSED;
         emit SetPoolStatus(PoolStatus.CLOSED);
     }
@@ -444,10 +486,9 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice withdraws asset tokens
      * @dev will swap LSD tokens for queued tokens if possible followed by withdrawing
      * from the staking pool if necessary (assumes staking pool will revert if there is insufficient withdrawal room)
-     * @param _account account to withdraw for
      * @param _amount amount to withdraw
      **/
-    function _withdraw(address _account, uint256 _amount) internal {
+    function _withdraw(uint256 _amount) internal {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
         uint256 toWithdrawFromQueue = _amount <= totalQueued ? _amount : totalQueued;
@@ -461,9 +502,6 @@ contract StakingQueue is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (toWithdrawFromPool != 0) {
             stakingPool.withdraw(address(this), address(this), toWithdrawFromPool);
         }
-
-        token.safeTransfer(_account, _amount);
-        emit Withdraw(_account, toWithdrawFromPool, toWithdrawFromQueue);
     }
 
     /**

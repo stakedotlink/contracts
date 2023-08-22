@@ -141,7 +141,7 @@ describe('DepositController', () => {
     await strategy.setWLOperatorController(wlOperatorController.address)
     await strategy.setDepositController(depositController.address)
     await stakingPool.addStrategy(strategy.address)
-    await stakingPool.setStakingQueue(accounts[0])
+    await stakingPool.setPriorityPool(accounts[0])
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
 

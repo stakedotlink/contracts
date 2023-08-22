@@ -7,13 +7,13 @@ import {
   getAccounts,
   setupToken,
 } from '../utils/helpers'
-import { ERC677, SDLPoolMock, StakingPool, StakingQueue, StrategyMock } from '../../typechain-types'
+import { ERC677, SDLPoolMock, StakingPool, PriorityPool, StrategyMock } from '../../typechain-types'
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
 
-describe('StakingQueue', () => {
-  let sq: StakingQueue
+describe('PriorityPool', () => {
+  let sq: PriorityPool
   let stakingPool: StakingPool
   let strategy: StrategyMock
   let token: ERC677
@@ -45,15 +45,15 @@ describe('StakingQueue', () => {
 
     sdlPool = (await deploy('SDLPoolMock')) as SDLPoolMock
 
-    sq = (await deployUpgradeable('StakingQueue', [
+    sq = (await deployUpgradeable('PriorityPool', [
       token.address,
       stakingPool.address,
       sdlPool.address,
       toEther(100),
-    ])) as StakingQueue
+    ])) as PriorityPool
 
     await stakingPool.addStrategy(strategy.address)
-    await stakingPool.setStakingQueue(sq.address)
+    await stakingPool.setPriorityPool(sq.address)
     await sq.setDistributionOracle(accounts[0])
 
     for (let i = 0; i < signers.length; i++) {
@@ -360,11 +360,11 @@ describe('StakingQueue', () => {
     await strategy.setMaxDeposits(toEther(1500))
     await sq.depositQueuedTokens()
 
-    await expect(sq.unqueueTokens(0, 0, [], toEther(1501))).to.be.revertedWith(
+    await expect(sq.unqueueTokens(toEther(1501), 0, 0, [])).to.be.revertedWith(
       'InsufficientQueuedTokens()'
     )
 
-    await sq.connect(signers[1]).unqueueTokens(0, 0, [], toEther(100))
+    await sq.connect(signers[1]).unqueueTokens(toEther(100), 0, 0, [])
     assert.equal(fromEther(await sq.totalQueued()), 1400)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 9600)
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[1], 0)), 400)
@@ -388,37 +388,37 @@ describe('StakingQueue', () => {
     await expect(
       sq
         .connect(signers[1])
-        .unqueueTokens(toEther(151), toEther(150), tree.getProof(2), toEther(50))
+        .unqueueTokens(toEther(50), toEther(151), toEther(150), tree.getProof(2))
     ).to.be.revertedWith('InvalidProof()')
     await expect(
       sq
         .connect(signers[1])
-        .unqueueTokens(toEther(150), toEther(151), tree.getProof(2), toEther(50))
+        .unqueueTokens(toEther(50), toEther(150), toEther(151), tree.getProof(2))
     ).to.be.revertedWith('InvalidProof()')
     await expect(
       sq
         .connect(signers[1])
-        .unqueueTokens(toEther(150), toEther(150), tree.getProof(1), toEther(50))
+        .unqueueTokens(toEther(50), toEther(150), toEther(150), tree.getProof(1))
     ).to.be.revertedWith('InvalidProof()')
     await expect(
-      sq.unqueueTokens(toEther(150), toEther(150), tree.getProof(1), toEther(50))
+      sq.unqueueTokens(toEther(50), toEther(150), toEther(150), tree.getProof(1))
     ).to.be.revertedWith('InvalidProof()')
 
     await sq
       .connect(signers[1])
-      .unqueueTokens(toEther(150), toEther(150), tree.getProof(2), toEther(50))
+      .unqueueTokens(toEther(50), toEther(150), toEther(150), tree.getProof(2))
     assert.equal(fromEther(await sq.totalQueued()), 1350)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 9650)
     assert.equal(fromEther(await sq.getLSDTokens(accounts[1], data[2][2])), 150)
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[1], data[2][1])), 200)
 
     await expect(
-      sq.connect(signers[2]).unqueueTokens(toEther(50), toEther(50), tree.getProof(3), toEther(500))
+      sq.connect(signers[2]).unqueueTokens(toEther(500), toEther(50), toEther(50), tree.getProof(3))
     ).to.be.revertedWith('InsufficientBalance()')
 
     await sq
       .connect(signers[2])
-      .unqueueTokens(toEther(50), toEther(50), tree.getProof(3), toEther(450))
+      .unqueueTokens(toEther(450), toEther(50), toEther(50), tree.getProof(3))
     assert.equal(fromEther(await sq.totalQueued()), 900)
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
     assert.equal(fromEther(await sq.getLSDTokens(accounts[2], data[3][2])), 50)
@@ -429,7 +429,7 @@ describe('StakingQueue', () => {
 
     await sq
       .connect(signers[1])
-      .unqueueTokens(toEther(150), toEther(150), tree.getProof(2), toEther(100))
+      .unqueueTokens(toEther(100), toEther(150), toEther(150), tree.getProof(2))
     assert.equal(fromEther(await sq.totalQueued()), 800)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 9750)
     assert.equal(fromEther(await sq.getLSDTokens(accounts[1], data[2][2])), 300)
@@ -446,7 +446,7 @@ describe('StakingQueue', () => {
     await sq.depositQueuedTokens()
 
     await sq.pauseForUpdate()
-    await sq.connect(signers[1]).withdraw(toEther(10))
+    await sq.connect(signers[1]).withdraw(toEther(10), 0, 0, [])
 
     assert.equal(fromEther(await sq.totalQueued()), 490)
     assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 710)
@@ -459,7 +459,7 @@ describe('StakingQueue', () => {
       toEther(700),
       0
     )
-    await sq.connect(signers[1]).withdraw(toEther(500))
+    await sq.connect(signers[1]).withdraw(toEther(500), 0, 0, [])
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
     assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 500)
@@ -467,12 +467,64 @@ describe('StakingQueue', () => {
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 8510)
 
     await stakingPool.connect(signers[1]).transfer(accounts[2], toEther(50))
-    await sq.connect(signers[2]).withdraw(toEther(50))
+    await sq.connect(signers[2]).withdraw(toEther(50), 0, 0, [])
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
     assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 500)
     assert.equal(fromEther(await stakingPool.totalStaked()), 1640)
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
+  })
+
+  it('withdraw should work correctly with queued tokens', async () => {
+    await stakingPool.connect(signers[1]).approve(sq.address, ethers.constants.MaxUint256)
+    await stakingPool.connect(signers[2]).approve(sq.address, ethers.constants.MaxUint256)
+    await sq.deposit(toEther(1000), true)
+    await sq.connect(signers[1]).deposit(toEther(100), true)
+    await sq.connect(signers[2]).deposit(toEther(200), true)
+    await strategy.setMaxDeposits(toEther(1150))
+    await sq.depositQueuedTokens()
+
+    await sq.pauseForUpdate()
+    await expect(
+      sq.connect(signers[1]).withdraw(toEther(10), toEther(1), 0, [])
+    ).to.be.revertedWith('Pausable: paused')
+
+    let data = [
+      [ethers.constants.AddressZero, toEther(0), toEther(0)],
+      [accounts[0], toEther(0), toEther(0)],
+      [accounts[1], toEther(50), toEther(50)],
+      [accounts[2], toEther(100), toEther(100)],
+    ]
+    let tree = StandardMerkleTree.of(data, ['address', 'uint256', 'uint256'])
+
+    await sq.updateDistribution(
+      tree.root,
+      ethers.utils.formatBytes32String('ipfs'),
+      toEther(150),
+      toEther(150)
+    )
+    await sq.connect(signers[1]).withdraw(toEther(50), toEther(50), toEther(50), tree.getProof(2))
+
+    assert.equal(fromEther(await sq.totalQueued()), 100)
+    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 0)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 1150)
+    assert.equal(fromEther(await token.balanceOf(accounts[1])), 9950)
+    assert.equal(fromEther(await sq.getQueuedTokens(accounts[1], toEther(50))), 0)
+
+    await expect(
+      sq.connect(signers[2]).withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(2))
+    ).to.be.revertedWith('InvalidProof()')
+    await stakingPool.transfer(accounts[2], toEther(100))
+    await sq
+      .connect(signers[2])
+      .withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(3))
+
+    assert.equal(fromEther(await sq.totalQueued()), 0)
+    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 0)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 1100)
+    assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
+    assert.equal(fromEther(await sq.getQueuedTokens(accounts[2], toEther(100))), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 50)
   })
 
   it('canWithdraw should work correctly', async () => {
