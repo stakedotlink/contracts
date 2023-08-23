@@ -40,6 +40,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     uint256 public totalQueued;
     uint256 public depositsSinceLastUpdate;
+    uint256 public sharesSinceLastUpdate;
 
     address[] private accounts;
     mapping(address => uint256) private accountIndexes;
@@ -389,6 +390,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 incrementalSharesAmount = _totalSharesAmount - totalSharesDistributed;
 
         depositsSinceLastUpdate -= incrementalAmount;
+        sharesSinceLastUpdate -= incrementalSharesAmount;
         merkleRoot = _merkleRoot;
         ipfsHash = _ipfsHash;
         totalDistributed = _totalAmount;
@@ -497,6 +499,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (toWithdrawFromQueue != 0) {
             totalQueued -= toWithdrawFromQueue;
             depositsSinceLastUpdate += toWithdrawFromQueue;
+            sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
         }
 
         if (toWithdrawFromPool != 0) {
@@ -521,6 +524,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         totalQueued = _totalQueued - toDeposit;
         depositsSinceLastUpdate += toDeposit;
+        sharesSinceLastUpdate += stakingPool.getSharesByStake(toDeposit);
         stakingPool.deposit(address(this), toDeposit);
 
         emit DepositQueuedTokens(toDeposit);
