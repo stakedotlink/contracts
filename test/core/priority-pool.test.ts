@@ -134,16 +134,20 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await token.balanceOf(sq.address)), 1500)
     assert.equal(fromEther(await stakingPool.balanceOf(sq.address)), 500)
     assert.equal(fromEther(await sq.totalQueued()), 1500)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 500)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 250)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [500, 250]
+    )
 
     await strategy.setMaxDeposits(toEther(10000))
     await sq.depositQueuedTokens()
     assert.equal(fromEther(await token.balanceOf(sq.address)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(sq.address)), 2000)
     assert.equal(fromEther(await sq.totalQueued()), 0)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 2000)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 1000)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [2000, 1000]
+    )
 
     await expect(sq.depositQueuedTokens()).to.be.revertedWith('InsufficientQueuedTokens()')
     await sq.deposit(toEther(10000), true)
@@ -187,16 +191,20 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await token.balanceOf(sq.address)), 1500)
     assert.equal(fromEther(await stakingPool.balanceOf(sq.address)), 500)
     assert.equal(fromEther(await sq.totalQueued()), 1500)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 500)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 250)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [500, 250]
+    )
 
     await strategy.setMaxDeposits(toEther(5000))
     await sq.performUpkeep('0x')
     assert.equal(fromEther(await token.balanceOf(sq.address)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(sq.address)), 2000)
     assert.equal(fromEther(await sq.totalQueued()), 0)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 2000)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 1000)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [2000, 1000]
+    )
 
     await sq.deposit(toEther(1099), true)
     await strategy.setMaxDeposits(toEther(6000))
@@ -281,10 +289,10 @@ describe('PriorityPool', () => {
       toEther(200)
     )
 
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 100)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 50)
-    assert.equal(fromEther(await sq.totalDistributed()), 400)
-    assert.equal(fromEther(await sq.totalSharesDistributed()), 200)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [100, 50]
+    )
     assert.equal(await sq.merkleRoot(), ethers.utils.formatBytes32String('root'))
     assert.equal(await sq.ipfsHash(), ethers.utils.formatBytes32String('ipfs'))
     assert.equal(await sq.paused(), false)
@@ -295,14 +303,14 @@ describe('PriorityPool', () => {
     await sq.updateDistribution(
       ethers.utils.formatBytes32String('root2'),
       ethers.utils.formatBytes32String('ipfs2'),
-      toEther(2000),
-      toEther(1000)
+      toEther(1600),
+      toEther(800)
     )
 
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 0)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 0)
-    assert.equal(fromEther(await sq.totalDistributed()), 2000)
-    assert.equal(fromEther(await sq.totalSharesDistributed()), 1000)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [0, 0]
+    )
     assert.equal(await sq.merkleRoot(), ethers.utils.formatBytes32String('root2'))
     assert.equal(await sq.ipfsHash(), ethers.utils.formatBytes32String('ipfs2'))
     assert.equal(await sq.paused(), false)
@@ -463,8 +471,10 @@ describe('PriorityPool', () => {
     await sq.connect(signers[1]).withdraw(toEther(10), 0, 0, [])
 
     assert.equal(fromEther(await sq.totalQueued()), 490)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 710)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 355)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [710, 355]
+    )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2700)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 8010)
 
@@ -477,8 +487,10 @@ describe('PriorityPool', () => {
     await sq.connect(signers[1]).withdraw(toEther(500), 0, 0, [])
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 500)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 250)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [500, 250]
+    )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2690)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 8510)
 
@@ -486,8 +498,10 @@ describe('PriorityPool', () => {
     await sq.connect(signers[2]).withdraw(toEther(50), 0, 0, [])
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 500)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 250)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [500, 250]
+    )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2640)
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
   })
@@ -525,8 +539,10 @@ describe('PriorityPool', () => {
     await sq.connect(signers[1]).withdraw(toEther(50), toEther(50), toEther(50), tree.getProof(2))
 
     assert.equal(fromEther(await sq.totalQueued()), 100)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 0)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 0)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [0, 0]
+    )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2150)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 9950)
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[1], toEther(50))), 0)
@@ -540,8 +556,10 @@ describe('PriorityPool', () => {
       .withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(3))
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
-    assert.equal(fromEther(await sq.depositsSinceLastUpdate()), 0)
-    assert.equal(fromEther(await sq.sharesSinceLastUpdate()), 0)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [0, 0]
+    )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2100)
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[2], toEther(100))), 0)
