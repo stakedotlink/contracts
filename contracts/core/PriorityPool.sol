@@ -35,8 +35,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     bytes32 public merkleRoot;
     bytes32 public ipfsHash;
-    uint256 public totalDistributed;
-    uint256 public totalSharesDistributed;
 
     uint256 public totalQueued;
     uint256 public depositsSinceLastUpdate;
@@ -375,28 +373,23 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice distributes a new batch of LSD tokens to users that have queued tokens
      * @param _merkleRoot new merkle root for the distribution tree
      * @param _ipfsHash new ipfs hash for the distribution tree (CIDv0, no prefix - only hash)
-     * @param _totalAmount lifetime amount of LSD tokens distributed
-     * @param _totalSharesAmount lifetime amount of LSD shares distributed
+     * @param _amountDistributed amount of LSD tokens distributed in this distribution
+     * @param _sharesAmountDistributed amount of LSD shares distributed in this distribution
      */
     function updateDistribution(
         bytes32 _merkleRoot,
         bytes32 _ipfsHash,
-        uint256 _totalAmount,
-        uint256 _totalSharesAmount
+        uint256 _amountDistributed,
+        uint256 _sharesAmountDistributed
     ) external onlyDistributionOracle {
         _unpause();
 
-        uint256 incrementalAmount = _totalAmount - totalDistributed;
-        uint256 incrementalSharesAmount = _totalSharesAmount - totalSharesDistributed;
-
-        depositsSinceLastUpdate -= incrementalAmount;
-        sharesSinceLastUpdate -= incrementalSharesAmount;
+        depositsSinceLastUpdate -= _amountDistributed;
+        sharesSinceLastUpdate -= _sharesAmountDistributed;
         merkleRoot = _merkleRoot;
         ipfsHash = _ipfsHash;
-        totalDistributed = _totalAmount;
-        totalSharesDistributed = _totalSharesAmount;
 
-        emit UpdateDistribution(_merkleRoot, _ipfsHash, incrementalAmount, incrementalSharesAmount);
+        emit UpdateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
     }
 
     /**
