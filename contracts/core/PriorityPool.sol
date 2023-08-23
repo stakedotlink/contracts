@@ -37,8 +37,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     bytes32 public ipfsHash;
 
     uint256 public totalQueued;
-    uint256 public depositsSinceLastUpdate;
-    uint256 public sharesSinceLastUpdate;
+    uint256 private depositsSinceLastUpdate;
+    uint256 private sharesSinceLastUpdate;
 
     address[] private accounts;
     mapping(address => uint256) private accountIndexes;
@@ -338,6 +338,16 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function performUpkeep(bytes calldata) external {
         _depositQueuedTokens(queueDepositThreshold);
+    }
+
+    /**
+     * @notice returns the amount of deposits since the last call to updateDistribution and the amount of shares
+     * received for those deposits
+     * @return amount of deposits
+     * @return amount of shares
+     */
+    function getDepositsSinceLastUpdate() external view returns (uint256, uint256) {
+        return (depositsSinceLastUpdate, sharesSinceLastUpdate);
     }
 
     /**
