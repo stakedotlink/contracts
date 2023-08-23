@@ -35,11 +35,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     bytes32 public merkleRoot;
     bytes32 public ipfsHash;
-    uint256 public totalDistributed;
-    uint256 public totalSharesDistributed;
 
     uint256 public totalQueued;
-    uint256 public depositsSinceLastUpdate;
+    uint256 private depositsSinceLastUpdate;
+    uint256 private sharesSinceLastUpdate;
 
     address[] private accounts;
     mapping(address => uint256) private accountIndexes;
@@ -342,6 +341,16 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
+     * @notice returns the amount of deposits since the last call to updateDistribution and the amount of shares
+     * received for those deposits
+     * @return amount of deposits
+     * @return amount of shares
+     */
+    function getDepositsSinceLastUpdate() external view returns (uint256, uint256) {
+        return (depositsSinceLastUpdate, sharesSinceLastUpdate);
+    }
+
+    /**
      * @notice returns account data used for calculating a new merkle tree
      * @dev merkle tree is calculated based on users' reSDL balance and the number of tokens they have queued,
      * the index of an account in this contract is equal to their index in the tree
@@ -374,27 +383,23 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice distributes a new batch of LSD tokens to users that have queued tokens
      * @param _merkleRoot new merkle root for the distribution tree
      * @param _ipfsHash new ipfs hash for the distribution tree (CIDv0, no prefix - only hash)
-     * @param _totalAmount lifetime amount of LSD tokens distributed
-     * @param _totalSharesAmount lifetime amount of LSD shares distributed
+     * @param _amountDistributed amount of LSD tokens distributed in this distribution
+     * @param _sharesAmountDistributed amount of LSD shares distributed in this distribution
      */
     function updateDistribution(
         bytes32 _merkleRoot,
         bytes32 _ipfsHash,
-        uint256 _totalAmount,
-        uint256 _totalSharesAmount
+        uint256 _amountDistributed,
+        uint256 _sharesAmountDistributed
     ) external onlyDistributionOracle {
         _unpause();
 
-        uint256 incrementalAmount = _totalAmount - totalDistributed;
-        uint256 incrementalSharesAmount = _totalSharesAmount - totalSharesDistributed;
-
-        depositsSinceLastUpdate -= incrementalAmount;
+        depositsSinceLastUpdate -= _amountDistributed;
+        sharesSinceLastUpdate -= _sharesAmountDistributed;
         merkleRoot = _merkleRoot;
         ipfsHash = _ipfsHash;
-        totalDistributed = _totalAmount;
-        totalSharesDistributed = _totalSharesAmount;
 
-        emit UpdateDistribution(_merkleRoot, _ipfsHash, incrementalAmount, incrementalSharesAmount);
+        emit UpdateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
     }
 
     /**
@@ -497,6 +502,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (toWithdrawFromQueue != 0) {
             totalQueued -= toWithdrawFromQueue;
             depositsSinceLastUpdate += toWithdrawFromQueue;
+            sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
         }
 
         if (toWithdrawFromPool != 0) {
@@ -521,6 +527,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         totalQueued = _totalQueued - toDeposit;
         depositsSinceLastUpdate += toDeposit;
+        sharesSinceLastUpdate += stakingPool.getSharesByStake(toDeposit);
         stakingPool.deposit(address(this), toDeposit);
 
         emit DepositQueuedTokens(toDeposit);
