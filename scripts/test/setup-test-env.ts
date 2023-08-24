@@ -36,10 +36,10 @@ Accounts:
 
 /*
 Staking Queue IPFS mock data
-CID: Qmey3UkJzL4ZKAeQ1XR1BYJBPQfSjjDKgPQv3DFEY3HWSz
+CID: QmV1N49KT7at9LpNxyyPnCNBLEztMFHvLXoHpdPRoUzGgz
 data:
 {
-  "merkleRoot": "0x794ac3c2cbc6a9906a16ea840fd9141feae35bef8632e4ff7f8b5fcda81042db",
+  "merkleRoot": "0x52171b32a0a6c33f6756c5c33673790b66945c4f1c4ec4a81932e60b06b5a321",
   "data": {
     "0x0000000000000000000000000000000000000000": {
       "amount": "0",
@@ -344,8 +344,8 @@ async function main() {
   tx = await LINK_PriorityPool.pauseForUpdate()
   await tx.wait()
   tx = await LINK_PriorityPool.updateDistribution(
-    '0x794ac3c2cbc6a9906a16ea840fd9141feae35bef8632e4ff7f8b5fcda81042db',
-    '0xF70DA54C680F900AC326B6835AE00DC95CFB78C964D8BFCE17A774DFBC548E37',
+    '0x52171b32a0a6c33f6756c5c33673790b66945c4f1c4ec4a81932e60b06b5a321',
+    '0x6310F1189600F807FAC771D10706B6665628B99797054447F58F4C8A05971B83',
     toEther(200),
     toEther(100)
   )
