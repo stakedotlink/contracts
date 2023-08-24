@@ -32,6 +32,7 @@ Accounts:
 5 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + reSDL + has queued LINK + has SDLPool stLINK rewards
 6 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + reSDL (locked) + has queued LINK + has withdrawable stLINK in the queue 
 7 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + has queued LINK 
+8 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + stLINK + has queued LINK + cannot withdraw full queued LINK amount 
 */
 
 /*
@@ -308,6 +309,19 @@ async function main() {
     )
   await tx.wait()
 
+  // Account 8
+
+  tx = await LINK_StakingPool.transfer(accounts[8], toEther(100))
+  await tx.wait()
+  tx = await linkToken
+    .connect(signers[8])
+    .transferAndCall(
+      LINK_PriorityPool.address,
+      toEther(5000),
+      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+    )
+  await tx.wait()
+
   // Reward Distributions
 
   await tx.wait()
@@ -349,6 +363,11 @@ async function main() {
     toEther(200),
     toEther(100)
   )
+  await tx.wait()
+
+  tx = await strategyMockLINK.setMaxDeposits(toEther(6200))
+  await tx.wait()
+  tx = await LINK_PriorityPool.depositQueuedTokens()
   await tx.wait()
 
   printDeployments()
