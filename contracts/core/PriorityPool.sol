@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "./interfaces/IStakingPool.sol";
 import "./interfaces/ISDLPool.sol";
@@ -136,7 +137,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _distributionAmount account's distribution amount from the latest distribution
      * @return amount of queued tokens for an account
      */
-    function getQueuedTokens(address _account, uint256 _distributionAmount) external view returns (uint256) {
+    function getQueuedTokens(address _account, uint256 _distributionAmount) public view returns (uint256) {
         return accountQueuedTokens[_account] - _distributionAmount;
     }
 
@@ -153,17 +154,20 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns the total amount of asset tokens that can be withdrawn
-     * @dev tokens are withdrawn from the queue first (if it's not paused) followed by
-     * the staking pool
+     * @notice returns the total amount of asset tokens that an account can withdraw
+     * @dev includes account's queued tokens and stLINK balance and checks both priority pool
+     * and staking pool liquidity
+     * @param _account account address
+     * @param _distributionAmount account's distribution amount from the latest distribution
      * @return amount of withrawable tokens
      */
-    function canWithdraw() external view returns (uint256) {
-        uint256 withdrawable = stakingPool.canWithdraw();
-        if (!paused()) {
-            withdrawable += totalQueued;
-        }
-        return withdrawable;
+    function canWithdraw(address _account, uint256 _distributionAmount) external view returns (uint256) {
+        uint256 canUnqueue = paused() ? 0 : MathUpgradeable.min(getQueuedTokens(_account, _distributionAmount), totalQueued);
+        uint256 stLINKCanWithdraw = MathUpgradeable.min(
+            stakingPool.balanceOf(_account),
+            stakingPool.canWithdraw() + totalQueued - canUnqueue
+        );
+        return canUnqueue + stLINKCanWithdraw;
     }
 
     /**
@@ -229,7 +233,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
             if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
 
-            uint256 queuedTokens = accountQueuedTokens[account] - _amount;
+            uint256 queuedTokens = getQueuedTokens(account, _amount);
             uint256 canUnqueue = queuedTokens <= totalQueued ? queuedTokens : totalQueued;
             uint256 amountToUnqueue = toWithdraw <= canUnqueue ? toWithdraw : canUnqueue;
 
@@ -272,7 +276,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
         }
 
-        if (_amountToUnqueue > accountQueuedTokens[account] - _amount) revert InsufficientBalance();
+        if (_amountToUnqueue > getQueuedTokens(account, _amount)) revert InsufficientBalance();
 
         accountQueuedTokens[account] -= _amountToUnqueue;
         totalQueued -= _amountToUnqueue;

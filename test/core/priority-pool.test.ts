@@ -567,11 +567,14 @@ describe('PriorityPool', () => {
   })
 
   it('canWithdraw should work correctly', async () => {
+    await strategy.setMinDeposits(0)
     await sq.deposit(toEther(2000), true)
-    assert.equal(fromEther(await sq.canWithdraw()), 1900)
-
+    assert.equal(fromEther(await sq.canWithdraw(accounts[0], 0)), 2000)
+    await strategy.setMaxDeposits(toEther(1100))
+    await sq.depositQueuedTokens()
+    assert.equal(fromEther(await sq.canWithdraw(accounts[0], 0)), 1900)
     await sq.pauseForUpdate()
-    assert.equal(fromEther(await sq.canWithdraw()), 900)
+    assert.equal(fromEther(await sq.canWithdraw(accounts[0], 0)), 1000)
   })
 
   it('onTokenTransfer should work correctly', async () => {
