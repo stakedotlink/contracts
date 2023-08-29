@@ -9,8 +9,8 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "./interfaces/IStakingPool.sol";
-import "./interfaces/ISDLPool.sol";
+import "../interfaces/IStakingPool.sol";
+import "../interfaces/ISDLPool.sol";
 
 /**
  * @title Priority Pool
