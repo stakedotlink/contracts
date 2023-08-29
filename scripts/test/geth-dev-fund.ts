@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat'
 
 async function main() {
-  let accounts = 8
+  let accounts = 9
 
   let customHttpProvider = new ethers.providers.JsonRpcProvider(process.env.GETH_URL)
 
