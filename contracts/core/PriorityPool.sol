@@ -36,6 +36,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     bytes32 public merkleRoot;
     bytes32 public ipfsHash;
+    uint256 public merkleTreeSize;
 
     uint256 public totalQueued;
     uint256 private depositsSinceLastUpdate;
@@ -210,28 +211,34 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice withdraws asset tokens
      * @dev will unqueue sender's tokens before taking LSD tokens if possible and
-     * if merkle args are set
+     * if _shouldUnqueue is set to true
      * @param _amountToWithdraw amount of tokens to withdraw
      * @param _amount amount as recorded in sender's merkle tree entry
      * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
      * @param _merkleProof merkle proof for sender's merkle tree entry
+     * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
      */
     function withdraw(
         uint256 _amountToWithdraw,
         uint256 _amount,
         uint256 _sharesAmount,
-        bytes32[] calldata _merkleProof
+        bytes32[] calldata _merkleProof,
+        bool _shouldUnqueue
     ) external {
         if (_amountToWithdraw == 0) revert InvalidAmount();
 
         uint256 toWithdraw = _amountToWithdraw;
         address account = msg.sender;
 
-        if (_amount != 0) {
+        if (_shouldUnqueue == true) {
             _requireNotPaused();
 
-            bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
-            if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
+            if (_merkleProof.length != 0) {
+                bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
+                if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
+            } else if (accountIndexes[account] < merkleTreeSize) {
+                revert InvalidProof();
+            }
 
             uint256 queuedTokens = getQueuedTokens(account, _amount);
             uint256 canUnqueue = queuedTokens <= totalQueued ? queuedTokens : totalQueued;
@@ -271,7 +278,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (_amountToUnqueue > totalQueued) revert InsufficientQueuedTokens();
 
         address account = msg.sender;
-        if (merkleRoot != bytes32(0)) {
+        if (merkleRoot != bytes32(0) && accountIndexes[account] < merkleTreeSize) {
             bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
             if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
         }
@@ -402,6 +409,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         sharesSinceLastUpdate -= _sharesAmountDistributed;
         merkleRoot = _merkleRoot;
         ipfsHash = _ipfsHash;
+        merkleTreeSize = accounts.length;
 
         emit UpdateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
     }
