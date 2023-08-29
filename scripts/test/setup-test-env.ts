@@ -87,6 +87,8 @@ async function main() {
 
   // LINK Staking
 
+  tx = await LINK_StakingPool.updateFee(0, ethers.constants.AddressZero, 0)
+  await tx.wait()
   const strategyMockLINK = (await deployUpgradeable('StrategyMock', [
     linkToken.address,
     LINK_StakingPool.address,
@@ -298,30 +300,6 @@ async function main() {
     )
   await tx.wait()
 
-  // Account 7
-
-  tx = await linkToken
-    .connect(signers[7])
-    .transferAndCall(
-      LINK_PriorityPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
-    )
-  await tx.wait()
-
-  // Account 8
-
-  tx = await LINK_StakingPool.transfer(accounts[8], toEther(100))
-  await tx.wait()
-  tx = await linkToken
-    .connect(signers[8])
-    .transferAndCall(
-      LINK_PriorityPool.address,
-      toEther(5000),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
-    )
-  await tx.wait()
-
   // Reward Distributions
 
   await tx.wait()
@@ -363,6 +341,30 @@ async function main() {
     toEther(200),
     toEther(100)
   )
+  await tx.wait()
+
+  // Account 7
+
+  tx = await linkToken
+    .connect(signers[7])
+    .transferAndCall(
+      LINK_PriorityPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+    )
+  await tx.wait()
+
+  // Account 8
+
+  tx = await LINK_StakingPool.transfer(accounts[8], toEther(100))
+  await tx.wait()
+  tx = await linkToken
+    .connect(signers[8])
+    .transferAndCall(
+      LINK_PriorityPool.address,
+      toEther(5000),
+      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+    )
   await tx.wait()
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(6200))
