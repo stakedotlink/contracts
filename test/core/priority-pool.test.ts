@@ -454,6 +454,12 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 9750)
     assert.equal(fromEther(await sq.getLSDTokens(accounts[1], data[2][2])), 300)
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[1], data[2][1])), 100)
+
+    await sq.connect(signers[3]).deposit(toEther(100), true)
+    await sq.connect(signers[3]).unqueueTokens(toEther(50), 0, 0, [])
+    assert.equal(fromEther(await sq.totalQueued()), 850)
+    assert.equal(fromEther(await token.balanceOf(accounts[3])), 9950)
+    assert.equal(fromEther(await sq.getQueuedTokens(accounts[3], 0)), 50)
   })
 
   it('withdraw should work correctly', async () => {
@@ -468,7 +474,7 @@ describe('PriorityPool', () => {
     await sq.depositQueuedTokens()
 
     await sq.pauseForUpdate()
-    await sq.connect(signers[1]).withdraw(toEther(10), 0, 0, [])
+    await sq.connect(signers[1]).withdraw(toEther(10), 0, 0, [], false)
 
     assert.equal(fromEther(await sq.totalQueued()), 490)
     assert.deepEqual(
@@ -484,7 +490,7 @@ describe('PriorityPool', () => {
       toEther(700),
       toEther(350)
     )
-    await sq.connect(signers[1]).withdraw(toEther(500), 0, 0, [])
+    await sq.connect(signers[1]).withdraw(toEther(500), 0, 0, [], false)
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
     assert.deepEqual(
@@ -495,7 +501,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 8510)
 
     await stakingPool.connect(signers[1]).transfer(accounts[2], toEther(50))
-    await sq.connect(signers[2]).withdraw(toEther(50), 0, 0, [])
+    await sq.connect(signers[2]).withdraw(toEther(50), 0, 0, [], false)
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
     assert.deepEqual(
@@ -519,7 +525,7 @@ describe('PriorityPool', () => {
 
     await sq.pauseForUpdate()
     await expect(
-      sq.connect(signers[1]).withdraw(toEther(10), toEther(1), 0, [])
+      sq.connect(signers[1]).withdraw(toEther(10), toEther(1), 0, [], true)
     ).to.be.revertedWith('Pausable: paused')
 
     let data = [
@@ -536,7 +542,9 @@ describe('PriorityPool', () => {
       toEther(150),
       toEther(75)
     )
-    await sq.connect(signers[1]).withdraw(toEther(50), toEther(50), toEther(50), tree.getProof(2))
+    await sq
+      .connect(signers[1])
+      .withdraw(toEther(50), toEther(50), toEther(50), tree.getProof(2), true)
 
     assert.equal(fromEther(await sq.totalQueued()), 100)
     assert.deepEqual(
@@ -548,12 +556,17 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[1], toEther(50))), 0)
 
     await expect(
-      sq.connect(signers[2]).withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(2))
+      sq
+        .connect(signers[2])
+        .withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(2), true)
     ).to.be.revertedWith('InvalidProof()')
+    await expect(sq.connect(signers[2]).withdraw(toEther(150), 0, 0, [], true)).to.be.revertedWith(
+      'InvalidProof()'
+    )
     await stakingPool.transfer(accounts[2], toEther(100))
     await sq
       .connect(signers[2])
-      .withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(3))
+      .withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(3), true)
 
     assert.equal(fromEther(await sq.totalQueued()), 0)
     assert.deepEqual(
@@ -564,6 +577,18 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9950)
     assert.equal(fromEther(await sq.getQueuedTokens(accounts[2], toEther(100))), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 50)
+
+    await strategy.setMaxDeposits(toEther(2100))
+    await sq.connect(signers[3]).deposit(toEther(100), true)
+    await sq.connect(signers[3]).withdraw(toEther(50), 0, 0, [], true)
+    assert.equal(fromEther(await sq.totalQueued()), 50)
+    assert.deepEqual(
+      (await sq.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      [0, 0]
+    )
+    assert.equal(fromEther(await stakingPool.totalStaked()), 2100)
+    assert.equal(fromEther(await token.balanceOf(accounts[3])), 9950)
+    assert.equal(fromEther(await sq.getQueuedTokens(accounts[3], 0)), 50)
   })
 
   it('canWithdraw should work correctly', async () => {
