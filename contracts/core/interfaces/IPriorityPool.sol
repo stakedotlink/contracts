@@ -4,6 +4,8 @@ pragma solidity 0.8.15;
 interface IPriorityPool {
     function paused() external view returns (bool);
 
+    function depositsSinceLastUpdate() external view returns (uint256);
+
     function pauseForUpdate() external;
 
     function updateDistribution(
