@@ -39,7 +39,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     uint256 public merkleTreeSize;
 
     uint256 public totalQueued;
-    uint256 private depositsSinceLastUpdate;
+    uint256 public depositsSinceLastUpdate;
     uint256 private sharesSinceLastUpdate;
 
     address[] private accounts;
