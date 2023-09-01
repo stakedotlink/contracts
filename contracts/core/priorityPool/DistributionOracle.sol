@@ -5,6 +5,7 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../interfaces/IPriorityPool.sol";
+import "../interfaces/IStakingPool.sol";
 
 contract DistributionOracle is ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
@@ -14,23 +15,29 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         REQUEST
     }
 
+    struct UpdateStatus {
+        uint64 timeOfLastUpdate;
+        uint64 pausedAtBlockNumber;
+        uint128 requestInProgress;
+    }
+
     IPriorityPool public priorityPool;
 
     bytes32 public jobId;
     uint256 public fee;
 
-    uint256 public minTimeBetweenUpdates;
-    uint256 public minDepositsSinceLastUpdate;
-    uint256 public minBlockConfirmations;
+    uint64 public minTimeBetweenUpdates;
+    uint64 public minBlockConfirmations;
+    uint128 public minDepositsSinceLastUpdate;
 
-    uint256 public timeOfLastUpdate;
-    uint256 public pausedAtBlockNumber;
+    UpdateStatus private updateStatus;
 
     error NotPaused();
     error InsufficientBlockConfirmations();
     error InsufficientBalance();
     error UpdateConditionsNotMet();
     error InvalidUpkeepType();
+    error RequestInProgress();
 
     /**
      * @notice Initialize the contract
@@ -49,9 +56,9 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         address _chainlinkOracle,
         bytes32 _jobId,
         uint256 _fee,
-        uint256 _minTimeBetweenUpdates,
-        uint256 _minDepositsSinceLastUpdate,
-        uint256 _minBlockConfirmations,
+        uint64 _minTimeBetweenUpdates,
+        uint128 _minDepositsSinceLastUpdate,
+        uint64 _minBlockConfirmations,
         address _priorityPool
     ) {
         setChainlinkToken(_chainlinkToken);
@@ -72,15 +79,17 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @return performData abi encoded upkeep type to perform
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        bool shouldPauseForUpdate = (!priorityPool.paused() &&
-            block.timestamp >= timeOfLastUpdate + minTimeBetweenUpdates) &&
+        bool shouldPauseForUpdate = !priorityPool.paused() &&
+            (block.timestamp >= updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) &&
             priorityPool.depositsSinceLastUpdate() >= minDepositsSinceLastUpdate;
 
         if (shouldPauseForUpdate) {
             return (true, abi.encode(UpkeepType.PAUSE));
         }
 
-        bool shouldRequestUpdate = priorityPool.paused() && block.number >= pausedAtBlockNumber + minBlockConfirmations;
+        bool shouldRequestUpdate = priorityPool.paused() &&
+            (block.number >= updateStatus.pausedAtBlockNumber + minBlockConfirmations) &&
+            updateStatus.requestInProgress == 0;
 
         if (shouldRequestUpdate) {
             return (true, abi.encode(UpkeepType.REQUEST));
@@ -99,7 +108,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
 
         if (upkeepType == UpkeepType.PAUSE) {
             if (
-                (block.timestamp < timeOfLastUpdate + minTimeBetweenUpdates) ||
+                (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) ||
                 (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate)
             ) {
                 revert UpdateConditionsNotMet();
@@ -145,6 +154,17 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         uint256 _sharesAmountDistributed
     ) public recordChainlinkFulfillment(_requestId) {
         priorityPool.updateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
+        updateStatus.requestInProgress = 0;
+    }
+
+    /**
+     * @notice Cancels a request if it has not been fulfilled
+     * @param _requestId request ID
+     * @param _expiration time of the expiration for the request
+     */
+    function cancelRequest(bytes32 _requestId, uint256 _expiration) external onlyOwner {
+        cancelChainlinkRequest(_requestId, fee, this.fulfillRequest.selector, _expiration);
+        updateStatus.requestInProgress = 0;
     }
 
     /**
@@ -164,9 +184,9 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @param _minBlockConfirmations min # of blocks to wait to request update after pausing priority pool
      * */
     function setUpdateParams(
-        uint256 _minTimeBetweenUpdates,
-        uint256 _minDepositsSinceLastUpdate,
-        uint256 _minBlockConfirmations
+        uint64 _minTimeBetweenUpdates,
+        uint128 _minDepositsSinceLastUpdate,
+        uint64 _minBlockConfirmations
     ) external onlyOwner {
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
         minDepositsSinceLastUpdate = _minDepositsSinceLastUpdate;
@@ -189,8 +209,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      */
     function _pauseForUpdate() private {
         priorityPool.pauseForUpdate();
-        pausedAtBlockNumber = block.number;
-        timeOfLastUpdate = block.timestamp;
+        updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 1);
     }
 
     /**
@@ -199,10 +218,14 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @dev pauseForUpdate() must be called before calling this function
      */
     function _requestUpdate() private {
+        UpdateStatus memory status = updateStatus;
+
         if (!priorityPool.paused()) revert NotPaused();
-        if (block.number < pausedAtBlockNumber + minBlockConfirmations) revert InsufficientBlockConfirmations();
+        if (block.number < status.pausedAtBlockNumber + minBlockConfirmations) revert InsufficientBlockConfirmations();
+        if (status.requestInProgress == 1) revert RequestInProgress();
+
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfillRequest.selector);
-        req.addUint("blockNumber", pausedAtBlockNumber);
+        req.addUint("blockNumber", status.pausedAtBlockNumber);
         sendChainlinkRequest(req, fee);
     }
 }
