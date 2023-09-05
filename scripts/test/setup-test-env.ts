@@ -107,6 +107,16 @@ async function main() {
   tx = await delegatorPool.addToken(LINK_StakingPool.address, stLINK_DelegatorRewardsPool.address)
   await tx.wait()
 
+
+  updateDeployments(
+    {
+      stLINK_DelegatorRewardsPool: stLINK_DelegatorRewardsPool.address
+    },
+    {
+      stLINK_DelegatorRewardsPool: 'stLINK_DelegatorRewardsPool'
+    }
+  )
+  
   // ETH Liquid SD Index
 
   const lidoAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
