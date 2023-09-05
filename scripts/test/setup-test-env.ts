@@ -112,7 +112,7 @@ async function main() {
       stLINK_DelegatorRewardsPool: stLINK_DelegatorRewardsPool.address,
     },
     {
-      stLINK_DelegatorRewardsPool: 'stLINK_DelegatorRewardsPool',
+      stLINK_DelegatorRewardsPool: 'RewardsPool',
     }
   )
 
