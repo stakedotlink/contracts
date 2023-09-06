@@ -55,7 +55,7 @@ contract StrategyMock is Strategy {
         token.safeTransfer(msg.sender, _amount);
     }
 
-    function updateDeposits()
+    function updateDeposits(bytes calldata)
         external
         onlyStakingPool
         returns (

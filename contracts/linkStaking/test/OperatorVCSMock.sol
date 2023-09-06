@@ -40,7 +40,7 @@ contract OperatorVCSMock {
     }
 
     function updateDeposits() external returns (uint256, uint256) {
-        return vault.updateDeposits();
+        return vault.updateDeposits(0, address(0));
     }
 
     function addVault(address _vault) external {
