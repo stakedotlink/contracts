@@ -10,5 +10,7 @@ interface IStaking {
 
     function getStakerLimits() external view returns (uint256, uint256);
 
+    function isActive() external view returns (bool);
+
     function migrate(bytes calldata data) external;
 }

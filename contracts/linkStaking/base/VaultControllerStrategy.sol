@@ -178,13 +178,17 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice returns the maximum that can be deposited into this strategy
      * @return maximum deposits
      */
-    function getMaxDeposits() public view override returns (uint256) {
+    function getMaxDeposits() public view virtual override returns (uint256) {
         (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
         return
             totalDeposits +
-            MathUpgradeable.min(
-                vaults.length * vaultMaxDeposits - totalPrincipalDeposits,
-                ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) * 9) / 10
+            (
+                stakeController.isActive()
+                    ? MathUpgradeable.min(
+                        vaults.length * vaultMaxDeposits - totalPrincipalDeposits,
+                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) * 9) / 10
+                    )
+                    : 0
             );
     }
 
@@ -192,7 +196,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice returns the minimum that must remain this strategy
      * @return minimum deposits
      */
-    function getMinDeposits() public view override returns (uint256) {
+    function getMinDeposits() public view virtual override returns (uint256) {
         return totalDeposits;
     }
 
