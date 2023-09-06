@@ -11,14 +11,12 @@ import "./interfaces/IOperatorVault.sol";
 contract OperatorVCS is VaultControllerStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint256 private totalPrincipalDeposits;
     uint256 public operatorRewardPercentage;
     uint256 private unclaimedOperatorRewards;
 
     mapping(address => bool) private vaultMapping;
 
     event VaultAdded(address indexed operator);
-    event DepositBufferedTokens(uint256 depositedAmount);
     event WithdrawExtraRewards(address indexed receiver, uint256 amount);
     event SetOperatorRewardPercentage(uint256 rewardPercentage);
 
@@ -38,7 +36,6 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _stakingPool address of the staking pool that controls this strategy
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
-     * @param _minDepositThreshold min amount of LINK deposits needed to initiate a deposit into vaults
      * @param _fees list of fees to be paid on rewards
      * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
      **/
@@ -47,52 +44,22 @@ contract OperatorVCS is VaultControllerStrategy {
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        uint256 _minDepositThreshold,
         Fee[] memory _fees,
         uint256 _operatorRewardPercentage
     ) public reinitializer(2) {
         if (address(token) == address(0)) {
-            __VaultControllerStrategy_init(
-                _token,
-                _stakingPool,
-                _stakeController,
-                _vaultImplementation,
-                _minDepositThreshold,
-                _fees
-            );
+            __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _vaultImplementation, _fees);
         }
+
+        // reassaign values to account for changed storage variables in upgrade
+        totalPrincipalDeposits = operatorRewardPercentage;
+        indexOfLastFullVault = 0;
 
         if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
         operatorRewardPercentage = _operatorRewardPercentage;
         for (uint256 i = 0; i < vaults.length; ++i) {
             vaultMapping[address(vaults[i])] = true;
         }
-    }
-
-    /**
-     * @notice returns the maximum that can be deposited into this strategy
-     * @return maximum deposits
-     */
-    function getMaxDeposits() public view override returns (uint256) {
-        (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
-        return totalDeposits + vaultMaxDeposits * vaults.length - (totalPrincipalDeposits + bufferedDeposits);
-    }
-
-    /**
-     * @notice returns the minimum that must remain this strategy
-     * @return minimum deposits
-     */
-    function getMinDeposits() public view override returns (uint256) {
-        return totalDeposits;
-    }
-
-    /**
-     * @notice returns the vault deposit limits for vaults controlled by this strategy
-     * @return minimum amount of deposits that a vault can hold
-     * @return maximum amount of deposits that a vault can hold
-     */
-    function getVaultDepositLimits() public view override returns (uint256, uint256) {
-        return stakeController.getOperatorLimits();
     }
 
     /**
@@ -156,11 +123,12 @@ contract OperatorVCS is VaultControllerStrategy {
     /**
      * @notice updates deposit accounting and calculates fees on newly earned rewards
      * @dev reverts if sender is not stakingPool
+     * @param _data encoded minRewards (uint256) - min amount of rewards required to claim (set 0 to skip reward claiming)
      * @return depositChange change in deposits since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits()
+    function updateDeposits(bytes calldata _data)
         external
         override
         onlyStakingPool
@@ -170,12 +138,16 @@ contract OperatorVCS is VaultControllerStrategy {
             uint256[] memory amounts
         )
     {
+        uint256 minRewards = abi.decode(_data, (uint256));
         uint256 vaultDeposits;
         uint256 operatorRewards;
 
         uint256 vaultCount = vaults.length;
         for (uint256 i = 0; i < vaultCount; ++i) {
-            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits();
+            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits(
+                minRewards,
+                address(stakingPool)
+            );
             vaultDeposits += deposits;
             operatorRewards += rewards;
         }
@@ -268,25 +240,6 @@ contract OperatorVCS is VaultControllerStrategy {
 
         operatorRewardPercentage = _operatorRewardPercentage;
         emit SetOperatorRewardPercentage(_operatorRewardPercentage);
-    }
-
-    /**
-     * @notice deposits buffered tokens into vaults
-     * @param _startIndex index of first vault to deposit into
-     * @param _toDeposit amount to deposit
-     * @param _vaultMinDeposits minimum amount of deposits that a vault can hold
-     * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
-     */
-    function _depositBufferedTokens(
-        uint256 _startIndex,
-        uint256 _toDeposit,
-        uint256 _vaultMinDeposits,
-        uint256 _vaultMaxDeposits
-    ) internal override {
-        uint256 deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
-        totalPrincipalDeposits += deposited;
-        bufferedDeposits -= deposited;
-        emit DepositBufferedTokens(deposited);
     }
 
     /**
