@@ -1,46 +1,49 @@
 import { ethers } from 'hardhat'
 import { assert } from 'chai'
-import {
-  toEther,
-  deploy,
-  deployUpgradeable,
-  getAccounts,
-  setupToken,
-  fromEther,
-} from '../utils/helpers'
-import { ERC677, CommunityVault, StakingMock } from '../../typechain-types'
+import { toEther, deploy, deployUpgradeable, getAccounts, fromEther } from '../utils/helpers'
+import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../typechain-types'
+import { Signer } from 'ethers'
 
 describe('CommunityVault', () => {
   let token: ERC677
-  let staking: StakingMock
+  let stakingController: StakingMock
+  let rewardsController: StakingRewardsMock
   let vault: CommunityVault
   let accounts: string[]
+  let signers: Signer[]
 
   before(async () => {
-    ;({ accounts } = await getAccounts())
+    ;({ accounts, signers } = await getAccounts())
   })
 
   beforeEach(async () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
-    await setupToken(token, accounts)
 
-    staking = (await deploy('StakingMock', [token.address])) as StakingMock
+    stakingController = (await deploy('StakingMock', [token.address])) as StakingMock
+    rewardsController = (await deploy('StakingRewardsMock', [token.address])) as StakingRewardsMock
 
     vault = (await deployUpgradeable('CommunityVault', [
       token.address,
-      accounts[0],
-      staking.address,
+      accounts[1],
+      stakingController.address,
+      rewardsController.address,
     ])) as CommunityVault
 
-    await token.approve(vault.address, ethers.constants.MaxUint256)
-    await vault.deposit(toEther(1000))
+    await token.connect(signers[1]).approve(vault.address, ethers.constants.MaxUint256)
+    await token.transfer(rewardsController.address, toEther(10000))
+    await token.transfer(accounts[1], toEther(100))
   })
 
-  it('getTotalDeposits should work correctly', async () => {
-    assert.equal(fromEther(await vault.getTotalDeposits()), 1000)
-    await staking.setBaseReward(toEther(10))
-    assert.equal(fromEther(await vault.getTotalDeposits()), 1010)
-    await staking.setDelegationReward(toEther(5))
-    assert.equal(fromEther(await vault.getTotalDeposits()), 1010)
+  it('claimRewards should work correctly', async () => {
+    await vault.connect(signers[1]).deposit(toEther(100))
+    await vault.connect(signers[1]).claimRewards(0)
+    await rewardsController.setReward(vault.address, toEther(10))
+    await vault.connect(signers[1]).claimRewards(toEther(11))
+    assert.equal(fromEther(await vault.getRewards()), 10)
+    assert.equal(fromEther(await token.balanceOf(accounts[1])), 0)
+
+    await vault.connect(signers[1]).claimRewards(toEther(10))
+    assert.equal(fromEther(await vault.getRewards()), 0)
+    assert.equal(fromEther(await token.balanceOf(accounts[1])), 10)
   })
 })
