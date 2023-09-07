@@ -92,7 +92,7 @@ contract OperatorVault is Vault {
     function deposit(uint256 _amount) external override onlyVaultController {
         trackedTotalDeposits += SafeCast.toUint128(_amount);
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x");
+        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "");
     }
 
     /**
@@ -179,19 +179,20 @@ contract OperatorVault is Vault {
         uint256 totalDeposits = principal + rewards;
         int256 depositChange = int256(totalDeposits) - int256(uint256(trackedTotalDeposits));
 
+        uint256 opRewards;
+        if (depositChange > 0) {
+            opRewards = (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+            unclaimedRewards += SafeCast.toUint128(opRewards);
+            trackedTotalDeposits = SafeCast.toUint128(totalDeposits);
+        }
+
         if (_minRewards != 0 && rewards >= _minRewards) {
             rewardsController.claimReward();
+            trackedTotalDeposits -= SafeCast.toUint128(rewards);
             token.safeTransfer(_rewardsReceiver, rewards);
         }
 
-        if (depositChange > 0) {
-            uint256 opRewards = (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
-            unclaimedRewards += SafeCast.toUint128(opRewards);
-            trackedTotalDeposits = SafeCast.toUint128(totalDeposits);
-            return (totalDeposits, opRewards);
-        }
-
-        return (totalDeposits, 0);
+        return (totalDeposits, opRewards);
     }
 
     /**
