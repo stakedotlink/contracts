@@ -164,6 +164,11 @@ abstract contract VaultControllerStrategy is Strategy {
         } else if (depositChange < 0) {
             totalDeposits -= uint256(depositChange * -1);
         }
+
+        uint256 balance = token.balanceOf(address(this));
+        if (balance != 0) {
+            token.safeTransfer(address(stakingPool), balance);
+        }
     }
 
     /**
