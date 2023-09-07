@@ -152,7 +152,8 @@ contract OperatorVCS is VaultControllerStrategy {
             operatorRewards += rewards;
         }
 
-        depositChange = int256(vaultDeposits + token.balanceOf(address(this))) - int256(totalDeposits);
+        uint256 balance = token.balanceOf(address(this));
+        depositChange = int256(vaultDeposits + balance) - int256(totalDeposits);
 
         if (operatorRewards != 0) {
             receivers = new address[](1 + (depositChange > 0 ? fees.length : 0));
@@ -181,6 +182,10 @@ contract OperatorVCS is VaultControllerStrategy {
             }
         } else if (depositChange < 0) {
             totalDeposits -= uint256(depositChange * -1);
+        }
+
+        if (balance != 0) {
+            token.safeTransfer(address(stakingPool), balance);
         }
     }
 
