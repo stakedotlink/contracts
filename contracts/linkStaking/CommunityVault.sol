@@ -33,14 +33,13 @@ contract CommunityVault is Vault {
 
     /**
      * @notice claims rewards from the Chainlink staking contract
-     * @param _rewardsReceiver address to receive claimed rewards
      * @param _minRewards min amount of rewards required to claim
      **/
-    function claimRewards(address _rewardsReceiver, uint256 _minRewards) external onlyVaultController {
+    function claimRewards(uint256 _minRewards) external onlyVaultController {
         uint256 rewards = getRewards();
         if (rewards != 0 && rewards >= _minRewards) {
             rewardsController.claimReward();
-            token.safeTransfer(_rewardsReceiver, token.balanceOf(address(this)));
+            token.safeTransfer(vaultController, token.balanceOf(address(this)));
         }
     }
 }
