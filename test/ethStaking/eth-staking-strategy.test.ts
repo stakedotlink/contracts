@@ -392,7 +392,7 @@ describe('EthStakingStrategy', () => {
 
     assert.equal(fromEther(await strategy.getDepositChange()), 105, 'depositChange incorrect')
 
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(
       fromEther(
         await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
@@ -424,7 +424,7 @@ describe('EthStakingStrategy', () => {
 
     assert.equal(fromEther(await strategy.getDepositChange()), -1, 'depositChange incorrect')
 
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(
       fromEther(
         await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.address))
