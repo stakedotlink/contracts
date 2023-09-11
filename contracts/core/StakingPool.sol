@@ -165,8 +165,8 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the amont of tokens sitting in the pool outside a strategy
-     * @dev these tokens earn no yield and should be deposited ASAP
+     * @notice returns the amont of tokens sitting in this pool outside a strategy
+     * @dev these tokens earn no yield and will be deposited ASAP
      * @return amount of tokens outside a strategy
      */
     function getUnusedDeposits() external view returns (uint256) {

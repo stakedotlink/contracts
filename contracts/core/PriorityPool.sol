@@ -326,7 +326,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued tokens into the staking pool
+     * @notice deposits queued and/or unused tokens
      * @param _queueDepositMin min amount of tokens required for deposit
      * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
@@ -351,7 +351,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued tokens into the staking pool
+     * @notice deposits queued and/or unused tokens
      * @dev will revert if less than queueDepositMin tokens can be deposited
      * @dev used by chainlink keepers
      */
@@ -533,7 +533,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued tokens
+     * @notice deposits queued and/or unused tokens
+     * @dev will prioritize unused deposits sitting in staking pool before queued deposits in this pool
      * @param _depositMin min amount of tokens required to deposit
      **/
     function _depositQueuedTokens(uint256 _depositMin, uint256 _depositMax) internal {
