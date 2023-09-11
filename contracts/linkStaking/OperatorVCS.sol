@@ -37,6 +37,8 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
      * @param _fees list of fees to be paid on rewards
+     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * that can be deposited at once
      * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
      **/
     function initialize(
@@ -45,10 +47,18 @@ contract OperatorVCS is VaultControllerStrategy {
         address _stakeController,
         address _vaultImplementation,
         Fee[] memory _fees,
+        uint256 _maxDepositSizeBP,
         uint256 _operatorRewardPercentage
     ) public reinitializer(2) {
         if (address(token) == address(0)) {
-            __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _vaultImplementation, _fees);
+            __VaultControllerStrategy_init(
+                _token,
+                _stakingPool,
+                _stakeController,
+                _vaultImplementation,
+                _fees,
+                _maxDepositSizeBP
+            );
         }
 
         // reassaign values to account for changed storage variables in upgrade
@@ -138,16 +148,15 @@ contract OperatorVCS is VaultControllerStrategy {
             uint256[] memory amounts
         )
     {
-        uint256 minRewards = abi.decode(_data, (uint256));
+        uint256 minRewards = _data.length == 0 ? 0 : abi.decode(_data, (uint256));
+        uint256 newTotalDeposits = totalDeposits;
         uint256 vaultDeposits;
         uint256 operatorRewards;
 
         uint256 vaultCount = vaults.length;
+        address receiver = address(this);
         for (uint256 i = 0; i < vaultCount; ++i) {
-            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits(
-                minRewards,
-                address(stakingPool)
-            );
+            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits(minRewards, receiver);
             vaultDeposits += deposits;
             operatorRewards += rewards;
         }
@@ -164,7 +173,7 @@ contract OperatorVCS is VaultControllerStrategy {
         }
 
         if (depositChange > 0) {
-            totalDeposits += uint256(depositChange);
+            newTotalDeposits += uint256(depositChange);
 
             if (receivers.length == 0) {
                 receivers = new address[](fees.length);
@@ -181,26 +190,36 @@ contract OperatorVCS is VaultControllerStrategy {
                 }
             }
         } else if (depositChange < 0) {
-            totalDeposits -= uint256(depositChange * -1);
+            newTotalDeposits -= uint256(depositChange * -1);
         }
 
         if (balance != 0) {
             token.safeTransfer(address(stakingPool), balance);
+            newTotalDeposits -= balance;
         }
+
+        totalDeposits = newTotalDeposits;
     }
 
     /**
-     * @notice deploys a new vault and adds it this strategy
+     * @notice deploys a new vault and adds it to this strategy
      * @dev reverts if sender is not owner
      * @param _operator address of operator that the vault represents
      * @param _rewardsReceiver address authorized to claim rewards for the vault
+     * @param _pfAlertsController address of the price feed alerts contract
      */
-    function addVault(address _operator, address _rewardsReceiver) external onlyOwner {
+    function addVault(
+        address _operator,
+        address _rewardsReceiver,
+        address _pfAlertsController
+    ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address,address)",
+            "initialize(address,address,address,address,address,address,address)",
             address(token),
             address(this),
             address(stakeController),
+            stakeController.getRewardVault(),
+            _pfAlertsController,
             _operator,
             _rewardsReceiver
         );
@@ -258,6 +277,6 @@ contract OperatorVCS is VaultControllerStrategy {
         for (uint256 i = 0; i < strategies.length; ++i) {
             strategyIdxs[i] = i;
         }
-        stakingPool.updateStrategyRewards(strategyIdxs);
+        stakingPool.updateStrategyRewards(strategyIdxs, "");
     }
 }

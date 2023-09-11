@@ -28,8 +28,14 @@ describe('OperatorVault', () => {
   beforeEach(async () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
 
-    stakingController = (await deploy('StakingMock', [token.address])) as StakingMock
     rewardsController = (await deploy('StakingRewardsMock', [token.address])) as StakingRewardsMock
+    stakingController = (await deploy('StakingMock', [
+      token.address,
+      rewardsController.address,
+      toEther(10),
+      toEther(100),
+      toEther(10000),
+    ])) as StakingMock
     pfAlertsController = (await deploy('PFAlertsControllerMock', [
       token.address,
     ])) as PFAlertsControllerMock

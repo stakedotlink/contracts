@@ -189,6 +189,7 @@ contract OperatorVault is Vault {
         if (_minRewards != 0 && rewards >= _minRewards) {
             rewardsController.claimReward();
             trackedTotalDeposits -= SafeCast.toUint128(rewards);
+            totalDeposits -= rewards;
             token.safeTransfer(_rewardsReceiver, rewards);
         }
 

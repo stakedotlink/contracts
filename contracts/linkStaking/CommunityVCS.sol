@@ -27,13 +27,21 @@ contract CommunityVCS is VaultControllerStrategy {
         address _stakeController,
         address _vaultImplementation,
         Fee[] memory _fees,
+        uint256 _maxDepositSizeBP,
         uint128 _vaultDeploymentThreshold,
         uint128 _vaultDeploymentAmount
     ) public initializer {
-        __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _vaultImplementation, _fees);
+        __VaultControllerStrategy_init(
+            _token,
+            _stakingPool,
+            _stakeController,
+            _vaultImplementation,
+            _fees,
+            _maxDepositSizeBP
+        );
         vaultDeploymentThreshold = _vaultDeploymentThreshold;
         vaultDeploymentAmount = _vaultDeploymentAmount;
-        _deployVaults(10);
+        _deployVaults(_vaultDeploymentAmount);
     }
 
     /**
@@ -47,7 +55,7 @@ contract CommunityVCS is VaultControllerStrategy {
         uint256 _numVaults,
         uint256 _minRewards
     ) external {
-        address receiver = address(stakingPool);
+        address receiver = address(this);
         for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
             ICommunityVault(address(vaults[i])).claimRewards(_minRewards, receiver);
         }
@@ -88,10 +96,11 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function _deployVaults(uint256 _numVaults) internal {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address)",
+            "initialize(address,address,address,address)",
             address(token),
             address(this),
-            address(stakeController)
+            address(stakeController),
+            stakeController.getRewardVault()
         );
         for (uint256 i = 0; i < _numVaults; i++) {
             _deployVault(data);
