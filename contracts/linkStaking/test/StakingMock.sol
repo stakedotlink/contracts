@@ -10,15 +10,30 @@ import "../../core/interfaces/IERC677Receiver.sol";
  */
 contract StakingMock is IERC677Receiver {
     IERC677 public token;
+    address public rewardVault;
 
     mapping(address => uint256) public principalBalances;
     mapping(address => uint256) public removedPrincipal;
 
+    uint256 public depositMin;
+    uint256 public depositMax;
+    uint256 public maxPoolSize;
+
     bool public active;
 
-    constructor(address _token) {
+    constructor(
+        address _token,
+        address _rewardVault,
+        uint256 _depositMin,
+        uint256 _depositMax,
+        uint256 _maxPoolSize
+    ) {
         token = IERC677(_token);
+        rewardVault = _rewardVault;
         active = true;
+        depositMin = _depositMin;
+        depositMax = _depositMax;
+        maxPoolSize = _maxPoolSize;
     }
 
     function onTokenTransfer(
@@ -30,12 +45,12 @@ contract StakingMock is IERC677Receiver {
         principalBalances[_sender] += _value;
     }
 
-    function getStakerLimits() external pure returns (uint256, uint256) {
-        return (10 ether, 7000 ether);
+    function getStakerLimits() external view returns (uint256, uint256) {
+        return (depositMin, depositMax);
     }
 
-    function getMaxPoolSize() external pure returns (uint256) {
-        return 25000000 ether;
+    function getMaxPoolSize() external view returns (uint256) {
+        return maxPoolSize;
     }
 
     function getTotalPrincipal() external view returns (uint256) {
@@ -50,6 +65,10 @@ contract StakingMock is IERC677Receiver {
         return removedPrincipal[_staker];
     }
 
+    function getRewardVault() external view returns (address) {
+        return rewardVault;
+    }
+
     function removePrincipal(address _staker, uint256 _amount) external {
         principalBalances[_staker] -= _amount;
         removedPrincipal[_staker] += _amount;
@@ -61,5 +80,9 @@ contract StakingMock is IERC677Receiver {
 
     function setActive(bool _active) external {
         active = _active;
+    }
+
+    function setMaxPoolSize(uint256 _maxPoolSize) external {
+        maxPoolSize = _maxPoolSize;
     }
 }

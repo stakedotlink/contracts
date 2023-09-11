@@ -20,7 +20,7 @@ contract VCSMock is VaultControllerStrategy {
         address _vaultImplementation,
         Fee[] memory _fees
     ) public initializer {
-        __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _vaultImplementation, _fees);
+        __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _vaultImplementation, _fees, 9000);
     }
 
     function addVaults(address[] memory _vaults) external {
@@ -29,14 +29,6 @@ contract VCSMock is VaultControllerStrategy {
             vaults.push(IVault(vault));
             token.approve(vault, type(uint256).max);
         }
-    }
-
-    function getMaxDeposits() public view override returns (uint256) {
-        return totalDeposits;
-    }
-
-    function getMinDeposits() public view override returns (uint256) {
-        return totalDeposits;
     }
 
     function depositToVaults(
