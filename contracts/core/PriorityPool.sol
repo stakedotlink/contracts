@@ -327,10 +327,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice deposits queued tokens into the staking pool
-     * @dev bypasses queueDepositMin
+     * @param _queueDepositMin min amount of tokens required for deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
-    function depositQueuedTokens() external {
-        _depositQueuedTokens(0);
+    function depositQueuedTokens(uint256 _queueDepositMin, uint256 _queueDepositMax) external {
+        _depositQueuedTokens(_queueDepositMin, _queueDepositMax);
     }
 
     /**
@@ -355,7 +356,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev used by chainlink keepers
      */
     function performUpkeep(bytes calldata) external {
-        _depositQueuedTokens(queueDepositMin);
+        _depositQueuedTokens(queueDepositMin, queueDepositMax);
     }
 
     /**
@@ -450,10 +451,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice sets the minimum and maximum amount that can be deposited
-     * @param _queueDepositMin min amount of tokens
-     * @param _queueDepositMax max amount of tokens
+     *@param _queueDepositMin min amount of tokens required for deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
-    function setQueueDepositThreshold(uint128 _queueDepositMin, uint128 _queueDepositMax) external onlyOwner {
+    function setQueueDepositParams(uint128 _queueDepositMin, uint128 _queueDepositMax) external onlyOwner {
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMin;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
@@ -535,7 +536,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice deposits queued tokens
      * @param _depositMin min amount of tokens required to deposit
      **/
-    function _depositQueuedTokens(uint256 _depositMin) internal {
+    function _depositQueuedTokens(uint256 _depositMin, uint256 _depositMax) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
@@ -548,11 +549,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         uint256 toDepositFromStakingPool = MathUpgradeable.min(
             MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
-            queueDepositMax
+            _depositMax
         );
         uint256 toDepositFromQueue = MathUpgradeable.min(
             MathUpgradeable.min(_totalQueued, strategyDepositRoom - toDepositFromStakingPool),
-            queueDepositMax - toDepositFromStakingPool
+            _depositMax - toDepositFromStakingPool
         );
 
         totalQueued = _totalQueued - toDepositFromQueue;
