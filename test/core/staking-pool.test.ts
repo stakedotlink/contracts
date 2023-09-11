@@ -133,7 +133,7 @@ describe('StakingPool', () => {
   })
 
   it('should be able to remove strategies', async () => {
-    await stakingPool.removeStrategy(1)
+    await stakingPool.removeStrategy(1, '0x')
     let strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
@@ -141,7 +141,7 @@ describe('StakingPool', () => {
       'Remaining strategies incorrect'
     )
 
-    await stakingPool.removeStrategy(1)
+    await stakingPool.removeStrategy(1, '0x')
     strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
@@ -152,7 +152,7 @@ describe('StakingPool', () => {
 
   it('should not be able remove nonexistent strategy', async () => {
     await assertThrowsAsync(async () => {
-      await stakingPool.removeStrategy(3)
+      await stakingPool.removeStrategy(3, '0x')
     }, 'revert')
   })
 
@@ -344,7 +344,7 @@ describe('StakingPool', () => {
     await token.transfer(strategy1.address, toEther(1100))
     await token.transfer(strategy3.address, toEther(500))
     await strategy2.simulateSlash(toEther(400))
-    await stakingPool.updateStrategyRewards([0, 1, 2])
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
@@ -390,7 +390,7 @@ describe('StakingPool', () => {
     await token.transfer(strategy1.address, toEther(1000))
     await token.transfer(strategy3.address, toEther(600))
     await strategy2.simulateSlash(toEther(300))
-    await stakingPool.updateStrategyRewards([0, 1, 2])
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
@@ -431,7 +431,7 @@ describe('StakingPool', () => {
     await stake(2, 1000)
     await stake(3, 2000)
     await strategy3.simulateSlash(toEther(200))
-    await stakingPool.updateStrategyRewards([0, 1, 2])
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
@@ -463,7 +463,7 @@ describe('StakingPool', () => {
     await strategy3.simulateSlash(toEther(200))
     await strategy2.setFeeBasisPoints(1000)
     await token.transfer(strategy2.address, toEther(200))
-    await stakingPool.updateStrategyRewards([0, 1, 2])
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[0])),
@@ -494,7 +494,7 @@ describe('StakingPool', () => {
 
     await strategy1.simulateSlash(toEther(290))
     await token.transfer(strategy2.address, toEther(100))
-    await stakingPool.updateStrategyRewards([0, 1, 2])
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[0])),
@@ -540,7 +540,7 @@ describe('StakingPool', () => {
     )
 
     await token.transfer(strategy1.address, toEther(1000))
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
     await stake(3, 1000)
 
     assert.equal(
@@ -555,7 +555,7 @@ describe('StakingPool', () => {
     )
 
     await strategy1.simulateSlash(toEther(2000))
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
 
     assert.equal(
       fromEther(await stakingPool.getStakeByShares(toEther(10))),
@@ -574,7 +574,7 @@ describe('StakingPool', () => {
     await stake(2, 1000)
 
     await token.transfer(strategy1.address, toEther(1000))
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
 
     await stakingPool.connect(signers[1]).transfer(accounts[3], toEther(100))
     await stakingPool.connect(signers[3]).transfer(accounts[0], toEther(25))
@@ -608,7 +608,7 @@ describe('StakingPool', () => {
     await stake(2, 1000)
 
     await token.transfer(strategy1.address, toEther(1000))
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
 
     await stakingPool.connect(signers[1]).transferShares(accounts[3], toEther(100))
     await stakingPool.connect(signers[3]).transferShares(accounts[0], toEther(50))
@@ -671,5 +671,21 @@ describe('StakingPool', () => {
     await strategy1.setMaxDeposits(toEther(2000))
     stakingLimit = await stakingPool.getMaxDeposits()
     assert.equal(fromEther(stakingLimit), 14000, 'staking limit is not correct')
+  })
+
+  it('getStrategyDepositRoom should work correctly', async () => {
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 13000)
+
+    await stake(1, 2000)
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 11000)
+
+    await strategy1.setMaxDeposits(toEther(2000))
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 12000)
+
+    await strategy2.setMaxDeposits(toEther(0))
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 11000)
+
+    await token.transfer(stakingPool.address, toEther(1000))
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 11000)
   })
 })
