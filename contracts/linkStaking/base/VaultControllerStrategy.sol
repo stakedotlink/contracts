@@ -30,13 +30,18 @@ abstract contract VaultControllerStrategy is Strategy {
 
     IVault[] internal vaults;
     uint256 internal totalDeposits;
-    uint256 internal totalPrincipalDeposits;
-    uint256 internal indexOfLastFullVault;
+    uint256 public totalPrincipalDeposits;
+    uint256 public indexOfLastFullVault;
 
-    uint256[10] private __gap;
+    uint256 public maxDepositSizeBP;
+
+    uint256[9] private __gap;
 
     event UpgradedVaults(uint256 startIndex, uint256 numVaults, bytes data);
+    event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
     event SetVaultImplementation(address vaultImplementation);
+
+    error InvalidBasisPoints();
 
     /**
      * @notice initializes contract
@@ -45,13 +50,16 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
      * @param _fees list of fees to be paid on rewards
+     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * that can be deposited at once
      **/
     function __VaultControllerStrategy_init(
         address _token,
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        Fee[] memory _fees
+        Fee[] memory _fees,
+        uint256 _maxDepositSizeBP
     ) public onlyInitializing {
         __Strategy_init(_token, _stakingPool);
 
@@ -64,6 +72,9 @@ abstract contract VaultControllerStrategy is Strategy {
             fees.push(_fees[i]);
         }
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+
+        if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
+        maxDepositSizeBP = _maxDepositSizeBP;
     }
 
     /**
@@ -81,8 +92,6 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        totalDeposits += _amount;
-        totalPrincipalDeposits += _amount;
 
         (uint256 vaultMinDeposits, uint256 vaultMaxDeposits) = getVaultDepositLimits();
 
@@ -91,7 +100,13 @@ abstract contract VaultControllerStrategy is Strategy {
             startIndex = 0;
         }
 
-        _depositToVaults(startIndex, _amount + token.balanceOf(address(this)), vaultMinDeposits, vaultMaxDeposits);
+        uint256 deposited = _depositToVaults(startIndex, token.balanceOf(address(this)), vaultMinDeposits, vaultMaxDeposits);
+        totalDeposits += deposited;
+        totalPrincipalDeposits += deposited;
+
+        if (deposited != _amount) {
+            token.safeTransfer(address(stakingPool), _amount - deposited);
+        }
     }
 
     /**
@@ -150,9 +165,10 @@ abstract contract VaultControllerStrategy is Strategy {
         )
     {
         depositChange = getDepositChange();
+        uint256 newTotalDeposits = totalDeposits;
 
         if (depositChange > 0) {
-            totalDeposits += uint256(depositChange);
+            newTotalDeposits += uint256(depositChange);
 
             receivers = new address[](fees.length);
             amounts = new uint256[](fees.length);
@@ -162,13 +178,16 @@ abstract contract VaultControllerStrategy is Strategy {
                 amounts[i] = (uint256(depositChange) * fees[i].basisPoints) / 10000;
             }
         } else if (depositChange < 0) {
-            totalDeposits -= uint256(depositChange * -1);
+            newTotalDeposits -= uint256(depositChange * -1);
         }
 
         uint256 balance = token.balanceOf(address(this));
         if (balance != 0) {
             token.safeTransfer(address(stakingPool), balance);
+            newTotalDeposits -= balance;
         }
+
+        totalDeposits = newTotalDeposits;
     }
 
     /**
@@ -191,7 +210,7 @@ abstract contract VaultControllerStrategy is Strategy {
                 stakeController.isActive()
                     ? MathUpgradeable.min(
                         vaults.length * vaultMaxDeposits - totalPrincipalDeposits,
-                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) * 9) / 10
+                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) * maxDepositSizeBP) / 10000
                     )
                     : 0
             );
@@ -278,6 +297,17 @@ abstract contract VaultControllerStrategy is Strategy {
         }
 
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+    }
+
+    /**
+     * @notice sets the basis point amount of the remaing deposit room in the Chainlink staking contract
+     * that can be deposited at once
+     * @param _maxDepositSizeBP basis point amount
+     */
+    function setMaxDepositSizeBP(uint256 _maxDepositSizeBP) external onlyOwner {
+        if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
+        maxDepositSizeBP = _maxDepositSizeBP;
+        emit SetMaxDepositSizeBP(_maxDepositSizeBP);
     }
 
     /**

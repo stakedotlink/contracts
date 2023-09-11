@@ -25,8 +25,14 @@ describe('Vault', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    stakingController = (await deploy('StakingMock', [token.address])) as StakingMock
     rewardsController = (await deploy('StakingRewardsMock', [token.address])) as StakingRewardsMock
+    stakingController = (await deploy('StakingMock', [
+      token.address,
+      rewardsController.address,
+      toEther(10),
+      toEther(100),
+      toEther(10000),
+    ])) as StakingMock
 
     vault = (await deployUpgradeable('CommunityVault', [
       token.address,
@@ -70,20 +76,20 @@ describe('Vault', () => {
 
   it('getRewards should work correctly', async () => {
     await vault.deposit(toEther(100))
-    await rewardsController.addReward(vault.address, toEther(10))
+    await rewardsController.setReward(vault.address, toEther(10))
     assert.equal(fromEther(await vault.getRewards()), 10)
 
-    await rewardsController.addReward(vault.address, toEther(30))
+    await rewardsController.setReward(vault.address, toEther(40))
     assert.equal(fromEther(await vault.getRewards()), 40)
   })
 
   it('getTotalDeposits should work correctly', async () => {
     await vault.deposit(toEther(100))
-    await rewardsController.addReward(vault.address, toEther(10))
+    await rewardsController.setReward(vault.address, toEther(10))
     assert.equal(fromEther(await vault.getTotalDeposits()), 110)
 
     await vault.deposit(toEther(150))
-    await rewardsController.addReward(vault.address, toEther(30))
+    await rewardsController.setReward(vault.address, toEther(40))
     assert.equal(fromEther(await vault.getTotalDeposits()), 290)
   })
 })
