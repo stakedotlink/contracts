@@ -15,7 +15,8 @@ const LINK_StakingPool = {
 }
 // LINK Priority Pool
 const LINK_PriorityPool = {
-  queueDepositThreshold: toEther(1000), // min amount of tokens neede to execute deposit
+  queueDepositMin: toEther(1000), // min amount of tokens neede to execute deposit
+  queueDepositMax: toEther(200000), // max amount of tokens in a single deposit tx}
 }
 
 async function main() {
@@ -34,7 +35,8 @@ async function main() {
     linkToken.address,
     stakingPool.address,
     sdlPool.address,
-    LINK_PriorityPool.queueDepositThreshold,
+    LINK_PriorityPool.queueDepositMin,
+    LINK_PriorityPool.queueDepositMax,
   ])
   console.log('LINK_PriorityPool deployed: ', priorityPool.address)
 
