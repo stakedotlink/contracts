@@ -1,14 +1,15 @@
 import { ethers } from 'hardhat'
+import { getAccounts } from '../utils/helpers'
 
 async function main() {
-  let accounts = 9
+  const { accounts } = await getAccounts()
 
   let customHttpProvider = new ethers.providers.JsonRpcProvider(process.env.GETH_URL)
 
   let coinbase = await customHttpProvider.send('eth_coinbase', [])
   let coinbaseSigner = await customHttpProvider.getUncheckedSigner(coinbase)
 
-  for (let i = 0; i < accounts; i++) {
+  for (let i = 0; i < accounts.length; i++) {
     let signer = await ethers.provider.getSigner(i)
     let balance = await signer.getBalance()
 
