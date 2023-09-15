@@ -226,12 +226,44 @@ async function main() {
   tx = await ownersRewardsPoolV1.distributeRewards()
   await tx.wait()
 
-  // Account 3
+  // stSDL
 
+  // Account 3
   tx = await sdlToken
     .connect(signers[3])
     .transferAndCall(delegatorPool.address, toEther(1000), '0x')
   await tx.wait()
+
+  // Account 9
+  tx = await sdlToken
+    .connect(signers[9])
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await tx.wait()
+
+  // Account 10
+  tx = await sdlToken
+    .connect(signers[10])
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await tx.wait()
+
+  // Account 11
+  tx = await sdlToken
+    .connect(signers[11])
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await tx.wait()
+
+  // Account 12
+  tx = await sdlToken
+    .connect(signers[12])
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await tx.wait()
+
+  // Account 13
+  tx = await sdlToken
+    .connect(signers[13])
+    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  await tx.wait()
+
   tx = await linkToken
     .connect(signers[3])
     .transferAndCall(
