@@ -451,12 +451,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice sets the minimum and maximum amount that can be deposited
-     *@param _queueDepositMin min amount of tokens required for deposit
+     * @param _queueDepositMin min amount of tokens required for deposit
      * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
     function setQueueDepositParams(uint128 _queueDepositMin, uint128 _queueDepositMax) external onlyOwner {
         queueDepositMin = _queueDepositMin;
-        queueDepositMax = _queueDepositMin;
+        queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
     }
 
