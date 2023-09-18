@@ -9,8 +9,8 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "./interfaces/IStakingPool.sol";
-import "./interfaces/ISDLPool.sol";
+import "../interfaces/IStakingPool.sol";
+import "../interfaces/ISDLPool.sol";
 
 /**
  * @title Priority Pool
@@ -39,7 +39,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     uint256 public merkleTreeSize;
 
     uint256 public totalQueued;
-    uint256 private depositsSinceLastUpdate;
+    uint256 public depositsSinceLastUpdate;
     uint256 private sharesSinceLastUpdate;
 
     address[] private accounts;
