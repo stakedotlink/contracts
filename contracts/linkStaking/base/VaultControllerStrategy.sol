@@ -7,14 +7,58 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../../core/interfaces/IERC677.sol";
 import "../../core/base/Strategy.sol";
-import "../interfaces/IVault.sol";
-import "../interfaces/IStaking.sol";
+
+interface IStaking {
+    function getCommunityStakerLimits() external view returns (uint256, uint256);
+
+    function getOperatorLimits() external view returns (uint256, uint256);
+
+    function getMaxPoolSize() external view returns (uint256);
+
+    function getTotalStakedAmount() external view returns (uint256);
+
+    function isActive() external view returns (bool);
+
+    function isOperator(address staker) external view returns (bool);
+
+    function getStake(address staker) external view returns (uint256);
+
+    function migrate(bytes calldata data) external;
+
+    function getBaseReward(address staker) external view returns (uint256);
+
+    function getDelegationReward(address staker) external view returns (uint256);
+
+    function getMigrationTarget() external view returns (address);
+
+    function isPaused() external view returns (bool);
+
+    function raiseAlert() external;
+}
+
+interface IVault {
+    function deposit(uint256 _amount) external;
+
+    function withdraw(uint256 _amount) external view;
+
+    function getTotalDeposits() external view returns (uint256);
+
+    function getPrincipalDeposits() external view returns (uint256);
+
+    function migrate(bytes calldata _data) external;
+
+    function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
+
+    function upgradeTo(address _newImplementation) external;
+
+    function setOperator(address _operator) external;
+}
 
 /**
  * @title Vault Controller Strategy
- * @notice Base strategy for managing multiple Chainlink staking vaults
+ * @notice Interim contract to maintain compatibility with staking pool
  */
-abstract contract VaultControllerStrategy is Strategy {
+abstract contract VaultControllerStrategyUpgrade is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Fee {
@@ -150,7 +194,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice returns the deposit change (positive/negative) since deposits were last updated
      * @return deposit change
      */
-    function depositChange() public view returns (int) {
+    function getDepositChange() public view returns (int) {
         uint256 totalBalance = token.balanceOf(address(this));
         for (uint256 i = 0; i < vaults.length; i++) {
             totalBalance += vaults[i].getTotalDeposits();
@@ -162,8 +206,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice returns the  total amount of fees that will be paid on the next update
      * @return total fees
      */
-    function pendingFees() external view override returns (uint256) {
-        int256 balanceChange = depositChange();
+    function getPendingFees() external view override returns (uint256) {
+        int256 balanceChange = getDepositChange();
         uint256 totalFees;
 
         if (balanceChange > 0) {
@@ -176,24 +220,33 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice updates the total amount deposited for reward distribution
+     * @return depositChange deposit change since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits() external onlyStakingPool returns (address[] memory receivers, uint256[] memory amounts) {
-        int balanceChange = depositChange();
+    function updateDeposits(bytes calldata)
+        external
+        onlyStakingPool
+        returns (
+            int256 depositChange,
+            address[] memory receivers,
+            uint256[] memory amounts
+        )
+    {
+        depositChange = getDepositChange();
 
-        if (balanceChange > 0) {
-            totalDeposits += uint256(balanceChange);
+        if (depositChange > 0) {
+            totalDeposits += uint256(depositChange);
 
             receivers = new address[](fees.length);
             amounts = new uint256[](fees.length);
 
             for (uint256 i = 0; i < fees.length; i++) {
                 receivers[i] = fees[i].receiver;
-                amounts[i] = (uint256(balanceChange) * fees[i].basisPoints) / 10000;
+                amounts[i] = (uint256(depositChange) * fees[i].basisPoints) / 10000;
             }
-        } else if (balanceChange < 0) {
-            totalDeposits -= uint256(balanceChange * -1);
+        } else if (depositChange < 0) {
+            totalDeposits -= uint256(depositChange * -1);
         }
     }
 

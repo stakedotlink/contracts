@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "./base/VaultControllerStrategy.sol";
+import "./VaultControllerStrategyUpgrade.sol";
 
 /**
  * @title Operator Vault Controller Strategy
- * @notice Implemented strategy for managing multiple Chainlink operator staking vaults
+ * @notice Interim contract to maintain compatibility with staking pool
  */
-contract OperatorVCS is VaultControllerStrategy {
+contract OperatorVCSUpgrade is VaultControllerStrategyUpgrade {
     uint256 private totalPrincipalDeposits;
 
     event VaultAdded(address indexed operator);
