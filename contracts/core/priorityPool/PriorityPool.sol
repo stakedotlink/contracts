@@ -31,7 +31,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     ISDLPool public sdlPool;
     address public distributionOracle;
 
-    uint256 public queueDepositThreshold;
+    uint128 public queueDepositMin;
+    uint128 public queueDepositMax;
     PoolStatus public poolStatus;
 
     bytes32 public merkleRoot;
@@ -59,7 +60,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 incrementalSharesAmount
     );
     event SetPoolStatus(PoolStatus status);
-    event SetQueueDepositThreshold(uint256 threshold);
+    event SetQueueDepositParams(uint128 queueDepositMin, uint128 queueDepositMax);
     event DepositQueuedTokens(uint256 amount);
 
     error InvalidValue();
@@ -86,13 +87,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _token address of asset token
      * @param _stakingPool address of staking pool
      * @param _sdlPool address of SDL pool
-     * @param _queueDepositThreshold min amount of tokens needed to execute deposit
+     * @param _queueDepositMin min amount of tokens needed to execute deposit
+     * @param _queueDepositMax max amount of tokens in a single deposit
      **/
     function initialize(
         address _token,
         address _stakingPool,
         address _sdlPool,
-        uint256 _queueDepositThreshold
+        uint128 _queueDepositMin,
+        uint128 _queueDepositMax
     ) public initializer {
         __UUPSUpgradeable_init();
         __Ownable_init();
@@ -100,7 +103,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
         sdlPool = ISDLPool(_sdlPool);
-        queueDepositThreshold = _queueDepositThreshold;
+        queueDepositMin = _queueDepositMin;
+        queueDepositMax = _queueDepositMax;
         accounts.push(address(0));
         token.safeIncreaseAllowance(_stakingPool, type(uint256).max);
     }
@@ -322,33 +326,37 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued tokens into the staking pool
-     * @dev bypasses queueDepositThreshold
+     * @notice deposits queued and/or unused tokens
+     * @param _queueDepositMin min amount of tokens required for deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
-    function depositQueuedTokens() external {
-        _depositQueuedTokens(0);
+    function depositQueuedTokens(uint256 _queueDepositMin, uint256 _queueDepositMax) external {
+        _depositQueuedTokens(_queueDepositMin, _queueDepositMax);
     }
 
     /**
-     * @notice returns whether a call should be made to performUpkeep to deposit queued tokens
+     * @notice returns whether a call should be made to performUpkeep to deposit queued/unused tokens
      * into the staking pool
      * @dev used by chainlink keepers
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        uint256 canDeposit = stakingPool.canDeposit();
+        uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
+        uint256 unusedDeposits = stakingPool.getUnusedDeposits();
         return (
-            poolStatus == PoolStatus.OPEN && totalQueued >= queueDepositThreshold && canDeposit >= queueDepositThreshold,
+            poolStatus == PoolStatus.OPEN &&
+                strategyDepositRoom >= queueDepositMin &&
+                (totalQueued + unusedDeposits) >= queueDepositMin,
             bytes("")
         );
     }
 
     /**
-     * @notice deposits queued tokens into the staking pool
-     * @dev will revert if less than queueDepositThreshold tokens can be deposited
+     * @notice deposits queued and/or unused tokens
+     * @dev will revert if less than queueDepositMin tokens can be deposited
      * @dev used by chainlink keepers
      */
     function performUpkeep(bytes calldata) external {
-        _depositQueuedTokens(queueDepositThreshold);
+        _depositQueuedTokens(queueDepositMin, queueDepositMax);
     }
 
     /**
@@ -442,12 +450,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the minimum amount of tokens needed to execute a deposit
-     * @param _queueDepositThreshold min amount of tokens
+     * @notice sets the minimum and maximum amount that can be deposited
+     * @param _queueDepositMin min amount of tokens required for deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
-    function setQueueDepositThreshold(uint256 _queueDepositThreshold) external onlyOwner {
-        queueDepositThreshold = _queueDepositThreshold;
-        emit SetQueueDepositThreshold(_queueDepositThreshold);
+    function setQueueDepositParams(uint128 _queueDepositMin, uint128 _queueDepositMax) external onlyOwner {
+        queueDepositMin = _queueDepositMin;
+        queueDepositMax = _queueDepositMax;
+        emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
     }
 
     /**
@@ -523,26 +533,36 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued tokens
-     * @param _depositThreshold min amount of tokens required for successful deposit
+     * @notice deposits queued and/or unused tokens
+     * @dev will prioritize unused deposits sitting in staking pool before queued deposits in this pool
+     * @param _depositMin min amount of tokens required to deposit
      **/
-    function _depositQueuedTokens(uint256 _depositThreshold) internal {
+    function _depositQueuedTokens(uint256 _depositMin, uint256 _depositMax) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
-        uint256 canDeposit = stakingPool.canDeposit();
-        if (canDeposit == 0 || canDeposit < _depositThreshold) revert InsufficientDepositRoom();
+        uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
+        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin) revert InsufficientDepositRoom();
 
         uint256 _totalQueued = totalQueued;
-        if (_totalQueued == 0 || _totalQueued < _depositThreshold) revert InsufficientQueuedTokens();
+        uint256 unusedDeposits = stakingPool.getUnusedDeposits();
+        uint256 canDeposit = _totalQueued + unusedDeposits;
+        if (canDeposit == 0 || canDeposit < _depositMin) revert InsufficientQueuedTokens();
 
-        uint256 toDeposit = _totalQueued <= canDeposit ? _totalQueued : canDeposit;
+        uint256 toDepositFromStakingPool = MathUpgradeable.min(
+            MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
+            _depositMax
+        );
+        uint256 toDepositFromQueue = MathUpgradeable.min(
+            MathUpgradeable.min(_totalQueued, strategyDepositRoom - toDepositFromStakingPool),
+            _depositMax - toDepositFromStakingPool
+        );
 
-        totalQueued = _totalQueued - toDeposit;
-        depositsSinceLastUpdate += toDeposit;
-        sharesSinceLastUpdate += stakingPool.getSharesByStake(toDeposit);
-        stakingPool.deposit(address(this), toDeposit);
+        totalQueued = _totalQueued - toDepositFromQueue;
+        depositsSinceLastUpdate += toDepositFromQueue;
+        sharesSinceLastUpdate += stakingPool.getSharesByStake(toDepositFromQueue);
+        stakingPool.deposit(address(this), toDepositFromQueue);
 
-        emit DepositQueuedTokens(toDeposit);
+        emit DepositQueuedTokens(toDepositFromQueue);
     }
 
     /**

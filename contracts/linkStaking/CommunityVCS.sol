@@ -2,130 +2,112 @@
 pragma solidity 0.8.15;
 
 import "./base/VaultControllerStrategy.sol";
+import "./interfaces/ICommunityVault.sol";
 
 /**
  * @title Community Vault Controller Strategy
  * @notice Implemented strategy for managing multiple Chainlink community staking vaults
  */
 contract CommunityVCS is VaultControllerStrategy {
-    uint256 private maxDeposits;
-    uint256 public maxVaultDeployments;
+    uint128 public vaultDeploymentThreshold;
+    uint128 public vaultDeploymentAmount;
 
-    event SetMaxDeposits(uint256 maxDeposits);
-    event SetMaxVaultDeployments(uint256 maxVaultDeployments);
-    event DepositBufferedTokens(uint256 amountDeposited, uint256 vaultsDeployed);
+    event SetVaultDeploymentParams(uint128 vaultDeploymentThreshold, uint128 vaultDeploymentAmount);
+
+    error VaultsAboveThreshold();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
+    /**
+     * @notice initializes contract
+     * @param _token address of LINK token
+     * @param _stakingPool address of the staking pool that controls this strategy
+     * @param _stakeController address of Chainlink staking contract
+     * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
+     * @param _fees list of fees to be paid on rewards
+     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * that can be deposited at once
+     * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
+     * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
+     **/
     function initialize(
         address _token,
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        uint256 _minDepositThreshold,
         Fee[] memory _fees,
-        uint256 _maxDeposits,
-        uint256 _maxVaultDeployments
+        uint256 _maxDepositSizeBP,
+        uint128 _vaultDeploymentThreshold,
+        uint128 _vaultDeploymentAmount
     ) public initializer {
         __VaultControllerStrategy_init(
             _token,
             _stakingPool,
             _stakeController,
             _vaultImplementation,
-            _minDepositThreshold,
-            _fees
+            _fees,
+            _maxDepositSizeBP
         );
-        maxDeposits = _maxDeposits;
-        maxVaultDeployments = _maxVaultDeployments;
-        _deployVaults(1);
+        vaultDeploymentThreshold = _vaultDeploymentThreshold;
+        vaultDeploymentAmount = _vaultDeploymentAmount;
+        _deployVaults(_vaultDeploymentAmount);
     }
 
     /**
-     * @notice returns the maximum that can be deposited into this strategy
-     * @return maximum deposits
+     * @notice claims Chanlink staking rewards from vaults
+     * @param _startIndex index of first vault to claim from
+     * @param _numVaults number of vaults to claim from starting at _startIndex
+     * @param _minRewards min amount of rewards required to claim
      */
-    function getMaxDeposits() public view override returns (uint256) {
-        return maxDeposits;
-    }
-
-    /**
-     * @notice returns the minimum that must remain this strategy
-     * @return minimum deposits
-     */
-    function getMinDeposits() public view override returns (uint256) {
-        return totalDeposits;
-    }
-
-    /**
-     * @notice returns the vault deposit limits
-     * @return minimum amount of deposits that a vault can hold
-     * @return maximum amount of deposits that a vault can hold
-     */
-    function getVaultDepositLimits() public view override returns (uint256, uint256) {
-        return stakeController.getCommunityStakerLimits();
-    }
-
-    /**
-     * @notice sets the maximum that can be deposited into this strategy
-     * @param _maxDeposits maximum amount
-     */
-    function setMaxDeposits(uint256 _maxDeposits) external onlyOwner {
-        maxDeposits = _maxDeposits;
-        emit SetMaxDeposits(_maxDeposits);
-    }
-
-    /**
-     * @notice sets the maximum number of vaults that can be deployed at once
-     * @param _maxVaultDeployments maximum amount
-     */
-    function setMaxVaultDeployments(uint256 _maxVaultDeployments) external onlyOwner {
-        maxVaultDeployments = _maxVaultDeployments;
-        emit SetMaxVaultDeployments(_maxVaultDeployments);
-    }
-
-    /**
-     * @notice deposits buffered tokens into vaults
-     * @param _startIndex index of first vault to deposit into
-     * @param _toDeposit amount to deposit
-     * @param _vaultMinDeposits minimum amount of deposits that a vault can hold
-     * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
-     */
-    function _depositBufferedTokens(
+    function claimRewards(
         uint256 _startIndex,
-        uint256 _toDeposit,
-        uint256 _vaultMinDeposits,
-        uint256 _vaultMaxDeposits
-    ) internal override {
-        uint256 deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
-        require(
-            deposited >= minDepositThreshold || vaults[vaults.length - 1].getPrincipalDeposits() >= _vaultMaxDeposits,
-            "Invalid deposit"
-        );
-
-        uint256 toDepositRemaining = _toDeposit - deposited;
-        uint256 vaultsToDeploy = toDepositRemaining / _vaultMaxDeposits;
-        if (toDepositRemaining % _vaultMaxDeposits >= _vaultMinDeposits) {
-            vaultsToDeploy += 1;
+        uint256 _numVaults,
+        uint256 _minRewards
+    ) external {
+        address receiver = address(this);
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
+            ICommunityVault(address(vaults[i])).claimRewards(_minRewards, receiver);
         }
+    }
 
-        if (vaultsToDeploy > 0) {
-            if (vaultsToDeploy > maxVaultDeployments) {
-                vaultsToDeploy = maxVaultDeployments;
-            }
-            _deployVaults(vaultsToDeploy);
-            deposited += _depositToVaults(
-                vaults.length - vaultsToDeploy,
-                toDepositRemaining,
-                _vaultMinDeposits,
-                _vaultMaxDeposits
-            );
-        }
+    /**
+     * @notice returns whether a new batch of vaults should be deployed
+     * @dev used by chainlink keepers
+     */
+    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        return ((vaults.length - 1 - indexOfLastFullVault) < vaultDeploymentThreshold, bytes(""));
+    }
 
-        bufferedDeposits -= deposited;
-        emit DepositBufferedTokens(deposited, vaultsToDeploy);
+    /**
+     * @notice deploys a new batch of vaults
+     * @dev will revert if the number of non-full vaults is not less than vaultDeploymentThreshold
+     * @dev used by chainlink keepers
+     */
+    function performUpkeep(bytes calldata) external {
+        if ((vaults.length - 1 - indexOfLastFullVault) >= vaultDeploymentThreshold) revert VaultsAboveThreshold();
+        _deployVaults(vaultDeploymentAmount);
+    }
+
+    /**
+     * @notice deploys a new batch of vaults
+     * @param _numVaults number of vaults to deploy
+     */
+    function addVaults(uint256 _numVaults) external onlyOwner {
+        _deployVaults(_numVaults);
+    }
+
+    /**
+     * @notice sets the vault deployment parameters
+     * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
+     * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
+     */
+    function setVaultDeploymentParams(uint128 _vaultDeploymentThreshold, uint128 _vaultDeploymentAmount) external onlyOwner {
+        vaultDeploymentThreshold = _vaultDeploymentThreshold;
+        vaultDeploymentAmount = _vaultDeploymentAmount;
+        emit SetVaultDeploymentParams(_vaultDeploymentThreshold, _vaultDeploymentAmount);
     }
 
     /**
@@ -134,10 +116,11 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function _deployVaults(uint256 _numVaults) internal {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address)",
+            "initialize(address,address,address,address)",
             address(token),
             address(this),
-            address(stakeController)
+            address(stakeController),
+            stakeController.getRewardVault()
         );
         for (uint256 i = 0; i < _numVaults; i++) {
             _deployVault(data);

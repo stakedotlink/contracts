@@ -165,6 +165,31 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
+     * @notice returns the amont of tokens sitting in this pool outside a strategy
+     * @dev these tokens earn no yield and will be deposited ASAP
+     * @return amount of tokens outside a strategy
+     */
+    function getUnusedDeposits() external view returns (uint256) {
+        return token.balanceOf(address(this));
+    }
+
+    /**
+     * @notice returns the available deposit room for this pool's strategies
+     * @return strategy deposit room
+     */
+    function getStrategyDepositRoom() external view returns (uint256) {
+        uint256 depositRoom;
+        for (uint256 i = 0; i < strategies.length; ++i) {
+            uint strategyDepositRoom = IStrategy(strategies[i]).canDeposit();
+            if (strategyDepositRoom >= type(uint256).max - depositRoom) {
+                return type(uint256).max;
+            }
+            depositRoom += strategyDepositRoom;
+        }
+        return depositRoom;
+    }
+
+    /**
      * @notice returns the available deposit room for this pool
      * @return available deposit room
      */
@@ -205,13 +230,14 @@ contract StakingPool is StakingRewardsPool {
     /**
      * @notice removes a strategy
      * @param _index index of strategy
+     * @param _strategyUpdateData encoded data to be passed to strategy
      **/
-    function removeStrategy(uint256 _index) external onlyOwner {
+    function removeStrategy(uint256 _index, bytes memory _strategyUpdateData) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
 
         uint256[] memory idxs = new uint256[](1);
         idxs[0] = _index;
-        updateStrategyRewards(idxs);
+        updateStrategyRewards(idxs, _strategyUpdateData);
 
         IStrategy strategy = IStrategy(strategies[_index]);
         uint256 totalStrategyDeposits = strategy.getTotalDeposits();
@@ -286,7 +312,7 @@ contract StakingPool is StakingRewardsPool {
      * @return total rewards
      * @return total fees
      **/
-    function getStrategyRewards(uint256[] memory _strategyIdxs) external view returns (int256, uint256) {
+    function getStrategyRewards(uint256[] calldata _strategyIdxs) external view returns (int256, uint256) {
         int256 totalRewards;
         uint256 totalFees;
 
@@ -308,8 +334,9 @@ contract StakingPool is StakingRewardsPool {
     /**
      * @notice updates and distributes rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
+     * @param _data encoded data to be passed to each strategy
      **/
-    function updateStrategyRewards(uint256[] memory _strategyIdxs) public {
+    function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) public {
         int256 totalRewards;
         uint256 totalFeeAmounts;
         uint256 totalFeeCount;
@@ -320,7 +347,7 @@ contract StakingPool is StakingRewardsPool {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
 
             (int256 depositChange, address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy
-                .updateDeposits();
+                .updateDeposits(_data);
             totalRewards += depositChange;
 
             if (strategyReceivers.length != 0) {

@@ -243,7 +243,7 @@ contract EthStakingStrategy is Strategy {
     /**
      * @notice updates deposit accounting and calculates reward distribution
      */
-    function updateDeposits()
+    function updateDeposits(bytes calldata)
         external
         onlyStakingPool
         returns (

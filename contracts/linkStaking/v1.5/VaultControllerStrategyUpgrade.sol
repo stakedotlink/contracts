@@ -3,19 +3,62 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../../core/interfaces/IERC677.sol";
 import "../../core/base/Strategy.sol";
-import "../interfaces/IVault.sol";
-import "../interfaces/IStaking.sol";
+
+interface IStaking {
+    function getCommunityStakerLimits() external view returns (uint256, uint256);
+
+    function getOperatorLimits() external view returns (uint256, uint256);
+
+    function getMaxPoolSize() external view returns (uint256);
+
+    function getTotalStakedAmount() external view returns (uint256);
+
+    function isActive() external view returns (bool);
+
+    function isOperator(address staker) external view returns (bool);
+
+    function getStake(address staker) external view returns (uint256);
+
+    function migrate(bytes calldata data) external;
+
+    function getBaseReward(address staker) external view returns (uint256);
+
+    function getDelegationReward(address staker) external view returns (uint256);
+
+    function getMigrationTarget() external view returns (address);
+
+    function isPaused() external view returns (bool);
+
+    function raiseAlert() external;
+}
+
+interface IVault {
+    function deposit(uint256 _amount) external;
+
+    function withdraw(uint256 _amount) external view;
+
+    function getTotalDeposits() external view returns (uint256);
+
+    function getPrincipalDeposits() external view returns (uint256);
+
+    function migrate(bytes calldata _data) external;
+
+    function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
+
+    function upgradeTo(address _newImplementation) external;
+
+    function setOperator(address _operator) external;
+}
 
 /**
  * @title Vault Controller Strategy
- * @notice Base strategy for managing multiple Chainlink staking vaults
+ * @notice Interim contract to maintain compatibility with staking pool
  */
-abstract contract VaultControllerStrategy is Strategy {
+abstract contract VaultControllerStrategyUpgrade is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Fee {
@@ -30,36 +73,23 @@ abstract contract VaultControllerStrategy is Strategy {
 
     IVault[] internal vaults;
     uint256 internal totalDeposits;
-    uint256 public totalPrincipalDeposits;
-    uint256 public indexOfLastFullVault;
+    uint256 internal bufferedDeposits;
+    uint256 public minDepositThreshold;
 
-    uint256 public maxDepositSizeBP;
+    uint256[10] private __gap;
 
-    uint256[9] private __gap;
-
+    event MigratedVaults(uint256 startIndex, uint256 numVaults, bytes data);
     event UpgradedVaults(uint256 startIndex, uint256 numVaults, bytes data);
-    event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
+    event SetMinDepositThreshold(uint256 minDepositThreshold);
     event SetVaultImplementation(address vaultImplementation);
 
-    error InvalidBasisPoints();
-
-    /**
-     * @notice initializes contract
-     * @param _token address of LINK token
-     * @param _stakingPool address of the staking pool that controls this strategy
-     * @param _stakeController address of Chainlink staking contract
-     * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
-     * @param _fees list of fees to be paid on rewards
-     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
-     * that can be deposited at once
-     **/
     function __VaultControllerStrategy_init(
         address _token,
         address _stakingPool,
         address _stakeController,
         address _vaultImplementation,
-        Fee[] memory _fees,
-        uint256 _maxDepositSizeBP
+        uint256 _minDepositThreshold,
+        Fee[] memory _fees
     ) public onlyInitializing {
         __Strategy_init(_token, _stakingPool);
 
@@ -68,17 +98,18 @@ abstract contract VaultControllerStrategy is Strategy {
         require(_isContract(_vaultImplementation), "Vault implementation address must belong to a contract");
         vaultImplementation = _vaultImplementation;
 
-        for (uint256 i = 0; i < _fees.length; ++i) {
+        (uint256 vaultMinDeposits, ) = getVaultDepositLimits();
+        require(_minDepositThreshold >= vaultMinDeposits, "Invalid min deposit threshold");
+
+        minDepositThreshold = _minDepositThreshold;
+        for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
-
-        if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
-        maxDepositSizeBP = _maxDepositSizeBP;
     }
 
     /**
-     * @notice returns a list of all vaults controlled by this contract
+     * @notice returns a list of all vaults
      * @return  list of vault addresses
      */
     function getVaults() external view returns (IVault[] memory) {
@@ -86,77 +117,115 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deposits tokens into this strategy from the staking pool
-     * @dev reverts if sender is not stakingPool
+     * @notice deposits tokens into this strategy
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-
-        (uint256 vaultMinDeposits, uint256 vaultMaxDeposits) = getVaultDepositLimits();
-
-        uint256 startIndex = indexOfLastFullVault + 1;
-        if (vaults[0].getPrincipalDeposits() < vaultMaxDeposits) {
-            startIndex = 0;
-        }
-
-        uint256 deposited = _depositToVaults(startIndex, token.balanceOf(address(this)), vaultMinDeposits, vaultMaxDeposits);
-        totalDeposits += deposited;
-        totalPrincipalDeposits += deposited;
-
-        if (deposited != _amount) {
-            token.safeTransfer(address(stakingPool), _amount - deposited);
-        }
+        totalDeposits += _amount;
+        bufferedDeposits += _amount;
     }
 
     /**
-     * @notice withdrawals are not yet implemented
+     * @notice withdrawals are not yet implemented in this iteration of Chainlink staking
      */
     function withdraw(uint256) external view onlyStakingPool {
         revert("withdrawals not yet implemented");
     }
 
     /**
-     * @notice returns the deposit change since deposits were last updated
-     * @dev deposit change could be positive or negative depending on reward rate and whether
-     * any slashing occurred
+     * @notice returns whether there are enough buffered tokens to initiate a deposit and the index
+     * of the first non-full vault
+     * @return whether a deposit should be initiated
+     * @return encoded index of first non-full vault
+     */
+    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        if (!stakeController.isActive() || stakeController.isPaused()) {
+            return (false, bytes(""));
+        }
+        if (bufferedDeposits < minDepositThreshold) {
+            return (false, bytes(""));
+        }
+
+        (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
+        uint256 firstNonFullVault;
+
+        for (uint256 i = 0; i < vaults.length; i++) {
+            uint256 vaultDeposits = vaults[i].getPrincipalDeposits();
+
+            if (vaultDeposits < vaultMaxDeposits) {
+                firstNonFullVault = i;
+                break;
+            }
+        }
+
+        return (true, abi.encode(firstNonFullVault));
+    }
+
+    /**
+     * @notice deposits buffered tokens into vaults if buffered balance exceeds minDepositThreshold
+     * @param _performData encoded index of first non-full vault
+     */
+    function performUpkeep(bytes calldata _performData) external {
+        require(bufferedDeposits >= minDepositThreshold, "Minimum deposit threshold has not been met");
+        uint256 startIndex = abi.decode(_performData, (uint256));
+        depositBufferedTokens(startIndex);
+    }
+
+    /**
+     * @notice deposits buffered tokens into vaults
+     * @param _startIndex index of first non-full vault
+     */
+    function depositBufferedTokens(uint256 _startIndex) public {
+        (uint256 vaultMinDeposits, uint256 vaultMaxDeposits) = getVaultDepositLimits();
+        require(
+            _startIndex == vaults.length - 1 || vaults[_startIndex].getPrincipalDeposits() < vaultMaxDeposits,
+            "Cannot deposit into vault that is full"
+        );
+        require(
+            _startIndex == 0 || vaults[_startIndex - 1].getPrincipalDeposits() >= vaultMaxDeposits,
+            "Cannot deposit into vault if lower index vault is not full"
+        );
+
+        _depositBufferedTokens(_startIndex, bufferedDeposits, vaultMinDeposits, vaultMaxDeposits);
+    }
+
+    /**
+     * @notice returns the deposit change (positive/negative) since deposits were last updated
      * @return deposit change
      */
     function getDepositChange() public view returns (int) {
         uint256 totalBalance = token.balanceOf(address(this));
-        for (uint256 i = 0; i < vaults.length; ++i) {
+        for (uint256 i = 0; i < vaults.length; i++) {
             totalBalance += vaults[i].getTotalDeposits();
         }
         return int(totalBalance) - int(totalDeposits);
     }
 
     /**
-     * @notice returns the total amount of fees that will be paid on the next call to updateDeposits()
-     * @dev fees are only paid when the depositChange since the last update is positive
+     * @notice returns the  total amount of fees that will be paid on the next update
      * @return total fees
      */
-    function getPendingFees() external view virtual override returns (uint256) {
-        int256 depositChange = getDepositChange();
+    function getPendingFees() external view override returns (uint256) {
+        int256 balanceChange = getDepositChange();
         uint256 totalFees;
 
-        if (depositChange > 0) {
-            for (uint256 i = 0; i < fees.length; ++i) {
-                totalFees += (uint256(depositChange) * fees[i].basisPoints) / 10000;
+        if (balanceChange > 0) {
+            for (uint256 i = 0; i < fees.length; i++) {
+                totalFees += (uint256(balanceChange) * fees[i].basisPoints) / 10000;
             }
         }
         return totalFees;
     }
 
     /**
-     * @notice updates deposit accounting and calculates fees on newly earned rewards
-     * @dev reverts if sender is not stakingPool
-     * @return depositChange change in deposits since last update
+     * @notice updates the total amount deposited for reward distribution
+     * @return depositChange deposit change since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
     function updateDeposits(bytes calldata)
         external
-        virtual
         onlyStakingPool
         returns (
             int256 depositChange,
@@ -165,77 +234,56 @@ abstract contract VaultControllerStrategy is Strategy {
         )
     {
         depositChange = getDepositChange();
-        uint256 newTotalDeposits = totalDeposits;
 
         if (depositChange > 0) {
-            newTotalDeposits += uint256(depositChange);
+            totalDeposits += uint256(depositChange);
 
             receivers = new address[](fees.length);
             amounts = new uint256[](fees.length);
 
-            for (uint256 i = 0; i < fees.length; ++i) {
+            for (uint256 i = 0; i < fees.length; i++) {
                 receivers[i] = fees[i].receiver;
                 amounts[i] = (uint256(depositChange) * fees[i].basisPoints) / 10000;
             }
         } else if (depositChange < 0) {
-            newTotalDeposits -= uint256(depositChange * -1);
+            totalDeposits -= uint256(depositChange * -1);
         }
-
-        uint256 balance = token.balanceOf(address(this));
-        if (balance != 0) {
-            token.safeTransfer(address(stakingPool), balance);
-            newTotalDeposits -= balance;
-        }
-
-        totalDeposits = newTotalDeposits;
     }
 
     /**
-     * @notice returns the total amount of deposits as tracked in this strategy
-     * @return total deposits
+     * @notice the total amount of deposits as tracked in this strategy
+     * @return total deposited
      */
     function getTotalDeposits() public view override returns (uint256) {
         return totalDeposits;
     }
 
     /**
-     * @notice returns the maximum that can be deposited into this strategy
-     * @return maximum deposits
-     */
-    function getMaxDeposits() public view virtual override returns (uint256) {
-        (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
-        return
-            totalDeposits +
-            (
-                stakeController.isActive()
-                    ? MathUpgradeable.min(
-                        vaults.length * vaultMaxDeposits - totalPrincipalDeposits,
-                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) * maxDepositSizeBP) / 10000
-                    )
-                    : 0
-            );
-    }
-
-    /**
-     * @notice returns the minimum that must remain this strategy
-     * @return minimum deposits
-     */
-    function getMinDeposits() public view virtual override returns (uint256) {
-        return totalDeposits;
-    }
-
-    /**
-     * @notice returns the vault deposit limits for vaults controlled by this strategy
+     * @notice returns the vault deposit limits
      * @return minimum amount of deposits that a vault can hold
      * @return maximum amount of deposits that a vault can hold
      */
-    function getVaultDepositLimits() public view returns (uint256, uint256) {
-        return stakeController.getStakerLimits();
+    function getVaultDepositLimits() public view virtual returns (uint256, uint256);
+
+    /**
+     * @notice migrates vaults to a new stake controller
+     * @param _startIndex index of first vault to migrate
+     * @param _numVaults number of vaults to migrate starting at _startIndex
+     * @param _data migration data
+     */
+    function migrateVaults(
+        uint256 _startIndex,
+        uint256 _numVaults,
+        bytes calldata _data
+    ) external onlyOwner {
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; i++) {
+            vaults[i].migrate(_data);
+        }
+        emit MigratedVaults(_startIndex, _numVaults, _data);
     }
 
     /**
      * @notice upgrades vaults to a new implementation contract
-     * @dev reverts if sender is not owner
      * @param _startIndex index of first vault to upgrade
      * @param _numVaults number of vaults to upgrade starting at _startIndex
      * @param _data optional encoded function call to be executed after upgrade
@@ -245,14 +293,14 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _numVaults,
         bytes memory _data
     ) external onlyOwner {
-        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
+        for (uint256 i = _startIndex; i < _startIndex + _numVaults; i++) {
             _upgradeVault(i, _data);
         }
         emit UpgradedVaults(_startIndex, _numVaults, _data);
     }
 
     /**
-     * @notice returns a list of all fees and fee receivers
+     * @notice returns a list of all fees
      * @return list of fees
      */
     function getFees() external view returns (Fee[] memory) {
@@ -261,9 +309,6 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice adds a new fee
-     * @dev
-     * - reverts if sender is not owner
-     * - reverts if total fees exceed 50%
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
@@ -274,9 +319,6 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice updates an existing fee
-     * @dev
-     * - reverts if sender is not owner
-     * - reverts if total fees exceed 50%
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -300,21 +342,19 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice sets the basis point amount of the remaing deposit room in the Chainlink staking contract
-     * that can be deposited at once
-     * @param _maxDepositSizeBP basis point amount
-     */
-    function setMaxDepositSizeBP(uint256 _maxDepositSizeBP) external onlyOwner {
-        if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
-        maxDepositSizeBP = _maxDepositSizeBP;
-        emit SetMaxDepositSizeBP(_maxDepositSizeBP);
+     * @notice sets the minimum buffered token balance needed to initiate a deposit into vaults
+     * @dev should always be >= to minimum vault deposit limit
+     * @param _minDepositThreshold mimumum token balance
+     **/
+    function setMinDepositThreshold(uint256 _minDepositThreshold) external onlyOwner {
+        (uint256 vaultMinDeposits, ) = getVaultDepositLimits();
+        require(_minDepositThreshold >= vaultMinDeposits, "Invalid min deposit threshold");
+        minDepositThreshold = _minDepositThreshold;
+        emit SetMinDepositThreshold(_minDepositThreshold);
     }
 
     /**
      * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
-     * @dev
-     * - reverts if sender is not owner
-     * - reverts if `_vaultImplementation` is not a contract
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
@@ -324,8 +364,21 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
+     * @notice deposits buffered tokens into vaults
+     * @param _startIndex index of first vault to deposit into
+     * @param _toDeposit amount to deposit
+     * @param _vaultMinDeposits minimum amount of deposits that a vault can hold
+     * @param _vaultMaxDeposits minimum amount of deposits that a vault can hold
+     */
+    function _depositBufferedTokens(
+        uint256 _startIndex,
+        uint256 _toDeposit,
+        uint256 _vaultMinDeposits,
+        uint256 _vaultMaxDeposits
+    ) internal virtual;
+
+    /**
      * @notice deposits tokens into vaults
-     * @dev vaults will be deposited into in ascending order starting with `_startIndex`
      * @param _startIndex index of first vault to deposit into
      * @param _toDeposit amount to deposit
      * @param _minDeposits minimum amount of deposits that a vault can hold
@@ -336,10 +389,9 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _toDeposit,
         uint256 _minDeposits,
         uint256 _maxDeposits
-    ) internal virtual returns (uint256) {
+    ) internal returns (uint256) {
         uint256 toDeposit = _toDeposit;
-        uint256 lastFullVault;
-        for (uint256 i = _startIndex; i < vaults.length; ++i) {
+        for (uint256 i = _startIndex; i < vaults.length; i++) {
             IVault vault = vaults[i];
             uint256 deposits = vault.getPrincipalDeposits();
             uint256 canDeposit = _maxDeposits - deposits;
@@ -347,22 +399,19 @@ abstract contract VaultControllerStrategy is Strategy {
             if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
                 break;
             } else if (toDeposit > canDeposit) {
-                lastFullVault = i;
                 vault.deposit(canDeposit);
                 toDeposit -= canDeposit;
             } else {
-                if (toDeposit == canDeposit) lastFullVault = i;
                 vault.deposit(toDeposit);
                 toDeposit = 0;
                 break;
             }
         }
-        indexOfLastFullVault = lastFullVault;
         return _toDeposit - toDeposit;
     }
 
     /**
-     * @notice deploys a new vault and adds it to this strategy
+     * @notice deploys a new vault
      * @param _data optional encoded function call to be executed after deployment
      */
     function _deployVault(bytes memory _data) internal {
@@ -372,7 +421,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice upgrades a vault controlled by this strategy
+     * @notice upgrades a vault
      * @param _vaultIdx index of vault to upgrade
      * @param _data optional encoded function call to be executed after upgrade
      */
@@ -391,7 +440,7 @@ abstract contract VaultControllerStrategy is Strategy {
      **/
     function _totalFeesBasisPoints() private view returns (uint256) {
         uint256 totalFees;
-        for (uint i = 0; i < fees.length; ++i) {
+        for (uint i = 0; i < fees.length; i++) {
             totalFees += fees[i].basisPoints;
         }
         return totalFees;

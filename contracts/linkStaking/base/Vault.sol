@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../../core/interfaces/IERC677.sol";
 import "../interfaces/IStaking.sol";
+import "../interfaces/IStakingRewards.sol";
 
 /**
  * @title Vault
@@ -19,8 +20,9 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IERC20Upgradeable public token;
     address public vaultController;
     IStaking public stakeController;
+    IStakingRewards public rewardsController;
 
-    uint256[10] private __gap;
+    uint256[9] private __gap;
 
     error OnlyVaultController();
 
@@ -29,17 +31,20 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _token address of LINK token
      * @param _vaultController address of the strategy that controls this vault
      * @param _stakeController address of Chainlink staking contract
+     * @param _rewardsController address of Chainlink staking rewards contract
      **/
     function __Vault_init(
         address _token,
         address _vaultController,
-        address _stakeController
+        address _stakeController,
+        address _rewardsController
     ) public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
         token = IERC20Upgradeable(_token);
         vaultController = _vaultController;
         stakeController = IStaking(_stakeController);
+        rewardsController = IStakingRewards(_rewardsController);
     }
 
     /**
@@ -56,11 +61,11 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function deposit(uint256 _amount) external virtual onlyVaultController {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "0x");
+        IERC677(address(token)).transferAndCall(address(stakeController), _amount, "");
     }
 
     /**
-     * @notice withdrawals are not yet implemented in this iteration of Chainlink staking
+     * @notice withdrawals are not yet implemented
      */
     function withdraw(uint256) external view onlyVaultController {
         revert("withdrawals not yet implemented");
@@ -71,22 +76,24 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @dev includes principal plus any rewards
      * @return total balance
      */
-    function getTotalDeposits() public view virtual returns (uint256);
+    function getTotalDeposits() public view returns (uint256) {
+        return getPrincipalDeposits() + getRewards();
+    }
 
     /**
      * @notice returns the principal balance of this contract in the Chainlink staking contract
      * @return principal balance
      */
-    function getPrincipalDeposits() public view returns (uint256) {
-        return stakeController.getStake(address(this));
+    function getPrincipalDeposits() public view virtual returns (uint256) {
+        return stakeController.getStakerPrincipal(address(this));
     }
 
     /**
-     * @notice migrates the deposited tokens into a new Chainlink staking contract
+     * @notice returns the claimable rewards balance of this contract in the Chainlink staking rewards contract
+     * @return rewards balance
      */
-    function migrate(bytes calldata data) external onlyVaultController {
-        stakeController.migrate(data);
-        stakeController = IStaking(stakeController.getMigrationTarget());
+    function getRewards() public view returns (uint256) {
+        return rewardsController.getReward(address(this));
     }
 
     /**

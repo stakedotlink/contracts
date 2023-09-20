@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import "../interfaces/IStaking.sol";
 import "../../core/interfaces/IERC677.sol";
 import "../../core/interfaces/IERC677Receiver.sol";
 
@@ -11,23 +8,32 @@ import "../../core/interfaces/IERC677Receiver.sol";
  * @title Staking Mock
  * @dev Mocks contract for testing
  */
-contract StakingMock is IStaking, IERC677Receiver {
+contract StakingMock is IERC677Receiver {
     IERC677 public token;
+    address public rewardVault;
 
-    mapping(address => uint256) public stakedBalances;
-    address public migration;
+    mapping(address => uint256) public principalBalances;
+    mapping(address => uint256) public removedPrincipal;
 
-    uint256 public baseReward;
-    uint256 public delegationReward;
-
-    mapping(address => uint256) public perVaultBaseReward;
+    uint256 public depositMin;
+    uint256 public depositMax;
+    uint256 public maxPoolSize;
 
     bool public active;
-    bool public paused;
 
-    constructor(address _token) {
+    constructor(
+        address _token,
+        address _rewardVault,
+        uint256 _depositMin,
+        uint256 _depositMax,
+        uint256 _maxPoolSize
+    ) {
         token = IERC677(_token);
+        rewardVault = _rewardVault;
         active = true;
+        depositMin = _depositMin;
+        depositMax = _depositMax;
+        maxPoolSize = _maxPoolSize;
     }
 
     function onTokenTransfer(
@@ -36,82 +42,47 @@ contract StakingMock is IStaking, IERC677Receiver {
         bytes calldata
     ) external {
         require(msg.sender == address(token), "has to be token");
-        stakedBalances[_sender] += _value;
+        principalBalances[_sender] += _value;
     }
 
-    function getCommunityStakerLimits() external pure returns (uint256, uint256) {
-        return (10 ether, 7000 ether);
+    function getStakerLimits() external view returns (uint256, uint256) {
+        return (depositMin, depositMax);
     }
 
-    function getOperatorLimits() external pure returns (uint256, uint256) {
-        return (10 ether, 50000 ether);
+    function getMaxPoolSize() external view returns (uint256) {
+        return maxPoolSize;
     }
 
-    function getMaxPoolSize() external pure returns (uint256) {
-        return 25000000 ether;
-    }
-
-    function getTotalStakedAmount() external view returns (uint256) {
+    function getTotalPrincipal() external view returns (uint256) {
         return token.balanceOf(address(this));
     }
 
-    function setActive(bool _active) external {
-        active = _active;
+    function getStakerPrincipal(address _staker) external view returns (uint256) {
+        return principalBalances[_staker];
+    }
+
+    function getRemovedPrincipal(address _staker) external view returns (uint256) {
+        return removedPrincipal[_staker];
+    }
+
+    function getRewardVault() external view returns (address) {
+        return rewardVault;
+    }
+
+    function removePrincipal(address _staker, uint256 _amount) external {
+        principalBalances[_staker] -= _amount;
+        removedPrincipal[_staker] += _amount;
     }
 
     function isActive() external view returns (bool) {
         return active;
     }
 
-    function isOperator(address) external pure returns (bool) {
-        return true;
+    function setActive(bool _active) external {
+        active = _active;
     }
 
-    function getStake(address staker) external view returns (uint256) {
-        return stakedBalances[staker];
-    }
-
-    function setMigration(address _migration) external {
-        migration = _migration;
-    }
-
-    function migrate(bytes calldata) external {
-        token.transferAndCall(migration, stakedBalances[msg.sender], "0x0");
-    }
-
-    function setBaseReward(uint256 _amount) external {
-        baseReward = _amount;
-    }
-
-    function setVaultBaseReward(address _vault, uint256 _amount) external {
-        perVaultBaseReward[_vault] = _amount;
-    }
-
-    function getBaseReward(address _account) external view returns (uint256) {
-        return perVaultBaseReward[_account] != 0 ? perVaultBaseReward[_account] : baseReward;
-    }
-
-    function setDelegationReward(uint256 _amount) external {
-        delegationReward = _amount;
-    }
-
-    function getDelegationReward(address) external view returns (uint256) {
-        return delegationReward;
-    }
-
-    function getMigrationTarget() external view returns (address) {
-        return migration;
-    }
-
-    function setPaused(bool _paused) external {
-        paused = _paused;
-    }
-
-    function isPaused() external view returns (bool) {
-        return paused;
-    }
-
-    function raiseAlert() external {
-        token.transfer(msg.sender, 100 ether);
+    function setMaxPoolSize(uint256 _maxPoolSize) external {
+        maxPoolSize = _maxPoolSize;
     }
 }

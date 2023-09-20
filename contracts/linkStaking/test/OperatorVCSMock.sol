@@ -31,6 +31,7 @@ contract OperatorVCSMock {
     }
 
     function deposit(uint256 _amount) external {
+        token.transferFrom(msg.sender, address(this), _amount);
         vault.deposit(_amount);
     }
 
@@ -39,8 +40,8 @@ contract OperatorVCSMock {
         return withdrawalAmount;
     }
 
-    function updateDeposits() external returns (uint256, uint256) {
-        return vault.updateDeposits();
+    function updateDeposits(uint256 _minRewards, address _rewardsReceiver) external returns (uint256, uint256) {
+        return vault.updateDeposits(_minRewards, _rewardsReceiver);
     }
 
     function addVault(address _vault) external {

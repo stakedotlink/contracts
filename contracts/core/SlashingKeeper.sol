@@ -64,6 +64,6 @@ contract SlashingKeeper is KeeperCompatibleInterface {
         for (uint256 i = 0; i < strategiesToUpdate.length; i++) {
             require(IStrategy(strategies[strategiesToUpdate[i]]).getDepositChange() < 0, "Deposit change is >= 0");
         }
-        stakingPool.updateStrategyRewards(strategiesToUpdate);
+        stakingPool.updateStrategyRewards(strategiesToUpdate, "");
     }
 }

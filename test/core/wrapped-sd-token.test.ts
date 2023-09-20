@@ -117,7 +117,7 @@ describe('WrappedSDToken', () => {
     await stake(1, 1000)
     await stake(2, 3000)
     await token.transfer(strategy1.address, toEther(1000))
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
 
     assert.equal(
       fromEther(await wsdToken.getWrappedByUnderlying(toEther(12.5))),
@@ -134,7 +134,7 @@ describe('WrappedSDToken', () => {
   it('tokens should be wrapped/unwrapped at current exchange rate', async () => {
     await stake(1, 1000)
     await token.transfer(strategy1.address, toEther(1000))
-    await stakingPool.updateStrategyRewards([0])
+    await stakingPool.updateStrategyRewards([0], '0x')
     await stakingPool.connect(signers[1]).transferAndCall(wsdToken.address, toEther(500), '0x00')
 
     assert.equal(
