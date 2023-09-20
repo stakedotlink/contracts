@@ -20,6 +20,8 @@ const operatorVCSImplementation = ''
 const delegatorPoolImplementation = ''
 
 const operatorStrategySDLPoolFee = 1500 // basis points fee of rewards to be paid to the SDL pool
+const operatorStrategyOperatorFee = 500 // basis point fee of rewards to be paid to operator
+const operatorFeeReceiver = '' // adddress to receive operator fee
 
 const delegatorPoolLockedAddresses: any = [
   '0x6879826450e576B401c4dDeff2B7755B1e85d97c',
@@ -83,6 +85,17 @@ async function main() {
             0,
             stLINKRewardsPool.address,
             operatorStrategySDLPoolFee
+          )
+        ).data || '',
+      value: '0',
+    },
+    {
+      to: operatorVCS.address,
+      data:
+        (
+          await operatorVCS.populateTransaction.addFee(
+            operatorFeeReceiver,
+            operatorStrategyOperatorFee
           )
         ).data || '',
       value: '0',
