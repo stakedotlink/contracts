@@ -1,4 +1,4 @@
-import { ethers, upgrades } from 'hardhat'
+import { ethers } from 'hardhat'
 import Safe, { EthersAdapter } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
@@ -14,6 +14,10 @@ import { getContract } from '../utils/deployment'
 import { getAccounts } from '../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
+
+const stakingPoolImplementation = ''
+const operatorVCSImplementation = ''
+const delegatorPoolImplementation = ''
 
 const operatorStrategySDLPoolFee = 1500 // basis points fee of rewards to be paid to the SDL pool
 
@@ -54,38 +58,10 @@ async function main() {
   const sdlPool = (await getContract('SDLPool')) as SDLPool
   const stLINKRewardsPool = (await getContract('stLINK_SDLRewardsPool')) as RewardsPoolWSD
 
-  const stakingPoolImp = (await upgrades.prepareUpgrade(
-    stakingPool.address,
-    await ethers.getContractFactory('StakingPool'),
-    {
-      kind: 'uups',
-      unsafeAllowRenames: true,
-    }
-  )) as string
-  console.log('StakingPool implementation deployed at: ', stakingPoolImp)
-
-  const operatorVCSImp = (await upgrades.prepareUpgrade(
-    operatorVCS.address,
-    await ethers.getContractFactory('OperatorVCSUpgrade'),
-    {
-      kind: 'uups',
-    }
-  )) as string
-  console.log('OperatorVCS implementation deployed at: ', operatorVCSImp)
-
-  const delegatorPoolImp = (await upgrades.prepareUpgrade(
-    delegatorPool.address,
-    await ethers.getContractFactory('DelegatorPool'),
-    {
-      kind: 'uups',
-    }
-  )) as string
-  console.log('DelegatorPool implementation deployed at: ', delegatorPoolImp)
-
   const safeTransactionData: MetaTransactionData[] = [
     {
       to: stakingPool.address,
-      data: (await stakingPool.populateTransaction.upgradeTo(stakingPoolImp)).data || '',
+      data: (await stakingPool.populateTransaction.upgradeTo(stakingPoolImplementation)).data || '',
       value: '0',
     },
     {
@@ -96,7 +72,7 @@ async function main() {
     },
     {
       to: operatorVCS.address,
-      data: (await operatorVCS.populateTransaction.upgradeTo(operatorVCSImp)).data || '',
+      data: (await operatorVCS.populateTransaction.upgradeTo(operatorVCSImplementation)).data || '',
       value: '0',
     },
     {
@@ -113,7 +89,8 @@ async function main() {
     },
     {
       to: delegatorPool.address,
-      data: (await delegatorPool.populateTransaction.upgradeTo(delegatorPoolImp)).data || '',
+      data:
+        (await delegatorPool.populateTransaction.upgradeTo(delegatorPoolImplementation)).data || '',
       value: '0',
     },
     {
