@@ -15,13 +15,13 @@ import { getAccounts } from '../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const stakingPoolImplementation = ''
-const operatorVCSImplementation = ''
-const delegatorPoolImplementation = ''
+const stakingPoolImplementation = '0xeCB2826EA31edbA61990E249A61d611Ae82866f8'
+const operatorVCSImplementation = '0xF256306b5f8115e3D787F8658fc4904f7050B54c'
+const delegatorPoolImplementation = '0x86637a9ABa90204575Db67451bA273b01CAdA2a3'
 
 const operatorStrategySDLPoolFee = 1500 // basis points fee of rewards to be paid to the SDL pool
 const operatorStrategyOperatorFee = 500 // basis point fee of rewards to be paid to operator
-const operatorFeeReceiver = '' // adddress to receive operator fee
+const operatorFeeReceiver = '0x7e3cB6c3f6d509590F623c8F1335b6FfA3e20E75' // adddress to receive operator fee
 
 const delegatorPoolLockedAddresses: any = [
   '0x6879826450e576B401c4dDeff2B7755B1e85d97c',
