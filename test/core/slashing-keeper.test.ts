@@ -14,7 +14,6 @@ import {
   StakingPool,
   WrappedSDToken,
   SlashingKeeper,
-  DelegatorPoolMock,
 } from '../../typechain-types'
 
 describe('SlashingKeeper', () => {
@@ -40,15 +39,11 @@ describe('SlashingKeeper', () => {
     token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
     await setupToken(token, accounts)
 
-    let delegatorPool = (await deploy('DelegatorPoolMock', [token.address, 0])) as DelegatorPoolMock
-
     stakingPool = (await deployUpgradeable('StakingPool', [
       token.address,
       'LinkPool LINK',
       'lpLINK',
       [[ownersRewards, 1000]],
-      accounts[0],
-      delegatorPool.address,
     ])) as StakingPool
 
     slashingKeeper = (await deploy('SlashingKeeper', [stakingPool.address])) as SlashingKeeper
@@ -81,9 +76,10 @@ describe('SlashingKeeper', () => {
     await stakingPool.addStrategy(strategy1.address)
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
+    await stakingPool.setPriorityPool(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
-    await stakingPool.stake(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000))
   })
 
   it('checkUpkeep should work correctly', async () => {
@@ -118,13 +114,21 @@ describe('SlashingKeeper', () => {
 
     let data = await slashingKeeper.checkUpkeep('0x00')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
-    assert.equal(fromEther(await strategy1.depositChange()), 0, 'strategy1 depositChange incorrect')
     assert.equal(
-      fromEther(await strategy2.depositChange()),
+      fromEther(await strategy1.getDepositChange()),
+      0,
+      'strategy1 depositChange incorrect'
+    )
+    assert.equal(
+      fromEther(await strategy2.getDepositChange()),
       100,
       'strategy2 depositChange incorrect'
     )
-    assert.equal(fromEther(await strategy3.depositChange()), 0, 'strategy3 depositChange incorrect')
+    assert.equal(
+      fromEther(await strategy3.getDepositChange()),
+      0,
+      'strategy3 depositChange incorrect'
+    )
 
     await strategy3.simulateSlash(toEther(10))
 

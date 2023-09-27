@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
-import "./interfaces/IDelegatorPool.sol";
 
 /**
  * @title Staking Pool
@@ -22,16 +21,14 @@ contract StakingPool is StakingRewardsPool {
 
     address[] private strategies;
     uint256 public totalStaked;
-    uint256 public liquidityBuffer;
+    uint256 private liquidityBuffer; // deprecated
 
     Fee[] private fees;
 
-    address public poolRouter;
-    address public delegatorPool;
-    uint16 public poolIndex;
+    address public priorityPool;
+    address private delegatorPool; // deprecated
+    uint16 private poolIndex; // deprecated
 
-    event Stake(address indexed account, uint256 amount);
-    event Withdraw(address indexed account, uint256 amount);
     event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -43,21 +40,17 @@ contract StakingPool is StakingRewardsPool {
         address _token,
         string memory _derivativeTokenName,
         string memory _derivativeTokenSymbol,
-        Fee[] memory _fees,
-        address _poolRouter,
-        address _delegatorPool
+        Fee[] memory _fees
     ) public initializer {
         __StakingRewardsPool_init(_token, _derivativeTokenName, _derivativeTokenSymbol);
-        poolRouter = _poolRouter;
-        delegatorPool = _delegatorPool;
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
     }
 
-    modifier onlyRouter() {
-        require(poolRouter == msg.sender, "PoolRouter only");
+    modifier onlyPriorityPool() {
+        require(priorityPool == msg.sender, "PriorityPool only");
         _;
     }
 
@@ -82,7 +75,7 @@ contract StakingPool is StakingRewardsPool {
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
-    function stake(address _account, uint256 _amount) external onlyRouter {
+    function deposit(address _account, uint256 _amount) external onlyPriorityPool {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -90,8 +83,6 @@ contract StakingPool is StakingRewardsPool {
 
         _mint(_account, _amount);
         totalStaked += _amount;
-
-        emit Stake(_account, _amount);
     }
 
     /**
@@ -105,7 +96,7 @@ contract StakingPool is StakingRewardsPool {
         address _account,
         address _receiver,
         uint256 _amount
-    ) external onlyRouter {
+    ) external onlyPriorityPool {
         uint256 toWithdraw = _amount;
         if (_amount == type(uint256).max) {
             toWithdraw = balanceOf(_account);
@@ -120,8 +111,6 @@ contract StakingPool is StakingRewardsPool {
         _burn(_account, toWithdraw);
         totalStaked -= toWithdraw;
         token.safeTransfer(_receiver, toWithdraw);
-
-        emit Withdraw(_account, toWithdraw);
     }
 
     /**
@@ -149,8 +138,15 @@ contract StakingPool is StakingRewardsPool {
      * @return maximum deposit limit
      **/
     function getMaxDeposits() public view returns (uint256) {
-        uint256 max = _maxDepositsWithoutBuffer();
-        return max + _liquidityBufferAmount(max);
+        uint256 max;
+        for (uint256 i = 0; i < strategies.length; i++) {
+            uint strategyMax = IStrategy(strategies[i]).getMaxDeposits();
+            if (strategyMax >= type(uint256).max - max) {
+                return type(uint256).max;
+            }
+            max += strategyMax;
+        }
+        return max;
     }
 
     /**
@@ -166,6 +162,31 @@ contract StakingPool is StakingRewardsPool {
         }
 
         return min;
+    }
+
+    /**
+     * @notice returns the amont of tokens sitting in this pool outside a strategy
+     * @dev these tokens earn no yield and will be deposited ASAP
+     * @return amount of tokens outside a strategy
+     */
+    function getUnusedDeposits() external view returns (uint256) {
+        return token.balanceOf(address(this));
+    }
+
+    /**
+     * @notice returns the available deposit room for this pool's strategies
+     * @return strategy deposit room
+     */
+    function getStrategyDepositRoom() external view returns (uint256) {
+        uint256 depositRoom;
+        for (uint256 i = 0; i < strategies.length; ++i) {
+            uint strategyDepositRoom = IStrategy(strategies[i]).canDeposit();
+            if (strategyDepositRoom >= type(uint256).max - depositRoom) {
+                return type(uint256).max;
+            }
+            depositRoom += strategyDepositRoom;
+        }
+        return depositRoom;
     }
 
     /**
@@ -209,13 +230,14 @@ contract StakingPool is StakingRewardsPool {
     /**
      * @notice removes a strategy
      * @param _index index of strategy
+     * @param _strategyUpdateData encoded data to be passed to strategy
      **/
-    function removeStrategy(uint256 _index) external onlyOwner {
+    function removeStrategy(uint256 _index, bytes memory _strategyUpdateData) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
 
         uint256[] memory idxs = new uint256[](1);
         idxs[0] = _index;
-        updateStrategyRewards(idxs);
+        updateStrategyRewards(idxs, _strategyUpdateData);
 
         IStrategy strategy = IStrategy(strategies[_index]);
         uint256 totalStrategyDeposits = strategy.getTotalDeposits();
@@ -284,41 +306,20 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the amount of tokens in the liquidity buffer
-     * @return token amount
-     */
-    function getLiquidityBufferAmount() external view returns (uint256) {
-        uint256 max = _maxDepositsWithoutBuffer();
-        return _liquidityBufferAmount(max);
-    }
-
-    /**
-     * @notice Sets the liquidity buffer. The liquidity buffer will increase the max staking limit
-     * of the pool by always keeping a portion of the staked tokens as liquid within the pool. The buffer
-     * has the effect of diluting yield, but promotes pool liquidity.
-     * @dev if buffer is < 1 ether, it represents a percentage of total deposits in basis points; otherwise,
-     * it represents a token amount
-     * @param _liquidityBuffer basis points or token amount
-     **/
-    function setLiquidityBuffer(uint256 _liquidityBuffer) external onlyOwner {
-        liquidityBuffer = _liquidityBuffer;
-    }
-
-    /**
      * @notice returns the amount of rewards earned since the last update and the amount of fees that
      * will be paid on the rewards
      * @param _strategyIdxs indexes of strategies to sum rewards/fees for
      * @return total rewards
      * @return total fees
      **/
-    function getStrategyRewards(uint256[] memory _strategyIdxs) external view returns (int256, uint256) {
+    function getStrategyRewards(uint256[] calldata _strategyIdxs) external view returns (int256, uint256) {
         int256 totalRewards;
         uint256 totalFees;
 
         for (uint256 i = 0; i < _strategyIdxs.length; i++) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
-            totalRewards += strategy.depositChange();
-            totalFees += strategy.pendingFees();
+            totalRewards += strategy.getDepositChange();
+            totalFees += strategy.getPendingFees();
         }
 
         if (totalRewards > 0) {
@@ -333,27 +334,28 @@ contract StakingPool is StakingRewardsPool {
     /**
      * @notice updates and distributes rewards based on balance changes in strategies
      * @param _strategyIdxs indexes of strategies to update rewards for
+     * @param _data encoded data to be passed to each strategy
      **/
-    function updateStrategyRewards(uint256[] memory _strategyIdxs) public {
+    function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) public {
         int256 totalRewards;
         uint256 totalFeeAmounts;
         uint256 totalFeeCount;
         address[][] memory receivers = new address[][](strategies.length + 1);
         uint256[][] memory feeAmounts = new uint256[][](strategies.length + 1);
 
-        for (uint256 i = 0; i < _strategyIdxs.length; i++) {
+        for (uint256 i = 0; i < _strategyIdxs.length; ++i) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
-            int rewards = strategy.depositChange();
-            if (rewards != 0) {
-                (address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy.updateDeposits();
-                totalRewards += rewards;
-                if (rewards > 0) {
-                    receivers[i] = (strategyReceivers);
-                    feeAmounts[i] = (strategyFeeAmounts);
-                    totalFeeCount += receivers[i].length;
-                    for (uint256 j = 0; j < strategyReceivers.length; j++) {
-                        totalFeeAmounts += strategyFeeAmounts[j];
-                    }
+
+            (int256 depositChange, address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy
+                .updateDeposits(_data);
+            totalRewards += depositChange;
+
+            if (strategyReceivers.length != 0) {
+                receivers[i] = strategyReceivers;
+                feeAmounts[i] = strategyFeeAmounts;
+                totalFeeCount += receivers[i].length;
+                for (uint256 j = 0; j < strategyReceivers.length; ++j) {
+                    totalFeeAmounts += strategyFeeAmounts[j];
                 }
             }
         }
@@ -386,9 +388,9 @@ contract StakingPool is StakingRewardsPool {
             for (uint256 i = 0; i < receivers.length; i++) {
                 for (uint256 j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x");
                     } else {
-                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x00");
+                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x");
                         feesPaidCount++;
                     }
                 }
@@ -420,11 +422,11 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice sets the index of this pool as stored in the pool router
-     * @param _poolIndex index of pool
-     */
-    function setPoolIndex(uint16 _poolIndex) external onlyRouter {
-        poolIndex = _poolIndex;
+     * @notice Sets the priority pool
+     * @param _priorityPool address of priority pool
+     **/
+    function setPriorityPool(address _priorityPool) external onlyOwner {
+        priorityPool = _priorityPool;
     }
 
     /**
@@ -433,38 +435,6 @@ contract StakingPool is StakingRewardsPool {
      */
     function _totalStaked() internal view override returns (uint256) {
         return totalStaked;
-    }
-
-    /**
-     * @notice returns the maximum amount that can be deposited into the pool without
-     * the liquidity buffer
-     * @return maximum deposit limit
-     */
-    function _maxDepositsWithoutBuffer() internal view returns (uint256) {
-        uint256 max;
-        for (uint256 i = 0; i < strategies.length; i++) {
-            uint strategyMax = IStrategy(strategies[i]).getMaxDeposits();
-            if (strategyMax >= type(uint256).max - max) {
-                return type(uint256).max;
-            }
-            max += strategyMax;
-        }
-        return max;
-    }
-
-    /**
-     * @notice returns the amount of tokens in the liquidity buffer
-     * @param _maxDeposits pool deposit limit without liquidity buffer
-     * @return token amount
-     */
-    function _liquidityBufferAmount(uint256 _maxDeposits) internal view returns (uint256) {
-        if (_maxDeposits == type(uint256).max) {
-            return 0;
-        } else if (liquidityBuffer < 1 ether) {
-            return (_maxDeposits * liquidityBuffer) / 10000;
-        } else {
-            return liquidityBuffer;
-        }
     }
 
     /**

@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "./IStakingRewardsPool.sol";
 
 interface IStakingPool is IStakingRewardsPool {
-    function stake(address _account, uint256 _amount) external;
+    function deposit(address _account, uint256 _amount) external;
 
     function withdraw(
         address _account,
@@ -16,7 +16,7 @@ interface IStakingPool is IStakingRewardsPool {
 
     function strategyWithdraw(uint256 _index, uint256 _amount) external;
 
-    function updateStrategyRewards(uint256[] memory _strategyIdxs) external;
+    function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external;
 
     function getMaxDeposits() external view returns (uint256);
 
@@ -35,4 +35,10 @@ interface IStakingPool is IStakingRewardsPool {
     function token() external view returns (address);
 
     function poolIndex() external view returns (uint16);
+
+    function canWithdraw() external view returns (uint256);
+
+    function getStrategyDepositRoom() external view returns (uint256);
+
+    function getUnusedDeposits() external view returns (uint256);
 }

@@ -29,7 +29,7 @@ contract SlashingKeeper is KeeperCompatibleInterface {
 
         for (uint256 i = 0; i < strategies.length; i++) {
             IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.depositChange() < 0) {
+            if (strategy.getDepositChange() < 0) {
                 strategiesToUpdate[i] = true;
                 totalStrategiesToUpdate++;
             }
@@ -49,7 +49,7 @@ contract SlashingKeeper is KeeperCompatibleInterface {
             return (true, abi.encode(strategyIdxs));
         }
 
-        return (false, "0x00");
+        return (false, "0x");
     }
 
     /**
@@ -62,8 +62,8 @@ contract SlashingKeeper is KeeperCompatibleInterface {
         require(strategiesToUpdate.length > 0, "No strategies to update");
 
         for (uint256 i = 0; i < strategiesToUpdate.length; i++) {
-            require(IStrategy(strategies[strategiesToUpdate[i]]).depositChange() < 0, "Deposit change is >= 0");
+            require(IStrategy(strategies[strategiesToUpdate[i]]).getDepositChange() < 0, "Deposit change is >= 0");
         }
-        stakingPool.updateStrategyRewards(strategiesToUpdate);
+        stakingPool.updateStrategyRewards(strategiesToUpdate, "");
     }
 }

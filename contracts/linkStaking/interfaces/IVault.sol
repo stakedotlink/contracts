@@ -15,6 +15,4 @@ interface IVault {
     function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
 
     function upgradeTo(address _newImplementation) external;
-
-    function setOperator(address _operator) external;
 }

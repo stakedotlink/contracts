@@ -62,8 +62,6 @@ describe('DepositController', () => {
       'LinkPool ETH',
       'lplETH',
       [],
-      accounts[0],
-      accounts[0],
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
@@ -143,6 +141,7 @@ describe('DepositController', () => {
     await strategy.setWLOperatorController(wlOperatorController.address)
     await strategy.setDepositController(depositController.address)
     await stakingPool.addStrategy(strategy.address)
+    await stakingPool.setPriorityPool(accounts[0])
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
 
@@ -189,7 +188,7 @@ describe('DepositController', () => {
   it('depositEther should work correctly', async () => {
     type DepositData = [string, string, string, number, number, number[], number[]]
     await wETH.wrap({ value: toEther(1000) })
-    await stakingPool.stake(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000))
 
     let depositData = (await depositController.getNextValidators(1)).slice(0, -2) as DepositData
     await expect(

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "./IERC677.sol";
-
 interface IRewardsPoolController {
     /**
      * @notice returns an account's stake balance for use by reward pools

@@ -46,11 +46,11 @@ async function deploy() {
   })
 }
 
-async function mockData() {
-  const child = child_process.spawn('npx', ['yarn', 'mock-data'])
+async function testnEnv() {
+  const child = child_process.spawn('npx', ['yarn', 'setup-test-env'])
 
   child.stdout.on('data', (data) => {
-    console.log('yarn mock-data - process (' + child.pid + '): ' + data)
+    console.log('yarn setup-test-env - process (' + child.pid + '): ' + data)
   })
 
   return await new Promise((resolve) => {
@@ -64,7 +64,7 @@ async function run() {
   await compile()
   await startHardhat()
   await deploy()
-  await mockData()
+  await testnEnv()
 }
 
 run().catch((error) => {
