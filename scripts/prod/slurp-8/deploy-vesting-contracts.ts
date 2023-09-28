@@ -16,7 +16,7 @@ const nops = [
   '0x3F44C324BD76E031171d6f2B87c4FeF00D4294C2',
   '0xd79576F14B711406a4D4489584121629329dFa2C',
 ]
-const vestingStart = 1695848355
+const vestingStart = 1695312000 // Sep 21 2023 12pm EDT
 const vestingDuration = 4 * 365 * 86400 // 4 years
 
 async function main() {
