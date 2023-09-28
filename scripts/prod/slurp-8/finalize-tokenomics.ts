@@ -11,7 +11,7 @@ const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 const linkPoolAddress = '0x6879826450e576b401c4ddeff2b7755b1e85d97c'
 const linkPoolMintAmount = '20000000000000000000000000'
 
-const treasuryBurnAmount = '22033397960000004176216064'
+const treasuryBurnAmount = '22033397960000000000000000'
 
 const nopCount = 14
 const mintAmountPerNop = '900000000000000000000000'
