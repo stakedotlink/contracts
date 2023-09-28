@@ -282,7 +282,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (_amountToUnqueue > totalQueued) revert InsufficientQueuedTokens();
 
         address account = msg.sender;
-        if (merkleRoot != bytes32(0) && accountIndexes[account] < merkleTreeSize) {
+        if (accountIndexes[account] < merkleTreeSize) {
             bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
             if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
         }
@@ -327,6 +327,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice deposits queued and/or unused tokens
+     * @dev allows bypassing of the stored deposit limits
      * @param _queueDepositMin min amount of tokens required for deposit
      * @param _queueDepositMax max amount of tokens that can be deposited at once
      */

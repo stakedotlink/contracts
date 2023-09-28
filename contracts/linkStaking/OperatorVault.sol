@@ -25,6 +25,7 @@ contract OperatorVault is Vault {
 
     event AlertRaised();
     event WithdrawRewards(address indexed receiver, uint256 amount);
+    event SetRewardsReceiver(address indexed rewardsReceiver);
 
     error OnlyOperator();
     error OnlyRewardsReceiver();
@@ -226,5 +227,6 @@ contract OperatorVault is Vault {
         if (rewardsReceiver == address(0) && msg.sender != owner()) revert OnlyRewardsReceiver();
         if (_rewardsReceiver == address(0)) revert ZeroAddress();
         rewardsReceiver = _rewardsReceiver;
+        emit SetRewardsReceiver(_rewardsReceiver);
     }
 }
