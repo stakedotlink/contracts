@@ -2,6 +2,7 @@ import { toEther, deploy, getAccounts, fromEther } from '../utils/helpers'
 import { StakingAllowance, Vesting } from '../../typechain-types'
 import { assert } from 'chai'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
+import { ethers } from 'hardhat'
 
 describe('Vesting', () => {
   let sdlToken: StakingAllowance
@@ -16,7 +17,7 @@ describe('Vesting', () => {
   beforeEach(async () => {
     sdlToken = (await deploy('StakingAllowance', ['Stake Dot Link', 'SDL'])) as StakingAllowance
 
-    start = Math.trunc(Date.now() / 1000)
+    start = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
     vesting = (await deploy('Vesting', [accounts[0], accounts[1], start, 86400 * 10])) as Vesting
 
     await sdlToken.mint(accounts[0], toEther(1000))
