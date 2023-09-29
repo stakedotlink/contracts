@@ -1,5 +1,6 @@
 import { updateDeployments, deploy } from '../../utils/deployment'
 
+const multisig = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 const nops = [
   '0x20C0B7b370c97ed139aeA464205c05fCeAF4ac68',
   '0x26119F458dD1E8780554e3e517557b9d290Fb4dD',
@@ -21,14 +22,14 @@ const vestingDuration = 4 * 365 * 86400 // 4 years
 
 async function main() {
   for (let i = 0; i < nops.length; i++) {
-    let vestingWallet = await deploy('VestingWallet', [nops[i], vestingStart, vestingDuration])
-    console.log('VestingWallet for', nops[i], 'deployed: ', vestingWallet.address)
+    let vesting = await deploy('Vesting', [multisig, nops[i], vestingStart, vestingDuration])
+    console.log('Vesting for', nops[i], 'deployed: ', vesting.address)
     updateDeployments(
       {
-        [`SDL_Vesting_NOP${i}`]: vestingWallet.address,
+        [`SDL_Vesting_NOP${i}`]: vesting.address,
       },
       {
-        [`SDL_Vesting_NOP${i}`]: 'VestingWallet',
+        [`SDL_Vesting_NOP${i}`]: 'Vesting',
       }
     )
   }
