@@ -42,6 +42,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     address public delegatorPool;
 
+    string public baseURI;
+
     event InitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event Withdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
     event CreateLock(
@@ -458,10 +460,17 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @dev required to conform to IERC721Metadata
+     * @dev returns the URI for a token
      */
     function tokenURI(uint256) external view returns (string memory) {
-        return "";
+        return baseURI;
+    }
+
+    /**
+     * @dev sets the base URI for all tokens
+     */
+    function setBaseURI(string calldata _baseURI) external onlyOwner {
+        baseURI = _baseURI;
     }
 
     /**
