@@ -6729,6 +6729,310 @@
           }
         }
       }
+    },
+    "aaa26fdbac43af4ff59e4da0aaac9b93287eefbd3fd78f136d59dc7db3bc138d": {
+      "address": "0x88DD5C421f7B9FCdB83FD534bd83d22F8B80eA75",
+      "txHash": "0x0b54c898efd8655bd857211574a119759e1ffd498310575d457272098c22c8f6",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "tokenPools",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_mapping(t_address,t_contract(IRewardsPool)17161)",
+            "contract": "RewardsPoolController",
+            "src": "contracts/core/base/RewardsPoolController.sol:18"
+          },
+          {
+            "label": "tokens",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "RewardsPoolController",
+            "src": "contracts/core/base/RewardsPoolController.sol:19"
+          },
+          {
+            "label": "name",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_string_storage",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:26"
+          },
+          {
+            "label": "symbol",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_string_storage",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:27"
+          },
+          {
+            "label": "operatorApprovals",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:29"
+          },
+          {
+            "label": "tokenApprovals",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_mapping(t_uint256,t_address)",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:30"
+          },
+          {
+            "label": "sdlToken",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_contract(IERC20Upgradeable)3860",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:32"
+          },
+          {
+            "label": "boostController",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_contract(IBoostController)17066",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:33"
+          },
+          {
+            "label": "lastLockId",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_uint256",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:35"
+          },
+          {
+            "label": "locks",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_mapping(t_uint256,t_struct(Lock)19558_storage)",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:36"
+          },
+          {
+            "label": "lockOwners",
+            "offset": 0,
+            "slot": "211",
+            "type": "t_mapping(t_uint256,t_address)",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:37"
+          },
+          {
+            "label": "balances",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:38"
+          },
+          {
+            "label": "totalEffectiveBalance",
+            "offset": 0,
+            "slot": "213",
+            "type": "t_uint256",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:40"
+          },
+          {
+            "label": "effectiveBalances",
+            "offset": 0,
+            "slot": "214",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:41"
+          },
+          {
+            "label": "delegatorPool",
+            "offset": 0,
+            "slot": "215",
+            "type": "t_address",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:43"
+          },
+          {
+            "label": "baseURI",
+            "offset": 0,
+            "slot": "216",
+            "type": "t_string_storage",
+            "contract": "SDLPool",
+            "src": "contracts/core/sdlPool/SDLPool.sol:45"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IBoostController)17066": {
+            "label": "contract IBoostController",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Upgradeable)3860": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IRewardsPool)17161": {
+            "label": "contract IRewardsPool",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_contract(IRewardsPool)17161)": {
+            "label": "mapping(address => contract IRewardsPool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+            "label": "mapping(address => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_address)": {
+            "label": "mapping(uint256 => address)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(Lock)19558_storage)": {
+            "label": "mapping(uint256 => struct SDLPool.Lock)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Lock)19558_storage": {
+            "label": "struct SDLPool.Lock",
+            "members": [
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "boostAmount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "startTime",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "duration",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "2"
+              },
+              {
+                "label": "expiry",
+                "type": "t_uint64",
+                "offset": 16,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
     }
   }
 }

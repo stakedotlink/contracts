@@ -8,7 +8,7 @@ import { getAccounts } from '../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const sdlPoolImplementation = ''
+const sdlPoolImplementation = '0x88DD5C421f7B9FCdB83FD534bd83d22F8B80eA75'
 const baseURI =
   'https://bronze-elderly-halibut-521.mypinata.cloud/ipfs/QmZexLPmRhNLYNTu7mpabt4aihp84vmoP1T2nYg4vqi7aU'
 
