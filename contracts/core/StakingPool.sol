@@ -328,6 +328,10 @@ contract StakingPool is StakingRewardsPool {
             }
         }
 
+        if (totalFees >= totalStaked) {
+            totalFees = 0;
+        }
+
         return (totalRewards, totalFees);
     }
 
