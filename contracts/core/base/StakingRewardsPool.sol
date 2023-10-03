@@ -67,7 +67,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     function getSharesByStake(uint256 _amount) public view returns (uint256) {
         uint256 totalStaked = _totalStaked();
         if (totalStaked == 0) {
-            return 0;
+            return _amount;
         } else {
             return (_amount * totalShares) / totalStaked;
         }
@@ -80,7 +80,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      */
     function getStakeByShares(uint256 _amount) public view returns (uint256) {
         if (totalShares == 0) {
-            return 0;
+            return _amount;
         } else {
             return (_amount * _totalStaked()) / totalShares;
         }
@@ -171,10 +171,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      */
     function _mint(address _recipient, uint256 _amount) internal override {
         uint256 sharesToMint = getSharesByStake(_amount);
-        if (sharesToMint == 0) {
-            sharesToMint = _amount;
-        }
-
         _mintShares(_recipient, sharesToMint);
 
         emit Transfer(address(0), _recipient, _amount);
