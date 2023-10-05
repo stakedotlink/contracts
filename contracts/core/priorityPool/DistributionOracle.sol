@@ -30,7 +30,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
     uint64 public minBlockConfirmations;
     uint128 public minDepositsSinceLastUpdate;
 
-    UpdateStatus private updateStatus;
+    UpdateStatus public updateStatus;
 
     error NotPaused();
     error InsufficientBlockConfirmations();
@@ -209,7 +209,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      */
     function _pauseForUpdate() private {
         priorityPool.pauseForUpdate();
-        updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 1);
+        updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 0);
     }
 
     /**
@@ -223,6 +223,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         if (!priorityPool.paused()) revert NotPaused();
         if (block.number < status.pausedAtBlockNumber + minBlockConfirmations) revert InsufficientBlockConfirmations();
         if (status.requestInProgress == 1) revert RequestInProgress();
+
+        updateStatus.requestInProgress = 1;
 
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfillRequest.selector);
         req.addUint("blockNumber", status.pausedAtBlockNumber);
