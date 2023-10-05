@@ -360,18 +360,18 @@ async function main() {
 
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
-  tx = await LINK_StakingPool.updateStrategyRewards([0])
+  tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
-  tx = await LINK_StakingPool.updateStrategyRewards([0])
+  tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
 
   // Staking Queue
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(2200))
   await tx.wait()
-  tx = await LINK_PriorityPool.depositQueuedTokens()
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000))
   await tx.wait()
 
   tx = await LINK_PriorityPool.pauseForUpdate()
@@ -410,8 +410,28 @@ async function main() {
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(6200))
   await tx.wait()
-  tx = await LINK_PriorityPool.depositQueuedTokens()
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000))
   await tx.wait()
+
+  const vestingStart = 1695312000 // Sep 21 2023 12pm EDT
+  const vestingDuration = 4 * 365 * 86400 // 4 years
+
+  let vesting0 = await deploy('Vesting', [accounts[0], accounts[12], vestingStart, vestingDuration])
+  let vesting1 = await deploy('Vesting', [accounts[0], accounts[13], vestingStart, vestingDuration])
+
+  await sdlToken.mint(vesting0.address, toEther(10000))
+  await sdlToken.mint(vesting1.address, toEther(10000))
+
+  updateDeployments(
+    {
+      SDL_Vesting_NOP_0: vesting0.address,
+      SDL_Vesting_NOP_1: vesting1.address,
+    },
+    {
+      SDL_Vesting_NOP0: 'Vesting',
+      SDL_Vesting_NOP1: 'Vesting',
+    }
+  )
 
   printDeployments()
 }
