@@ -25,7 +25,7 @@ const LINK_CommunityVCS = {
   fees: [], // fee receivers & percentage amounts in basis points
   maxDepositSizeBP: 9000, // basis point amount of the remaing deposit room in the Chainlink staking contract that can be deposited at once
   vaultDeploymentThreshold: 10, // the min number of non-full vaults before a new batch is deployed
-  vaultDeploymentAmount: 20, // amount of vaults to deploy when threshold is met
+  vaultDeploymentAmount: 50, // amount of vaults to deploy when threshold is met
 }
 
 async function main() {
@@ -80,6 +80,17 @@ async function main() {
     ethers.utils.defaultAbiCoder.encode(['bool'], [true])
   )
   await stakingPool.addStrategy(communityVCS.address)
+
+  await communityVCS.addVaults(50)
+  await communityVCS.addVaults(50)
+  await communityVCS.addVaults(50)
+
+  console.log('Testing StakingPool.updateStrategyRewards:')
+
+  console.log(
+    '200 vaults: ',
+    (await stakingPool.estimateGas.updateStrategyRewards([0], '0x')).toNumber()
+  )
 
   console.log('Testing PriorityPool.depositQueuedTokens:')
 
