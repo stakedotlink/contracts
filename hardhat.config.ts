@@ -54,12 +54,16 @@ const config: HardhatUserConfig = {
         auto: true,
         interval: 5000,
       },
+      hardfork: 'shanghai',
     },
   },
   etherscan: {
     apiKey: '',
   },
   solidity: {
+    settings: {
+      evmVersion: 'shanghai',
+    },
     compilers: [
       {
         version: '0.8.15',
