@@ -59,17 +59,22 @@ contract OperatorVCS is VaultControllerStrategy {
                 _fees,
                 _maxDepositSizeBP
             );
-        }
+        } else {
+            // reassaign values to account for changed storage variables in upgrade
+            totalPrincipalDeposits = operatorRewardPercentage;
+            indexOfLastFullVault = 0;
 
-        // reassaign values to account for changed storage variables in upgrade
-        totalPrincipalDeposits = operatorRewardPercentage;
-        indexOfLastFullVault = 0;
+            stakeController = IStaking(_stakeController);
+            vaultImplementation = _vaultImplementation;
+            maxDepositSizeBP = _maxDepositSizeBP;
+
+            for (uint256 i = 0; i < vaults.length; ++i) {
+                vaultMapping[address(vaults[i])] = true;
+            }
+        }
 
         if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
         operatorRewardPercentage = _operatorRewardPercentage;
-        for (uint256 i = 0; i < vaults.length; ++i) {
-            vaultMapping[address(vaults[i])] = true;
-        }
     }
 
     /**
