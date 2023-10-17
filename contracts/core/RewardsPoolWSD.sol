@@ -4,25 +4,25 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IRewardsPoolController.sol";
-import "./interfaces/IWrappedSDToken.sol";
+import "./interfaces/IWrappedLST.sol";
 import "./RewardsPool.sol";
 
 /**
  * @title RewardsPoolWSD
- * @notice Handles reward distribution for a single wrapped staking derivative token
+ * @notice Handles reward distribution for a single wrapped liquid staking token
  * @dev rewards can only be positive (user balances can only increase)
  */
 contract RewardsPoolWSD is RewardsPool {
     using SafeERC20 for IERC677;
 
-    IWrappedSDToken public wsdToken;
+    IWrappedLST public wsdToken;
 
     constructor(
         address _controller,
         address _token,
         address _wsdToken
     ) RewardsPool(_controller, _token) {
-        wsdToken = IWrappedSDToken(_wsdToken);
+        wsdToken = IWrappedLST(_wsdToken);
     }
 
     /**

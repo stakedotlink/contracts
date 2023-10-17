@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import "./IERC677.sol";
 
-interface IWrappedSDToken is IERC677 {
+interface IWrappedLST is IERC677 {
     /**
      * @notice wraps tokens
      * @param _amount amount of unwrapped tokens to wrap
