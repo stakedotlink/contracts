@@ -9,6 +9,13 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/IWrappedLST.sol";
 
+/**
+ * @title Wrapped token bridge
+ * @notice Handles CCIP transfers with a wrapped token
+ * @dev This contract can perform 2 functions:
+ * - can wrap tokens and initiate a CCIP transfer of the wrapped tokens to a destination chain
+ * - can receive a CCIP transfer of wrapped tokens, unwrap them, and send them to the receiver
+ */
 contract WrappedTokenBridge is Ownable, CCIPReceiver {
     using SafeERC20 for IERC20;
 
@@ -58,6 +65,13 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         _;
     }
 
+    /**
+     * @notice Initializes the contract
+     * @param _router address of the CCIP router
+     * @param _linkToken address of the LINK token
+     * @param _token address of the unwrapped token
+     * @param _wrappedToken address of the wrapped token
+     **/
     constructor(
         address _router,
         address _linkToken,
@@ -74,6 +88,13 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         wrappedToken.approve(_router, type(uint256).max);
     }
 
+    /**
+     * @notice ERC677 implementation to receive a token transfer to be wrapped and sent to a destination chain
+     * @param _sender address of sender
+     * @param _value amount of tokens transferred
+     * @param _calldata encoded calldata consisting of destinationChainSelector (uint64), receiver (address),
+     * maxLINKFee (uint256), extraArgs (bytes)
+     **/
     function onTokenTransfer(
         address _sender,
         uint256 _value,
@@ -89,6 +110,15 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         _transferTokens(destinationChainSelector, _sender, receiver, _value, false, maxLINKFee, extraArgs);
     }
 
+    /**
+     * @notice Wraps and transfers tokens to a destination chain
+     * @param _destinationChainSelector id of destination chain
+     * @param _receiver address to receive tokens on destination chain
+     * @param _amount amount of tokens to transfer
+     * @param _payNative whether fee should be paid natively or with LINK
+     * @param _maxLINKFee call will revert if LINK fee exceeds this value
+     * @param _extraArgs encoded args as defined in CCIP API
+     **/
     function transferTokens(
         uint64 _destinationChainSelector,
         address _receiver,
@@ -102,6 +132,13 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
             _transferTokens(_destinationChainSelector, msg.sender, _receiver, _amount, _payNative, _maxLINKFee, _extraArgs);
     }
 
+    /**
+     * @notice Returns the current fee for a token transfer
+     * @param _destinationChainSelector id of destination chain
+     * @param _payNative whether fee should be paid natively or with LINK
+     * @param _extraArgs encoded args as defined in CCIP API
+     * @return fee current fee
+     **/
     function getFee(
         uint64 _destinationChainSelector,
         bool _payNative,
@@ -117,6 +154,10 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
     }
 
+    /**
+     * @notice Called by the CCIP router to deliver a message
+     * @param _any2EvmMessage CCIP message
+     **/
     function ccipReceive(Client.Any2EVMMessage calldata _any2EvmMessage) external override onlyRouter {
         try this.processMessage(_any2EvmMessage) {} catch (bytes memory err) {
             bytes32 messageId = _any2EvmMessage.messageId;
@@ -126,23 +167,37 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         }
     }
 
+    /**
+     * @notice Processes a received message
+     * @param _any2EvmMessage CCIP message
+     **/
     function processMessage(Client.Any2EVMMessage calldata _any2EvmMessage) external onlySelf {
         _ccipReceive(_any2EvmMessage);
     }
 
-    function retryFailedMessage(bytes32 _messageId, address tokenReceiver) external onlyOwner {
+    /**
+     * @notice Executes a failed message
+     * @param _messageId id of CCIP message
+     * @param _tokenReceiver address to receive all token transfers included in the message
+     **/
+    function retryFailedMessage(bytes32 _messageId, address _tokenReceiver) external onlyOwner {
         if (messageErrorsStatus[_messageId] != ErrorStatus.UNRESOLVED) revert MessageIsResolved();
 
         messageErrorsStatus[_messageId] = ErrorStatus.RESOLVED;
 
         Client.Any2EVMMessage memory message = failedMessages[_messageId];
         for (uint256 i = 0; i < message.destTokenAmounts.length; ++i) {
-            IERC20(message.destTokenAmounts[i].token).safeTransfer(tokenReceiver, message.destTokenAmounts[i].amount);
+            IERC20(message.destTokenAmounts[i].token).safeTransfer(_tokenReceiver, message.destTokenAmounts[i].amount);
         }
 
         emit MessageResolved(_messageId);
     }
 
+    /**
+     * @notice Recovers tokens that were accidentally sent to this contract
+     * @param _tokens list of tokens to recover
+     * @param _receiver address to receive recovered tokens
+     **/
     function recoverTokens(address[] calldata _tokens, address _receiver) external onlyOwner {
         for (uint256 i = 0; i < _tokens.length; ++i) {
             IERC20 tokenToTransfer = IERC20(_tokens[i]);
@@ -150,6 +205,16 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         }
     }
 
+    /**
+     * @notice Wraps and transfers tokens to a destination chain
+     * @param _destinationChainSelector id of destination chain
+     * @param _sender address of token sender
+     * @param _receiver address to receive tokens on destination chain
+     * @param _amount amount of tokens to transfer
+     * @param _payNative whether fee should be paid natively or with LINK
+     * @param _maxLINKFee call will revert if LINK fee exceeds this value
+     * @param _extraArgs encoded args as defined in CCIP API
+     **/
     function _transferTokens(
         uint64 _destinationChainSelector,
         address _sender,
@@ -198,6 +263,13 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         return messageId;
     }
 
+    /**
+     * @notice Builds a CCIP message
+     * @param _receiver address to receive tokens on destination chain
+     * @param _amount amount of tokens to transfer
+     * @param _feeTokenAddress address of token that fees will be paid in
+     * @param _extraArgs encoded args as defined in CCIP API
+     **/
     function _buildCCIPMessage(
         address _receiver,
         uint256 _amount,
@@ -219,12 +291,16 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         return evm2AnyMessage;
     }
 
-    function _ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) internal override {
-        if (any2EvmMessage.destTokenAmounts.length != 1) revert InvalidMessage();
+    /**
+     * @notice Processes a received message
+     * @param _any2EvmMessage CCIP message
+     **/
+    function _ccipReceive(Client.Any2EVMMessage memory _any2EvmMessage) internal override {
+        if (_any2EvmMessage.destTokenAmounts.length != 1) revert InvalidMessage();
 
-        address tokenAddress = any2EvmMessage.destTokenAmounts[0].token;
-        uint256 tokenAmount = any2EvmMessage.destTokenAmounts[0].amount;
-        address receiver = abi.decode(any2EvmMessage.data, (address));
+        address tokenAddress = _any2EvmMessage.destTokenAmounts[0].token;
+        uint256 tokenAmount = _any2EvmMessage.destTokenAmounts[0].amount;
+        address receiver = abi.decode(_any2EvmMessage.data, (address));
 
         if (tokenAddress != address(wrappedToken) || receiver == address(0)) revert InvalidMessage();
 
@@ -234,9 +310,9 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         token.safeTransfer(receiver, amountToTransfer);
 
         emit TokensReceived(
-            any2EvmMessage.messageId,
-            any2EvmMessage.sourceChainSelector,
-            abi.decode(any2EvmMessage.sender, (address)),
+            _any2EvmMessage.messageId,
+            _any2EvmMessage.sourceChainSelector,
+            abi.decode(_any2EvmMessage.sender, (address)),
             receiver,
             tokenAmount
         );
