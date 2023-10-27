@@ -44,6 +44,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     string public baseURI;
 
+    address public ccipController;
+
     event InitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event Withdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
     event CreateLock(
@@ -79,6 +81,12 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error DuplicateContract();
     error ContractNotFound();
     error UnlockAlreadyInitiated();
+    error OnlyCCIPController();
+
+    modifier onlyCCIPController() {
+        if (msg.sender != ccipController) revert OnlyCCIPController();
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -312,6 +320,53 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         sdlToken.safeTransfer(msg.sender, _amount);
     }
 
+    function mint(
+        address _receiver,
+        uint256 _lockId,
+        uint256 _amount,
+        uint256 _boostAmount,
+        uint64 _startTime,
+        uint64 _duration,
+        uint64 _expiry
+    ) external onlyCCIPController updateRewards(_receiver) updateRewards(ccipController) {
+        if (lockOwners[_lockId] != address(0)) revert InvalidLockId();
+
+        locks[_lockId] = Lock(_amount, _boostAmount, _startTime, _duration, _expiry);
+        lockOwners[_lockId] = _receiver;
+        balances[_receiver] += 1;
+
+        uint256 totalAmount = _amount + _boostAmount;
+        effectiveBalances[_receiver] += totalAmount;
+        effectiveBalances[ccipController] -= totalAmount;
+    }
+
+    function burn(
+        address _sender,
+        uint256 _lockId,
+        address _sdlReceiver
+    )
+        external
+        onlyCCIPController
+        onlyLockOwner(_lockId, _sender)
+        updateRewards(_sender)
+        updateRewards(ccipController)
+        returns (Lock memory)
+    {
+        Lock memory lock = locks[_lockId];
+
+        delete locks[_lockId].amount;
+        delete lockOwners[_lockId];
+        balances[_sender] -= 1;
+
+        uint256 totalAmount = lock.amount + lock.boostAmount;
+        effectiveBalances[_sender] -= totalAmount;
+        effectiveBalances[ccipController] += totalAmount;
+
+        sdlToken.safeTransfer(_sdlReceiver, lock.amount);
+
+        return lock;
+    }
+
     /**
      * @notice transfers a lock between accounts
      * @dev reverts if sender is not the owner of and not approved to transfer the lock
@@ -480,6 +535,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      */
     function setBoostController(address _boostController) external onlyOwner {
         boostController = IBoostController(_boostController);
+    }
+
+    function setCCIPController(address _ccipController) external onlyOwner {
+        ccipController = _ccipController;
     }
 
     /**
