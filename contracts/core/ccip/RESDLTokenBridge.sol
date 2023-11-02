@@ -44,7 +44,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
     );
     event TokenReceived(
         bytes32 indexed messageId,
-        uint64 indexed destinationChainSelector,
+        uint64 indexed sourceChainSelector,
         address indexed sender,
         address receiver,
         uint256 tokenId
