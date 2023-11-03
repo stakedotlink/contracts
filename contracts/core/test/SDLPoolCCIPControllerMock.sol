@@ -36,7 +36,7 @@ contract SDLPoolCCIPControllerMock {
             uint64
         )
     {
-        return sdlPool.burn(_sender, _tokenId, reSDLTokenBridge);
+        return sdlPool.handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge);
     }
 
     function handleIncomingRESDL(
@@ -49,7 +49,7 @@ contract SDLPoolCCIPControllerMock {
         uint64 _expiry
     ) external onlyBridge {
         sdlToken.safeTransferFrom(reSDLTokenBridge, address(sdlPool), _amount);
-        sdlPool.mint(_receiver, _tokenId, _amount, _boostAmount, _startTime, _duration, _expiry);
+        sdlPool.handleIncomingRESDL(_receiver, _tokenId, _amount, _boostAmount, _startTime, _duration, _expiry);
     }
 
     function setRESDLTokenBridge(address _reSDLTokenBridge) external {
