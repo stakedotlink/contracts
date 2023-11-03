@@ -9,10 +9,10 @@ import "../../interfaces/IBoostController.sol";
 import "../../interfaces/IERC721Receiver.sol";
 
 /**
- * @title SDL Pool Base
+ * @title SDL Pool
  * @notice Base SDL Pool contract to inherit from
  */
-contract SDLPoolBase is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUpgradeable {
+contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Lock {
