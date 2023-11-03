@@ -4,11 +4,11 @@ pragma solidity 0.8.15;
 import "./base/SDLPoolBase.sol";
 
 /**
- * @title SDL Pool
+ * @title SDL Pool Primary
  * @notice Allows users to stake/lock SDL tokens and receive a percentage of the protocol's earned rewards
  * @dev deployed only on the primary chain
  */
-contract SDLPool is SDLPoolBase {
+contract SDLPoolPrimary is SDLPoolBase {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public delegatorPool;
