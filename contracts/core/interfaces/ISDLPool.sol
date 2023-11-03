@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-interface ISDLPool {
+import "./IRewardsPoolController.sol";
+
+interface ISDLPool is IRewardsPoolController {
     function effectiveBalanceOf(address _account) external view returns (uint256);
 
     function ownerOf(uint256 _lockId) external view returns (address);
 
-    function burn(
+    function supportedTokens() external view returns (address[] memory);
+
+    function handleOutgoingRESDL(
         address _sender,
         uint256 _lockId,
         address _sdlReceiver
@@ -20,7 +24,7 @@ interface ISDLPool {
             uint64 _expiry
         );
 
-    function mint(
+    function handleIncomingRESDL(
         address _receiver,
         uint256 _lockId,
         uint256 _amount,
