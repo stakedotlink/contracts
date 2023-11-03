@@ -22,4 +22,8 @@ interface IRewardsPoolController {
      * @param _rewardsPool token rewards pool to add
      **/
     function addToken(address _token, address _rewardsPool) external;
+
+    function distributeTokens(address[] memory _tokens) external;
+
+    function withdrawRewards(address[] memory _tokens) external view;
 }
