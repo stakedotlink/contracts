@@ -207,7 +207,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             _extraArgs
         );
 
-        IRouterClient router = IRouterClient(this.getRouter());
+        IRouterClient router = IRouterClient(getRouter());
         uint256 fees = router.getFee(_destinationChainSelector, evm2AnyMessage);
 
         if (fees > maxLINKFee) revert FeeExceedsLimit(fees);
@@ -245,7 +245,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             extraArgsByChain[_destinationChainSelector]
         );
 
-        IRouterClient router = IRouterClient(this.getRouter());
+        IRouterClient router = IRouterClient(getRouter());
         uint256 fees = router.getFee(_destinationChainSelector, evm2AnyMessage);
 
         if (fees > maxLINKFee) revert FeeExceedsLimit(fees);

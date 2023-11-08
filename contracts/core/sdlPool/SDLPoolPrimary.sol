@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "./base/SDLPoolBase.sol";
+import "./base/SDLPool.sol";
 
 /**
  * @title SDL Pool Primary
  * @notice Allows users to stake/lock SDL tokens and receive a percentage of the protocol's earned rewards
  * @dev deployed only on the primary chain
  */
-contract SDLPoolPrimary is SDLPoolBase {
+contract SDLPoolPrimary is SDLPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public delegatorPool;

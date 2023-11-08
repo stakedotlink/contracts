@@ -10,10 +10,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     using SafeERC20 for IERC20;
 
-    IERC20 linkToken;
+    IERC20 immutable linkToken;
 
-    IERC20 public sdlToken;
-    address public sdlPool;
+    IERC20 immutable sdlToken;
+    address immutable sdlPool;
     address public reSDLTokenBridge;
 
     uint256 public maxLINKFee;
@@ -46,12 +46,7 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
      * @param _sdlToken address of the SDL token
      * @param _sdlPool address of the SDL Pool
      **/
-    constructor(
-        address _router,
-        address _linkToken,
-        address _sdlToken,
-        address _sdlPool
-    ) CCIPReceiver(_router) {
+    constructor(address _router, address _linkToken, address _sdlToken, address _sdlPool) CCIPReceiver(_router) {
         linkToken = IERC20(_linkToken);
         sdlToken = IERC20(_sdlToken);
         sdlPool = _sdlPool;

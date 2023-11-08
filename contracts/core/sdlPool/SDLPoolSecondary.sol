@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "./base/SDLPoolBase.sol";
+import "./base/SDLPool.sol";
 
 /**
  * @title SDL Pool Secondary
  * @notice Allows users to stake/lock SDL tokens and receive a percentage of the protocol's earned rewards
  * @dev deployed on all supported chains besides the primary chain
  */
-contract SDLPoolSecondary is SDLPoolBase {
+contract SDLPoolSecondary is SDLPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct NewLockPointer {
@@ -87,11 +87,7 @@ contract SDLPoolSecondary is SDLPoolBase {
      * @param _value of the token transfer
      * @param _calldata encoded lockId (uint256) and lockingDuration (uint64)
      **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _calldata
-    ) external override {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external override {
         if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender)) revert UnauthorizedToken();
 
         if (_value == 0) revert InvalidValue();
@@ -166,11 +162,10 @@ contract SDLPoolSecondary is SDLPoolBase {
      * @param _lockId id of the lock
      * @param _amount amount to withdraw from the lock
      **/
-    function withdraw(uint256 _lockId, uint256 _amount)
-        external
-        onlyLockOwner(_lockId, msg.sender)
-        updateRewards(msg.sender)
-    {
+    function withdraw(
+        uint256 _lockId,
+        uint256 _amount
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
         Lock memory lock = _getQueuedLockState(_lockId);
 
         if (lock.startTime != 0) {
@@ -270,11 +265,7 @@ contract SDLPoolSecondary is SDLPoolBase {
         return updateNeeded == 1 && updateInProgress == 0;
     }
 
-    function _queueNewLock(
-        address _owner,
-        uint256 _amount,
-        uint64 _lockingDuration
-    ) internal {
+    function _queueNewLock(address _owner, uint256 _amount, uint64 _lockingDuration) internal {
         Lock memory lock = _createLock(_amount, _lockingDuration);
         queuedNewLocks[updateBatchIndex].push(lock);
         newLocksByOwner[_owner].push(NewLockPointer(updateBatchIndex, uint128(queuedNewLocks[updateBatchIndex].length - 1)));
@@ -413,11 +404,7 @@ contract SDLPoolSecondary is SDLPoolBase {
         return updateInProgress == 1 ? updateBatchIndex - 2 : updateBatchIndex - 1;
     }
 
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _lockId
-    ) internal override {
+    function _transfer(address _from, address _to, uint256 _lockId) internal override {
         if (queuedLockUpdates[_lockId].length != 0) revert CannotTransferWithQueuedUpdates();
         super._transfer(_from, _to, _lockId);
     }

@@ -24,10 +24,9 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         UNRESOLVED
     }
 
-    IERC20 linkToken;
-
-    IERC20 token;
-    IWrappedLST wrappedToken;
+    IERC20 immutable linkToken;
+    IERC20 immutable token;
+    IWrappedLST immutable wrappedToken;
 
     mapping(bytes32 => ErrorStatus) public messageErrorsStatus;
     mapping(bytes32 => Client.Any2EVMMessage) public failedMessages;
@@ -72,12 +71,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _token address of the unwrapped token
      * @param _wrappedToken address of the wrapped token
      **/
-    constructor(
-        address _router,
-        address _linkToken,
-        address _token,
-        address _wrappedToken
-    ) CCIPReceiver(_router) {
+    constructor(address _router, address _linkToken, address _token, address _wrappedToken) CCIPReceiver(_router) {
         linkToken = IERC20(_linkToken);
 
         token = IERC20(_token);
@@ -95,11 +89,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _calldata encoded calldata consisting of destinationChainSelector (uint64), receiver (address),
      * maxLINKFee (uint256), extraArgs (bytes)
      **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _calldata
-    ) external {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
         if (msg.sender != address(token)) revert InvalidSender();
         if (_value == 0) revert InvalidValue();
 
@@ -151,7 +141,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
             _extraArgs
         );
 
-        return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
+        return IRouterClient(getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
     }
 
     /**
@@ -235,7 +225,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
             _extraArgs
         );
 
-        IRouterClient router = IRouterClient(this.getRouter());
+        IRouterClient router = IRouterClient(getRouter());
         uint256 fees = router.getFee(_destinationChainSelector, evm2AnyMessage);
 
         if (_payNative) {

@@ -15,13 +15,9 @@ import "./RewardsPool.sol";
 contract RewardsPoolWSD is RewardsPool {
     using SafeERC20 for IERC677;
 
-    IWrappedLST public wsdToken;
+    IWrappedLST immutable wsdToken;
 
-    constructor(
-        address _controller,
-        address _token,
-        address _wsdToken
-    ) RewardsPool(_controller, _token) {
+    constructor(address _controller, address _token, address _wsdToken) RewardsPool(_controller, _token) {
         wsdToken = IWrappedLST(_wsdToken);
     }
 

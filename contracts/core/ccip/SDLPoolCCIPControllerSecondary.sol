@@ -56,17 +56,10 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         _initiateUpdate(primaryChainSelector, primaryChainDestination, extraArgs);
     }
 
-    function handleOutgoingRESDL(address _sender, uint256 _tokenId)
-        external
-        onlyBridge
-        returns (
-            uint256,
-            uint256,
-            uint64,
-            uint64,
-            uint64
-        )
-    {
+    function handleOutgoingRESDL(
+        address _sender,
+        uint256 _tokenId
+    ) external onlyBridge returns (uint256, uint256, uint64, uint64, uint64) {
         return ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge);
     }
 
@@ -97,11 +90,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         emit SetPrimaryChain(_primaryChainSelector, _primaryChainDestination);
     }
 
-    function _initiateUpdate(
-        uint64 _destinationChainSelector,
-        address _destination,
-        bytes memory _extraArgs
-    ) internal {
+    function _initiateUpdate(uint64 _destinationChainSelector, address _destination, bytes memory _extraArgs) internal {
         (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = ISDLPoolSecondary(sdlPool).handleOutgoingUpdate();
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
@@ -111,7 +100,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             _extraArgs
         );
 
-        IRouterClient router = IRouterClient(this.getRouter());
+        IRouterClient router = IRouterClient(getRouter());
         uint256 fees = router.getFee(_destinationChainSelector, evm2AnyMessage);
 
         if (fees > maxLINKFee) revert FeeExceedsLimit(fees);

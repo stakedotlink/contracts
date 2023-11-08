@@ -25,11 +25,11 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         uint64 expiry;
     }
 
-    IERC20 public linkToken;
+    IERC20 immutable linkToken;
 
-    IERC20 public sdlToken;
-    ISDLPool public sdlPool;
-    ISDLPoolCCIPController public sdlPoolCCIPController;
+    IERC20 immutable sdlToken;
+    ISDLPool immutable sdlPool;
+    ISDLPoolCCIPController immutable sdlPoolCCIPController;
 
     mapping(uint64 => address) public whitelistedDestinations;
 
@@ -132,7 +132,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
             _extraArgs
         );
 
-        IRouterClient router = IRouterClient(this.getRouter());
+        IRouterClient router = IRouterClient(getRouter());
         uint256 fees = router.getFee(_destinationChainSelector, evm2AnyMessage);
 
         if (_payNative) {
@@ -180,7 +180,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
             _extraArgs
         );
 
-        return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
+        return IRouterClient(getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
     }
 
     /**
