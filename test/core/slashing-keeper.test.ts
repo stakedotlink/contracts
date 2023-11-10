@@ -94,8 +94,7 @@ describe('SlashingKeeper', () => {
     assert.equal(data[0], true, 'upkeepNeeded incorrect')
     assert.deepEqual(
       decode(data[1])[0].map((v: any) => v.toNumber()),
-      [2],
-      'performData incorrect'
+      [2]
     )
 
     await strategy1.simulateSlash(toEther(30))
@@ -104,8 +103,7 @@ describe('SlashingKeeper', () => {
     assert.equal(data[0], true, 'upkeepNeeded incorrect')
     assert.deepEqual(
       decode(data[1])[0].map((v: any) => v.toNumber()),
-      [0, 2],
-      'performData incorrect'
+      [0, 2]
     )
   })
 

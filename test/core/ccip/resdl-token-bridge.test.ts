@@ -8,8 +8,8 @@ import {
   CCIPTokenPoolMock,
   WrappedNative,
   RESDLTokenBridge,
-  SDLPool,
   SDLPoolCCIPControllerMock,
+  SDLPoolPrimary,
 } from '../../../typechain-types'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { Signer } from 'ethers'
@@ -19,7 +19,7 @@ describe('RESDLTokenBridge', () => {
   let sdlToken: ERC677
   let token2: ERC677
   let bridge: RESDLTokenBridge
-  let sdlPool: SDLPool
+  let sdlPool: SDLPoolPrimary
   let onRamp: CCIPOnRampMock
   let offRamp: CCIPOffRampMock
   let tokenPool: CCIPTokenPoolMock
@@ -56,13 +56,12 @@ describe('RESDLTokenBridge', () => {
     await router.applyRampUpdates([[77, onRamp.address]], [], [[77, offRamp.address]])
 
     let boostController = await deploy('LinearBoostController', [4 * 365 * 86400, 4])
-    sdlPool = (await deployUpgradeable('SDLPool', [
+    sdlPool = (await deployUpgradeable('SDLPoolPrimary', [
       'reSDL',
       'reSDL',
       sdlToken.address,
       boostController.address,
-      ethers.constants.AddressZero,
-    ])) as SDLPool
+    ])) as SDLPoolPrimary
     let sdlPoolCCIPController = (await deploy('SDLPoolCCIPControllerMock', [
       sdlToken.address,
       sdlPool.address,
