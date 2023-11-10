@@ -126,12 +126,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         UpkeepType upkeepType = abi.decode(_performData, (UpkeepType));
 
         if (upkeepType == UpkeepType.PAUSE) {
-            if (
-                (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) ||
-                (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate)
-            ) {
-                revert UpdateConditionsNotMet();
-            }
+            if (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate) revert UpdateConditionsNotMet();
             _pauseForUpdate();
         } else if (upkeepType == UpkeepType.REQUEST) {
             _requestUpdate();
@@ -210,7 +205,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @notice Withdraws LINK tokens
      * @param _amount amount to withdraw
      */
-    function withdrawLink(uint256 _amount) public onlyOwner {
+    function withdrawLink(uint256 _amount) external onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
         if (link.transfer(msg.sender, _amount) != true) revert InsufficientBalance();
     }
@@ -257,6 +252,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @dev must always be called before requestUpdate()
      */
     function _pauseForUpdate() private {
+        if (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) revert UpdateConditionsNotMet();
         if (awaitingManualVerification == 1) revert AwaitingManualVerification();
         priorityPool.pauseForUpdate();
         updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 0);
