@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "./base/SDLPoolBase.sol";
+import "./base/SDLPool.sol";
 
 /**
  * @title SDL Pool Primary
  * @notice Allows users to stake/lock SDL tokens and receive a percentage of the protocol's earned rewards
  * @dev deployed only on the primary chain
  */
-contract SDLPoolPrimary is SDLPoolBase {
+contract SDLPoolPrimary is SDLPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public delegatorPool;
@@ -163,6 +163,12 @@ contract SDLPoolPrimary is SDLPoolBase {
         sdlToken.safeTransfer(msg.sender, _amount);
     }
 
+    /**
+     * @notice handles an outgoing transfer of an reSDL lock to another chain
+     * @param _sender sender of lock
+     * @param _lockId id of lock
+     * @param _sdlReceiver address to receive underlying SDL on this chain
+     */
     function handleOutgoingRESDL(
         address _sender,
         uint256 _lockId,
@@ -192,6 +198,16 @@ contract SDLPoolPrimary is SDLPoolBase {
         return lock;
     }
 
+    /**
+     * @notice handles an incoming transfer of an reSDL lock from another chain
+     * @param _receiver receiver of lock
+     * @param _lockId id of lock
+     * @param _amount amount of underlying SDL
+     * @param _boostAmount reSDL boost amount
+     * @param _startTime start time of lock
+     * @param _duration duration of lock
+     * @param _expiry expiry time of lock
+     */
     function handleIncomingRESDL(
         address _receiver,
         uint256 _lockId,
@@ -214,6 +230,12 @@ contract SDLPoolPrimary is SDLPoolBase {
         emit IncomingRESDL(_receiver, _lockId);
     }
 
+    /**
+     * @notice handles an incoming update from a secondary chain
+     * @dev updates the total reSDL supply and keeps reSDL lock ids consistent between chains
+     * @param _numNewRESDLTokens number of new reSDL locks to be minted on other chain
+     * @param _totalRESDLSupplyChange total reSDL supply change on other chain
+     */
     function handleIncomingUpdate(uint256 _numNewRESDLTokens, int256 _totalRESDLSupplyChange)
         external
         onlyCCIPController
@@ -226,8 +248,10 @@ contract SDLPoolPrimary is SDLPoolBase {
         }
 
         if (_totalRESDLSupplyChange > 0) {
+            effectiveBalances[ccipController] += uint256(_totalRESDLSupplyChange);
             totalEffectiveBalance += uint256(_totalRESDLSupplyChange);
-        } else if (_totalRESDLSupplyChange > 0) {
+        } else if (_totalRESDLSupplyChange < 0) {
+            effectiveBalances[ccipController] -= uint256(-1 * _totalRESDLSupplyChange);
             totalEffectiveBalance -= uint256(-1 * _totalRESDLSupplyChange);
         }
 

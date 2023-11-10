@@ -83,11 +83,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error ContractNotFound();
     error UnlockAlreadyInitiated();
 
-    modifier onlyCCIPController() {
-        if (msg.sender != ccipController) revert OnlyCCIPController();
-        _;
-    }
-
     /**
      * @notice initializes contract
      * @param _name name of the staking derivative token
@@ -113,6 +108,14 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      **/
     modifier onlyLockOwner(uint256 _lockId, address _owner) {
         _onlyLockOwner(_lockId, _owner);
+        _;
+    }
+
+    /**
+     * @notice reverts if sender is not the CCIP controller
+     **/
+    modifier onlyCCIPController() {
+        if (msg.sender != ccipController) revert OnlyCCIPController();
         _;
     }
 
@@ -360,6 +363,11 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         boostController = IBoostController(_boostController);
     }
 
+    /**
+     * @notice sets the CCIP controller
+     * @dev this contract interfaces with CCIP
+     * @param _ccipController address of CCIP controller
+     */
     function setCCIPController(address _ccipController) external onlyOwner {
         ccipController = _ccipController;
     }
@@ -415,6 +423,12 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         return lock;
     }
 
+    /**
+     * @notice checks if a lock is owned by an certain account
+     * @dev reverts if lock is not owner by account
+     * @param _lockId id of lock
+     * @param _owner owner address
+     **/
     function _onlyLockOwner(uint256 _lockId, address _owner) internal view {
         if (_owner != ownerOf(_lockId)) revert SenderNotAuthorized();
     }

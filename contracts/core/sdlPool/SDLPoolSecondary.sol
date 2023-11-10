@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "./base/SDLPoolBase.sol";
+import "./base/SDLPool.sol";
 
 /**
  * @title SDL Pool Secondary
  * @notice Allows users to stake/lock SDL tokens and receive a percentage of the protocol's earned rewards
  * @dev deployed on all supported chains besides the primary chain
  */
-contract SDLPoolSecondary is SDLPoolBase {
+contract SDLPoolSecondary is SDLPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct NewLockPointer {
@@ -24,12 +24,12 @@ contract SDLPoolSecondary is SDLPoolBase {
 
     uint256[] internal currentMintLockIdByBatch;
     Lock[][] internal queuedNewLocks;
-    mapping(address => NewLockPointer[]) newLocksByOwner;
+    mapping(address => NewLockPointer[]) internal newLocksByOwner;
 
-    uint128 internal updateBatchIndex;
-    uint64 internal updateInProgress;
+    uint128 public updateBatchIndex;
+    uint64 public updateInProgress;
     uint64 internal updateNeeded;
-    int256 internal queuedRESDLSupplyChange;
+    int256 public queuedRESDLSupplyChange;
 
     event QueueInitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event QueueWithdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
@@ -46,6 +46,7 @@ contract SDLPoolSecondary is SDLPoolBase {
 
     error CannotTransferWithQueuedUpdates();
     error UpdateInProgress();
+    error NoUpdateInProgress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -67,10 +68,48 @@ contract SDLPoolSecondary is SDLPoolBase {
     ) public initializer {
         __SDLPoolBase_init(_name, _symbol, _sdlToken, _boostController);
         updateBatchIndex = 1;
+        currentMintLockIdByBatch.push(0);
+        queuedNewLocks.push();
+        queuedNewLocks.push();
+    }
+
+    /**
+     * @notice returns a list of queued new locks for an owner
+     * @param _owner owner of locks
+     * @return list of queued locks and corresponding batch indexes
+     **/
+    function getQueuedNewLocksByOwner(address _owner) external view returns (Lock[] memory, uint256[] memory) {
+        uint256 numNewLocks = newLocksByOwner[_owner].length;
+        Lock[] memory newLocks = new Lock[](numNewLocks);
+        uint256[] memory batchIndexes = new uint256[](numNewLocks);
+
+        for (uint256 i = 0; i < numNewLocks; ++i) {
+            NewLockPointer memory pointer = newLocksByOwner[_owner][i];
+            newLocks[i] = queuedNewLocks[pointer.updateBatchIndex][pointer.index];
+            batchIndexes[i] = pointer.updateBatchIndex;
+        }
+
+        return (newLocks, batchIndexes);
+    }
+
+    /**
+     * @notice returns queued lock updates for a list of lock ids
+     * @param _lockIds list of lock ids
+     * @return list of queued lock updates corresponding to each lock id
+     **/
+    function getQueuedLockUpdates(uint256[] calldata _lockIds) external view returns (LockUpdate[][] memory) {
+        LockUpdate[][] memory updates = new LockUpdate[][](_lockIds.length);
+
+        for (uint256 i = 0; i < _lockIds.length; ++i) {
+            updates[i] = queuedLockUpdates[_lockIds[i]];
+        }
+
+        return updates;
     }
 
     /**
      * @notice ERC677 implementation to stake/lock SDL tokens or distribute rewards
+     * @dev operations will be queued until the next update at which point the user can execute (excludes reward distribution)
      * @dev
      * - will update/create a lock if the token transferred is SDL or will distribute rewards otherwise
      *
@@ -81,8 +120,6 @@ contract SDLPoolSecondary is SDLPoolBase {
      * - set lockId to 0 to create a new lock or set lockId to > 0 to stake more into an existing lock
      * - set lockingDuration to 0 to stake without locking or set lockingDuration to > 0 to lock for an amount
      *   time in seconds
-     * - see _updateLock() for more details on updating an existing lock or _createLock() for more details on
-     *   creating a new lock
      * @param _sender of the stake
      * @param _value of the token transfer
      * @param _calldata encoded lockId (uint256) and lockingDuration (uint64)
@@ -110,6 +147,7 @@ contract SDLPoolSecondary is SDLPoolBase {
 
     /**
      * @notice extends the locking duration of a lock
+     * @dev operation will be queued until the next update at which point the user can execute
      * @dev
      * - reverts if `_lockId` is invalid or sender is not owner of lock
      * - reverts if `_lockingDuration` is less than current locking duration of lock
@@ -124,6 +162,7 @@ contract SDLPoolSecondary is SDLPoolBase {
 
     /**
      * @notice initiates the unlock period for a lock
+     * @dev operation will be queued until the next update at which point the user can execute
      * @dev
      * - at least half of the locking duration must have elapsed to initiate the unlock period
      * - the unlock period consists of half of the locking duration
@@ -157,6 +196,7 @@ contract SDLPoolSecondary is SDLPoolBase {
 
     /**
      * @notice withdraws unlocked SDL
+     * @dev operation will be queued until the next update at which point the user can execute
      * @dev
      * - SDL can only be withdrawn if unlocked (once the unlock period has elapsed or if it was never
      *   locked in the first place)
@@ -193,11 +233,24 @@ contract SDLPoolSecondary is SDLPoolBase {
         emit QueueWithdraw(msg.sender, _lockId, _amount);
     }
 
+    /**
+     * @notice executes queued operations for the sender
+     * @dev will mint new locks and update existing locks
+     * @dev an operation can only be executed once its encompassing batch is finalized
+     * @param _lockIds ids of locks to update
+     **/
     function executeQueuedOperations(uint256[] memory _lockIds) external {
         _executeQueuedLockUpdates(msg.sender, _lockIds);
-        _executeQueuedNewLocks(msg.sender);
+        _mintQueuedNewLocks(msg.sender);
     }
 
+    /**
+     * @notice handles the outgoing transfer of an reSDL lock to another chain
+     * @param _sender sender of the transfer
+     * @param _lockId id of lock
+     * @param _sdlReceiver address to receive underlying SDL on this chain
+     * @return lock the lock being transferred
+     **/
     function handleOutgoingRESDL(
         address _sender,
         uint256 _lockId,
@@ -222,6 +275,16 @@ contract SDLPoolSecondary is SDLPoolBase {
         return lock;
     }
 
+    /**
+     * @notice handles the incoming transfer of an reSDL lock from another chain
+     * @param _receiver receiver of the transfer
+     * @param _lockId id of lock
+     * @param _amount amount of underlying SDL
+     * @param _boostAmount reSDL boost amount
+     * @param _startTime start time of the lock
+     * @param _duration duration of the lock
+     * @param _expiry expiry time of the lock
+     **/
     function handleIncomingRESDL(
         address _receiver,
         uint256 _lockId,
@@ -241,9 +304,15 @@ contract SDLPoolSecondary is SDLPoolBase {
         effectiveBalances[_receiver] += totalAmount;
         totalEffectiveBalance += totalAmount;
 
+        if (_lockId > lastLockId) lastLockId = _lockId;
+
         emit IncomingRESDL(_receiver, _lockId);
     }
 
+    /**
+     * @notice handles an outgoing update to the primary chain
+     * @return the number of new locks to mint and the reSDL supply change since the last update
+     **/
     function handleOutgoingUpdate() external onlyCCIPController returns (uint256, int256) {
         if (updateInProgress == 1) revert UpdateInProgress();
 
@@ -254,22 +323,46 @@ contract SDLPoolSecondary is SDLPoolBase {
         updateBatchIndex++;
         updateInProgress = 1;
         updateNeeded = 0;
+        queuedNewLocks.push();
 
         emit OutgoingUpdate(updateBatchIndex - 1, numNewQueuedLocks, reSDLSupplyChange);
 
         return (numNewQueuedLocks, reSDLSupplyChange);
     }
 
+    /**
+     * @notice handles an incoming update from the primary chain
+     * @dev an outgoing update must be sent prior to receiving an incoming update
+     * @dev finalizes the most recent batch of operations
+     * @param _mintStartIndex start index to use for minting new locks in the lastest batch
+     **/
     function handleIncomingUpdate(uint256 _mintStartIndex) external onlyCCIPController {
-        currentMintLockIdByBatch[updateBatchIndex - 1] = _mintStartIndex;
+        if (updateInProgress == 0) revert NoUpdateInProgress();
+
+        if (_mintStartIndex != 0) {
+            uint256 newLastLockId = _mintStartIndex + queuedNewLocks[updateBatchIndex - 1].length - 1;
+            if (newLastLockId > lastLockId) lastLockId = newLastLockId;
+        }
+
+        currentMintLockIdByBatch.push(_mintStartIndex);
         updateInProgress = 0;
         emit IncomingUpdate(updateBatchIndex - 1, _mintStartIndex);
     }
 
+    /**
+     * @notice returns whether an update should be sent to the primary chain
+     * @return whether update should be sent
+     **/
     function shouldUpdate() external view returns (bool) {
         return updateNeeded == 1 && updateInProgress == 0;
     }
 
+    /**
+     * @notice queues a new lock to be minted
+     * @param _owner owner of lock
+     * @param _amount amount of underlying SDL
+     * @param _lockingDuration locking duration
+     **/
     function _queueNewLock(
         address _owner,
         uint256 _amount,
@@ -284,8 +377,13 @@ contract SDLPoolSecondary is SDLPoolBase {
         emit QueueCreateLock(_owner, _amount, lock.boostAmount, _lockingDuration);
     }
 
-    function _executeQueuedNewLocks(address _owner) internal updateRewards(_owner) {
-        uint128 finalizedBatchIndex = _getFinalizedUpdateBatchIndex();
+    /**
+     * @notice mints queued new locks for an owner
+     * @dev will only mint locks that are part of finalized batches
+     * @param _owner owner address
+     **/
+    function _mintQueuedNewLocks(address _owner) internal updateRewards(_owner) {
+        uint256 finalizedBatchIndex = _getFinalizedUpdateBatchIndex();
         uint256 numNewLocks = newLocksByOwner[_owner].length;
         uint256 i = 0;
         while (i < numNewLocks) {
@@ -313,7 +411,7 @@ contract SDLPoolSecondary is SDLPoolBase {
 
         for (uint256 j = 0; j < numNewLocks; ++j) {
             if (i == numNewLocks) {
-                delete newLocksByOwner[_owner][j];
+                newLocksByOwner[_owner].pop();
             } else {
                 newLocksByOwner[_owner][j] = newLocksByOwner[_owner][i];
                 ++i;
@@ -321,6 +419,13 @@ contract SDLPoolSecondary is SDLPoolBase {
         }
     }
 
+    /**
+     * @notice queued an update for a lock
+     * @param _owner owner of lock
+     * @param _lockId id of lock
+     * @param _amount new amount of underlying SDL
+     * @param _lockingDuration new locking duration
+     **/
     function _queueLockUpdate(
         address _owner,
         uint256 _lockId,
@@ -338,10 +443,16 @@ contract SDLPoolSecondary is SDLPoolBase {
         emit QueueUpdateLock(_owner, _lockId, lockUpdate.lock.amount, lockUpdate.lock.boostAmount, lockUpdate.lock.duration);
     }
 
+    /**
+     * @notice executes a series of lock updates
+     * @dev will only update locks that are part of finalized batches
+     * @param _owner owner of locks
+     * @param _lockIds list of ids for locks to update
+     **/
     function _executeQueuedLockUpdates(address _owner, uint256[] memory _lockIds) internal updateRewards(_owner) {
-        uint128 finalizedBatchIndex = _getFinalizedUpdateBatchIndex();
+        uint256 finalizedBatchIndex = _getFinalizedUpdateBatchIndex();
 
-        for (uint256 i = 1; i < _lockIds.length; ++i) {
+        for (uint256 i = 0; i < _lockIds.length; ++i) {
             uint256 lockId = _lockIds[i];
             _onlyLockOwner(lockId, _owner);
             uint256 numUpdates = queuedLockUpdates[lockId].length;
@@ -390,7 +501,7 @@ contract SDLPoolSecondary is SDLPoolBase {
 
             for (uint256 k = 0; k < numUpdates; ++k) {
                 if (j == numUpdates) {
-                    delete queuedLockUpdates[lockId][k];
+                    queuedLockUpdates[lockId].pop();
                 } else {
                     queuedLockUpdates[lockId][k] = queuedLockUpdates[lockId][j];
                     ++j;
@@ -399,6 +510,12 @@ contract SDLPoolSecondary is SDLPoolBase {
         }
     }
 
+    /**
+     * @notice returns the current state of a lock
+     * @dev will return the most recent queued update for a lock or the finalized state if there are no queued updates
+     * @param _lockId id of lock
+     * @return the current state of a lock
+     **/
     function _getQueuedLockState(uint256 _lockId) internal view returns (Lock memory) {
         uint256 updatesLength = queuedLockUpdates[_lockId].length;
 
@@ -409,10 +526,20 @@ contract SDLPoolSecondary is SDLPoolBase {
         }
     }
 
-    function _getFinalizedUpdateBatchIndex() internal view returns (uint128) {
-        return updateInProgress == 1 ? updateBatchIndex - 2 : updateBatchIndex - 1;
+    /**
+     * @notice returns the index of the latest finalized batch
+     * @return latest finalized batch index
+     **/
+    function _getFinalizedUpdateBatchIndex() internal view returns (uint256) {
+        return currentMintLockIdByBatch.length - 1;
     }
 
+    /**
+     * @notice transfers a lock between accounts
+     * @param _from account to transfer from
+     * @param _to account to transfer to
+     * @param _lockId id of lock to tansfer
+     **/
     function _transfer(
         address _from,
         address _to,
