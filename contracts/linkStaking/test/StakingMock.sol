@@ -79,6 +79,10 @@ contract StakingMock is IERC677Receiver {
         removedPrincipal[_staker] += _amount;
     }
 
+    function getMerkleRoot() external view returns (bytes32) {
+        return bytes32(0);
+    }
+
     function isActive() external view returns (bool) {
         return active;
     }
