@@ -136,6 +136,14 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice temporary override used for 0.2 early access period
+     * @return maximum deposits
+     */
+    function getMaxDeposits() public view override returns (uint256) {
+        return getTotalDeposits();
+    }
+
+    /**
      * @notice updates deposit accounting and calculates fees on newly earned rewards
      * @dev reverts if sender is not stakingPool
      * @param _data encoded minRewards (uint256) - min amount of rewards required to claim (set 0 to skip reward claiming)

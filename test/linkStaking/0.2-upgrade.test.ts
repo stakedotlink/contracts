@@ -179,7 +179,7 @@ describe('LINK-Staking-0.2-Upgrade', () => {
       ])
     )
 
-    assert.equal(fromEther(await stakingPool.canDeposit()), 375000)
+    assert.equal(fromEther(await stakingPool.canDeposit()), 0)
     assert.equal(fromEther(await linkToken.balanceOf(operatorStaking.address)), 765000)
     assert.deepEqual(
       (await operatorVCS.getFees()).map((fee) => [fee[0], fee[1].toNumber()]),
