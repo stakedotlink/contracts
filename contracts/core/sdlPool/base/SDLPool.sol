@@ -82,6 +82,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error DuplicateContract();
     error ContractNotFound();
     error UnlockAlreadyInitiated();
+    error InvalidToken();
 
     /**
      * @notice initializes contract
@@ -326,6 +327,16 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      */
     function totalStaked() external view override returns (uint256) {
         return totalEffectiveBalance;
+    }
+
+    /**
+     * @notice adds a new token
+     * @param _token token to add
+     * @param _rewardsPool token rewards pool to add
+     **/
+    function addToken(address _token, address _rewardsPool) public override onlyOwner {
+        if (_token == address(sdlToken)) revert InvalidToken();
+        super.addToken(_token, _rewardsPool);
     }
 
     /**
