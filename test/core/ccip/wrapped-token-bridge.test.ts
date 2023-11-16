@@ -103,7 +103,7 @@ describe('WrappedTokenBridge', () => {
     let preFeeBalance = await linkToken.balanceOf(accounts[0])
 
     await bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(10), '0x')
-    let lastRequestData = await onRamp.lastRequestData()
+    let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
     assert.equal(fromEther(await wrappedToken.balanceOf(tokenPool.address)), 50)
@@ -134,7 +134,7 @@ describe('WrappedTokenBridge', () => {
     await bridge.transferTokens(77, accounts[4], toEther(100), true, 0, '0x', {
       value: toEther(10),
     })
-    let lastRequestData = await onRamp.lastRequestData()
+    let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
     assert.equal(fromEther(await wrappedToken.balanceOf(tokenPool.address)), 50)
@@ -170,7 +170,7 @@ describe('WrappedTokenBridge', () => {
       )
     )
 
-    let lastRequestData = await onRamp.lastRequestData()
+    let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
     assert.equal(fromEther(await wrappedToken.balanceOf(tokenPool.address)), 50)

@@ -12,20 +12,30 @@ interface ISDLPoolSecondary is ISDLPool {
     function shouldUpdate() external view returns (bool);
 }
 
-contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
+contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     using SafeERC20 for IERC20;
 
-    uint64 internal timeOfLastUpdate;
-    uint64 internal timeBetweenUpdates;
+    uint64 public timeOfLastUpdate;
+    uint64 public timeBetweenUpdates;
 
-    uint64 internal primaryChainSelector;
-    address internal primaryChainDestination;
-    bytes internal extraArgs;
-
-    event SetPrimaryChain(uint64 primaryChainSelector, address primaryChainDestination);
+    uint64 public immutable primaryChainSelector;
+    address public immutable primaryChainDestination;
+    bytes public extraArgs;
 
     error UpdateConditionsNotMet();
 
+    /**
+     * @notice Initializes the contract
+     * @param _router address of the CCIP router
+     * @param _linkToken address of the LINK token
+     * @param _sdlToken address of the SDL token
+     * @param _sdlPool address of the SDL Pool
+     * @param _primaryChainSelector id of the primary chain
+     * @param _primaryChainDestination address to receive messages on primary chain
+     * @param _maxLINKFee max fee to be paid on an outgoing message
+     * @param _timeBetweenUpdates min amount of time (seconds) between updates
+     * @param _extraArgs extra args as defined in CCIP API to be used for outgoing messages
+     **/
     constructor(
         address _router,
         address _linkToken,
@@ -33,13 +43,21 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         address _sdlPool,
         uint64 _primaryChainSelector,
         address _primaryChainDestination,
+        uint256 _maxLINKFee,
+        uint64 _timeBetweenUpdates,
         bytes memory _extraArgs
-    ) SDLPoolCCIPController(_router, _linkToken, _sdlToken, _sdlPool) {
+    ) SDLPoolCCIPController(_router, _linkToken, _sdlToken, _sdlPool, _maxLINKFee) {
         primaryChainSelector = _primaryChainSelector;
         primaryChainDestination = _primaryChainDestination;
+        timeBetweenUpdates = _timeBetweenUpdates;
         extraArgs = _extraArgs;
     }
 
+    /**
+     * @notice Returns whether an update to the primary chain should be initiated
+     * @dev used by Chainlink automation
+     * @return whether an update should be initiated
+     **/
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         if (ISDLPoolSecondary(sdlPool).shouldUpdate() && block.timestamp > timeOfLastUpdate + timeBetweenUpdates) {
             return (true, "0x");
@@ -48,6 +66,10 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         return (false, "0x");
     }
 
+    /**
+     * @notice Initiates an update to the primary chain if update conditions are met
+     * @dev used by Chainlink automation
+     **/
     function performUpkeep(bytes calldata) external {
         if (!ISDLPoolSecondary(sdlPool).shouldUpdate() || block.timestamp <= timeOfLastUpdate + timeBetweenUpdates)
             revert UpdateConditionsNotMet();
@@ -56,6 +78,12 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         _initiateUpdate(primaryChainSelector, primaryChainDestination, extraArgs);
     }
 
+    /**
+     * @notice Handles the outgoing transfer of an reSDL token to the primary chain
+     * @param _sender sender of the transfer
+     * @param _tokenId id of token
+     * @return the token being transferred
+     **/
     function handleOutgoingRESDL(address _sender, uint256 _tokenId)
         external
         onlyBridge
@@ -70,6 +98,16 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         return ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge);
     }
 
+    /**
+     * @notice Handles the incoming transfer of an reSDL token from the primary chain
+     * @param _receiver receiver of the transfer
+     * @param _tokenId id of reSDL token
+     * @param _amount amount of underlying SDL
+     * @param _boostAmount reSDL boost amount
+     * @param _startTime start time of the lock
+     * @param _duration duration of the lock
+     * @param _expiry expiry time of the lock
+     **/
     function handleIncomingRESDL(
         address _receiver,
         uint256 _tokenId,
@@ -91,12 +129,20 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         );
     }
 
-    function setPrimaryChain(uint64 _primaryChainSelector, address _primaryChainDestination) external onlyOwner {
-        primaryChainSelector = _primaryChainSelector;
-        primaryChainDestination = _primaryChainDestination;
-        emit SetPrimaryChain(_primaryChainSelector, _primaryChainDestination);
+    /**
+     * @notice Sets the min amount of time between updates
+     * @param _timeBetweenUpdates min amount of time (seconds)
+     **/
+    function setTimeBetweenUpdates(uint64 _timeBetweenUpdates) external onlyOwner {
+        timeBetweenUpdates = _timeBetweenUpdates;
     }
 
+    /**
+     * @notice Initiates an update to the primary chain
+     * @param _destinationChainSelector id of destination chain
+     * @param _destination address to receive message on destination chain
+     * @param _extraArgs extra args as defined in CCIP API
+     **/
     function _initiateUpdate(
         uint64 _destinationChainSelector,
         address _destination,
@@ -120,6 +166,11 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         emit MessageSent(messageId, _destinationChainSelector, fees);
     }
 
+    /**
+     * @notice Processes a received message
+     * @dev handles incoming updates and reward distributions from the primary chain
+     * @param _any2EvmMessage CCIP message
+     **/
     function _ccipReceive(Client.Any2EVMMessage memory _any2EvmMessage) internal override {
         address sender = abi.decode(_any2EvmMessage.sender, (address));
         uint64 sourceChainSelector = _any2EvmMessage.sourceChainSelector;
@@ -143,6 +194,14 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         emit MessageReceived(_any2EvmMessage.messageId, sourceChainSelector);
     }
 
+    /**
+     * @notice Builds a CCIP message
+     * @dev builds the message for outgoing updates to the primary chain
+     * @param _destination address of destination contract
+     * @param _numNewRESDLTokens number of new reSDL NFTs to be minted
+     * @param _totalRESDLSupplyChange reSDL supply change since last update
+     * @param _extraArgs encoded args as defined in CCIP API
+     **/
     function _buildCCIPMessage(
         address _destination,
         uint256 _numNewRESDLTokens,

@@ -49,4 +49,8 @@ contract CCIPOffRampMock {
             _receiver
         );
     }
+
+    function setTokenPool(address _token, address _pool) external {
+        tokenPools[_token] = ITokenPool(_pool);
+    }
 }
