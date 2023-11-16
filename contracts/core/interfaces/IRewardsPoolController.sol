@@ -25,5 +25,5 @@ interface IRewardsPoolController {
 
     function distributeTokens(address[] memory _tokens) external;
 
-    function withdrawRewards(address[] memory _tokens) external view;
+    function withdrawRewards(address[] memory _tokens) external;
 }

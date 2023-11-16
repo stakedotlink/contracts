@@ -10,10 +10,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     using SafeERC20 for IERC20;
 
-    IERC20 linkToken;
+    IERC20 public immutable linkToken;
 
-    IERC20 public sdlToken;
-    address public sdlPool;
+    IERC20 public immutable sdlToken;
+    address public immutable sdlPool;
     address public reSDLTokenBridge;
 
     uint256 public maxLINKFee;
@@ -45,16 +45,19 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
      * @param _linkToken address of the LINK token
      * @param _sdlToken address of the SDL token
      * @param _sdlPool address of the SDL Pool
+     * @param _maxLINKFee max fee to be paid on an outgoing message
      **/
     constructor(
         address _router,
         address _linkToken,
         address _sdlToken,
-        address _sdlPool
+        address _sdlPool,
+        uint256 _maxLINKFee
     ) CCIPReceiver(_router) {
         linkToken = IERC20(_linkToken);
         sdlToken = IERC20(_sdlToken);
         sdlPool = _sdlPool;
+        maxLINKFee = _maxLINKFee;
         linkToken.approve(_router, type(uint256).max);
     }
 
@@ -70,10 +73,18 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
         }
     }
 
+    /**
+     * @notice Sets the max LINK fee to be paid on an outgoing CCIP message
+     * @param _maxLINKFee maximum fee in LINK
+     **/
     function setMaxLINKFee(uint256 _maxLINKFee) external onlyOwner {
         maxLINKFee = _maxLINKFee;
     }
 
+    /**
+     * @notice Sets the address of the reSDL token bridge
+     * @param _reSDLTokenBridge address of reSDL token bridge
+     **/
     function setRESDLTokenBridge(address _reSDLTokenBridge) external onlyOwner {
         reSDLTokenBridge = _reSDLTokenBridge;
     }

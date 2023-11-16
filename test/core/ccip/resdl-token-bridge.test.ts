@@ -109,7 +109,7 @@ describe('RESDLTokenBridge', () => {
     let preFeeBalance = await linkToken.balanceOf(accounts[0])
 
     await bridge.transferRESDL(77, accounts[4], 2, false, toEther(10), '0x')
-    let lastRequestData = await onRamp.lastRequestData()
+    let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
     assert.equal(fromEther(await sdlToken.balanceOf(tokenPool.address)), 1000)
@@ -156,7 +156,7 @@ describe('RESDLTokenBridge', () => {
     preFeeBalance = await linkToken.balanceOf(accounts[0])
 
     await bridge.transferRESDL(77, accounts[5], 3, false, toEther(10), '0x')
-    lastRequestData = await onRamp.lastRequestData()
+    lastRequestData = await onRamp.getLastRequestData()
     lastRequestMsg = await onRamp.getLastRequestMessage()
 
     assert.equal(fromEther(await sdlToken.balanceOf(tokenPool.address)), 1500)
@@ -196,7 +196,7 @@ describe('RESDLTokenBridge', () => {
     let preFeeBalance = await ethers.provider.getBalance(accounts[0])
 
     await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), '0x', { value: toEther(10) })
-    let lastRequestData = await onRamp.lastRequestData()
+    let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
     assert.equal(fromEther(await sdlToken.balanceOf(tokenPool.address)), 1000)
