@@ -297,7 +297,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(300),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
     await controller.performUpkeep('0x')
     await offRamp
@@ -313,7 +313,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
 
     assert.deepEqual(parseLock((await sdlPool.getLocks([7]))[0]), {
       amount: 300,
-      boostAmount: 100,
+      boostAmount: 0,
       startTime: 0,
       duration: 0,
       expiry: 0,
