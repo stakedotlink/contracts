@@ -22,6 +22,8 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     address public immutable primaryChainDestination;
     bytes public extraArgs;
 
+    event SetExtraArgs(bytes extraArgs);
+
     error UpdateConditionsNotMet();
 
     /**
@@ -135,6 +137,15 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      **/
     function setTimeBetweenUpdates(uint64 _timeBetweenUpdates) external onlyOwner {
         timeBetweenUpdates = _timeBetweenUpdates;
+    }
+
+    /**
+     * @notice Sets the extra args for sending updates to the primary chain
+     * @param _extraArgs extra args as defined in CCIP API
+     **/
+    function setExtraArgs(bytes calldata _extraArgs) external onlyOwner {
+        extraArgs = _extraArgs;
+        emit SetExtraArgs(_extraArgs);
     }
 
     /**
