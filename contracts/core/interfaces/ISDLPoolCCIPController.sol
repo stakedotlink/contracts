@@ -2,7 +2,11 @@
 pragma solidity 0.8.15;
 
 interface ISDLPoolCCIPController {
-    function handleOutgoingRESDL(address _sender, uint256 _lockId)
+    function handleOutgoingRESDL(
+        uint64 _destinationChainSelector,
+        address _sender,
+        uint256 _lockId
+    )
         external
         returns (
             uint256 _amount,
@@ -13,6 +17,7 @@ interface ISDLPoolCCIPController {
         );
 
     function handleIncomingRESDL(
+        uint64 _sourceChainSelector,
         address _receiver,
         uint256 _lockId,
         uint256 _amount,

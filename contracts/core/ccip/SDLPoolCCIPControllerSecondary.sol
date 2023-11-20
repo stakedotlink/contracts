@@ -86,7 +86,11 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @param _tokenId id of token
      * @return the token being transferred
      **/
-    function handleOutgoingRESDL(address _sender, uint256 _tokenId)
+    function handleOutgoingRESDL(
+        uint64,
+        address _sender,
+        uint256 _tokenId
+    )
         external
         onlyBridge
         returns (
@@ -111,6 +115,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @param _expiry expiry time of the lock
      **/
     function handleIncomingRESDL(
+        uint64,
         address _receiver,
         uint256 _tokenId,
         uint256 _amount,

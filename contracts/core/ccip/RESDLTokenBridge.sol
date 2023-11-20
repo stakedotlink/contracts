@@ -113,13 +113,12 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         if (sender != sdlPool.ownerOf(_tokenId)) revert SenderNotAuthorized();
         if (_receiver == address(0)) revert InvalidReceiver();
 
-        address destination = whitelistedDestinations[_destinationChainSelector];
-        if (destination == address(0)) revert InvalidDestination();
+        if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert InvalidDestination();
 
         RESDLToken memory reSDLToken;
         {
             (uint256 amount, uint256 boostAmount, uint64 startTime, uint64 duration, uint64 expiry) = sdlPoolCCIPController
-                .handleOutgoingRESDL(sender, _tokenId);
+                .handleOutgoingRESDL(_destinationChainSelector, sender, _tokenId);
             reSDLToken = RESDLToken(amount, boostAmount, startTime, duration, expiry);
         }
 
@@ -127,7 +126,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
             _receiver,
             _tokenId,
             reSDLToken,
-            destination,
+            whitelistedDestinations[_destinationChainSelector],
             _payNative ? address(0) : address(linkToken),
             _extraArgs
         );
@@ -298,7 +297,16 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
             uint64 expiry
         ) = abi.decode(_any2EvmMessage.data, (address, uint256, uint256, uint256, uint64, uint64, uint64));
 
-        sdlPoolCCIPController.handleIncomingRESDL(receiver, tokenId, amount, boostAmount, startTime, duration, expiry);
+        sdlPoolCCIPController.handleIncomingRESDL(
+            _any2EvmMessage.sourceChainSelector,
+            receiver,
+            tokenId,
+            amount,
+            boostAmount,
+            startTime,
+            duration,
+            expiry
+        );
 
         emit TokenReceived(_any2EvmMessage.messageId, _any2EvmMessage.sourceChainSelector, sender, receiver, tokenId);
     }
