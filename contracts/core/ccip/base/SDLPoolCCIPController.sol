@@ -20,19 +20,12 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
 
     event MessageSent(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
     event MessageReceived(bytes32 indexed messageId, uint64 indexed destinationChainSelector);
-    event MessageFailed(bytes32 indexed messageId, bytes error);
 
-    error OnlySelf();
     error OnlyRESDLTokenBridge();
     error AlreadyAdded();
     error InvalidDestination();
     error SenderNotAuthorized();
     error FeeExceedsLimit(uint256 fee);
-
-    modifier onlySelf() {
-        if (msg.sender != address(this)) revert OnlySelf();
-        _;
-    }
 
     modifier onlyBridge() {
         if (msg.sender != reSDLTokenBridge) revert OnlyRESDLTokenBridge();
@@ -87,23 +80,5 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
      **/
     function setRESDLTokenBridge(address _reSDLTokenBridge) external onlyOwner {
         reSDLTokenBridge = _reSDLTokenBridge;
-    }
-
-    /**
-     * @notice Called by the CCIP router to deliver a message
-     * @param _any2EvmMessage CCIP message
-     **/
-    function ccipReceive(Client.Any2EVMMessage calldata _any2EvmMessage) external override onlyRouter {
-        try this.processMessage(_any2EvmMessage) {} catch (bytes memory err) {
-            emit MessageFailed(_any2EvmMessage.messageId, err);
-        }
-    }
-
-    /**
-     * @notice Processes a received message
-     * @param _any2EvmMessage CCIP message
-     **/
-    function processMessage(Client.Any2EVMMessage calldata _any2EvmMessage) external onlySelf {
-        _ccipReceive(_any2EvmMessage);
     }
 }

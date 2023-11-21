@@ -19,18 +19,10 @@ import "../interfaces/IWrappedLST.sol";
 contract WrappedTokenBridge is Ownable, CCIPReceiver {
     using SafeERC20 for IERC20;
 
-    enum ErrorStatus {
-        RESOLVED,
-        UNRESOLVED
-    }
-
     IERC20 linkToken;
 
     IERC20 token;
     IWrappedLST wrappedToken;
-
-    mapping(bytes32 => ErrorStatus) public messageErrorsStatus;
-    mapping(bytes32 => Client.Any2EVMMessage) public failedMessages;
 
     event TokensTransferred(
         bytes32 indexed messageId,
@@ -48,22 +40,13 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         address receiver,
         uint256 tokenAmount
     );
-    event MessageFailed(bytes32 indexed messageId, bytes error);
-    event MessageResolved(bytes32 indexed messageId);
 
     error InvalidSender();
     error InvalidValue();
     error InsufficientFee();
     error TransferFailed();
     error FeeExceedsLimit();
-    error OnlySelf();
-    error MessageIsResolved();
     error InvalidMessage();
-
-    modifier onlySelf() {
-        if (msg.sender != address(this)) revert OnlySelf();
-        _;
-    }
 
     /**
      * @notice Initializes the contract
@@ -152,45 +135,6 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         );
 
         return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
-    }
-
-    /**
-     * @notice Called by the CCIP router to deliver a message
-     * @param _any2EvmMessage CCIP message
-     **/
-    function ccipReceive(Client.Any2EVMMessage calldata _any2EvmMessage) external override onlyRouter {
-        try this.processMessage(_any2EvmMessage) {} catch (bytes memory err) {
-            bytes32 messageId = _any2EvmMessage.messageId;
-            messageErrorsStatus[messageId] = ErrorStatus.UNRESOLVED;
-            failedMessages[messageId] = _any2EvmMessage;
-            emit MessageFailed(messageId, err);
-        }
-    }
-
-    /**
-     * @notice Processes a received message
-     * @param _any2EvmMessage CCIP message
-     **/
-    function processMessage(Client.Any2EVMMessage calldata _any2EvmMessage) external onlySelf {
-        _ccipReceive(_any2EvmMessage);
-    }
-
-    /**
-     * @notice Executes a failed message
-     * @param _messageId id of CCIP message
-     * @param _tokenReceiver address to receive all token transfers included in the message
-     **/
-    function retryFailedMessage(bytes32 _messageId, address _tokenReceiver) external onlyOwner {
-        if (messageErrorsStatus[_messageId] != ErrorStatus.UNRESOLVED) revert MessageIsResolved();
-
-        messageErrorsStatus[_messageId] = ErrorStatus.RESOLVED;
-
-        Client.Any2EVMMessage memory message = failedMessages[_messageId];
-        for (uint256 i = 0; i < message.destTokenAmounts.length; ++i) {
-            IERC20(message.destTokenAmounts[i].token).safeTransfer(_tokenReceiver, message.destTokenAmounts[i].amount);
-        }
-
-        emit MessageResolved(_messageId);
     }
 
     /**
