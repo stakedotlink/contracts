@@ -25,7 +25,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
   let sdlToken: ERC677
   let token1: ERC677
   let token2: ERC677
-  let controller: SDLPoolCCIPControllerSecondary
+  let controller: any
   let sdlPool: SDLPoolSecondary
   let onRamp: CCIPOnRampMock
   let offRamp: CCIPOffRampMock
@@ -105,17 +105,17 @@ describe('SDLPoolCCIPControllerSecondary', () => {
 
   it('handleOutgoingRESDL should work correctly', async () => {
     await expect(
-      controller.connect(signers[5]).handleOutgoingRESDL(accounts[0], 2)
+      controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[0], 2)
     ).to.be.revertedWith('SenderNotAuthorized()')
 
     assert.deepEqual(
       parseLock(
-        await controller.connect(signers[5]).callStatic.handleOutgoingRESDL(accounts[1], 2)
+        await controller.connect(signers[5]).callStatic.handleOutgoingRESDL(77, accounts[1], 2)
       ),
       { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 }
     )
 
-    await controller.connect(signers[5]).handleOutgoingRESDL(accounts[1], 2)
+    await controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[1], 2)
     assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 200)
     await expect(sdlPool.ownerOf(2)).to.be.revertedWith('InvalidLockId()')
   })
@@ -126,7 +126,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
 
     await controller
       .connect(signers[5])
-      .handleIncomingRESDL(accounts[3], 7, toEther(300), toEther(200), 111, 222, 0)
+      .handleIncomingRESDL(77, accounts[3], 7, toEther(300), toEther(200), 111, 222, 0)
     assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 0)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 600)
     assert.equal(await sdlPool.ownerOf(7), accounts[3])
@@ -245,9 +245,9 @@ describe('SDLPoolCCIPControllerSecondary', () => {
     let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
     await sdlPool.addToken(token1.address, rewardsPool1.address)
 
-    await offRamp
+    let success: any = await offRamp
       .connect(signers[4])
-      .executeSingleMessage(
+      .callStatic.executeSingleMessage(
         ethers.utils.formatBytes32String('messageId'),
         77,
         '0x',
@@ -257,13 +257,18 @@ describe('SDLPoolCCIPControllerSecondary', () => {
           { token: token2.address, amount: toEther(50) },
         ]
       )
+    assert.equal(success, false)
 
-    let events: any = await controller.queryFilter(
-      controller.filters['MessageFailed(bytes32,bytes)']()
-    )
-    assert.equal(events[0].args.messageId, ethers.utils.formatBytes32String('messageId'))
-    assert.equal(fromEther(await token1.balanceOf(controller.address)), 25)
-    assert.equal(fromEther(await token2.balanceOf(controller.address)), 50)
+    success = await offRamp
+      .connect(signers[5])
+      .callStatic.executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        '0x',
+        controller.address,
+        [{ token: token1.address, amount: toEther(25) }]
+      )
+    assert.equal(success, false)
 
     let rewardsPool2 = await deploy('RewardsPool', [sdlPool.address, token2.address])
     await sdlPool.addToken(token2.address, rewardsPool2.address)
@@ -300,6 +305,18 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
     await controller.performUpkeep('0x')
+
+    let success: any = await offRamp
+      .connect(signers[5])
+      .callStatic.executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        ethers.utils.defaultAbiCoder.encode(['uint256'], [7]),
+        controller.address,
+        []
+      )
+    assert.equal(success, false)
+
     await offRamp
       .connect(signers[4])
       .executeSingleMessage(

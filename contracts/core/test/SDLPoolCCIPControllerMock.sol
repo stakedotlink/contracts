@@ -12,7 +12,6 @@ contract SDLPoolCCIPControllerMock {
     ISDLPool public sdlPool;
     address public reSDLTokenBridge;
 
-    error OnlySelf();
     error OnlyRESDLTokenBridge();
 
     modifier onlyBridge() {
@@ -25,7 +24,11 @@ contract SDLPoolCCIPControllerMock {
         sdlPool = ISDLPool(_sdlPool);
     }
 
-    function handleOutgoingRESDL(address _sender, uint256 _tokenId)
+    function handleOutgoingRESDL(
+        uint64,
+        address _sender,
+        uint256 _tokenId
+    )
         external
         onlyBridge
         returns (
@@ -40,6 +43,7 @@ contract SDLPoolCCIPControllerMock {
     }
 
     function handleIncomingRESDL(
+        uint64,
         address _receiver,
         uint256 _tokenId,
         uint256 _amount,

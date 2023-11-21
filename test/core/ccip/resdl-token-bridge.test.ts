@@ -190,7 +190,7 @@ describe('RESDLTokenBridge', () => {
     await expect(sdlPool.ownerOf(3)).to.be.revertedWith('InvalidLockId()')
   })
 
-  it('transferTokens should work correctly with native fee', async () => {
+  it('transferRESDL should work correctly with native fee', async () => {
     let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
 
     let preFeeBalance = await ethers.provider.getBalance(accounts[0])
@@ -249,9 +249,9 @@ describe('RESDLTokenBridge', () => {
   it('ccipReceive should work correctly', async () => {
     await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), '0x', { value: toEther(10) })
 
-    await offRamp
+    let success: any = await offRamp
       .connect(signers[1])
-      .executeSingleMessage(
+      .callStatic.executeSingleMessage(
         ethers.utils.formatBytes32String('messageId'),
         77,
         ethers.utils.defaultAbiCoder.encode(
@@ -261,10 +261,7 @@ describe('RESDLTokenBridge', () => {
         bridge.address,
         [{ token: sdlToken.address, amount: toEther(25) }]
       )
-
-    let events: any = await bridge.queryFilter(bridge.filters['MessageFailed(bytes32,bytes)']())
-    assert.equal(events[0].args.messageId, ethers.utils.formatBytes32String('messageId'))
-    assert.equal(fromEther(await sdlToken.balanceOf(bridge.address)), 25)
+    assert.equal(success, false)
 
     await offRamp.executeSingleMessage(
       ethers.utils.formatBytes32String('messageId'),
@@ -314,14 +311,5 @@ describe('RESDLTokenBridge', () => {
 
     await bridge.removeWhitelistedDestination(10)
     assert.equal(await bridge.whitelistedDestinations(10), ethers.constants.AddressZero)
-  })
-
-  it('recoverTokens should work correctly', async () => {
-    await linkToken.transfer(bridge.address, toEther(1000))
-    await sdlToken.transfer(bridge.address, toEther(2000))
-    await bridge.recoverTokens([linkToken.address, sdlToken.address], accounts[3])
-
-    assert.equal(fromEther(await linkToken.balanceOf(accounts[3])), 1000)
-    assert.equal(fromEther(await sdlToken.balanceOf(accounts[3])), 2000)
   })
 })

@@ -226,57 +226,38 @@ describe('WrappedTokenBridge', () => {
     )
 
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[5])), 50)
-  })
 
-  it('failed messages should be properly handled', async () => {
-    await stakingPool.transferAndCall(
-      bridge.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(
-        ['uint64', 'address', 'uint256', 'bytes'],
-        [77, accounts[4], toEther(10), '0x']
-      )
-    )
     await token2.transfer(tokenPool2.address, toEther(100))
-    await offRamp.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId1'),
+
+    let success: any = await offRamp.callStatic.executeSingleMessage(
+      ethers.utils.formatBytes32String('messageId'),
       77,
       ethers.utils.defaultAbiCoder.encode(['address'], [accounts[5]]),
       bridge.address,
       [
         { token: wrappedToken.address, amount: toEther(25) },
-        { token: token2.address, amount: toEther(10) },
+        { token: token2.address, amount: toEther(25) },
       ]
     )
-    await offRamp.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId2'),
+    assert.equal(success, false)
+
+    success = await offRamp.callStatic.executeSingleMessage(
+      ethers.utils.formatBytes32String('messageId'),
       77,
       ethers.utils.defaultAbiCoder.encode(['address'], [accounts[5]]),
       bridge.address,
-      [{ token: token2.address, amount: toEther(10) }]
+      [{ token: token2.address, amount: toEther(25) }]
     )
-    await offRamp.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId3'),
+    assert.equal(success, false)
+
+    success = await offRamp.callStatic.executeSingleMessage(
+      ethers.utils.formatBytes32String('messageId'),
       77,
       '0x',
       bridge.address,
       [{ token: wrappedToken.address, amount: toEther(25) }]
     )
-
-    let events: any = await bridge.queryFilter(bridge.filters['MessageFailed(bytes32,bytes)']())
-
-    await bridge.retryFailedMessage(events[1].args.messageId, accounts[4])
-    assert.equal(await bridge.messageErrorsStatus(events[1].args.messageId), 0)
-    assert.equal(fromEther(await token2.balanceOf(accounts[4])), 10)
-
-    await bridge.retryFailedMessage(events[2].args.messageId, accounts[5])
-    assert.equal(await bridge.messageErrorsStatus(events[2].args.messageId), 0)
-    assert.equal(fromEther(await wrappedToken.balanceOf(accounts[5])), 25)
-
-    await bridge.retryFailedMessage(events[0].args.messageId, accounts[6])
-    assert.equal(await bridge.messageErrorsStatus(events[1].args.messageId), 0)
-    assert.equal(fromEther(await token2.balanceOf(accounts[6])), 10)
-    assert.equal(fromEther(await wrappedToken.balanceOf(accounts[6])), 25)
+    assert.equal(success, false)
   })
 
   it('recoverTokens should work correctly', async () => {
