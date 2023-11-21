@@ -37,17 +37,18 @@ contract CCIPOffRampMock {
         bytes calldata _data,
         address _receiver,
         Client.EVMTokenAmount[] calldata _tokenAmounts
-    ) external {
+    ) external returns (bool) {
         for (uint256 i = 0; i < _tokenAmounts.length; ++i) {
             tokenPools[_tokenAmounts[i].token].releaseOrMint(_receiver, _tokenAmounts[i].amount);
         }
 
-        router.routeMessage(
+        (bool success, ) = router.routeMessage(
             Client.Any2EVMMessage(_messageId, _sourceChainSelector, abi.encode(msg.sender), _data, _tokenAmounts),
             GAS_FOR_CALL_EXACT_CHECK,
             1000000,
             _receiver
         );
+        return success;
     }
 
     function setTokenPool(address _token, address _pool) external {
