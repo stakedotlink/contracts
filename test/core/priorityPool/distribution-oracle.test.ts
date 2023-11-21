@@ -4,7 +4,6 @@ import { ERC677, DistributionOracle, PriorityPoolMock, Operator } from '../../..
 import { ethers } from 'hardhat'
 import { mineUpTo, time } from '@nomicfoundation/hardhat-network-helpers'
 import cbor from 'cbor'
-import { BigNumber } from 'ethers'
 
 describe('DistributionOracle', () => {
   let pp: PriorityPoolMock

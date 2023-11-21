@@ -1,14 +1,11 @@
 import { DistributionOracle } from '../../../typechain-types'
 import { deploy, getContract, updateDeployments } from '../../utils/deployment'
+import { toEther } from '../../utils/helpers'
 
-const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
-
-const clOracle = ''
-const jobId = ''
-const fee = 0
-const minTimeBetweenUpdates = 0
-const minDepositsSinceLastUpdate = 0
-const minBlockConfirmations = 0
+const clOracle = '0x1152c76A0B3acC9856B1d8ee9EbDf2A2d0a01cC3'
+const minTimeBetweenUpdates = 86400 // 1 day
+const minDepositsSinceLastUpdate = toEther(1000)
+const minBlockConfirmations = 75 // 15min with with avg block time of 12 seconds
 
 async function main() {
   const linkToken = await getContract('LINKToken')
@@ -17,17 +14,14 @@ async function main() {
   const distributionOracle = (await deploy('DistributionOracle', [
     linkToken.address,
     clOracle,
-    jobId,
-    fee,
+    '',
+    0,
     minTimeBetweenUpdates,
     minDepositsSinceLastUpdate,
     minBlockConfirmations,
     priorityPool.address,
   ])) as DistributionOracle
   console.log('DistributionOracle deployed: ', distributionOracle.address)
-
-  let tx = await distributionOracle.transferOwnership(multisigAddress)
-  await tx.wait()
 
   updateDeployments(
     { LINK_PP_DistributionOracle: distributionOracle.address },
