@@ -49,24 +49,17 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         address receiver,
         uint256 tokenId
     );
-    event MessageFailed(bytes32 indexed messageId, bytes error);
     event DestinationAdded(uint64 indexed destinationChainSelector, address destination);
     event DestinationRemoved(uint64 indexed destinationChainSelector, address destination);
 
     error InsufficientFee();
     error TransferFailed();
     error FeeExceedsLimit();
-    error OnlySelf();
     error SenderNotAuthorized();
     error InvalidDestination();
     error InvalidReceiver();
     error AlreadyAdded();
     error AlreadyRemoved();
-
-    modifier onlySelf() {
-        if (msg.sender != address(this)) revert OnlySelf();
-        _;
-    }
 
     /**
      * @notice Initializes the contract
@@ -183,18 +176,6 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
     }
 
     /**
-     * @notice Recovers tokens that were accidentally sent to this contract
-     * @param _tokens list of tokens to recover
-     * @param _receiver address to receive recovered tokens
-     **/
-    function recoverTokens(address[] calldata _tokens, address _receiver) external onlyOwner {
-        for (uint256 i = 0; i < _tokens.length; ++i) {
-            IERC20 tokenToTransfer = IERC20(_tokens[i]);
-            tokenToTransfer.safeTransfer(_receiver, tokenToTransfer.balanceOf(address(this)));
-        }
-    }
-
-    /**
      * @notice Whitelists a new destination chain
      * @param _destinationChainSelector id of destination chain
      * @param _destination address to receive CCIP messages on destination chain
@@ -214,24 +195,6 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert AlreadyRemoved();
         emit DestinationRemoved(_destinationChainSelector, whitelistedDestinations[_destinationChainSelector]);
         delete whitelistedDestinations[_destinationChainSelector];
-    }
-
-    /**
-     * @notice Called by the CCIP router to deliver a message
-     * @param _any2EvmMessage CCIP message
-     **/
-    function ccipReceive(Client.Any2EVMMessage calldata _any2EvmMessage) external override onlyRouter {
-        try this.processMessage(_any2EvmMessage) {} catch (bytes memory err) {
-            emit MessageFailed(_any2EvmMessage.messageId, err);
-        }
-    }
-
-    /**
-     * @notice Processes a received message
-     * @param _any2EvmMessage CCIP message
-     **/
-    function processMessage(Client.Any2EVMMessage calldata _any2EvmMessage) external onlySelf {
-        _ccipReceive(_any2EvmMessage);
     }
 
     /**
