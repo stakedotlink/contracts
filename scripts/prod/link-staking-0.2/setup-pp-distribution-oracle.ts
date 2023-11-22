@@ -1,12 +1,12 @@
 import { DistributionOracle } from '../../../typechain-types'
 import { getContract } from '../../utils/deployment'
 
-const jobId = ''
+const jobId = 'fc3f1cdefbca4d8786cddc954078df9c'
 const fee = 0
 
 async function main() {
   const distributionOracle = (await getContract(
-    'LINK_PP_Distribution_Oracle'
+    'LINK_PP_DistributionOracle'
   )) as DistributionOracle
 
   await (

@@ -11,7 +11,7 @@ const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 const queueDepositMin = toEther(1000) // min priority pool deposit into staking pool
 const queueDepositMax = toEther(225000) // max priority pool deposit into staking pool in single tx (15 vaults)
 
-const numVaultsToAdd = 20 // the number of new community vaults to deploy
+const numVaultsToAdd = 57 // the number of new community vaults to deploy
 
 async function main() {
   const { signers, accounts } = await getAccounts()

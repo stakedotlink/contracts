@@ -8,7 +8,7 @@ import { getAccounts } from '../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const numVaultsToAdd = 20 // the number of new community vaults to deploy
+const numVaultsToAdd = 57 // the number of new community vaults to deploy
 
 async function main() {
   const { signers, accounts } = await getAccounts()
