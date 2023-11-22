@@ -137,7 +137,7 @@ describe('DistributionOracle', () => {
       )
     )[0].args
 
-    await expect(oracle.executeManualVerification()).to.be.revertedWith('NothingToVerify()')
+    await expect(oracle.executeManualVerification()).to.be.revertedWith('NoVerificationPending()')
 
     await opContract.fulfillOracleRequest2(
       event[2],
