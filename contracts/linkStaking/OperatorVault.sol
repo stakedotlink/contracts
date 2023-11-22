@@ -62,8 +62,8 @@ contract OperatorVault is Vault {
         } else {
             stakeController.migrate("");
             stakeController = IStaking(_stakeController);
-            trackedTotalDeposits = SafeCast.toUint128(getTotalDeposits());
             rewardsController = IStakingRewards(_rewardsController);
+            trackedTotalDeposits = SafeCast.toUint128(getTotalDeposits());
         }
         pfAlertsController = IPFAlertsController(_pfAlertsController);
         rewardsReceiver = _rewardsReceiver;

@@ -73,7 +73,7 @@ contract StakingMockV1 is IERC677Receiver {
     }
 
     function migrate(bytes calldata) external {
-        token.transferAndCall(migration, stakedBalances[msg.sender], "0x0");
+        token.transferAndCall(migration, stakedBalances[msg.sender] + baseReward + delegationReward, abi.encode(msg.sender));
     }
 
     function setBaseReward(uint256 _amount) external {

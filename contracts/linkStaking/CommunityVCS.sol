@@ -74,6 +74,14 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice returns the maximum that can be deposited into this strategy
+     * @return maximum deposits
+     */
+    function getMaxDeposits() public view virtual override returns (uint256) {
+        return stakeController.getMerkleRoot() == bytes32(0) ? super.getMaxDeposits() : 0;
+    }
+
+    /**
      * @notice returns whether a new batch of vaults should be deployed
      * @dev used by chainlink keepers
      */

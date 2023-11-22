@@ -33,6 +33,7 @@ describe('DistributionOracle', () => {
 
     await opContract.setAuthorizedSenders([accounts[0]])
     await token.transfer(oracle.address, toEther(100))
+    await oracle.toggleManualVerification()
   })
 
   it('pauseForUpdate should work correctly', async () => {
@@ -114,6 +115,73 @@ describe('DistributionOracle', () => {
       (await oracle.updateStatus()).map((v) => v.toNumber()),
       [ts, blockNumber, 0]
     )
+    assert.equal(await pp.merkleRoot(), ethers.utils.formatBytes32String('merkle'))
+    assert.equal(await pp.ipfsHash(), ethers.utils.formatBytes32String('ipfs'))
+    assert.equal(fromEther(await pp.amountDistributed()), 1000)
+    assert.equal(fromEther(await pp.sharesAmountDistributed()), 500)
+  })
+
+  it('manual verification should work correctly', async () => {
+    await oracle.toggleManualVerification()
+    await oracle.pauseForUpdate()
+    let blockNumber = await ethers.provider.getBlockNumber()
+    let ts = (await ethers.provider.getBlock(blockNumber)).timestamp
+    await mineUpTo(blockNumber + 10)
+    await oracle.requestUpdate()
+
+    let event: any = (
+      await opContract.queryFilter(
+        opContract.filters[
+          'OracleRequest(bytes32,address,bytes32,uint256,address,bytes4,uint256,uint256,bytes)'
+        ]()
+      )
+    )[0].args
+
+    await expect(oracle.executeManualVerification()).to.be.revertedWith('NothingToVerify()')
+
+    await opContract.fulfillOracleRequest2(
+      event[2],
+      event[3],
+      event[4],
+      event[5],
+      event[6],
+      ethers.utils.defaultAbiCoder.encode(
+        ['bytes32', 'bytes32', 'bytes32', 'uint256', 'uint256'],
+        [
+          event[2],
+          ethers.utils.formatBytes32String('merkle'),
+          ethers.utils.formatBytes32String('ipfs'),
+          toEther(1000),
+          toEther(500),
+        ]
+      )
+    )
+
+    await expect(oracle.requestUpdate()).to.be.revertedWith('AwaitingManualVerification()')
+    await expect(oracle.pauseForUpdate()).to.be.revertedWith('AwaitingManualVerification()')
+
+    assert.deepEqual(
+      (await oracle.updateStatus()).map((v) => v.toNumber()),
+      [ts, blockNumber, 0]
+    )
+    assert.equal((await oracle.awaitingManualVerification()).toNumber(), 1)
+    assert.deepEqual(
+      await oracle.updateData().then((d) => [d[0], d[1], fromEther(d[2]), fromEther(d[3])]),
+      [
+        ethers.utils.formatBytes32String('merkle'),
+        ethers.utils.formatBytes32String('ipfs'),
+        1000,
+        500,
+      ]
+    )
+    assert.equal(await pp.merkleRoot(), ethers.utils.formatBytes32String(''))
+    assert.equal(await pp.ipfsHash(), ethers.utils.formatBytes32String(''))
+    assert.equal(fromEther(await pp.amountDistributed()), 0)
+    assert.equal(fromEther(await pp.sharesAmountDistributed()), 0)
+
+    await oracle.executeManualVerification()
+
+    assert.equal((await oracle.awaitingManualVerification()).toNumber(), 0)
     assert.equal(await pp.merkleRoot(), ethers.utils.formatBytes32String('merkle'))
     assert.equal(await pp.ipfsHash(), ethers.utils.formatBytes32String('ipfs'))
     assert.equal(fromEther(await pp.amountDistributed()), 1000)
