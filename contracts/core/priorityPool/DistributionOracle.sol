@@ -53,7 +53,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
     error UpdateConditionsNotMet();
     error InvalidUpkeepType();
     error RequestInProgress();
-    error NothingToVerify();
+    error NoVerificationPending();
     error AwaitingManualVerification();
 
     /**
@@ -180,7 +180,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @notice Executes a manual verification update request
      * */
     function executeManualVerification() external onlyOwner {
-        if (awaitingManualVerification == 0) revert NothingToVerify();
+        if (awaitingManualVerification == 0) revert NoVerificationPending();
         awaitingManualVerification = 0;
 
         priorityPool.updateDistribution(
@@ -189,6 +189,15 @@ contract DistributionOracle is ChainlinkClient, Ownable {
             updateData.amountDistributed,
             updateData.sharesAmountDistributed
         );
+    }
+
+    /**
+     * @notice Rejects a manual verification update request and requests a new update
+     * */
+    function rejectManualVerificationAndRetry() external onlyOwner {
+        if (awaitingManualVerification == 0) revert NoVerificationPending();
+        awaitingManualVerification = 0;
+        _requestUpdate();
     }
 
     /**
