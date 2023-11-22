@@ -1,7 +1,7 @@
 import { DistributionOracle } from '../../../typechain-types'
 import { deploy, getContract, updateDeployments } from '../../utils/deployment'
 import { toEther } from '../../utils/helpers'
-import {ethers} from "ethers";
+import { ethers } from 'ethers'
 
 const clOracle = '0x1152c76A0B3acC9856B1d8ee9EbDf2A2d0a01cC3'
 const minTimeBetweenUpdates = 86400 // 1 day
