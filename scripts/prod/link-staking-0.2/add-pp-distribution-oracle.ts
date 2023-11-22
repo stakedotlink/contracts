@@ -4,9 +4,12 @@ import SafeApiKit from '@safe-global/api-kit'
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
 import { PriorityPool } from '../../../typechain-types'
 import { getContract } from '../../utils/deployment'
-import { getAccounts } from '../../utils/helpers'
+import { getAccounts, toEther } from '../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
+
+const queueDepositMin = toEther(1000) // min priority pool deposit into staking pool
+const queueDepositMax = toEther(225000) // max priority pool deposit into staking pool in single tx (15 vaults)
 
 async function main() {
   const { signers, accounts } = await getAccounts()
@@ -29,6 +32,17 @@ async function main() {
       data:
         (await priorityPool.populateTransaction.setDistributionOracle(distributionOracle.address))
           .data || '',
+      value: '0',
+    },
+    {
+      to: priorityPool.address,
+      data:
+        (
+          await priorityPool.populateTransaction.setQueueDepositParams(
+            queueDepositMin,
+            queueDepositMax
+          )
+        ).data || '',
       value: '0',
     },
   ]

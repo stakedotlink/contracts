@@ -4,12 +4,12 @@ import { deployUpgradeable, getContract, updateDeployments } from '../../utils/d
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const clCommunityStakingPool = ''
+const clCommunityStakingPool = '0xBc10f2E862ED4502144c7d632a3459F49DFCDB5e'
 
 const communityStrategySDLPoolFee = 500 // basis point amount of rewards paid to SDL pool
 const maxDepositSizeBP = 9000 // basis point amount of the remaing deposit room in the Chainlink staking contract that can be deposited at once
-const vaultDeploymentThreshold = 10 // the min number of non-full vaults before a new batch is deployed
-const vaultDeploymentAmount = 20 //  amount of vaults to deploy when threshold is met
+const vaultDeploymentThreshold = 6 // the min number of non-full vaults before a new batch is deployed
+const vaultDeploymentAmount = 10 // amount of vaults to deploy when threshold is met
 
 async function main() {
   const linkToken = (await getContract('LINKToken')) as ERC677
