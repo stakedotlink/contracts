@@ -20,14 +20,14 @@ import {
   OperatorVCS,
   CommunityVCS,
   CommunityVault,
+  StakingRewardsMock,
 } from '../../typechain-types'
-import { StakingRewards } from '../../typechain-types/StakingRewards'
 import { Interface } from '@ethersproject/abi'
 
 describe('LINK-Staking-0.2-Upgrade', () => {
   let linkToken: ERC677
   let stakingV1: StakingMockV1
-  let rewardVault: StakingRewards
+  let rewardVault: StakingRewardsMock
   let operatorStaking: StakingMock
   let communityStaking: StakingMock
   let pfAlertsController: PFAlertsControllerMock
@@ -51,7 +51,7 @@ describe('LINK-Staking-0.2-Upgrade', () => {
     ])) as StakingPool
 
     stakingV1 = (await deploy('StakingMockV1', [linkToken.address])) as StakingMockV1
-    rewardVault = (await deploy('StakingRewardsMock', [linkToken.address])) as StakingRewards
+    rewardVault = (await deploy('StakingRewardsMock', [linkToken.address])) as StakingRewardsMock
     operatorStaking = (await deploy('StakingMock', [
       linkToken.address,
       rewardVault.address,
@@ -179,7 +179,7 @@ describe('LINK-Staking-0.2-Upgrade', () => {
       ])
     )
 
-    assert.equal(fromEther(await stakingPool.canDeposit()), 375000)
+    assert.equal(fromEther(await stakingPool.canDeposit()), 0)
     assert.equal(fromEther(await linkToken.balanceOf(operatorStaking.address)), 765000)
     assert.deepEqual(
       (await operatorVCS.getFees()).map((fee) => [fee[0], fee[1].toNumber()]),

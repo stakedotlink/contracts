@@ -1,4 +1,4 @@
-import { BigNumber, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -840,13 +840,13 @@ describe('SDLPool', () => {
       await receiver.getData().then((d: any) => ({
         operator: d[0].operator,
         from: d[0].from,
-        tokenId: d[0].tokenId,
+        tokenId: d[0].tokenId.toNumber(),
         data: d[0].data,
       })),
       {
         operator: accounts[2],
         from: accounts[2],
-        tokenId: BigNumber.from(3),
+        tokenId: 3,
         data: '0x',
       }
     )
@@ -947,13 +947,13 @@ describe('SDLPool', () => {
       await receiver.getData().then((d: any) => ({
         operator: d[0].operator,
         from: d[0].from,
-        tokenId: d[0].tokenId,
+        tokenId: d[0].tokenId.toNumber(),
         data: d[0].data,
       })),
       {
         operator: accounts[2],
         from: accounts[2],
-        tokenId: BigNumber.from(3),
+        tokenId: 3,
         data: '0x01',
       }
     )
