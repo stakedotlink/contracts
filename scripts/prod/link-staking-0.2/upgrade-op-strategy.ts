@@ -9,9 +9,9 @@ import { Interface } from '@ethersproject/abi'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const clOperatorStakingPool = ''
-const clRewardsVault = ''
-const clPriceFeedAlertsController = ''
+const clOperatorStakingPool = '0xA1d76A7cA72128541E9FCAcafBdA3a92EF94fDc5'
+const clRewardsVault = '0x996913c8c08472f584ab8834e925b06d0eb1d813'
+const clPriceFeedAlertsController = '0x27484ba119d12649be2a9854e4d3b44cc3fdbad7'
 
 const stakingPoolImplementation = ''
 const operatorVCSImplementation = ''
