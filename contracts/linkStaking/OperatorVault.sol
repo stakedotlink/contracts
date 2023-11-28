@@ -66,7 +66,7 @@ contract OperatorVault is Vault {
         }
         pfAlertsController = IPFAlertsController(_pfAlertsController);
         rewardsReceiver = _rewardsReceiver;
-        if (operator == address(0)) {
+        if (operator == address(0) && _operator != address(0)) {
             setOperator(_operator);
         }
     }
