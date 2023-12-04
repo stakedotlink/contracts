@@ -135,7 +135,7 @@ contract OperatorVCS is VaultControllerStrategy {
      * @return maximum deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
-        return getTotalDeposits();
+        return (stakeController.isActive() ? 855000 ether : 0);
     }
 
     /**
