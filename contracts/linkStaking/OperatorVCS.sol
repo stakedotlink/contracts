@@ -49,7 +49,7 @@ contract OperatorVCS is VaultControllerStrategy {
         Fee[] memory _fees,
         uint256 _maxDepositSizeBP,
         uint256 _operatorRewardPercentage
-    ) public reinitializer(2) {
+    ) public reinitializer(3) {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
                 _token,
@@ -59,22 +59,17 @@ contract OperatorVCS is VaultControllerStrategy {
                 _fees,
                 _maxDepositSizeBP
             );
+
+            if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
+            operatorRewardPercentage = _operatorRewardPercentage;
         } else {
-            // reassaign values to account for changed storage variables in upgrade
-            totalPrincipalDeposits = operatorRewardPercentage;
-            indexOfLastFullVault = 0;
-
-            stakeController = IStaking(_stakeController);
-            vaultImplementation = _vaultImplementation;
-            maxDepositSizeBP = _maxDepositSizeBP;
-
-            for (uint256 i = 0; i < vaults.length; ++i) {
-                vaultMapping[address(vaults[i])] = true;
+            uint256 totalPrincipal;
+            uint256 numVaults = vaults.length;
+            for (uint256 i = 0; i < numVaults; ++i) {
+                totalPrincipal += vaults[i].getPrincipalDeposits();
             }
+            totalPrincipalDeposits = totalPrincipal;
         }
-
-        if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
-        operatorRewardPercentage = _operatorRewardPercentage;
     }
 
     /**
