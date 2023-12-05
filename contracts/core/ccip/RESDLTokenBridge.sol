@@ -33,6 +33,8 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
 
     mapping(uint64 => address) public whitelistedDestinations;
 
+    bytes public extraArgs;
+
     event TokenTransferred(
         bytes32 indexed messageId,
         uint64 indexed destinationChainSelector,
@@ -51,6 +53,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
     );
     event DestinationAdded(uint64 indexed destinationChainSelector, address destination);
     event DestinationRemoved(uint64 indexed destinationChainSelector, address destination);
+    event SetExtraArgs(bytes extraArgs);
 
     error InsufficientFee();
     error TransferFailed();
@@ -68,18 +71,21 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
      * @param _sdlToken address of the SDL token
      * @param _sdlPool address of the SDL Pool
      * @param _sdlPoolCCIPController address of the SDL Pool CCIP controller
+     * @param _extraArgs encoded args as defined in CCIP API used for sending transfers
      **/
     constructor(
         address _router,
         address _linkToken,
         address _sdlToken,
         address _sdlPool,
-        address _sdlPoolCCIPController
+        address _sdlPoolCCIPController,
+        bytes memory _extraArgs
     ) CCIPReceiver(_router) {
         linkToken = IERC20(_linkToken);
         sdlToken = IERC20(_sdlToken);
         sdlPool = ISDLPool(_sdlPool);
         sdlPoolCCIPController = ISDLPoolCCIPController(_sdlPoolCCIPController);
+        extraArgs = _extraArgs;
         linkToken.safeApprove(_router, type(uint256).max);
         sdlToken.safeApprove(_router, type(uint256).max);
         sdlToken.safeApprove(_sdlPoolCCIPController, type(uint256).max);
@@ -92,15 +98,13 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
      * @param _tokenId id of reSDL token
      * @param _payNative whether fee should be paid natively or with LINK
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
-     * @param _extraArgs encoded args as defined in CCIP API
      **/
     function transferRESDL(
         uint64 _destinationChainSelector,
         address _receiver,
         uint256 _tokenId,
         bool _payNative,
-        uint256 _maxLINKFee,
-        bytes memory _extraArgs
+        uint256 _maxLINKFee
     ) external payable returns (bytes32 messageId) {
         address sender = msg.sender;
         if (sender != sdlPool.ownerOf(_tokenId)) revert SenderNotAuthorized();
@@ -121,7 +125,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
             reSDLToken,
             whitelistedDestinations[_destinationChainSelector],
             _payNative ? address(0) : address(linkToken),
-            _extraArgs
+            extraArgs
         );
 
         IRouterClient router = IRouterClient(this.getRouter());
@@ -155,21 +159,16 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
      * @notice Returns the current fee for an reSDL transfer
      * @param _destinationChainSelector id of destination chain
      * @param _payNative whether fee should be paid natively or with LINK
-     * @param _extraArgs encoded args as defined in CCIP API
      * @return fee current fee
      **/
-    function getFee(
-        uint64 _destinationChainSelector,
-        bool _payNative,
-        bytes memory _extraArgs
-    ) external view returns (uint256) {
+    function getFee(uint64 _destinationChainSelector, bool _payNative) external view returns (uint256) {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             address(this),
             0,
             RESDLToken(0, 0, 0, 0, 0),
             address(this),
             _payNative ? address(0) : address(linkToken),
-            _extraArgs
+            extraArgs
         );
 
         return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
@@ -195,6 +194,15 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert AlreadyRemoved();
         emit DestinationRemoved(_destinationChainSelector, whitelistedDestinations[_destinationChainSelector]);
         delete whitelistedDestinations[_destinationChainSelector];
+    }
+
+    /**
+     * @notice sets extra args used for reSDL transfers
+     * @param _extraArgs encoded args as defined in CCIP API
+     */
+    function setExtraArgs(bytes calldata _extraArgs) external onlyOwner {
+        extraArgs = _extraArgs;
+        emit SetExtraArgs(_extraArgs);
     }
 
     /**

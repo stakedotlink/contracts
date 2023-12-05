@@ -76,7 +76,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _sender address of sender
      * @param _value amount of tokens transferred
      * @param _calldata encoded calldata consisting of destinationChainSelector (uint64), receiver (address),
-     * maxLINKFee (uint256), extraArgs (bytes)
+     * maxLINKFee (uint256)
      **/
     function onTokenTransfer(
         address _sender,
@@ -86,11 +86,11 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         if (msg.sender != address(token)) revert InvalidSender();
         if (_value == 0) revert InvalidValue();
 
-        (uint64 destinationChainSelector, address receiver, uint256 maxLINKFee, bytes memory extraArgs) = abi.decode(
+        (uint64 destinationChainSelector, address receiver, uint256 maxLINKFee) = abi.decode(
             _calldata,
-            (uint64, address, uint256, bytes)
+            (uint64, address, uint256)
         );
-        _transferTokens(destinationChainSelector, _sender, receiver, _value, false, maxLINKFee, extraArgs);
+        _transferTokens(destinationChainSelector, _sender, receiver, _value, false, maxLINKFee);
     }
 
     /**
@@ -100,38 +100,29 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _amount amount of tokens to transfer
      * @param _payNative whether fee should be paid natively or with LINK
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
-     * @param _extraArgs encoded args as defined in CCIP API
      **/
     function transferTokens(
         uint64 _destinationChainSelector,
         address _receiver,
         uint256 _amount,
         bool _payNative,
-        uint256 _maxLINKFee,
-        bytes memory _extraArgs
+        uint256 _maxLINKFee
     ) external payable onlyOwner returns (bytes32 messageId) {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        return
-            _transferTokens(_destinationChainSelector, msg.sender, _receiver, _amount, _payNative, _maxLINKFee, _extraArgs);
+        return _transferTokens(_destinationChainSelector, msg.sender, _receiver, _amount, _payNative, _maxLINKFee);
     }
 
     /**
      * @notice Returns the current fee for a token transfer
      * @param _destinationChainSelector id of destination chain
      * @param _payNative whether fee should be paid natively or with LINK
-     * @param _extraArgs encoded args as defined in CCIP API
      * @return fee current fee
      **/
-    function getFee(
-        uint64 _destinationChainSelector,
-        bool _payNative,
-        bytes memory _extraArgs
-    ) external view returns (uint256) {
+    function getFee(uint64 _destinationChainSelector, bool _payNative) external view returns (uint256) {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             address(this),
             1000 ether,
-            _payNative ? address(0) : address(linkToken),
-            _extraArgs
+            _payNative ? address(0) : address(linkToken)
         );
 
         return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
@@ -157,7 +148,6 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _amount amount of tokens to transfer
      * @param _payNative whether fee should be paid natively or with LINK
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
-     * @param _extraArgs encoded args as defined in CCIP API
      **/
     function _transferTokens(
         uint64 _destinationChainSelector,
@@ -165,8 +155,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         address _receiver,
         uint256 _amount,
         bool _payNative,
-        uint256 _maxLINKFee,
-        bytes memory _extraArgs
+        uint256 _maxLINKFee
     ) internal returns (bytes32 messageId) {
         uint256 preWrapBalance = wrappedToken.balanceOf(address(this));
         wrappedToken.wrap(_amount);
@@ -175,8 +164,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             _receiver,
             amountToTransfer,
-            _payNative ? address(0) : address(linkToken),
-            _extraArgs
+            _payNative ? address(0) : address(linkToken)
         );
 
         IRouterClient router = IRouterClient(this.getRouter());
@@ -212,13 +200,11 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _receiver address to receive tokens on destination chain
      * @param _amount amount of tokens to transfer
      * @param _feeTokenAddress address of token that fees will be paid in
-     * @param _extraArgs encoded args as defined in CCIP API
      **/
     function _buildCCIPMessage(
         address _receiver,
         uint256 _amount,
-        address _feeTokenAddress,
-        bytes memory _extraArgs
+        address _feeTokenAddress
     ) internal view returns (Client.EVM2AnyMessage memory) {
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
         Client.EVMTokenAmount memory tokenAmount = Client.EVMTokenAmount({token: address(wrappedToken), amount: _amount});
@@ -228,7 +214,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
             receiver: abi.encode(_receiver),
             data: "",
             tokenAmounts: tokenAmounts,
-            extraArgs: _extraArgs,
+            extraArgs: "0x",
             feeToken: _feeTokenAddress
         });
 
