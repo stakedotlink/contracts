@@ -15,15 +15,17 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     uint64[] internal whitelistedChains;
     mapping(uint64 => address) public whitelistedDestinations;
 
-    mapping(uint64 => bytes) public extraArgsByChain;
+    mapping(uint64 => bytes) public updateExtraArgsByChain;
+    mapping(uint64 => bytes) public rewardsExtraArgsByChain;
     mapping(uint64 => uint256) public reSDLSupplyByChain;
 
     mapping(address => address) public wrappedRewardTokens;
 
     event DistributeRewards(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
-    event ChainAdded(uint64 indexed chainSelector, address destination, bytes extraArgs);
+    event ChainAdded(uint64 indexed chainSelector, address destination, bytes updateExtraArgs, bytes rewardsExtraArgs);
     event ChainRemoved(uint64 indexed destinationChainSelector, address destination);
-    event SetExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
+    event SetUpdateExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
+    event SetRewardsExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
     event SetWrappedRewardToken(address indexed token, address rewardToken);
 
     /**
@@ -44,9 +46,8 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
     /**
      * @notice Claims and distributes rewards between all secondary chains
-     * @param _extraArgs list of extra args as defined in CCIP API to be used for distribution to each chain
      **/
-    function distributeRewards(bytes[] memory _extraArgs) external {
+    function distributeRewards() external {
         uint256 totalRESDL = ISDLPoolPrimary(sdlPool).effectiveBalanceOf(address(this));
         address[] memory tokens = ISDLPoolPrimary(sdlPool).supportedTokens();
         uint256 numDestinations = whitelistedChains.length;
@@ -81,7 +82,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         }
 
         for (uint256 i = 0; i < numDestinations; ++i) {
-            _distributeRewards(whitelistedChains[i], _extraArgs[i], tokens, distributionAmounts[i]);
+            _distributeRewards(whitelistedChains[i], tokens, distributionAmounts[i]);
         }
     }
 
@@ -159,19 +160,22 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @notice Whitelists a new chain
      * @param _chainSelector id of chain
      * @param _destination address to receive CCIP messages on chain
-     * @param _extraArgs extraArgs for this destination as defined in CCIP docs
+     * @param _updateExtraArgs extraArgs for sending updates to this destination as defined in CCIP docs
+     * @param _rewardsExtraArgs extraArgs for sending rewards to this destination as defined in CCIP docs
      **/
     function addWhitelistedChain(
         uint64 _chainSelector,
         address _destination,
-        bytes calldata _extraArgs
+        bytes calldata _updateExtraArgs,
+        bytes calldata _rewardsExtraArgs
     ) external onlyOwner {
         if (whitelistedDestinations[_chainSelector] != address(0)) revert AlreadyAdded();
         if (_destination == address(0)) revert InvalidDestination();
         whitelistedChains.push(_chainSelector);
         whitelistedDestinations[_chainSelector] = _destination;
-        extraArgsByChain[_chainSelector] = _extraArgs;
-        emit ChainAdded(_chainSelector, _destination, _extraArgs);
+        updateExtraArgsByChain[_chainSelector] = _updateExtraArgs;
+        rewardsExtraArgsByChain[_chainSelector] = _rewardsExtraArgs;
+        emit ChainAdded(_chainSelector, _destination, _updateExtraArgs, _rewardsExtraArgs);
     }
 
     /**
@@ -190,7 +194,8 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         }
 
         delete whitelistedDestinations[_chainSelector];
-        delete extraArgsByChain[_chainSelector];
+        delete updateExtraArgsByChain[_chainSelector];
+        delete rewardsExtraArgsByChain[_chainSelector];
     }
 
     /**
@@ -215,26 +220,35 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     }
 
     /**
-     * @notice Sets the extra args for a chain
+     * @notice Sets the extra args used for sending updates to a chain
      * @param _chainSelector id of chain
-     * @param _extraArgs extra args as defined in CCIP API
+     * @param _updateExtraArgs extra args as defined in CCIP API
      **/
-    function setExtraArgs(uint64 _chainSelector, bytes calldata _extraArgs) external onlyOwner {
+    function setUpdateExtraArgs(uint64 _chainSelector, bytes calldata _updateExtraArgs) external onlyOwner {
         if (whitelistedDestinations[_chainSelector] == address(0)) revert InvalidDestination();
-        extraArgsByChain[_chainSelector] = _extraArgs;
-        emit SetExtraArgs(_chainSelector, _extraArgs);
+        updateExtraArgsByChain[_chainSelector] = _updateExtraArgs;
+        emit SetUpdateExtraArgs(_chainSelector, _updateExtraArgs);
+    }
+
+    /**
+     * @notice Sets the extra args used for sending rewards to a chain
+     * @param _chainSelector id of chain
+     * @param _rewardsExtraArgs extra args as defined in CCIP API
+     **/
+    function setRewardsExtraArgs(uint64 _chainSelector, bytes calldata _rewardsExtraArgs) external onlyOwner {
+        if (whitelistedDestinations[_chainSelector] == address(0)) revert InvalidDestination();
+        rewardsExtraArgsByChain[_chainSelector] = _rewardsExtraArgs;
+        emit SetRewardsExtraArgs(_chainSelector, _rewardsExtraArgs);
     }
 
     /**
      * @notice Distributes rewards to a single chain
      * @param _destinationChainSelector id of chain
-     * @param _extraArgs extra args as defined in CCIP API
      * @param _rewardTokens list of reward tokens to distribute
      * @param _rewardTokenAmounts list of reward token amounts to distribute
      **/
     function _distributeRewards(
         uint64 _destinationChainSelector,
-        bytes memory _extraArgs,
         address[] memory _rewardTokens,
         uint256[] memory _rewardTokenAmounts
     ) internal {
@@ -266,7 +280,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             0,
             rewardTokens,
             rewardTokenAmounts,
-            _extraArgs
+            rewardsExtraArgsByChain[_destinationChainSelector]
         );
 
         IRouterClient router = IRouterClient(this.getRouter());
@@ -314,7 +328,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             _mintStartIndex,
             new address[](0),
             new uint256[](0),
-            extraArgsByChain[_destinationChainSelector]
+            updateExtraArgsByChain[_destinationChainSelector]
         );
 
         IRouterClient router = IRouterClient(this.getRouter());
