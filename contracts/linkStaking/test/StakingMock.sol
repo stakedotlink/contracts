@@ -94,4 +94,9 @@ contract StakingMock is IERC677Receiver {
     function setMaxPoolSize(uint256 _maxPoolSize) external {
         maxPoolSize = _maxPoolSize;
     }
+
+    function setDepositLimits(uint256 _depositMin, uint256 _depositMax) external {
+        depositMin = _depositMin;
+        depositMax = _depositMax;
+    }
 }
