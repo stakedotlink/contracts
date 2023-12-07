@@ -8,7 +8,7 @@ import { getAccounts } from '../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const operatorVCSImplementation = ''
+const operatorVCSImplementation = '0x584338Dabae9e5429c334Fc1aD41c46AC007Bc29'
 
 async function main() {
   const { signers, accounts } = await getAccounts()
