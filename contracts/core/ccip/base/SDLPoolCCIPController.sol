@@ -26,6 +26,7 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     error InvalidDestination();
     error SenderNotAuthorized();
     error FeeExceedsLimit(uint256 fee);
+    error InvalidReceiver();
 
     modifier onlyBridge() {
         if (msg.sender != reSDLTokenBridge) revert OnlyRESDLTokenBridge();
@@ -60,6 +61,8 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
      * @param _receiver address to receive recovered tokens
      **/
     function recoverTokens(address[] calldata _tokens, address _receiver) external onlyOwner {
+        if (_receiver == address(0)) revert InvalidReceiver();
+
         for (uint256 i = 0; i < _tokens.length; ++i) {
             IERC20 tokenToTransfer = IERC20(_tokens[i]);
             tokenToTransfer.safeTransfer(_receiver, tokenToTransfer.balanceOf(address(this)));

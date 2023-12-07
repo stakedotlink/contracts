@@ -15,12 +15,11 @@ interface ISDLPoolSecondary is ISDLPool {
 contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     using SafeERC20 for IERC20;
 
-    uint64 public timeOfLastUpdate;
-    uint64 public timeBetweenUpdates;
-
     uint64 public immutable primaryChainSelector;
     address public immutable primaryChainDestination;
     bytes public extraArgs;
+
+    bool public shouldUpdate;
 
     event SetExtraArgs(bytes extraArgs);
 
@@ -35,7 +34,6 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @param _primaryChainSelector id of the primary chain
      * @param _primaryChainDestination address to receive messages on primary chain
      * @param _maxLINKFee max fee to be paid on an outgoing message
-     * @param _timeBetweenUpdates min amount of time (seconds) between updates
      * @param _extraArgs extra args as defined in CCIP API to be used for outgoing messages
      **/
     constructor(
@@ -46,12 +44,10 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
         uint64 _primaryChainSelector,
         address _primaryChainDestination,
         uint256 _maxLINKFee,
-        uint64 _timeBetweenUpdates,
         bytes memory _extraArgs
     ) SDLPoolCCIPController(_router, _linkToken, _sdlToken, _sdlPool, _maxLINKFee) {
         primaryChainSelector = _primaryChainSelector;
         primaryChainDestination = _primaryChainDestination;
-        timeBetweenUpdates = _timeBetweenUpdates;
         extraArgs = _extraArgs;
     }
 
@@ -61,11 +57,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @return whether an update should be initiated
      **/
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        if (ISDLPoolSecondary(sdlPool).shouldUpdate() && block.timestamp > timeOfLastUpdate + timeBetweenUpdates) {
-            return (true, "0x");
-        }
-
-        return (false, "0x");
+        return (shouldUpdate, "0x");
     }
 
     /**
@@ -73,10 +65,9 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @dev used by Chainlink automation
      **/
     function performUpkeep(bytes calldata) external {
-        if (!ISDLPoolSecondary(sdlPool).shouldUpdate() || block.timestamp <= timeOfLastUpdate + timeBetweenUpdates)
-            revert UpdateConditionsNotMet();
+        if (!shouldUpdate) revert UpdateConditionsNotMet();
 
-        timeOfLastUpdate = uint64(block.timestamp);
+        shouldUpdate = false;
         _initiateUpdate(primaryChainSelector, primaryChainDestination, extraArgs);
     }
 
@@ -137,14 +128,6 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     }
 
     /**
-     * @notice Sets the min amount of time between updates
-     * @param _timeBetweenUpdates min amount of time (seconds)
-     **/
-    function setTimeBetweenUpdates(uint64 _timeBetweenUpdates) external onlyOwner {
-        timeBetweenUpdates = _timeBetweenUpdates;
-    }
-
-    /**
      * @notice Sets the extra args for sending updates to the primary chain
      * @param _extraArgs extra args as defined in CCIP API
      **/
@@ -201,6 +184,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
                     IERC20(rewardTokens[i]).safeTransfer(sdlPool, _any2EvmMessage.destTokenAmounts[i].amount);
                 }
                 ISDLPoolSecondary(sdlPool).distributeTokens(rewardTokens);
+                if (ISDLPoolSecondary(sdlPool).shouldUpdate()) shouldUpdate = true;
             }
         } else {
             uint256 mintStartIndex = abi.decode(_any2EvmMessage.data, (uint256));

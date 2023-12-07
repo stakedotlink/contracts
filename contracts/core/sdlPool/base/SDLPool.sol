@@ -69,6 +69,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error TransferFromIncorrectOwner();
     error TransferToZeroAddress();
     error TransferToNonERC721Implementer();
+    error TransferToCCIPController();
     error ApprovalToCurrentOwner();
     error ApprovalToCaller();
     error OnlyCCIPController();
@@ -460,6 +461,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     ) internal virtual {
         if (_from != ownerOf(_lockId)) revert TransferFromIncorrectOwner();
         if (_to == address(0)) revert TransferToZeroAddress();
+        if (_to == ccipController) revert TransferToCCIPController();
 
         delete tokenApprovals[_lockId];
 

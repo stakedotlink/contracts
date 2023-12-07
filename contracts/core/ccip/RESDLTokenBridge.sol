@@ -63,6 +63,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
     error InvalidReceiver();
     error AlreadyAdded();
     error AlreadyRemoved();
+    error InvalidMsgValue();
 
     /**
      * @notice Initializes the contract
@@ -109,8 +110,8 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         address sender = msg.sender;
         if (sender != sdlPool.ownerOf(_tokenId)) revert SenderNotAuthorized();
         if (_receiver == address(0)) revert InvalidReceiver();
-
         if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert InvalidDestination();
+        if (_payNative == false && msg.value != 0) revert InvalidMsgValue();
 
         RESDLToken memory reSDLToken;
         {
