@@ -47,6 +47,8 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
     error TransferFailed();
     error FeeExceedsLimit();
     error InvalidMessage();
+    error InvalidMsgValue();
+    error InvalidReceiver();
 
     /**
      * @notice Initializes the contract
@@ -108,6 +110,8 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         bool _payNative,
         uint256 _maxLINKFee
     ) external payable onlyOwner returns (bytes32 messageId) {
+        if (_payNative == false && msg.value != 0) revert InvalidMsgValue();
+
         token.safeTransferFrom(msg.sender, address(this), _amount);
         return _transferTokens(_destinationChainSelector, msg.sender, _receiver, _amount, _payNative, _maxLINKFee);
     }
@@ -134,6 +138,8 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
      * @param _receiver address to receive recovered tokens
      **/
     function recoverTokens(address[] calldata _tokens, address _receiver) external onlyOwner {
+        if (_receiver == address(0)) revert InvalidReceiver();
+
         for (uint256 i = 0; i < _tokens.length; ++i) {
             IERC20 tokenToTransfer = IERC20(_tokens[i]);
             tokenToTransfer.safeTransfer(_receiver, tokenToTransfer.balanceOf(address(this)));

@@ -22,6 +22,7 @@ contract SDLPoolSecondary is SDLPool {
 
     mapping(uint256 => LockUpdate[]) internal queuedLockUpdates;
 
+    uint256 public queuedNewLockLimit;
     uint256[] internal currentMintLockIdByBatch;
     Lock[][] internal queuedNewLocks;
     mapping(address => NewLockPointer[]) internal newLocksByOwner;
@@ -47,6 +48,7 @@ contract SDLPoolSecondary is SDLPool {
     error CannotTransferWithQueuedUpdates();
     error UpdateInProgress();
     error NoUpdateInProgress();
+    error TooManyQueuedLocks();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -59,18 +61,21 @@ contract SDLPoolSecondary is SDLPool {
      * @param _symbol symbol of the staking derivative token
      * @param _sdlToken address of the SDL token
      * @param _boostController address of the boost controller
+     * @param _queuedNewLockLimit max amount of queued new locks an account can have
      **/
     function initialize(
         string memory _name,
         string memory _symbol,
         address _sdlToken,
-        address _boostController
+        address _boostController,
+        uint256 _queuedNewLockLimit
     ) public initializer {
         __SDLPoolBase_init(_name, _symbol, _sdlToken, _boostController);
         updateBatchIndex = 1;
         currentMintLockIdByBatch.push(0);
         queuedNewLocks.push();
         queuedNewLocks.push();
+        queuedNewLockLimit = _queuedNewLockLimit;
     }
 
     /**
@@ -368,6 +373,8 @@ contract SDLPoolSecondary is SDLPool {
         uint256 _amount,
         uint64 _lockingDuration
     ) internal {
+        if (newLocksByOwner[_owner].length >= queuedNewLockLimit) revert TooManyQueuedLocks();
+
         Lock memory lock = _createLock(_amount, _lockingDuration);
         queuedNewLocks[updateBatchIndex].push(lock);
         newLocksByOwner[_owner].push(NewLockPointer(updateBatchIndex, uint128(queuedNewLocks[updateBatchIndex].length - 1)));
