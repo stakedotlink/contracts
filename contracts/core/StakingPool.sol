@@ -26,10 +26,12 @@ contract StakingPool is StakingRewardsPool {
     Fee[] private fees;
 
     address public priorityPool;
-    address private delegatorPool; // deprecated
+    address public rewardsInitiator;
     uint16 private poolIndex; // deprecated
 
     event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
+
+    error SenderNotAuthorized();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -50,7 +52,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     modifier onlyPriorityPool() {
-        require(priorityPool == msg.sender, "PriorityPool only");
+        if (msg.sender != priorityPool) revert SenderNotAuthorized();
         _;
     }
 
@@ -237,7 +239,7 @@ contract StakingPool is StakingRewardsPool {
 
         uint256[] memory idxs = new uint256[](1);
         idxs[0] = _index;
-        updateStrategyRewards(idxs, _strategyUpdateData);
+        _updateStrategyRewards(idxs, _strategyUpdateData);
 
         IStrategy strategy = IStrategy(strategies[_index]);
         uint256 totalStrategyDeposits = strategy.getTotalDeposits();
@@ -340,7 +342,86 @@ contract StakingPool is StakingRewardsPool {
      * @param _strategyIdxs indexes of strategies to update rewards for
      * @param _data encoded data to be passed to each strategy
      **/
-    function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) public {
+    function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external {
+        if (msg.sender != rewardsInitiator && !_strategyExists(msg.sender)) revert SenderNotAuthorized();
+        _updateStrategyRewards(_strategyIdxs, _data);
+    }
+
+    /**
+     * @notice deposits available liquidity into strategies by order of priority
+     * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
+     **/
+    function depositLiquidity() public {
+        uint256 toDeposit = token.balanceOf(address(this));
+        if (toDeposit > 0) {
+            for (uint256 i = 0; i < strategies.length; i++) {
+                IStrategy strategy = IStrategy(strategies[i]);
+                uint256 strategyCanDeposit = strategy.canDeposit();
+                if (strategyCanDeposit >= toDeposit) {
+                    strategy.deposit(toDeposit);
+                    break;
+                } else if (strategyCanDeposit > 0) {
+                    strategy.deposit(strategyCanDeposit);
+                    toDeposit -= strategyCanDeposit;
+                }
+            }
+        }
+    }
+
+    /**
+     * @notice Sets the priority pool
+     * @param _priorityPool address of priority pool
+     **/
+    function setPriorityPool(address _priorityPool) external onlyOwner {
+        priorityPool = _priorityPool;
+    }
+
+    /**
+     * @notice Sets the rewards initiator
+     * @dev this address has sole authority to update rewards
+     * @param _rewardsInitiator address of rewards initiator
+     **/
+    function setRewardsInitiator(address _rewardsInitiator) external onlyOwner {
+        rewardsInitiator = _rewardsInitiator;
+    }
+
+    /**
+     * @notice returns the total amount of assets staked in the pool
+     * @return the total staked amount
+     */
+    function _totalStaked() internal view override returns (uint256) {
+        return totalStaked;
+    }
+
+    /**
+     * @notice withdraws liquidity from strategies in opposite order of priority
+     * @dev withdraws from strategies[strategies.length - 1], then strategies[strategies.length - 2], and so on
+     * until withdraw amount is reached
+     * @param _amount amount to withdraw
+     **/
+    function _withdrawLiquidity(uint256 _amount) private {
+        uint256 toWithdraw = _amount;
+
+        for (uint256 i = strategies.length; i > 0; i--) {
+            IStrategy strategy = IStrategy(strategies[i - 1]);
+            uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
+
+            if (strategyCanWithdrawdraw >= toWithdraw) {
+                strategy.withdraw(toWithdraw);
+                break;
+            } else if (strategyCanWithdrawdraw > 0) {
+                strategy.withdraw(strategyCanWithdrawdraw);
+                toWithdraw -= strategyCanWithdrawdraw;
+            }
+        }
+    }
+
+    /**
+     * @notice updates and distributes rewards based on balance changes in strategies
+     * @param _strategyIdxs indexes of strategies to update rewards for
+     * @param _data encoded data to be passed to each strategy
+     **/
+    function _updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) private {
         int256 totalRewards;
         uint256 totalFeeAmounts;
         uint256 totalFeeCount;
@@ -402,66 +483,6 @@ contract StakingPool is StakingRewardsPool {
         }
 
         emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, totalFeeAmounts);
-    }
-
-    /**
-     * @notice deposits available liquidity into strategies by order of priority
-     * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
-     **/
-    function depositLiquidity() public {
-        uint256 toDeposit = token.balanceOf(address(this));
-        if (toDeposit > 0) {
-            for (uint256 i = 0; i < strategies.length; i++) {
-                IStrategy strategy = IStrategy(strategies[i]);
-                uint256 strategyCanDeposit = strategy.canDeposit();
-                if (strategyCanDeposit >= toDeposit) {
-                    strategy.deposit(toDeposit);
-                    break;
-                } else if (strategyCanDeposit > 0) {
-                    strategy.deposit(strategyCanDeposit);
-                    toDeposit -= strategyCanDeposit;
-                }
-            }
-        }
-    }
-
-    /**
-     * @notice Sets the priority pool
-     * @param _priorityPool address of priority pool
-     **/
-    function setPriorityPool(address _priorityPool) external onlyOwner {
-        priorityPool = _priorityPool;
-    }
-
-    /**
-     * @notice returns the total amount of assets staked in the pool
-     * @return the total staked amount
-     */
-    function _totalStaked() internal view override returns (uint256) {
-        return totalStaked;
-    }
-
-    /**
-     * @notice withdraws liquidity from strategies in opposite order of priority
-     * @dev withdraws from strategies[strategies.length - 1], then strategies[strategies.length - 2], and so on
-     * until withdraw amount is reached
-     * @param _amount amount to withdraw
-     **/
-    function _withdrawLiquidity(uint256 _amount) private {
-        uint256 toWithdraw = _amount;
-
-        for (uint256 i = strategies.length; i > 0; i--) {
-            IStrategy strategy = IStrategy(strategies[i - 1]);
-            uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
-
-            if (strategyCanWithdrawdraw >= toWithdraw) {
-                strategy.withdraw(toWithdraw);
-                break;
-            } else if (strategyCanWithdrawdraw > 0) {
-                strategy.withdraw(strategyCanWithdrawdraw);
-                toWithdraw -= strategyCanWithdrawdraw;
-            }
-        }
     }
 
     /**

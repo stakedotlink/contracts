@@ -21,6 +21,8 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
     mapping(address => address) public wrappedRewardTokens;
 
+    address public rewardsInitiator;
+
     event DistributeRewards(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
     event ChainAdded(uint64 indexed chainSelector, address destination, bytes updateExtraArgs, bytes rewardsExtraArgs);
     event ChainRemoved(uint64 indexed destinationChainSelector, address destination);
@@ -44,10 +46,15 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         uint256 _maxLINKFee
     ) SDLPoolCCIPController(_router, _linkToken, _sdlToken, _sdlPool, _maxLINKFee) {}
 
+    modifier onlyRewardsInitiator() {
+        if (msg.sender != rewardsInitiator) revert SenderNotAuthorized();
+        _;
+    }
+
     /**
      * @notice Claims and distributes rewards between all secondary chains
      **/
-    function distributeRewards() external {
+    function distributeRewards() external onlyRewardsInitiator {
         uint256 totalRESDL = ISDLPoolPrimary(sdlPool).effectiveBalanceOf(address(this));
         address[] memory tokens = ISDLPoolPrimary(sdlPool).supportedTokens();
         uint256 numDestinations = whitelistedChains.length;
@@ -239,6 +246,15 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         if (whitelistedDestinations[_chainSelector] == address(0)) revert InvalidDestination();
         rewardsExtraArgsByChain[_chainSelector] = _rewardsExtraArgs;
         emit SetRewardsExtraArgs(_chainSelector, _rewardsExtraArgs);
+    }
+
+    /**
+     * @notice Sets the rewards initiator
+     * @dev this address has sole authority to update rewards
+     * @param _rewardsInitiator address of rewards initiator
+     **/
+    function setRewardsInitiator(address _rewardsInitiator) external onlyOwner {
+        rewardsInitiator = _rewardsInitiator;
     }
 
     /**
