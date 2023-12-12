@@ -284,28 +284,20 @@ contract SDLPoolSecondary is SDLPool {
      * @notice handles the incoming transfer of an reSDL lock from another chain
      * @param _receiver receiver of the transfer
      * @param _lockId id of lock
-     * @param _amount amount of underlying SDL
-     * @param _boostAmount reSDL boost amount
-     * @param _startTime start time of the lock
-     * @param _duration duration of the lock
-     * @param _expiry expiry time of the lock
+     * @param _lock lock
      **/
     function handleIncomingRESDL(
         address _receiver,
         uint256 _lockId,
-        uint256 _amount,
-        uint256 _boostAmount,
-        uint64 _startTime,
-        uint64 _duration,
-        uint64 _expiry
+        Lock calldata _lock
     ) external onlyCCIPController updateRewards(_receiver) {
         if (lockOwners[_lockId] != address(0)) revert InvalidLockId();
 
-        locks[_lockId] = Lock(_amount, _boostAmount, _startTime, _duration, _expiry);
+        locks[_lockId] = Lock(_lock.amount, _lock.boostAmount, _lock.startTime, _lock.duration, _lock.expiry);
         lockOwners[_lockId] = _receiver;
         balances[_receiver] += 1;
 
-        uint256 totalAmount = _amount + _boostAmount;
+        uint256 totalAmount = _lock.amount + _lock.boostAmount;
         effectiveBalances[_receiver] += totalAmount;
         totalEffectiveBalance += totalAmount;
 

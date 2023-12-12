@@ -28,32 +28,18 @@ contract SDLPoolCCIPControllerMock {
         uint64,
         address _sender,
         uint256 _tokenId
-    )
-        external
-        onlyBridge
-        returns (
-            uint256,
-            uint256,
-            uint64,
-            uint64,
-            uint64
-        )
-    {
-        return sdlPool.handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge);
+    ) external onlyBridge returns (address, ISDLPool.RESDLToken memory) {
+        return (address(0), sdlPool.handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge));
     }
 
     function handleIncomingRESDL(
         uint64,
         address _receiver,
         uint256 _tokenId,
-        uint256 _amount,
-        uint256 _boostAmount,
-        uint64 _startTime,
-        uint64 _duration,
-        uint64 _expiry
+        ISDLPool.RESDLToken calldata _reSDLToken
     ) external onlyBridge {
-        sdlToken.safeTransferFrom(reSDLTokenBridge, address(sdlPool), _amount);
-        sdlPool.handleIncomingRESDL(_receiver, _tokenId, _amount, _boostAmount, _startTime, _duration, _expiry);
+        sdlToken.safeTransferFrom(reSDLTokenBridge, address(sdlPool), _reSDLToken.amount);
+        sdlPool.handleIncomingRESDL(_receiver, _tokenId, _reSDLToken);
     }
 
     function setRESDLTokenBridge(address _reSDLTokenBridge) external {

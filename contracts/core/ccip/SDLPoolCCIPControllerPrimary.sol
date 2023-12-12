@@ -2,7 +2,6 @@
 pragma solidity 0.8.15;
 
 import "./base/SDLPoolCCIPController.sol";
-import "../interfaces/ISDLPool.sol";
 import "../interfaces/IERC677.sol";
 
 interface ISDLPoolPrimary is ISDLPool {
@@ -25,7 +24,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
     event DistributeRewards(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
     event ChainAdded(uint64 indexed chainSelector, address destination, bytes updateExtraArgs, bytes rewardsExtraArgs);
-    event ChainRemoved(uint64 indexed destinationChainSelector, address destination);
+    event ChainRemoved(uint64 indexed chainSelector, address destination);
     event SetUpdateExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
     event SetRewardsExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
     event SetWrappedRewardToken(address indexed token, address rewardToken);
@@ -98,27 +97,21 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @param _destinationChainSelector id of the destination chain
      * @param _sender sender of the transfer
      * @param _tokenId id of token
+     * @return the destination address
      * @return the token being transferred
      **/
     function handleOutgoingRESDL(
         uint64 _destinationChainSelector,
         address _sender,
         uint256 _tokenId
-    )
-        external
-        onlyBridge
-        returns (
-            uint256,
-            uint256,
-            uint64,
-            uint64,
-            uint64
-        )
-    {
-        (uint256 amount, uint256 boostAmount, uint64 startTime, uint64 duration, uint64 expiry) = ISDLPoolPrimary(sdlPool)
-            .handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge);
-        reSDLSupplyByChain[_destinationChainSelector] += amount + boostAmount;
-        return (amount, boostAmount, startTime, duration, expiry);
+    ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
+        ISDLPool.RESDLToken memory reSDLToken = ISDLPoolPrimary(sdlPool).handleOutgoingRESDL(
+            _sender,
+            _tokenId,
+            reSDLTokenBridge
+        );
+        reSDLSupplyByChain[_destinationChainSelector] += reSDLToken.amount + reSDLToken.boostAmount;
+        return (whitelistedDestinations[_destinationChainSelector], reSDLToken);
     }
 
     /**
@@ -126,33 +119,17 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @param _sourceChainSelector id of the source chain
      * @param _receiver receiver of the transfer
      * @param _tokenId id of reSDL token
-     * @param _amount amount of underlying SDL
-     * @param _boostAmount reSDL boost amount
-     * @param _startTime start time of the lock
-     * @param _duration duration of the lock
-     * @param _expiry expiry time of the lock
+     * @param _reSDLToken reSDL token
      **/
     function handleIncomingRESDL(
         uint64 _sourceChainSelector,
         address _receiver,
         uint256 _tokenId,
-        uint256 _amount,
-        uint256 _boostAmount,
-        uint64 _startTime,
-        uint64 _duration,
-        uint64 _expiry
-    ) external onlyBridge {
-        sdlToken.safeTransferFrom(reSDLTokenBridge, sdlPool, _amount);
-        ISDLPoolPrimary(sdlPool).handleIncomingRESDL(
-            _receiver,
-            _tokenId,
-            _amount,
-            _boostAmount,
-            _startTime,
-            _duration,
-            _expiry
-        );
-        reSDLSupplyByChain[_sourceChainSelector] -= _amount + _boostAmount;
+        ISDLPool.RESDLToken calldata _reSDLToken
+    ) external override onlyBridge {
+        sdlToken.safeTransfer(sdlPool, _reSDLToken.amount);
+        ISDLPoolPrimary(sdlPool).handleIncomingRESDL(_receiver, _tokenId, _reSDLToken);
+        reSDLSupplyByChain[_sourceChainSelector] -= _reSDLToken.amount + _reSDLToken.boostAmount;
     }
 
     /**
@@ -311,14 +288,14 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     /**
      * @notice Processes a received message
      * @dev handles incoming updates from a secondary chain and sends an update in response
-     * @param _any2EvmMessage CCIP message
+     * @param _message CCIP message
      **/
-    function _ccipReceive(Client.Any2EVMMessage memory _any2EvmMessage) internal override {
-        address sender = abi.decode(_any2EvmMessage.sender, (address));
-        uint64 sourceChainSelector = _any2EvmMessage.sourceChainSelector;
+    function _ccipReceive(Client.Any2EVMMessage memory _message) internal override {
+        address sender = abi.decode(_message.sender, (address));
+        uint64 sourceChainSelector = _message.sourceChainSelector;
         if (sender != whitelistedDestinations[sourceChainSelector]) revert SenderNotAuthorized();
 
-        (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = abi.decode(_any2EvmMessage.data, (uint256, int256));
+        (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = abi.decode(_message.data, (uint256, int256));
 
         if (totalRESDLSupplyChange > 0) {
             reSDLSupplyByChain[sourceChainSelector] += uint256(totalRESDLSupplyChange);
@@ -330,7 +307,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
         _ccipSendUpdate(sourceChainSelector, mintStartIndex);
 
-        emit MessageReceived(_any2EvmMessage.messageId, sourceChainSelector);
+        emit MessageReceived(_message.messageId, sourceChainSelector);
     }
 
     /**

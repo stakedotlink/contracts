@@ -229,14 +229,14 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
 
     /**
      * @notice Processes a received message
-     * @param _any2EvmMessage CCIP message
+     * @param _message CCIP message
      **/
-    function _ccipReceive(Client.Any2EVMMessage memory _any2EvmMessage) internal override {
-        if (_any2EvmMessage.destTokenAmounts.length != 1) revert InvalidMessage();
+    function _ccipReceive(Client.Any2EVMMessage memory _message) internal override {
+        if (_message.destTokenAmounts.length != 1) revert InvalidMessage();
 
-        address tokenAddress = _any2EvmMessage.destTokenAmounts[0].token;
-        uint256 tokenAmount = _any2EvmMessage.destTokenAmounts[0].amount;
-        address receiver = abi.decode(_any2EvmMessage.data, (address));
+        address tokenAddress = _message.destTokenAmounts[0].token;
+        uint256 tokenAmount = _message.destTokenAmounts[0].amount;
+        address receiver = abi.decode(_message.data, (address));
 
         if (tokenAddress != address(wrappedToken) || receiver == address(0)) revert InvalidMessage();
 
@@ -246,9 +246,9 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
         token.safeTransfer(receiver, amountToTransfer);
 
         emit TokensReceived(
-            _any2EvmMessage.messageId,
-            _any2EvmMessage.sourceChainSelector,
-            abi.decode(_any2EvmMessage.sender, (address)),
+            _message.messageId,
+            _message.sourceChainSelector,
+            abi.decode(_message.sender, (address)),
             receiver,
             tokenAmount
         );
