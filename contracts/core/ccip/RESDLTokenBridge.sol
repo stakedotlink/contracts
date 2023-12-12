@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
-import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -14,16 +13,8 @@ import "../interfaces/ISDLPoolCCIPController.sol";
  * @title reSDL Token Bridge
  * @notice Handles CCIP transfers of reSDL NFTs
  */
-contract RESDLTokenBridge is Ownable, CCIPReceiver {
+contract RESDLTokenBridge is Ownable {
     using SafeERC20 for IERC20;
-
-    struct RESDLToken {
-        uint256 amount;
-        uint256 boostAmount;
-        uint64 startTime;
-        uint64 duration;
-        uint64 expiry;
-    }
 
     IERC20 public linkToken;
 
@@ -31,9 +22,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
     ISDLPool public sdlPool;
     ISDLPoolCCIPController public sdlPoolCCIPController;
 
-    mapping(uint64 => address) public whitelistedDestinations;
-
-    bytes public extraArgs;
+    mapping(uint64 => bytes) public extraArgsByChain;
 
     event TokenTransferred(
         bytes32 indexed messageId,
@@ -51,45 +40,37 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         address receiver,
         uint256 tokenId
     );
-    event DestinationAdded(uint64 indexed destinationChainSelector, address destination);
-    event DestinationRemoved(uint64 indexed destinationChainSelector, address destination);
-    event SetExtraArgs(bytes extraArgs);
+    event SetExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
 
     error InsufficientFee();
     error TransferFailed();
     error FeeExceedsLimit();
     error SenderNotAuthorized();
-    error InvalidDestination();
     error InvalidReceiver();
-    error AlreadyAdded();
-    error AlreadyRemoved();
     error InvalidMsgValue();
 
     /**
      * @notice Initializes the contract
-     * @param _router address of the CCIP router
      * @param _linkToken address of the LINK token
      * @param _sdlToken address of the SDL token
      * @param _sdlPool address of the SDL Pool
      * @param _sdlPoolCCIPController address of the SDL Pool CCIP controller
-     * @param _extraArgs encoded args as defined in CCIP API used for sending transfers
      **/
     constructor(
-        address _router,
         address _linkToken,
         address _sdlToken,
         address _sdlPool,
-        address _sdlPoolCCIPController,
-        bytes memory _extraArgs
-    ) CCIPReceiver(_router) {
+        address _sdlPoolCCIPController
+    ) {
         linkToken = IERC20(_linkToken);
         sdlToken = IERC20(_sdlToken);
         sdlPool = ISDLPool(_sdlPool);
         sdlPoolCCIPController = ISDLPoolCCIPController(_sdlPoolCCIPController);
-        extraArgs = _extraArgs;
-        linkToken.safeApprove(_router, type(uint256).max);
-        sdlToken.safeApprove(_router, type(uint256).max);
-        sdlToken.safeApprove(_sdlPoolCCIPController, type(uint256).max);
+    }
+
+    modifier onlySDLPoolCCIPController() {
+        if (msg.sender != address(sdlPoolCCIPController)) revert SenderNotAuthorized();
+        _;
     }
 
     /**
@@ -107,48 +88,45 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         bool _payNative,
         uint256 _maxLINKFee
     ) external payable returns (bytes32 messageId) {
-        address sender = msg.sender;
-        if (sender != sdlPool.ownerOf(_tokenId)) revert SenderNotAuthorized();
+        if (msg.sender != sdlPool.ownerOf(_tokenId)) revert SenderNotAuthorized();
         if (_receiver == address(0)) revert InvalidReceiver();
-        if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert InvalidDestination();
         if (_payNative == false && msg.value != 0) revert InvalidMsgValue();
 
-        RESDLToken memory reSDLToken;
-        {
-            (uint256 amount, uint256 boostAmount, uint64 startTime, uint64 duration, uint64 expiry) = sdlPoolCCIPController
-                .handleOutgoingRESDL(_destinationChainSelector, sender, _tokenId);
-            reSDLToken = RESDLToken(amount, boostAmount, startTime, duration, expiry);
-        }
+        (address destination, ISDLPool.RESDLToken memory reSDLToken) = sdlPoolCCIPController.handleOutgoingRESDL(
+            _destinationChainSelector,
+            msg.sender,
+            _tokenId
+        );
+        bytes memory extraArgs = extraArgsByChain[_destinationChainSelector];
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             _receiver,
             _tokenId,
             reSDLToken,
-            whitelistedDestinations[_destinationChainSelector],
+            destination,
             _payNative ? address(0) : address(linkToken),
             extraArgs
         );
 
-        IRouterClient router = IRouterClient(this.getRouter());
-        uint256 fees = router.getFee(_destinationChainSelector, evm2AnyMessage);
+        uint256 fees = IRouterClient(sdlPoolCCIPController.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
 
         if (_payNative) {
             if (fees > msg.value) revert InsufficientFee();
-            messageId = router.ccipSend{value: fees}(_destinationChainSelector, evm2AnyMessage);
+            messageId = sdlPoolCCIPController.ccipSend{value: fees}(_destinationChainSelector, evm2AnyMessage);
             if (fees < msg.value) {
-                (bool success, ) = sender.call{value: msg.value - fees}("");
+                (bool success, ) = msg.sender.call{value: msg.value - fees}("");
                 if (!success) revert TransferFailed();
             }
         } else {
             if (fees > _maxLINKFee) revert FeeExceedsLimit();
-            linkToken.safeTransferFrom(sender, address(this), fees);
-            messageId = router.ccipSend(_destinationChainSelector, evm2AnyMessage);
+            linkToken.safeTransferFrom(msg.sender, address(sdlPoolCCIPController), fees);
+            messageId = sdlPoolCCIPController.ccipSend(_destinationChainSelector, evm2AnyMessage);
         }
 
         emit TokenTransferred(
             messageId,
             _destinationChainSelector,
-            sender,
+            msg.sender,
             _receiver,
             _tokenId,
             _payNative ? address(0) : address(linkToken),
@@ -166,44 +144,51 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             address(this),
             0,
-            RESDLToken(0, 0, 0, 0, 0),
+            ISDLPool.RESDLToken(0, 0, 0, 0, 0),
             address(this),
             _payNative ? address(0) : address(linkToken),
-            extraArgs
+            extraArgsByChain[_destinationChainSelector]
         );
 
-        return IRouterClient(this.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
+        return IRouterClient(sdlPoolCCIPController.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
     }
 
     /**
-     * @notice Whitelists a new destination chain
-     * @param _destinationChainSelector id of destination chain
-     * @param _destination address to receive CCIP messages on destination chain
+     * @notice Sets the extra args used for sending reSDL to a chain
+     * @param _chainSelector id of chain
+     * @param _extraArgs extra args as defined in CCIP API
      **/
-    function addWhitelistedDestination(uint64 _destinationChainSelector, address _destination) external onlyOwner {
-        if (whitelistedDestinations[_destinationChainSelector] != address(0)) revert AlreadyAdded();
-        if (_destination == address(0)) revert InvalidDestination();
-        whitelistedDestinations[_destinationChainSelector] = _destination;
-        emit DestinationAdded(_destinationChainSelector, _destination);
+    function setExtraArgs(uint64 _chainSelector, bytes calldata _extraArgs) external onlyOwner {
+        extraArgsByChain[_chainSelector] = _extraArgs;
+        emit SetExtraArgs(_chainSelector, _extraArgs);
     }
 
     /**
-     * @notice Removes an existing destination chain
-     * @param _destinationChainSelector id of destination chain
+     * @notice Processes a received message
+     * @dev handles incoming reSDL transfers
+     * @param _message CCIP message
      **/
-    function removeWhitelistedDestination(uint64 _destinationChainSelector) external onlyOwner {
-        if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert AlreadyRemoved();
-        emit DestinationRemoved(_destinationChainSelector, whitelistedDestinations[_destinationChainSelector]);
-        delete whitelistedDestinations[_destinationChainSelector];
-    }
+    function ccipReceive(Client.Any2EVMMessage memory _message) external onlySDLPoolCCIPController {
+        address sender = abi.decode(_message.sender, (address));
 
-    /**
-     * @notice sets extra args used for reSDL transfers
-     * @param _extraArgs encoded args as defined in CCIP API
-     */
-    function setExtraArgs(bytes calldata _extraArgs) external onlyOwner {
-        extraArgs = _extraArgs;
-        emit SetExtraArgs(_extraArgs);
+        (
+            address receiver,
+            uint256 tokenId,
+            uint256 amount,
+            uint256 boostAmount,
+            uint64 startTime,
+            uint64 duration,
+            uint64 expiry
+        ) = abi.decode(_message.data, (address, uint256, uint256, uint256, uint64, uint64, uint64));
+
+        sdlPoolCCIPController.handleIncomingRESDL(
+            _message.sourceChainSelector,
+            receiver,
+            tokenId,
+            ISDLPool.RESDLToken(amount, boostAmount, startTime, duration, expiry)
+        );
+
+        emit TokenReceived(_message.messageId, _message.sourceChainSelector, sender, receiver, tokenId);
     }
 
     /**
@@ -219,7 +204,7 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
     function _buildCCIPMessage(
         address _receiver,
         uint256 _tokenId,
-        RESDLToken memory _reSDLToken,
+        ISDLPool.RESDLToken memory _reSDLToken,
         address _destination,
         address _feeTokenAddress,
         bytes memory _extraArgs
@@ -248,38 +233,5 @@ contract RESDLTokenBridge is Ownable, CCIPReceiver {
         });
 
         return evm2AnyMessage;
-    }
-
-    /**
-     * @notice Processes a received message
-     * @dev handles incoming reSDL transfers
-     * @param _any2EvmMessage CCIP message
-     **/
-    function _ccipReceive(Client.Any2EVMMessage memory _any2EvmMessage) internal override {
-        address sender = abi.decode(_any2EvmMessage.sender, (address));
-        if (sender != whitelistedDestinations[_any2EvmMessage.sourceChainSelector]) revert SenderNotAuthorized();
-
-        (
-            address receiver,
-            uint256 tokenId,
-            uint256 amount,
-            uint256 boostAmount,
-            uint64 startTime,
-            uint64 duration,
-            uint64 expiry
-        ) = abi.decode(_any2EvmMessage.data, (address, uint256, uint256, uint256, uint64, uint64, uint64));
-
-        sdlPoolCCIPController.handleIncomingRESDL(
-            _any2EvmMessage.sourceChainSelector,
-            receiver,
-            tokenId,
-            amount,
-            boostAmount,
-            startTime,
-            duration,
-            expiry
-        );
-
-        emit TokenReceived(_any2EvmMessage.messageId, _any2EvmMessage.sourceChainSelector, sender, receiver, tokenId);
     }
 }

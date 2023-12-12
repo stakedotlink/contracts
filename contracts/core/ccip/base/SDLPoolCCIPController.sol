@@ -7,6 +7,9 @@ import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "../../interfaces/IRESDLTokenBridge.sol";
+import "../../interfaces/ISDLPool.sol";
+
 abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     using SafeERC20 for IERC20;
 
@@ -21,17 +24,11 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     event MessageSent(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
     event MessageReceived(bytes32 indexed messageId, uint64 indexed destinationChainSelector);
 
-    error OnlyRESDLTokenBridge();
     error AlreadyAdded();
     error InvalidDestination();
     error SenderNotAuthorized();
     error FeeExceedsLimit(uint256 fee);
     error InvalidReceiver();
-
-    modifier onlyBridge() {
-        if (msg.sender != reSDLTokenBridge) revert OnlyRESDLTokenBridge();
-        _;
-    }
 
     /**
      * @notice Initializes the contract
@@ -53,6 +50,60 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
         sdlPool = _sdlPool;
         maxLINKFee = _maxLINKFee;
         linkToken.approve(_router, type(uint256).max);
+    }
+
+    modifier onlyBridge() {
+        if (msg.sender != reSDLTokenBridge) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
+     * @notice Handles the outgoing transfer of an reSDL token to another chain
+     * @param _destinationChainSelector id of the destination chain
+     * @param _sender sender of the transfer
+     * @param _tokenId id of token
+     * @return the destination address
+     * @return the token being transferred
+     **/
+    function handleOutgoingRESDL(
+        uint64 _destinationChainSelector,
+        address _sender,
+        uint256 _tokenId
+    ) external virtual returns (address, ISDLPool.RESDLToken memory);
+
+    /**
+     * @notice Handles the incoming transfer of an reSDL token from another chain
+     * @param _sourceChainSelector id of the source chain
+     * @param _receiver receiver of the transfer
+     * @param _tokenId id of reSDL token
+     * @param _reSDLToken reSDL token
+     **/
+    function handleIncomingRESDL(
+        uint64 _sourceChainSelector,
+        address _receiver,
+        uint256 _tokenId,
+        ISDLPool.RESDLToken calldata _reSDLToken
+    ) external virtual;
+
+    function ccipSend(uint64 _destinationChainSelector, Client.EVM2AnyMessage calldata _evmToAnyMessage)
+        external
+        payable
+        onlyBridge
+        returns (bytes32)
+    {
+        if (msg.value != 0) {
+            return IRouterClient(this.getRouter()).ccipSend{value: msg.value}(_destinationChainSelector, _evmToAnyMessage);
+        } else {
+            return IRouterClient(this.getRouter()).ccipSend(_destinationChainSelector, _evmToAnyMessage);
+        }
+    }
+
+    function ccipReceive(Client.Any2EVMMessage calldata _message) external override onlyRouter {
+        if (_message.destTokenAmounts.length == 1 && _message.destTokenAmounts[0].token == address(sdlToken)) {
+            IRESDLTokenBridge(reSDLTokenBridge).ccipReceive(_message);
+        } else {
+            _ccipReceive(_message);
+        }
     }
 
     /**

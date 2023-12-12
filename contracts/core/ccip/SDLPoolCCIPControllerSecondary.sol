@@ -2,7 +2,6 @@
 pragma solidity 0.8.15;
 
 import "./base/SDLPoolCCIPController.sol";
-import "../interfaces/ISDLPool.sol";
 
 interface ISDLPoolSecondary is ISDLPool {
     function handleOutgoingUpdate() external returns (uint256, int256);
@@ -75,56 +74,34 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @notice Handles the outgoing transfer of an reSDL token to the primary chain
      * @param _sender sender of the transfer
      * @param _tokenId id of token
+     * @return the destination address
      * @return the token being transferred
      **/
     function handleOutgoingRESDL(
         uint64,
         address _sender,
         uint256 _tokenId
-    )
-        external
-        onlyBridge
-        returns (
-            uint256,
-            uint256,
-            uint64,
-            uint64,
-            uint64
-        )
-    {
-        return ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge);
+    ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
+        return (
+            primaryChainDestination,
+            ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge)
+        );
     }
 
     /**
      * @notice Handles the incoming transfer of an reSDL token from the primary chain
      * @param _receiver receiver of the transfer
      * @param _tokenId id of reSDL token
-     * @param _amount amount of underlying SDL
-     * @param _boostAmount reSDL boost amount
-     * @param _startTime start time of the lock
-     * @param _duration duration of the lock
-     * @param _expiry expiry time of the lock
+     * @param _reSDLToken reSDL token
      **/
     function handleIncomingRESDL(
         uint64,
         address _receiver,
         uint256 _tokenId,
-        uint256 _amount,
-        uint256 _boostAmount,
-        uint64 _startTime,
-        uint64 _duration,
-        uint64 _expiry
-    ) external onlyBridge {
-        sdlToken.safeTransferFrom(reSDLTokenBridge, sdlPool, _amount);
-        ISDLPoolSecondary(sdlPool).handleIncomingRESDL(
-            _receiver,
-            _tokenId,
-            _amount,
-            _boostAmount,
-            _startTime,
-            _duration,
-            _expiry
-        );
+        ISDLPool.RESDLToken calldata _reSDLToken
+    ) external override onlyBridge {
+        sdlToken.safeTransferFrom(reSDLTokenBridge, sdlPool, _reSDLToken.amount);
+        ISDLPoolSecondary(sdlPool).handleIncomingRESDL(_receiver, _tokenId, _reSDLToken);
     }
 
     /**
@@ -168,30 +145,30 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     /**
      * @notice Processes a received message
      * @dev handles incoming updates and reward distributions from the primary chain
-     * @param _any2EvmMessage CCIP message
+     * @param _message CCIP message
      **/
-    function _ccipReceive(Client.Any2EVMMessage memory _any2EvmMessage) internal override {
-        address sender = abi.decode(_any2EvmMessage.sender, (address));
-        uint64 sourceChainSelector = _any2EvmMessage.sourceChainSelector;
+    function _ccipReceive(Client.Any2EVMMessage memory _message) internal override {
+        address sender = abi.decode(_message.sender, (address));
+        uint64 sourceChainSelector = _message.sourceChainSelector;
         if (sourceChainSelector != primaryChainSelector || sender != primaryChainDestination) revert SenderNotAuthorized();
 
-        if (_any2EvmMessage.data.length == 0) {
-            uint256 numRewardTokens = _any2EvmMessage.destTokenAmounts.length;
+        if (_message.data.length == 0) {
+            uint256 numRewardTokens = _message.destTokenAmounts.length;
             address[] memory rewardTokens = new address[](numRewardTokens);
             if (numRewardTokens != 0) {
                 for (uint256 i = 0; i < numRewardTokens; ++i) {
-                    rewardTokens[i] = _any2EvmMessage.destTokenAmounts[i].token;
-                    IERC20(rewardTokens[i]).safeTransfer(sdlPool, _any2EvmMessage.destTokenAmounts[i].amount);
+                    rewardTokens[i] = _message.destTokenAmounts[i].token;
+                    IERC20(rewardTokens[i]).safeTransfer(sdlPool, _message.destTokenAmounts[i].amount);
                 }
                 ISDLPoolSecondary(sdlPool).distributeTokens(rewardTokens);
                 if (ISDLPoolSecondary(sdlPool).shouldUpdate()) shouldUpdate = true;
             }
         } else {
-            uint256 mintStartIndex = abi.decode(_any2EvmMessage.data, (uint256));
+            uint256 mintStartIndex = abi.decode(_message.data, (uint256));
             ISDLPoolSecondary(sdlPool).handleIncomingUpdate(mintStartIndex);
         }
 
-        emit MessageReceived(_any2EvmMessage.messageId, sourceChainSelector);
+        emit MessageReceived(_message.messageId, sourceChainSelector);
     }
 
     /**
