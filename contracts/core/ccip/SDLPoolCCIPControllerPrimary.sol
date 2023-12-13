@@ -105,10 +105,11 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         address _sender,
         uint256 _tokenId
     ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
+        if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert InvalidDestination();
         ISDLPool.RESDLToken memory reSDLToken = ISDLPoolPrimary(sdlPool).handleOutgoingRESDL(
             _sender,
             _tokenId,
-            reSDLTokenBridge
+            address(this)
         );
         reSDLSupplyByChain[_destinationChainSelector] += reSDLToken.amount + reSDLToken.boostAmount;
         return (whitelistedDestinations[_destinationChainSelector], reSDLToken);
@@ -291,9 +292,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @param _message CCIP message
      **/
     function _ccipReceive(Client.Any2EVMMessage memory _message) internal override {
-        address sender = abi.decode(_message.sender, (address));
         uint64 sourceChainSelector = _message.sourceChainSelector;
-        if (sender != whitelistedDestinations[sourceChainSelector]) revert SenderNotAuthorized();
 
         (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = abi.decode(_message.data, (uint256, int256));
 
@@ -365,5 +364,15 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         });
 
         return evm2AnyMessage;
+    }
+
+    /**
+     * @notice Verifies the sender of a CCIP message is whitelisted
+     * @param _message CCIP message
+     **/
+    function _verifyCCIPSender(Client.Any2EVMMessage memory _message) internal view override {
+        address sender = abi.decode(_message.sender, (address));
+        uint64 sourceChainSelector = _message.sourceChainSelector;
+        if (sender != whitelistedDestinations[sourceChainSelector]) revert SenderNotAuthorized();
     }
 }

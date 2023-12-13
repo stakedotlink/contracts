@@ -56,6 +56,7 @@ describe('WrappedTokenBridge', () => {
 
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
+    await stakingPool.setRewardsInitiator(accounts[0])
 
     await linkToken.approve(stakingPool.address, ethers.constants.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(10000))
@@ -93,16 +94,16 @@ describe('WrappedTokenBridge', () => {
   })
 
   it('getFee should work correctly', async () => {
-    assert.equal(fromEther(await bridge.getFee(77, false, '0x')), 2)
-    assert.equal(fromEther(await bridge.getFee(77, true, '0x')), 3)
-    await expect(bridge.getFee(78, false, '0x')).to.be.reverted
-    await expect(bridge.getFee(78, true, '0x')).to.be.reverted
+    assert.equal(fromEther(await bridge.getFee(77, false)), 2)
+    assert.equal(fromEther(await bridge.getFee(77, true)), 3)
+    await expect(bridge.getFee(78, false)).to.be.reverted
+    await expect(bridge.getFee(78, true)).to.be.reverted
   })
 
   it('transferTokens should work correctly with LINK fee', async () => {
     let preFeeBalance = await linkToken.balanceOf(accounts[0])
 
-    await bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(10), '0x')
+    await bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(10))
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
@@ -124,14 +125,14 @@ describe('WrappedTokenBridge', () => {
     assert.equal(lastRequestMsg[3], linkToken.address)
 
     await expect(
-      bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(1), '0x')
+      bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(1))
     ).to.be.revertedWith('FeeExceedsLimit()')
   })
 
   it('transferTokens should work correctly with native fee', async () => {
     let preFeeBalance = await ethers.provider.getBalance(accounts[0])
 
-    await bridge.transferTokens(77, accounts[4], toEther(100), true, 0, '0x', {
+    await bridge.transferTokens(77, accounts[4], toEther(100), true, 0, {
       value: toEther(10),
     })
     let lastRequestData = await onRamp.getLastRequestData()

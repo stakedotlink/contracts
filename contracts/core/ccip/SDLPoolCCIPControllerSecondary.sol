@@ -82,10 +82,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
         address _sender,
         uint256 _tokenId
     ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
-        return (
-            primaryChainDestination,
-            ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, reSDLTokenBridge)
-        );
+        return (primaryChainDestination, ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, address(this)));
     }
 
     /**
@@ -100,7 +97,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
         uint256 _tokenId,
         ISDLPool.RESDLToken calldata _reSDLToken
     ) external override onlyBridge {
-        sdlToken.safeTransferFrom(reSDLTokenBridge, sdlPool, _reSDLToken.amount);
+        sdlToken.safeTransfer(sdlPool, _reSDLToken.amount);
         ISDLPoolSecondary(sdlPool).handleIncomingRESDL(_receiver, _tokenId, _reSDLToken);
     }
 
@@ -148,10 +145,6 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @param _message CCIP message
      **/
     function _ccipReceive(Client.Any2EVMMessage memory _message) internal override {
-        address sender = abi.decode(_message.sender, (address));
-        uint64 sourceChainSelector = _message.sourceChainSelector;
-        if (sourceChainSelector != primaryChainSelector || sender != primaryChainDestination) revert SenderNotAuthorized();
-
         if (_message.data.length == 0) {
             uint256 numRewardTokens = _message.destTokenAmounts.length;
             address[] memory rewardTokens = new address[](numRewardTokens);
@@ -168,7 +161,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
             ISDLPoolSecondary(sdlPool).handleIncomingUpdate(mintStartIndex);
         }
 
-        emit MessageReceived(_message.messageId, sourceChainSelector);
+        emit MessageReceived(_message.messageId, _message.sourceChainSelector);
     }
 
     /**
@@ -194,5 +187,15 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
         });
 
         return evm2AnyMessage;
+    }
+
+    /**
+     * @notice Verifies the sender of a CCIP message is whitelisted
+     * @param _message CCIP message
+     **/
+    function _verifyCCIPSender(Client.Any2EVMMessage memory _message) internal view override {
+        address sender = abi.decode(_message.sender, (address));
+        uint64 sourceChainSelector = _message.sourceChainSelector;
+        if (sourceChainSelector != primaryChainSelector || sender != primaryChainDestination) revert SenderNotAuthorized();
     }
 }

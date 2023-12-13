@@ -13,14 +13,16 @@ import {
   StrategyMock,
   StakingPool,
   WrappedSDToken,
-  SlashingKeeper,
+  RewardsInitiator,
+  SDLPoolCCIPControllerMock,
 } from '../../typechain-types'
 
-describe('SlashingKeeper', () => {
+describe('RewardsInitiator', () => {
   let token: ERC677
   let wsdToken: WrappedSDToken
-  let slashingKeeper: SlashingKeeper
+  let rewardsInitiator: RewardsInitiator
   let stakingPool: StakingPool
+  let sdlPoolCCIPController: SDLPoolCCIPControllerMock
   let strategy1: StrategyMock
   let strategy2: StrategyMock
   let strategy3: StrategyMock
@@ -46,7 +48,15 @@ describe('SlashingKeeper', () => {
       [[ownersRewards, 1000]],
     ])) as StakingPool
 
-    slashingKeeper = (await deploy('SlashingKeeper', [stakingPool.address])) as SlashingKeeper
+    sdlPoolCCIPController = (await deploy('SDLPoolCCIPControllerMock', [
+      accounts[0],
+      accounts[0],
+    ])) as SDLPoolCCIPControllerMock
+
+    rewardsInitiator = (await deploy('RewardsInitiator', [
+      stakingPool.address,
+      sdlPoolCCIPController.address,
+    ])) as RewardsInitiator
 
     wsdToken = (await deploy('WrappedSDToken', [
       stakingPool.address,
@@ -77,6 +87,7 @@ describe('SlashingKeeper', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
     await stakingPool.setPriorityPool(accounts[0])
+    await stakingPool.setRewardsInitiator(rewardsInitiator.address)
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(1000))
@@ -85,12 +96,12 @@ describe('SlashingKeeper', () => {
   it('checkUpkeep should work correctly', async () => {
     await token.transfer(strategy2.address, toEther(100))
 
-    let data = await slashingKeeper.checkUpkeep('0x00')
+    let data = await rewardsInitiator.checkUpkeep('0x00')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
 
     await strategy3.simulateSlash(toEther(20))
 
-    data = await slashingKeeper.checkUpkeep('0x00')
+    data = await rewardsInitiator.checkUpkeep('0x00')
     assert.equal(data[0], true, 'upkeepNeeded incorrect')
     assert.deepEqual(
       decode(data[1])[0].map((v: any) => v.toNumber()),
@@ -99,7 +110,7 @@ describe('SlashingKeeper', () => {
 
     await strategy1.simulateSlash(toEther(30))
 
-    data = await slashingKeeper.checkUpkeep('0x00')
+    data = await rewardsInitiator.checkUpkeep('0x00')
     assert.equal(data[0], true, 'upkeepNeeded incorrect')
     assert.deepEqual(
       decode(data[1])[0].map((v: any) => v.toNumber()),
@@ -112,9 +123,9 @@ describe('SlashingKeeper', () => {
     await strategy1.simulateSlash(toEther(10))
     await strategy3.simulateSlash(toEther(10))
 
-    await slashingKeeper.performUpkeep(encode([0, 2]))
+    await rewardsInitiator.performUpkeep(encode([0, 2]))
 
-    let data = await slashingKeeper.checkUpkeep('0x00')
+    let data = await rewardsInitiator.checkUpkeep('0x00')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
     assert.equal(
       fromEther(await strategy1.getDepositChange()),
@@ -134,11 +145,34 @@ describe('SlashingKeeper', () => {
 
     await strategy3.simulateSlash(toEther(10))
 
-    await expect(slashingKeeper.performUpkeep(encode([0, 2]))).to.be.revertedWith(
-      'Deposit change is >= 0'
+    await expect(rewardsInitiator.performUpkeep(encode([0, 2]))).to.be.revertedWith(
+      'PositiveDepositChange()'
     )
-    await expect(slashingKeeper.performUpkeep(encode([]))).to.be.revertedWith(
-      'No strategies to update'
+    await expect(rewardsInitiator.performUpkeep(encode([]))).to.be.revertedWith(
+      'NoStrategiesToUpdate()'
     )
+  })
+
+  it('updateRewards should work correctly', async () => {
+    await token.transfer(strategy2.address, toEther(100))
+    await strategy1.simulateSlash(toEther(10))
+    await strategy3.simulateSlash(toEther(10))
+
+    await rewardsInitiator.updateRewards([0, 2], '0x')
+
+    assert.equal(fromEther(await strategy1.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy2.getDepositChange()), 100)
+    assert.equal(fromEther(await strategy3.getDepositChange()), 0)
+    assert.equal((await sdlPoolCCIPController.rewardsDistributed()).toNumber(), 1)
+
+    await token.transfer(strategy2.address, toEther(10))
+    await token.transfer(strategy3.address, toEther(20))
+
+    await rewardsInitiator.updateRewards([0, 1, 2], '0x')
+
+    assert.equal(fromEther(await strategy1.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy2.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy3.getDepositChange()), 0)
+    assert.equal((await sdlPoolCCIPController.rewardsDistributed()).toNumber(), 2)
   })
 })

@@ -8,8 +8,8 @@ import {
   CCIPTokenPoolMock,
   WrappedNative,
   RESDLTokenBridge,
-  SDLPoolCCIPControllerMock,
   SDLPoolPrimary,
+  SDLPoolCCIPControllerPrimary,
 } from '../../../typechain-types'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { Signer } from 'ethers'
@@ -20,6 +20,7 @@ describe('RESDLTokenBridge', () => {
   let token2: ERC677
   let bridge: RESDLTokenBridge
   let sdlPool: SDLPoolPrimary
+  let sdlPoolCCIPController: SDLPoolCCIPControllerPrimary
   let onRamp: CCIPOnRampMock
   let offRamp: CCIPOffRampMock
   let tokenPool: CCIPTokenPoolMock
@@ -62,13 +63,15 @@ describe('RESDLTokenBridge', () => {
       sdlToken.address,
       boostController.address,
     ])) as SDLPoolPrimary
-    let sdlPoolCCIPController = (await deploy('SDLPoolCCIPControllerMock', [
+    sdlPoolCCIPController = (await deploy('SDLPoolCCIPControllerPrimary', [
+      router.address,
+      linkToken.address,
       sdlToken.address,
       sdlPool.address,
-    ])) as SDLPoolCCIPControllerMock
+      toEther(10),
+    ])) as SDLPoolCCIPControllerPrimary
 
     bridge = (await deploy('RESDLTokenBridge', [
-      router.address,
       linkToken.address,
       sdlToken.address,
       sdlPool.address,
@@ -78,7 +81,8 @@ describe('RESDLTokenBridge', () => {
     await sdlPoolCCIPController.setRESDLTokenBridge(bridge.address)
     await sdlPool.setCCIPController(sdlPoolCCIPController.address)
     await linkToken.approve(bridge.address, ethers.constants.MaxUint256)
-    await bridge.addWhitelistedDestination(77, accounts[0])
+    await bridge.setExtraArgs(77, '0x11')
+    await sdlPoolCCIPController.addWhitelistedChain(77, accounts[6], '0x', '0x')
     await sdlToken.transfer(accounts[1], toEther(200))
 
     await sdlToken.transferAndCall(
@@ -94,10 +98,10 @@ describe('RESDLTokenBridge', () => {
   })
 
   it('getFee should work correctly', async () => {
-    assert.equal(fromEther(await bridge.getFee(77, false, '0x')), 2)
-    assert.equal(fromEther(await bridge.getFee(77, true, '0x')), 3)
-    await expect(bridge.getFee(78, false, '0x')).to.be.reverted
-    await expect(bridge.getFee(78, true, '0x')).to.be.reverted
+    assert.equal(fromEther(await bridge.getFee(77, false)), 2)
+    assert.equal(fromEther(await bridge.getFee(77, true)), 3)
+    await expect(bridge.getFee(78, false)).to.be.reverted
+    await expect(bridge.getFee(78, true)).to.be.reverted
   })
 
   it('transferRESDL should work correctly with LINK fee', async () => {
@@ -108,7 +112,7 @@ describe('RESDLTokenBridge', () => {
 
     let preFeeBalance = await linkToken.balanceOf(accounts[0])
 
-    await bridge.transferRESDL(77, accounts[4], 2, false, toEther(10), '0x')
+    await bridge.transferRESDL(77, accounts[4], 2, false, toEther(10))
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
@@ -116,11 +120,11 @@ describe('RESDLTokenBridge', () => {
     assert.equal(fromEther(preFeeBalance.sub(await linkToken.balanceOf(accounts[0]))), 2)
 
     assert.equal(fromEther(lastRequestData[0]), 2)
-    assert.equal(lastRequestData[1], bridge.address)
+    assert.equal(lastRequestData[1], sdlPoolCCIPController.address)
 
     assert.equal(
       ethers.utils.defaultAbiCoder.decode(['address'], lastRequestMsg[0])[0],
-      accounts[0]
+      accounts[6]
     )
     assert.deepEqual(
       ethers.utils.defaultAbiCoder
@@ -140,11 +144,12 @@ describe('RESDLTokenBridge', () => {
       [[sdlToken.address, 1000]]
     )
     assert.equal(lastRequestMsg[3], linkToken.address)
+    assert.equal(lastRequestMsg[4], '0x11')
     await expect(sdlPool.ownerOf(3)).to.be.revertedWith('InvalidLockId()')
 
-    await expect(
-      bridge.transferRESDL(77, accounts[4], 1, false, toEther(1), '0x')
-    ).to.be.revertedWith('FeeExceedsLimit()')
+    await expect(bridge.transferRESDL(77, accounts[4], 1, false, toEther(1))).to.be.revertedWith(
+      'FeeExceedsLimit()'
+    )
 
     await sdlToken.transferAndCall(
       sdlPool.address,
@@ -155,7 +160,7 @@ describe('RESDLTokenBridge', () => {
 
     preFeeBalance = await linkToken.balanceOf(accounts[0])
 
-    await bridge.transferRESDL(77, accounts[5], 3, false, toEther(10), '0x')
+    await bridge.transferRESDL(77, accounts[5], 3, false, toEther(10))
     lastRequestData = await onRamp.getLastRequestData()
     lastRequestMsg = await onRamp.getLastRequestMessage()
 
@@ -163,11 +168,11 @@ describe('RESDLTokenBridge', () => {
     assert.equal(fromEther(preFeeBalance.sub(await linkToken.balanceOf(accounts[0]))), 2)
 
     assert.equal(fromEther(lastRequestData[0]), 2)
-    assert.equal(lastRequestData[1], bridge.address)
+    assert.equal(lastRequestData[1], sdlPoolCCIPController.address)
 
     assert.equal(
       ethers.utils.defaultAbiCoder.decode(['address'], lastRequestMsg[0])[0],
-      accounts[0]
+      accounts[6]
     )
     assert.deepEqual(
       ethers.utils.defaultAbiCoder
@@ -187,6 +192,7 @@ describe('RESDLTokenBridge', () => {
       [[sdlToken.address, 500]]
     )
     assert.equal(lastRequestMsg[3], linkToken.address)
+    assert.equal(lastRequestMsg[4], '0x11')
     await expect(sdlPool.ownerOf(3)).to.be.revertedWith('InvalidLockId()')
   })
 
@@ -195,7 +201,7 @@ describe('RESDLTokenBridge', () => {
 
     let preFeeBalance = await ethers.provider.getBalance(accounts[0])
 
-    await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), '0x', { value: toEther(10) })
+    await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), { value: toEther(10) })
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
@@ -205,11 +211,11 @@ describe('RESDLTokenBridge', () => {
       3
     )
     assert.equal(fromEther(lastRequestData[0]), 3)
-    assert.equal(lastRequestData[1], bridge.address)
+    assert.equal(lastRequestData[1], sdlPoolCCIPController.address)
 
     assert.equal(
       ethers.utils.defaultAbiCoder.decode(['address'], lastRequestMsg[0])[0],
-      accounts[0]
+      accounts[6]
     )
     assert.deepEqual(
       ethers.utils.defaultAbiCoder
@@ -229,25 +235,26 @@ describe('RESDLTokenBridge', () => {
       [[sdlToken.address, 1000]]
     )
     assert.equal(lastRequestMsg[3], wrappedNative.address)
+    assert.equal(lastRequestMsg[4], '0x11')
     await expect(sdlPool.ownerOf(3)).to.be.revertedWith('InvalidLockId()')
   })
 
   it('transferRESDL validation should work correctly', async () => {
     await expect(
-      bridge.connect(signers[1]).transferRESDL(77, accounts[4], 1, false, toEther(10), '0x')
+      bridge.connect(signers[1]).transferRESDL(77, accounts[4], 1, false, toEther(10))
     ).to.be.revertedWith('SenderNotAuthorized()')
     await expect(
-      bridge.transferRESDL(77, ethers.constants.AddressZero, 1, false, toEther(10), '0x')
+      bridge.transferRESDL(77, ethers.constants.AddressZero, 1, false, toEther(10))
     ).to.be.revertedWith('InvalidReceiver()')
-    await expect(
-      bridge.transferRESDL(78, accounts[4], 1, false, toEther(10), '0x')
-    ).to.be.revertedWith('InvalidDestination()')
+    await expect(bridge.transferRESDL(78, accounts[4], 1, false, toEther(10))).to.be.revertedWith(
+      'InvalidDestination()'
+    )
 
-    bridge.transferRESDL(77, accounts[4], 1, false, toEther(10), '0x')
+    bridge.transferRESDL(77, accounts[4], 1, false, toEther(10))
   })
 
   it('ccipReceive should work correctly', async () => {
-    await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), '0x', { value: toEther(10) })
+    await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), { value: toEther(10) })
 
     let success: any = await offRamp
       .connect(signers[1])
@@ -258,21 +265,23 @@ describe('RESDLTokenBridge', () => {
           ['address', 'uint256', 'uint256', 'uint256', 'uint64', 'uint64', 'uint64'],
           [accounts[5], 2, toEther(25), toEther(25), 1000, 3000, 8000]
         ),
-        bridge.address,
+        sdlPoolCCIPController.address,
         [{ token: sdlToken.address, amount: toEther(25) }]
       )
     assert.equal(success, false)
 
-    await offRamp.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId'),
-      77,
-      ethers.utils.defaultAbiCoder.encode(
-        ['address', 'uint256', 'uint256', 'uint256', 'uint64', 'uint64', 'uint64'],
-        [accounts[5], 2, toEther(25), toEther(25), 1000, 3000, 8000]
-      ),
-      bridge.address,
-      [{ token: sdlToken.address, amount: toEther(25) }]
-    )
+    await offRamp
+      .connect(signers[6])
+      .executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256', 'uint256', 'uint256', 'uint64', 'uint64', 'uint64'],
+          [accounts[5], 2, toEther(25), toEther(25), 1000, 3000, 8000]
+        ),
+        sdlPoolCCIPController.address,
+        [{ token: sdlToken.address, amount: toEther(25) }]
+      )
 
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 225)
     assert.equal(await sdlPool.ownerOf(2), accounts[5])
@@ -296,20 +305,11 @@ describe('RESDLTokenBridge', () => {
     )
   })
 
-  it('should be able to add/remove whitelisted destinations', async () => {
-    await expect(
-      bridge.addWhitelistedDestination(10, ethers.constants.AddressZero)
-    ).to.be.revertedWith('InvalidDestination()')
-    await expect(bridge.removeWhitelistedDestination(10)).to.be.revertedWith('AlreadyRemoved()')
+  it('should be able to set extra args', async () => {
+    await bridge.setExtraArgs(10, '0x22')
+    assert.equal(await bridge.extraArgsByChain(10), '0x22')
 
-    await bridge.addWhitelistedDestination(10, accounts[0])
-
-    assert.equal(await bridge.whitelistedDestinations(10), accounts[0])
-    await expect(bridge.addWhitelistedDestination(10, accounts[1])).to.be.revertedWith(
-      'AlreadyAdded()'
-    )
-
-    await bridge.removeWhitelistedDestination(10)
-    assert.equal(await bridge.whitelistedDestinations(10), ethers.constants.AddressZero)
+    await bridge.setExtraArgs(77, '0x33')
+    assert.equal(await bridge.extraArgsByChain(77), '0x33')
   })
 })

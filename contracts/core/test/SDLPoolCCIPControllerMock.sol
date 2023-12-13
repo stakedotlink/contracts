@@ -12,6 +12,8 @@ contract SDLPoolCCIPControllerMock {
     ISDLPool public sdlPool;
     address public reSDLTokenBridge;
 
+    uint256 public rewardsDistributed;
+
     error OnlyRESDLTokenBridge();
 
     modifier onlyBridge() {
@@ -40,6 +42,10 @@ contract SDLPoolCCIPControllerMock {
     ) external onlyBridge {
         sdlToken.safeTransferFrom(reSDLTokenBridge, address(sdlPool), _reSDLToken.amount);
         sdlPool.handleIncomingRESDL(_receiver, _tokenId, _reSDLToken);
+    }
+
+    function distributeRewards() external {
+        rewardsDistributed++;
     }
 
     function setRESDLTokenBridge(address _reSDLTokenBridge) external {

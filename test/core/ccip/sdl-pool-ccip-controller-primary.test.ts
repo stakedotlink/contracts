@@ -94,6 +94,8 @@ describe('SDLPoolCCIPControllerPrimary', () => {
 
     await sdlPool.setCCIPController(controller.address)
     await controller.setRESDLTokenBridge(accounts[5])
+    await controller.setRewardsInitiator(accounts[0])
+    await controller.addWhitelistedChain(77, accounts[4], '0x11', '0x22')
   })
 
   it('handleOutgoingRESDL should work correctly', async () => {
@@ -109,26 +111,33 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     ).to.be.revertedWith('SenderNotAuthorized()')
 
     assert.deepEqual(
-      parseLock(
-        await controller.connect(signers[5]).callStatic.handleOutgoingRESDL(77, accounts[0], 3)
-      ),
-      { amount: 200, boostAmount: 200, startTime: ts, duration: 365 * 86400, expiry: 0 }
+      await controller
+        .connect(signers[5])
+        .callStatic.handleOutgoingRESDL(77, accounts[0], 3)
+        .then((d: any) => [d[0], parseLock(d[1])]),
+      [
+        accounts[4],
+        { amount: 200, boostAmount: 200, startTime: ts, duration: 365 * 86400, expiry: 0 },
+      ]
     )
 
     await controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[0], 3)
-    assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 200)
+    assert.equal(fromEther(await sdlToken.balanceOf(controller.address)), 200)
     assert.equal(fromEther(await controller.reSDLSupplyByChain(77)), 400)
     await expect(sdlPool.ownerOf(3)).to.be.revertedWith('InvalidLockId()')
   })
 
   it('handleIncomingRESDL should work correctly', async () => {
-    await sdlToken.connect(signers[5]).approve(controller.address, toEther(100))
     await controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[0], 1)
 
-    await controller
-      .connect(signers[5])
-      .handleIncomingRESDL(77, accounts[3], 1, toEther(100), toEther(100), 111, 222, 0)
-    assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 0)
+    await controller.connect(signers[5]).handleIncomingRESDL(77, accounts[3], 1, {
+      amount: toEther(100),
+      boostAmount: toEther(100),
+      startTime: 111,
+      duration: 222,
+      expiry: 0,
+    })
+    assert.equal(fromEther(await sdlToken.balanceOf(controller.address)), 0)
     assert.equal(fromEther(await controller.reSDLSupplyByChain(77)), 0)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 300)
     assert.equal(await sdlPool.ownerOf(1), accounts[3])
@@ -142,23 +151,24 @@ describe('SDLPoolCCIPControllerPrimary', () => {
   })
 
   it('adding/removing whitelisted chains should work correctly', async () => {
-    await controller.addWhitelistedChain(77, accounts[5], '0x11')
-    await controller.addWhitelistedChain(88, accounts[6], '0x22')
+    await controller.addWhitelistedChain(88, accounts[6], '0x33', '0x44')
 
     assert.deepEqual(
       (await controller.getWhitelistedChains()).map((d) => d.toNumber()),
       [77, 88]
     )
-    assert.equal(await controller.whitelistedDestinations(77), accounts[5])
+    assert.equal(await controller.whitelistedDestinations(77), accounts[4])
     assert.equal(await controller.whitelistedDestinations(88), accounts[6])
-    assert.equal(await controller.extraArgsByChain(77), '0x11')
-    assert.equal(await controller.extraArgsByChain(88), '0x22')
+    assert.equal(await controller.updateExtraArgsByChain(77), '0x11')
+    assert.equal(await controller.rewardsExtraArgsByChain(77), '0x22')
+    assert.equal(await controller.updateExtraArgsByChain(88), '0x33')
+    assert.equal(await controller.rewardsExtraArgsByChain(88), '0x44')
 
-    await expect(controller.addWhitelistedChain(77, accounts[7], '0x11')).to.be.revertedWith(
-      'AlreadyAdded()'
-    )
     await expect(
-      controller.addWhitelistedChain(99, ethers.constants.AddressZero, '0x11')
+      controller.addWhitelistedChain(77, accounts[7], '0x11', '0x22')
+    ).to.be.revertedWith('AlreadyAdded()')
+    await expect(
+      controller.addWhitelistedChain(99, ethers.constants.AddressZero, '0x11', '0x22')
     ).to.be.revertedWith('InvalidDestination()')
 
     await controller.removeWhitelistedChain(77)
@@ -167,7 +177,8 @@ describe('SDLPoolCCIPControllerPrimary', () => {
       [88]
     )
     assert.equal(await controller.whitelistedDestinations(77), ethers.constants.AddressZero)
-    assert.equal(await controller.extraArgsByChain(77), '0x')
+    assert.equal(await controller.updateExtraArgsByChain(77), '0x')
+    assert.equal(await controller.rewardsExtraArgsByChain(77), '0x')
 
     await expect(controller.removeWhitelistedChain(77)).to.be.revertedWith('InvalidDestination()')
   })
@@ -176,18 +187,18 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
     await sdlPool.addToken(token1.address, rewardsPool1.address)
     await controller.approveRewardTokens([token1.address, token2.address])
-    await controller.addWhitelistedChain(77, accounts[6], '0x')
     await controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[0], 1)
     await token1.transferAndCall(rewardsPool1.address, toEther(50), '0x')
-    await controller.distributeRewards(['0x'])
+    await controller.distributeRewards()
 
     let requestData = await onRamp.getLastRequestData()
     let requestMsg: any = await onRamp.getLastRequestMessage()
     assert.equal(fromEther(await linkToken.balanceOf(controller.address)), 98)
     assert.equal(fromEther(requestData[0]), 2)
     assert.equal(requestData[1], controller.address)
-    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[6])
+    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[4])
     assert.equal(requestMsg[3], linkToken.address)
+    assert.equal(requestMsg[4], '0x22')
     assert.deepEqual(
       requestMsg.tokenAmounts.map((d: any) => [d[0], fromEther(d[1])]),
       [[token1.address, 25]]
@@ -210,7 +221,7 @@ describe('SDLPoolCCIPControllerPrimary', () => {
 
     let rewardsPool2 = await deploy('RewardsPool', [sdlPool.address, token2.address])
     await sdlPool.addToken(token2.address, rewardsPool2.address)
-    await controller.addWhitelistedChain(88, accounts[7], '0x')
+    await controller.addWhitelistedChain(88, accounts[7], '0x', '0x33')
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(400),
@@ -219,15 +230,16 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     await controller.connect(signers[5]).handleOutgoingRESDL(88, accounts[0], 3)
     await token1.transferAndCall(rewardsPool1.address, toEther(200), '0x')
     await token2.transferAndCall(rewardsPool2.address, toEther(300), '0x')
-    await controller.distributeRewards(['0x', '0x'])
+    await controller.distributeRewards()
 
     requestData = await onRamp.getLastRequestData()
     requestMsg = await onRamp.getLastRequestMessage()
     assert.equal(fromEther(await linkToken.balanceOf(controller.address)), 94)
     assert.equal(fromEther(requestData[0]), 2)
     assert.equal(requestData[1], controller.address)
-    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[6])
+    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[4])
     assert.equal(requestMsg[3], linkToken.address)
+    assert.equal(requestMsg[4], '0x22')
     assert.deepEqual(
       requestMsg.tokenAmounts.map((d: any) => [d[0], fromEther(d[1])]),
       [
@@ -244,6 +256,7 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     assert.equal(requestData[1], controller.address)
     assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[7])
     assert.equal(requestMsg[3], linkToken.address)
+    assert.equal(requestMsg[4], '0x33')
     assert.deepEqual(
       requestMsg.tokenAmounts.map((d: any) => [d[0], fromEther(d[1])]),
       [
@@ -266,19 +279,18 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     await sdlPool.addToken(token1.address, rewardsPool.address)
     await controller.approveRewardTokens([wToken.address])
     await controller.setWrappedRewardToken(token1.address, wToken.address)
-    await controller.addWhitelistedChain(77, accounts[6], '0x')
     await onRamp.setTokenPool(wToken.address, wtokenPool.address)
     await offRamp.setTokenPool(wToken.address, wtokenPool.address)
     await controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[0], 1)
     await token1.transferAndCall(rewardsPool.address, toEther(500), '0x')
-    await controller.distributeRewards(['0x'])
+    await controller.distributeRewards()
 
     let requestData = await onRamp.getLastRequestData()
     let requestMsg: any = await onRamp.getLastRequestMessage()
     assert.equal(fromEther(await linkToken.balanceOf(controller.address)), 98)
     assert.equal(fromEther(requestData[0]), 2)
     assert.equal(requestData[1], controller.address)
-    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[6])
+    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[4])
     assert.equal(requestMsg[3], linkToken.address)
     assert.deepEqual(
       requestMsg.tokenAmounts.map((d: any) => [d[0], fromEther(d[1])]),
@@ -288,9 +300,8 @@ describe('SDLPoolCCIPControllerPrimary', () => {
   })
 
   it('ccipReceive should work correctly', async () => {
-    await controller.addWhitelistedChain(77, accounts[5], '0x')
     await offRamp
-      .connect(signers[5])
+      .connect(signers[4])
       .executeSingleMessage(
         ethers.utils.formatBytes32String('messageId'),
         77,
@@ -308,12 +319,13 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     assert.equal(fromEther(await linkToken.balanceOf(controller.address)), 98)
     assert.equal(fromEther(requestData[0]), 2)
     assert.equal(requestData[1], controller.address)
-    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[5])
+    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[4])
     assert.equal(ethers.utils.defaultAbiCoder.decode(['uint256'], requestMsg[1])[0], 3)
     assert.equal(requestMsg[3], linkToken.address)
+    assert.equal(requestMsg[4], '0x11')
 
     await offRamp
-      .connect(signers[5])
+      .connect(signers[4])
       .executeSingleMessage(
         ethers.utils.formatBytes32String('messageId'),
         77,
@@ -331,11 +343,12 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     assert.equal(fromEther(await linkToken.balanceOf(controller.address)), 96)
     assert.equal(fromEther(requestData[0]), 2)
     assert.equal(requestData[1], controller.address)
-    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[5])
+    assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[4])
     assert.equal(ethers.utils.defaultAbiCoder.decode(['uint256'], requestMsg[1])[0], 0)
     assert.equal(requestMsg[3], linkToken.address)
+    assert.equal(requestMsg[4], '0x11')
 
-    await controller.addWhitelistedChain(88, accounts[6], '0x')
+    await controller.addWhitelistedChain(88, accounts[6], '0x33', '0x')
     let onRamp88 = (await deploy('CCIPOnRampMock', [[], [], linkToken.address])) as CCIPOnRampMock
     let offRamp88 = (await deploy('CCIPOffRampMock', [router.address, [], []])) as CCIPOffRampMock
     await router.applyRampUpdates([[88, onRamp88.address]], [], [[88, offRamp88.address]])
@@ -361,6 +374,7 @@ describe('SDLPoolCCIPControllerPrimary', () => {
     assert.equal(ethers.utils.defaultAbiCoder.decode(['address'], requestMsg[0])[0], accounts[6])
     assert.equal(ethers.utils.defaultAbiCoder.decode(['uint256'], requestMsg[1])[0].toNumber(), 6)
     assert.equal(requestMsg[3], linkToken.address)
+    assert.equal(requestMsg[4], '0x33')
   })
 
   it('recoverTokens should work correctly', async () => {

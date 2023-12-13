@@ -1195,13 +1195,25 @@ describe('SDLPoolPrimary', () => {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
     await expect(
-      sdlPool.handleIncomingRESDL(accounts[1], 1, toEther(100), toEther(50), 123, 456, 789)
+      sdlPool.handleIncomingRESDL(accounts[1], 1, {
+        amount: toEther(100),
+        boostAmount: toEther(50),
+        startTime: 123,
+        duration: 456,
+        expiry: 789,
+      })
     ).to.be.revertedWith('InvalidLockId()')
     await sdlPool.handleOutgoingRESDL(accounts[0], 1, accounts[0])
 
     const startingEffectiveBalance = await sdlPool.totalEffectiveBalance()
 
-    await sdlPool.handleIncomingRESDL(accounts[1], 7, toEther(100), toEther(50), 123, 456, 0)
+    await sdlPool.handleIncomingRESDL(accounts[1], 7, {
+      amount: toEther(100),
+      boostAmount: toEther(50),
+      startTime: 123,
+      duration: 456,
+      expiry: 0,
+    })
     assert.deepEqual(parseLocks(await sdlPool.getLocks([7]))[0], {
       amount: 100,
       boostAmount: 50,
@@ -1215,7 +1227,13 @@ describe('SDLPoolPrimary', () => {
     assert.equal(await sdlPool.ownerOf(7), accounts[1])
     assert.equal((await sdlPool.balanceOf(accounts[1])).toNumber(), 1)
 
-    await sdlPool.handleIncomingRESDL(accounts[2], 9, toEther(200), toEther(400), 1, 2, 3)
+    await sdlPool.handleIncomingRESDL(accounts[2], 9, {
+      amount: toEther(200),
+      boostAmount: toEther(400),
+      startTime: 1,
+      duration: 2,
+      expiry: 3,
+    })
     assert.deepEqual(parseLocks(await sdlPool.getLocks([9]))[0], {
       amount: 200,
       boostAmount: 400,
@@ -1234,7 +1252,13 @@ describe('SDLPoolPrimary', () => {
     let rewards1 = await rewardsPool.withdrawableRewards(accounts[3])
     let rewards2 = await rewardsPool.withdrawableRewards(accounts[0])
 
-    await sdlPool.handleIncomingRESDL(accounts[3], 10, toEther(50), toEther(100), 1, 2, 3)
+    await sdlPool.handleIncomingRESDL(accounts[3], 10, {
+      amount: toEther(50),
+      boostAmount: toEther(100),
+      startTime: 1,
+      duration: 2,
+      expiry: 3,
+    })
 
     assert.isTrue((await rewardsPool.withdrawableRewards(accounts[3])).eq(rewards1))
     assert.isTrue((await rewardsPool.withdrawableRewards(accounts[0])).eq(rewards2))
@@ -1279,5 +1303,19 @@ describe('SDLPoolPrimary', () => {
     assert.equal((await sdlPool.lastLockId()).toNumber(), 13)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 3600)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 1600)
+  })
+
+  it('should not be able to transfer to ccip controller', async () => {
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(1000),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+
+    await expect(
+      sdlPool.connect(signers[1]).transferFrom(accounts[1], accounts[0], 1)
+    ).to.be.revertedWith('TransferToCCIPController()')
   })
 })

@@ -76,6 +76,7 @@ describe('StakingPool', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
     await stakingPool.setPriorityPool(accounts[0])
+    await stakingPool.setRewardsInitiator(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
