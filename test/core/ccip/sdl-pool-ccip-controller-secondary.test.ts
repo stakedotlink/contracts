@@ -67,6 +67,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       'reSDL',
       sdlToken.address,
       boostController.address,
+      5,
     ])) as SDLPoolSecondary
     controller = (await deploy('SDLPoolCCIPControllerSecondary', [
       router.address,
@@ -76,7 +77,6 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       77,
       accounts[4],
       toEther(10),
-      10000,
       '0x',
     ])) as SDLPoolCCIPControllerSecondary
 
@@ -109,25 +109,25 @@ describe('SDLPoolCCIPControllerSecondary', () => {
     ).to.be.revertedWith('SenderNotAuthorized()')
 
     assert.deepEqual(
-      parseLock(
-        await controller.connect(signers[5]).callStatic.handleOutgoingRESDL(77, accounts[1], 2)
-      ),
-      { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 }
+      await controller
+        .connect(signers[5])
+        .callStatic.handleOutgoingRESDL(77, accounts[1], 2)
+        .then((d: any) => [d[0], parseLock(d[1])]),
+      [accounts[4], { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 }]
     )
 
     await controller.connect(signers[5]).handleOutgoingRESDL(77, accounts[1], 2)
-    assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 200)
+    assert.equal(fromEther(await sdlToken.balanceOf(controller.address)), 200)
     await expect(sdlPool.ownerOf(2)).to.be.revertedWith('InvalidLockId()')
   })
 
   it('handleIncomingRESDL should work correctly', async () => {
-    await sdlToken.transfer(accounts[5], toEther(300))
-    await sdlToken.connect(signers[5]).approve(controller.address, toEther(300))
+    await sdlToken.transfer(controller.address, toEther(300))
 
     await controller
       .connect(signers[5])
-      .handleIncomingRESDL(77, accounts[3], 7, toEther(300), toEther(200), 111, 222, 0)
-    assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 0)
+      .handleIncomingRESDL(77, accounts[3], 7, [toEther(300), toEther(200), 111, 222, 0])
+    assert.equal(fromEther(await sdlToken.balanceOf(controller.address)), 0)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 600)
     assert.equal(await sdlPool.ownerOf(7), accounts[3])
     assert.deepEqual(parseLock((await sdlPool.getLocks([7]))[0]), {
@@ -140,37 +140,58 @@ describe('SDLPoolCCIPControllerSecondary', () => {
   })
 
   it('checkUpkeep should work correctly', async () => {
-    assert.equal((await controller.checkUpkeep('0x'))[0], false)
+    await token1.transfer(tokenPool.address, toEther(1000))
+    let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
+    await sdlPool.addToken(token1.address, rewardsPool1.address)
 
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
-    )
-    assert.equal((await controller.checkUpkeep('0x'))[0], true)
-
-    await controller.performUpkeep('0x')
     assert.equal((await controller.checkUpkeep('0x'))[0], false)
+    assert.equal(await controller.shouldUpdate(), false)
 
     await offRamp
       .connect(signers[4])
       .executeSingleMessage(
         ethers.utils.formatBytes32String('messageId'),
         77,
-        ethers.utils.defaultAbiCoder.encode(['uint256'], [3]),
+        '0x',
         controller.address,
-        []
+        [{ token: token1.address, amount: toEther(25) }]
       )
-    assert.equal((await controller.checkUpkeep('0x'))[0], false)
 
-    await sdlPool.connect(signers[1]).withdraw(2, toEther(10))
     assert.equal((await controller.checkUpkeep('0x'))[0], false)
+    assert.equal(await controller.shouldUpdate(), false)
 
-    await time.increase(10000)
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
+    )
+
+    assert.equal((await controller.checkUpkeep('0x'))[0], false)
+    assert.equal(await controller.shouldUpdate(), false)
+
+    await offRamp
+      .connect(signers[4])
+      .executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        '0x',
+        controller.address,
+        [{ token: token1.address, amount: toEther(25) }]
+      )
+
     assert.equal((await controller.checkUpkeep('0x'))[0], true)
+    assert.equal(await controller.shouldUpdate(), true)
+
+    await controller.performUpkeep('0x')
+    assert.equal((await controller.checkUpkeep('0x'))[0], false)
+    assert.equal(await controller.shouldUpdate(), false)
   })
 
   it('performUpkeep should work correctly', async () => {
+    await token1.transfer(tokenPool.address, toEther(1000))
+    let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
+    await sdlPool.addToken(token1.address, rewardsPool1.address)
+
     await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
 
     await sdlToken.transferAndCall(
@@ -178,6 +199,15 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
     )
+    await offRamp
+      .connect(signers[4])
+      .executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        '0x',
+        controller.address,
+        [{ token: token1.address, amount: toEther(25) }]
+      )
     await controller.performUpkeep('0x')
     await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
 
@@ -215,7 +245,15 @@ describe('SDLPoolCCIPControllerSecondary', () => {
     await sdlPool.connect(signers[1]).withdraw(2, toEther(10))
     await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
 
-    await time.increase(10000)
+    await offRamp
+      .connect(signers[4])
+      .executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        '0x',
+        controller.address,
+        [{ token: token1.address, amount: toEther(25) }]
+      )
     await controller.performUpkeep('0x')
 
     lastRequestData = await onRamp.getLastRequestData()
@@ -286,6 +324,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
         ]
       )
 
+    assert.equal(await controller.shouldUpdate(), false)
     assert.equal(fromEther(await token1.balanceOf(rewardsPool1.address)), 30)
     assert.equal(fromEther(await token2.balanceOf(rewardsPool2.address)), 60)
     assert.deepEqual(
@@ -296,14 +335,47 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       (await sdlPool.withdrawableRewards(accounts[1])).map((d) => fromEther(d)),
       [15, 30]
     )
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
+    )
+    await offRamp
+      .connect(signers[4])
+      .executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        '0x',
+        controller.address,
+        [
+          { token: token1.address, amount: toEther(30) },
+          { token: token2.address, amount: toEther(60) },
+        ]
+      )
+
+    assert.equal(await controller.shouldUpdate(), true)
   })
 
   it('ccipReceive should work correctly for incoming updates', async () => {
+    await token1.transfer(tokenPool.address, toEther(1000))
+    let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
+    await sdlPool.addToken(token1.address, rewardsPool1.address)
+
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(300),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
+    await offRamp
+      .connect(signers[4])
+      .executeSingleMessage(
+        ethers.utils.formatBytes32String('messageId'),
+        77,
+        '0x',
+        controller.address,
+        [{ token: token1.address, amount: toEther(30) }]
+      )
     await controller.performUpkeep('0x')
 
     let success: any = await offRamp
@@ -326,8 +398,9 @@ describe('SDLPoolCCIPControllerSecondary', () => {
         controller.address,
         []
       )
-    await sdlPool.executeQueuedOperations([])
+    assert.equal(await controller.shouldUpdate(), false)
 
+    await sdlPool.executeQueuedOperations([])
     assert.deepEqual(parseLock((await sdlPool.getLocks([7]))[0]), {
       amount: 300,
       boostAmount: 0,

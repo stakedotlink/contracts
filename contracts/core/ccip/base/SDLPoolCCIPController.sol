@@ -50,6 +50,7 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
         sdlPool = _sdlPool;
         maxLINKFee = _maxLINKFee;
         linkToken.approve(_router, type(uint256).max);
+        sdlToken.approve(_router, type(uint256).max);
     }
 
     modifier onlyBridge() {
@@ -99,6 +100,8 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     }
 
     function ccipReceive(Client.Any2EVMMessage calldata _message) external override onlyRouter {
+        _verifyCCIPSender(_message);
+
         if (_message.destTokenAmounts.length == 1 && _message.destTokenAmounts[0].token == address(sdlToken)) {
             IRESDLTokenBridge(reSDLTokenBridge).ccipReceive(_message);
         } else {
@@ -135,4 +138,10 @@ abstract contract SDLPoolCCIPController is Ownable, CCIPReceiver {
     function setRESDLTokenBridge(address _reSDLTokenBridge) external onlyOwner {
         reSDLTokenBridge = _reSDLTokenBridge;
     }
+
+    /**
+     * @notice Verifies the sender of a CCIP message is whitelisted
+     * @param _message CCIP message
+     **/
+    function _verifyCCIPSender(Client.Any2EVMMessage memory _message) internal view virtual;
 }

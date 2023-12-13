@@ -61,6 +61,7 @@ describe('PriorityPool', () => {
 
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(sq.address)
+    await stakingPool.setRewardsInitiator(accounts[0])
     await sq.setDistributionOracle(accounts[0])
 
     for (let i = 0; i < signers.length; i++) {

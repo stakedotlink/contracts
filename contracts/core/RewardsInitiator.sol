@@ -11,7 +11,7 @@ import "./interfaces/ISDLPoolCCIPControllerPrimary.sol";
  * @dev Chainlink automation should call updateRewards periodically under normal circumstances and call performUpkeep
  * in the case of a negative rebase in the staking pool
  */
-contract SlashingKeeper {
+contract RewardsInitiator {
     IStakingPool public stakingPool;
     ISDLPoolCCIPControllerPrimary public sdlPoolCCIPController;
 

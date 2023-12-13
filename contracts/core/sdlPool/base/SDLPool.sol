@@ -72,7 +72,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error TransferToCCIPController();
     error ApprovalToCurrentOwner();
     error ApprovalToCaller();
-    error OnlyCCIPController();
     error InvalidValue();
     error InvalidParams();
     error UnauthorizedToken();
@@ -83,7 +82,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error DuplicateContract();
     error ContractNotFound();
     error UnlockAlreadyInitiated();
-    error InvalidToken();
 
     /**
      * @notice initializes contract
@@ -117,7 +115,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @notice reverts if sender is not the CCIP controller
      **/
     modifier onlyCCIPController() {
-        if (msg.sender != ccipController) revert OnlyCCIPController();
+        if (msg.sender != ccipController) revert SenderNotAuthorized();
         _;
     }
 
