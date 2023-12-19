@@ -88,6 +88,7 @@ describe('RewardsInitiator', () => {
     await stakingPool.addStrategy(strategy3.address)
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRewardsInitiator(rewardsInitiator.address)
+    await rewardsInitiator.whitelistCaller(accounts[0], true)
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(1000))
