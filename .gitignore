@@ -9,3 +9,5 @@ deployments/localhost.json
 .envrc
 forge-cache/
 .vscode
+out
+cache_forge
