@@ -11,12 +11,4 @@ contract MerkleDistributorForkTest is BaseTest {
     function setUp() public {
         BaseTest.init(_fork);
     }
-
-    function test_claimDistribution_EmptyProof() public {
-        ERC677 _testToken = new ERC677("Token", "TKN", 1000000);
-        merkleDistributor.addDistribution(address(_testToken), bytes32(""), 0, 0);
-        bytes32[] memory _proof = new bytes32[](0);
-        vm.expectRevert("MerkleDistributor: Invalid proof.");
-        merkleDistributor.claimDistribution(address(_testToken), 0, users.user1, 10, _proof);
-    }
 }

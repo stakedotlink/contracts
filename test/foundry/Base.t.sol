@@ -13,8 +13,9 @@ abstract contract BaseTest is Test, Utils {
 
     function init(bool _fork) public {
         if (_fork) {
-            network = vm.createSelectFork(vm.rpcUrl("ethereum"));
-            merkleDistributor = getValue("MerkleDistributor");
+            // commented out until github keys are setup
+            // network = vm.createSelectFork(vm.rpcUrl("ethereum"));
+            // merkleDistributor = MerkleDistributor(getValue("MerkleDistributor"));
         } else {
             merkleDistributor = new MerkleDistributor();
         }
