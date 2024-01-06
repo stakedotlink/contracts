@@ -43,4 +43,4 @@ jobs:
       - name: Run tests
         run: |
           yarn test
-          forge test -vvv
+          forge test --no-match-test testFork -vvv
