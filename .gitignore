@@ -11,3 +11,4 @@ forge-cache/
 .vscode
 out
 cache_forge
+test/foundry/simulation
