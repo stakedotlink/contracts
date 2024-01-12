@@ -11,7 +11,11 @@ contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
     uint256 public minRewardsTotal;
     uint256 public minRewardsPerVault;
 
-    constructor(address _communityVCS, uint256 _minRewardsTotal, uint256 _minRewardsPerVault) {
+    constructor(
+        address _communityVCS,
+        uint256 _minRewardsTotal,
+        uint256 _minRewardsPerVault
+    ) {
         communityVCS = CommunityVCS(_communityVCS);
         minRewardsTotal = _minRewardsTotal;
         minRewardsPerVault = _minRewardsPerVault;
