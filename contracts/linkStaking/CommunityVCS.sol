@@ -62,11 +62,14 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _vaults list if vault indexes to claim from
      * @param _minRewards min amount of rewards required to claim
      */
-    function claimRewards(uint256[] calldata _vaults, uint256 _minRewards) external {
+    function claimRewards(uint256[] calldata _vaults, uint256 _minRewards) external returns (uint256) {
         address receiver = address(this);
+        uint256 balanceBefore = token.balanceOf(address(this));
         for (uint256 i = 0; i < _vaults.length; ++i) {
             ICommunityVault(address(vaults[_vaults[i]])).claimRewards(_minRewards, receiver);
         }
+        uint256 balanceAfter = token.balanceOf(address(this));
+        return balanceAfter - balanceBefore;
     }
 
     /**

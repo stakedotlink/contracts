@@ -28,12 +28,14 @@ contract CommunityVCSMock {
         return _vaults;
     }
 
-    function claimRewards(uint256[] memory _vaults, uint256 _minRewards) external {
+    function claimRewards(uint256[] memory _vaults, uint256 _minRewards) external returns (uint256) {
+        uint256 _totalRewards = 0;
         for (uint256 i = 0; i < _vaults.length; i++) {
             uint256 _rewards = vaults[_vaults[i]].getRewards();
+            _totalRewards += _rewards;
             assert(_rewards >= _minRewards);
         }
-        return;
+        return _totalRewards;
     }
 }
 

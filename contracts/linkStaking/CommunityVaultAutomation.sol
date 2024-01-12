@@ -11,6 +11,8 @@ contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
     uint256 public minRewardsTotal;
     uint256 public minRewardsPerVault;
 
+    error RewardsMinimumNotMet();
+
     constructor(
         address _communityVCS,
         uint256 _minRewardsTotal,
@@ -24,25 +26,27 @@ contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
     /**
      * @notice returns whether or not rewards is equal to or greater than the minimum rewards set
      * @return upkeepNeeded whether or not rewards should be claimed
-     * @return performData abi encoded total claimable rewards and list of vault indexes to claim from
+     * @return performData abi encoded list of vault indexes to claim from
      *
      */
     function checkUpkeep(bytes calldata) external returns (bool upkeepNeeded, bytes memory performData) {
-        (uint256 _totalRewards, uint256[] memory _vaults) = checkRewards();
-        if (_totalRewards >= minRewardsTotal) {
-            return (true, abi.encode(_totalRewards, _vaults));
+        (uint256 totalRewards, uint256[] memory vaultList) = checkRewards();
+        if (totalRewards >= minRewardsTotal) {
+            return (true, abi.encode(vaultList));
         }
-        return (false, abi.encode(_totalRewards, _vaults));
+        return (false, abi.encode(vaultList));
     }
 
     /**
      * @notice Claims rewards from vaults
-     * @param performData abi encoded total claimable rewards and list of vault indexes to claim from
+     * @param performData abi encoded list of vault indexes to claim from
      */
     function performUpkeep(bytes calldata performData) external {
-        (uint256 _totalRewards, uint256[] memory _vaults) = abi.decode(performData, (uint256, uint256[]));
-        if (_totalRewards >= minRewardsTotal) {
-            communityVCS.claimRewards(_vaults, minRewardsPerVault);
+        uint256[] memory vaultList = abi.decode(performData, (uint256[]));
+
+        uint256 claimedRewards = communityVCS.claimRewards(vaultList, minRewardsPerVault);
+        if (claimedRewards < minRewardsTotal) {
+            revert RewardsMinimumNotMet();
         }
     }
 
@@ -53,29 +57,27 @@ contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
      */
     function checkRewards() public view returns (uint256, uint256[] memory) {
         IVault[] memory vaults = communityVCS.getVaults();
-        uint256 _totalRewards = 0;
+        uint256 totalRewards = 0;
 
         uint256 maxVaults = vaults.length;
-        uint256[] memory _vaultsToClaim = new uint256[](maxVaults);
+        uint256[] memory vaultsToClaim = new uint256[](maxVaults);
         uint256 count = 0;
 
         for (uint256 i = 0; i < vaults.length; i++) {
             IVault vault = IVault(vaults[i]);
-            uint256 _rewards = vault.getRewards();
-            if (_rewards > minRewardsPerVault) {
-                _totalRewards += _rewards;
-                if (count < maxVaults) {
-                    _vaultsToClaim[count] = i;
-                    count++;
-                }
+            uint256 rewards = vault.getRewards();
+            if (rewards >= minRewardsPerVault) {
+                totalRewards += rewards;
+                vaultsToClaim[count] = i;
+                count++;
             }
         }
-        uint256[] memory _finalVaultsToClaim = new uint256[](count);
+        uint256[] memory finalVaultsToClaim = new uint256[](count);
         for (uint256 j = 0; j < count; j++) {
-            _finalVaultsToClaim[j] = _vaultsToClaim[j];
+            finalVaultsToClaim[j] = vaultsToClaim[j];
         }
 
-        return (_totalRewards, _finalVaultsToClaim);
+        return (totalRewards, finalVaultsToClaim);
     }
 
     function setCommunityVCS(address _communityVCS) external onlyOwner {

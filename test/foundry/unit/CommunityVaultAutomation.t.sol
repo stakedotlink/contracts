@@ -23,8 +23,7 @@ contract CommunityVaultAutomationTest is BaseTest {
         uint256[4] memory _vaultsReference = [uint256(0), 1, 2, 4];
         (bool upkeepNeeded, bytes memory performData) = communityVaultAutomation.checkUpkeep("");
         assertEq(upkeepNeeded, true);
-        (uint256 _totalRewards, uint256[] memory _vaults) = abi.decode(performData, (uint256, uint256[]));
-        assertTrue(_totalRewards > 0);
+        uint256[] memory _vaults = abi.decode(performData, (uint256[]));
         assertTrue(_vaults.length == 4);
         for (uint256 i = 0; i < _vaultsReference.length; i++) {
             assertTrue(_vaults[i] == _vaultsReference[i]);
