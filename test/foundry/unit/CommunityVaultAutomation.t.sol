@@ -16,15 +16,19 @@ contract CommunityVaultAutomationTest is BaseTest {
     function setUp() public {
         BaseTest.init(_fork);
         communityVCSMock = new CommunityVCSMock(5);
-        communityVaultAutomation = new CommunityVaultAutomation(address(communityVCSMock), 0);
+        communityVaultAutomation = new CommunityVaultAutomation(address(communityVCSMock), 0, 1);
     }
 
     function test_performUpkeep_success() public {
+        uint256[4] memory _vaultsReference = [uint256(0), 1, 2, 4];
         (bool upkeepNeeded, bytes memory performData) = communityVaultAutomation.checkUpkeep("");
         assertEq(upkeepNeeded, true);
-        (uint256 _totalRewards, uint256 _lastIndex) = abi.decode(performData, (uint256, uint256));
+        (uint256 _totalRewards, uint256[] memory _vaults) = abi.decode(performData, (uint256, uint256[]));
         assertTrue(_totalRewards > 0);
-        assertTrue(_lastIndex == 2);
+        assertTrue(_vaults.length == 4);
+        for (uint256 i = 0; i < _vaultsReference.length; i++) {
+            assertTrue(_vaults[i] == _vaultsReference[i]);
+        }
         communityVaultAutomation.performUpkeep(performData);
     }
 }

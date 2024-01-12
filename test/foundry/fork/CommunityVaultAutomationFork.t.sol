@@ -13,6 +13,6 @@ contract CommunityVaultAutomationForkTest is BaseTest {
 
     function setUp() public {
         BaseTest.init(_fork);
-        communityVaultAutomation = new CommunityVaultAutomation(getValue("CommunityVCS"), 0);
+        communityVaultAutomation = new CommunityVaultAutomation(getValue("CommunityVCS"), 0, 0);
     }
 }

@@ -7,9 +7,14 @@ contract CommunityVCSMock {
     constructor(uint256 _totalVaults) {
         for (uint256 i = 0; i < _totalVaults; i++) {
             uint256 _total = (i + 1) * 1 ether;
-            if (i > 2) {
-                _total = 0;
+            if (i == 4) {
+                (i + 1) * 1 ether;
+            } else {
+                if (i > 2) {
+                    _total = 0;
+                }
             }
+
             vaults.push(new VaultMock(_total));
         }
     }
@@ -23,7 +28,11 @@ contract CommunityVCSMock {
         return _vaults;
     }
 
-    function claimRewards(uint256 _startIndex, uint256 _numVaults, uint256 _minRewards) external {
+    function claimRewards(uint256[] memory _vaults, uint256 _minRewards) external {
+        for (uint256 i = 0; i < _vaults.length; i++) {
+            uint256 _rewards = vaults[_vaults[i]].getRewards();
+            assert(_rewards >= _minRewards);
+        }
         return;
     }
 }
