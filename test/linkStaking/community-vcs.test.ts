@@ -96,24 +96,23 @@ describe('CommunityVCS', () => {
     await rewardsController.setReward(vaults[3], toEther(7))
     await rewardsController.setReward(vaults[5], toEther(8))
 
-    await strategy.claimRewards(0, 10, toEther(10))
+    await strategy.claimRewards([1, 3, 5], toEther(10))
     assert.equal(fromEther(await token.balanceOf(strategy.address)), 0)
 
     await rewardsController.setReward(vaults[6], toEther(10))
     await rewardsController.setReward(vaults[7], toEther(7))
     await rewardsController.setReward(vaults[8], toEther(15))
 
-    await strategy.claimRewards(0, 10, toEther(10))
+    await strategy.claimRewards([6, 7, 8], toEther(10))
     assert.equal(fromEther(await token.balanceOf(strategy.address)), 25)
 
-    await rewardsController.setReward(vaults[8], toEther(15))
     await rewardsController.setReward(vaults[9], toEther(15))
     await rewardsController.setReward(vaults[10], toEther(15))
     await rewardsController.setReward(vaults[11], toEther(15))
 
-    await strategy.claimRewards(9, 2, toEther(10))
-    assert.equal(fromEther(await token.balanceOf(strategy.address)), 55)
+    await strategy.claimRewards([9, 10, 11], toEther(10))
+    assert.equal(fromEther(await token.balanceOf(strategy.address)), 70)
 
-    await expect(strategy.claimRewards(0, 30, 0)).to.be.reverted
+    await expect(strategy.claimRewards([100], 0)).to.be.reverted
   })
 })
