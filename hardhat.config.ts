@@ -4,6 +4,7 @@ import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 import '@nomiclabs/hardhat-etherscan'
+import '@nomicfoundation/hardhat-ledger'
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -39,8 +40,14 @@ const config: HardhatUserConfig = {
       accounts,
     },
     mainnet: {
-      url: 'http://localhost:1248',
-      accounts: 'remote',
+      url: 'https://rpc.flashbots.net',
+      ledgerAccounts: ["0x23c4602e63ACfe29b930c530B19d44a84AF0d767"],
+      timeout: 600000,
+    },
+    arbitrum_mainnet: {
+      chainId: 42161,
+      url: 'https://arb1.arbitrum.io/rpc',
+      ledgerAccounts: ["0x23c4602e63ACfe29b930c530B19d44a84AF0d767"],
       timeout: 600000,
     },
     testnet: {
