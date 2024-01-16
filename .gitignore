@@ -11,3 +11,5 @@ forge-cache/
 .vscode
 out
 cache_forge
+test/foundry/simulation
+.openzeppelin/unknown-1337.json

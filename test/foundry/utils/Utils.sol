@@ -5,7 +5,7 @@ import {Script} from "forge-std/Script.sol";
 
 contract Utils is Script {
     function updateDeployment(address newAddress, string memory key) internal {
-        string memory inputDir = "script/input/";
+        string memory inputDir = "scripts/input/";
         string memory chainDir = string.concat(vm.toString(block.chainid), "/config.json");
         string[] memory inputs = new string[](4);
         inputs[0] = "./update-config.sh";
@@ -17,7 +17,7 @@ contract Utils is Script {
     }
 
     function getValue(string memory key) internal returns (address) {
-        string memory inputDir = "script/input/";
+        string memory inputDir = "scripts/input/";
         string memory chainDir = string.concat(vm.toString(block.chainid), "/config.json");
         string[] memory inputs = new string[](3);
         inputs[0] = "./get-value.sh";

@@ -32,7 +32,8 @@ contract CommunityVCS is VaultControllerStrategy {
      * that can be deposited at once
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
-     **/
+     *
+     */
     function initialize(
         address _token,
         address _stakingPool,
@@ -58,19 +59,17 @@ contract CommunityVCS is VaultControllerStrategy {
 
     /**
      * @notice claims Chanlink staking rewards from vaults
-     * @param _startIndex index of first vault to claim from
-     * @param _numVaults number of vaults to claim from starting at _startIndex
+     * @param _vaults list if vault indexes to claim from
      * @param _minRewards min amount of rewards required to claim
      */
-    function claimRewards(
-        uint256 _startIndex,
-        uint256 _numVaults,
-        uint256 _minRewards
-    ) external {
+    function claimRewards(uint256[] calldata _vaults, uint256 _minRewards) external returns (uint256) {
         address receiver = address(this);
-        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
-            ICommunityVault(address(vaults[i])).claimRewards(_minRewards, receiver);
+        uint256 balanceBefore = token.balanceOf(address(this));
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            ICommunityVault(address(vaults[_vaults[i]])).claimRewards(_minRewards, receiver);
         }
+        uint256 balanceAfter = token.balanceOf(address(this));
+        return balanceAfter - balanceBefore;
     }
 
     /**
