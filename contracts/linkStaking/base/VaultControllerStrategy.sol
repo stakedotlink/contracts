@@ -122,7 +122,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * any slashing occurred
      * @return deposit change
      */
-    function getDepositChange() public view returns (int) {
+    function getDepositChange() public view virtual returns (int) {
         uint256 totalBalance = token.balanceOf(address(this));
         for (uint256 i = 0; i < vaults.length; ++i) {
             totalBalance += vaults[i].getTotalDeposits();
