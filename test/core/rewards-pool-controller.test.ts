@@ -1,5 +1,5 @@
 import { BigNumber, Signer } from 'ethers'
-import { assert } from 'chai'
+import { assert, expect } from 'chai'
 import {
   toEther,
   assertThrowsAsync,
@@ -13,9 +13,12 @@ import {
   ERC677,
   RewardsPool,
   RewardsPoolControllerMock,
+  RewardsPoolTimeBased,
   RewardsPoolWSD,
   WrappedSDTokenMock,
 } from '../../typechain-types'
+import { ethers, network } from 'hardhat'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('RewardsPoolController', () => {
   let stakingToken: ERC677
@@ -444,6 +447,245 @@ describe('RewardsPoolController', () => {
         ),
         JSON.stringify([0, 0, 200, 300]),
         'account-2 withdrawableRewards incorrect'
+      )
+    })
+  })
+
+  describe('RewardsPoolTimeBased', () => {
+    let token3: ERC677
+    let tbRewardsPool: RewardsPoolTimeBased
+    beforeEach(async () => {
+      await network.provider.send('evm_setIntervalMining', [0])
+
+      token3 = (await deploy('ERC677', ['Token3', '3', 1000000000])) as ERC677
+      await setupToken(token3, accounts)
+
+      tbRewardsPool = (await deploy('RewardsPoolTimeBased', [
+        controller.address,
+        token3.address,
+        100,
+      ])) as RewardsPoolTimeBased
+
+      await controller.addToken(token3.address, tbRewardsPool.address)
+      await token3.approve(tbRewardsPool.address, ethers.constants.MaxUint256)
+    })
+
+    it('depositRewards should work correctly with no previous epoch', async () => {
+      await expect(tbRewardsPool.depositRewards(100000, 10)).to.be.revertedWith('InvalidExpiry()')
+
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(400))
+
+      assert.equal(fromEther(await token3.balanceOf(tbRewardsPool.address)), 400)
+      assert.equal(fromEther(await tbRewardsPool.totalRewards()), 400)
+      assert.equal(fromEther(await tbRewardsPool.epochRewardsAmount()), 400)
+      assert.equal((await tbRewardsPool.epochDuration()).toNumber(), 1000)
+      assert.equal((await tbRewardsPool.epochExpiry()).toNumber(), ts + 1000)
+      assert.equal(fromEther(await tbRewardsPool.rewardPerToken()), 0)
+    })
+
+    it('depositRewards should work correctly with previous completed epoch', async () => {
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
+      await time.increase(1000)
+      ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 500, toEther(200))
+
+      assert.equal(fromEther(await token3.balanceOf(tbRewardsPool.address)), 800)
+      assert.equal(fromEther(await tbRewardsPool.totalRewards()), 800)
+      assert.equal(fromEther(await tbRewardsPool.epochRewardsAmount()), 200)
+      assert.equal((await tbRewardsPool.epochDuration()).toNumber(), 500)
+      assert.equal((await tbRewardsPool.epochExpiry()).toNumber(), ts + 500)
+      assert.equal(fromEther(await tbRewardsPool.rewardPerToken()), 0.4)
+
+      await expect(tbRewardsPool.depositRewards(ts + 499, 10)).to.be.revertedWith('InvalidExpiry()')
+    })
+
+    it('depositRewards should work correctly with epoch in progress', async () => {
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
+      await time.increase(499)
+      ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 500, toEther(200))
+
+      assert.equal(fromEther(await token3.balanceOf(tbRewardsPool.address)), 800)
+      assert.equal(fromEther(await tbRewardsPool.totalRewards()), 800)
+      assert.equal(fromEther(await tbRewardsPool.epochRewardsAmount()), 500)
+      assert.equal((await tbRewardsPool.epochDuration()).toNumber(), 500)
+      assert.equal((await tbRewardsPool.epochExpiry()).toNumber(), ts + 500)
+      assert.equal(fromEther(await tbRewardsPool.rewardPerToken()), 0.2)
+
+      await expect(tbRewardsPool.depositRewards(ts + 499, 10)).to.be.revertedWith('InvalidExpiry()')
+    })
+
+    it('getRewardPerToken should work correctly', async () => {
+      assert.equal(fromEther(await tbRewardsPool.getRewardPerToken()), 0)
+
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
+
+      assert.equal(fromEther(await tbRewardsPool.getRewardPerToken()), 0)
+
+      await time.increase(500)
+
+      assert.equal(fromEther(await tbRewardsPool.getRewardPerToken()), 0.2)
+
+      ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 500, toEther(200))
+
+      assert.equal(fromEther(await tbRewardsPool.getRewardPerToken()), 0.2004)
+
+      await time.increase(10000)
+
+      assert.equal(Number(fromEther(await tbRewardsPool.getRewardPerToken()).toFixed(3)), 0.533)
+
+      ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 400, toEther(200))
+
+      await time.increase(100)
+
+      assert.equal(Number(fromEther(await tbRewardsPool.getRewardPerToken()).toFixed(3)), 0.567)
+    })
+
+    it('withdrawableRewards should work correctly', async () => {
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        [0, 0, 0]
+      )
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        [0, 0, 0]
+      )
+
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
+
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        [0, 0, 0]
+      )
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        [0, 0, 0]
+      )
+      await time.increase(500)
+
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        [0, 0, 200]
+      )
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        [0, 0, 100]
+      )
+      ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 500, toEther(200))
+
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        [0, 0, 200.4]
+      )
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        [0, 0, 100.2]
+      )
+      await time.increase(10000)
+
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[1])).map((r) =>
+          Number(fromEther(r).toFixed(2))
+        ),
+        [0, 0, 533.33]
+      )
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[2])).map((r) =>
+          Number(fromEther(r).toFixed(2))
+        ),
+        [0, 0, 266.67]
+      )
+      ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 400, toEther(200))
+
+      await time.increase(100)
+
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[1])).map((r) =>
+          Number(fromEther(r).toFixed(2))
+        ),
+        [0, 0, 566.67]
+      )
+      assert.deepEqual(
+        (await controller.withdrawableRewards(accounts[2])).map((r) =>
+          Number(fromEther(r).toFixed(2))
+        ),
+        [0, 0, 283.33]
+      )
+    })
+
+    it('withdrawRewards should work correctly', async () => {
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
+      await time.increase(1000)
+
+      await controller.connect(signers[1]).withdrawRewards([token3.address])
+      await controller.connect(signers[2]).withdrawRewards([token3.address])
+
+      assert.equal(fromEther(await token3.balanceOf(accounts[1])), 10400)
+      assert.equal(fromEther(await token3.balanceOf(accounts[2])), 10200)
+      assert.equal(
+        JSON.stringify(
+          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+        ),
+        JSON.stringify([0, 0, 0])
+      )
+      assert.equal(
+        JSON.stringify(
+          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+        ),
+        JSON.stringify([0, 0, 0])
+      )
+    })
+
+    it('staking/withdrawing should update all rewards', async () => {
+      let ts =
+        (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp + 1
+      await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
+      await time.increase(1000)
+
+      assert.equal(fromEther(await tbRewardsPool.userRewardPerTokenPaid(accounts[1])), 0)
+      assert.equal(fromEther(await tbRewardsPool.userRewardPerTokenPaid(accounts[2])), 0)
+      assert.equal(fromEther(await tbRewardsPool.rewardPerToken()), 0)
+
+      await withdraw(1, 500)
+      await stake(2, 500)
+
+      assert.equal(fromEther(await tbRewardsPool.userRewardPerTokenPaid(accounts[1])), 0.4)
+      assert.equal(fromEther(await tbRewardsPool.userRewardPerTokenPaid(accounts[2])), 0.4)
+      assert.equal(fromEther(await tbRewardsPool.rewardPerToken()), 0.4)
+    })
+
+    it('should be able to distributeTokens', async () => {
+      await token3.transfer(controller.address, toEther(150))
+
+      await controller.distributeTokens([token3.address])
+      assert.equal(
+        JSON.stringify(
+          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+        ),
+        JSON.stringify([0, 0, 100])
+      )
+      assert.equal(
+        JSON.stringify(
+          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+        ),
+        JSON.stringify([0, 0, 50])
       )
     })
   })
