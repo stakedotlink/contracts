@@ -64,7 +64,7 @@ describe('WrappedTokenBridge', () => {
 
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
 
     await linkToken.approve(stakingPool.address, ethers.constants.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(10000))

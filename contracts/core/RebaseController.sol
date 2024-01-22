@@ -8,12 +8,12 @@ import "./interfaces/IStrategy.sol";
 import "./interfaces/ISDLPoolCCIPControllerPrimary.sol";
 
 /**
- * @title Rewards Initiator
+ * @title Rebase Controller
  * @notice Updates and distributes rewards across the staking pool and cross-chain SDL Pools
  * @dev Chainlink automation should call updateRewards periodically under normal circumstances and call performUpkeep
  * in the case of a negative rebase in the staking pool
  */
-contract RewardsInitiator is Ownable {
+contract RebaseController {
     IStakingPool public stakingPool;
     ISDLPoolCCIPControllerPrimary public sdlPoolCCIPController;
 

@@ -26,7 +26,7 @@ contract StakingPool is StakingRewardsPool {
     Fee[] private fees;
 
     address public priorityPool;
-    address public rewardsInitiator;
+    address public rebaseController;
     uint16 private poolIndex; // deprecated
 
     event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
@@ -345,7 +345,7 @@ contract StakingPool is StakingRewardsPool {
      * @param _data encoded data to be passed to each strategy
      **/
     function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external {
-        if (msg.sender != rewardsInitiator && !_strategyExists(msg.sender)) revert SenderNotAuthorized();
+        if (msg.sender != rebaseController && !_strategyExists(msg.sender)) revert SenderNotAuthorized();
         _updateStrategyRewards(_strategyIdxs, _data);
     }
 
@@ -379,12 +379,12 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice Sets the rewards initiator
+     * @notice Sets the rebase controller
      * @dev this address has sole authority to update rewards
-     * @param _rewardsInitiator address of rewards initiator
+     * @param _rebaseController address of rebase controller
      **/
-    function setRewardsInitiator(address _rewardsInitiator) external onlyOwner {
-        rewardsInitiator = _rewardsInitiator;
+    function setRebaseController(address _rebaseController) external onlyOwner {
+        rebaseController = _rebaseController;
     }
 
     /**

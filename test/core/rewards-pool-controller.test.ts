@@ -464,6 +464,7 @@ describe('RewardsPoolController', () => {
         controller.address,
         token3.address,
         100,
+        100000,
       ])) as RewardsPoolTimeBased
 
       await controller.addToken(token3.address, tbRewardsPool.address)
