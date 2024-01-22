@@ -12,17 +12,19 @@ import {
   ERC677,
   StrategyMock,
   StakingPool,
-  WrappedSDToken,
   RebaseController,
   SDLPoolCCIPControllerMock,
+  PriorityPool,
+  InsurancePool,
 } from '../../typechain-types'
 
 describe('RebaseController', () => {
   let token: ERC677
-  let wsdToken: WrappedSDToken
   let rebaseController: RebaseController
   let stakingPool: StakingPool
+  let priorityPool: PriorityPool
   let sdlPoolCCIPController: SDLPoolCCIPControllerMock
+  let insurancePool: InsurancePool
   let strategy1: StrategyMock
   let strategy2: StrategyMock
   let strategy3: StrategyMock
@@ -52,21 +54,34 @@ describe('RebaseController', () => {
       [[ownersRewards, 1000]],
     ])) as StakingPool
 
+    priorityPool = (await deployUpgradeable('PriorityPool', [
+      token.address,
+      stakingPool.address,
+      accounts[0],
+      toEther(100),
+      toEther(1000),
+    ])) as PriorityPool
+
     sdlPoolCCIPController = (await deploy('SDLPoolCCIPControllerMock', [
       accounts[0],
       accounts[0],
     ])) as SDLPoolCCIPControllerMock
 
+    insurancePool = (await deployUpgradeable('InsurancePool', [
+      token.address,
+      'name',
+      'symbol',
+      accounts[0],
+      3000,
+    ])) as InsurancePool
+
     rebaseController = (await deploy('RebaseController', [
       stakingPool.address,
+      priorityPool.address,
       sdlPoolCCIPController.address,
+      insurancePool.address,
+      3000,
     ])) as RebaseController
-
-    wsdToken = (await deploy('WrappedSDToken', [
-      stakingPool.address,
-      'Wrapped LinkPool LINK',
-      'wlplLINK',
-    ])) as WrappedSDToken
 
     strategy1 = (await deployUpgradeable('StrategyMock', [
       token.address,
@@ -92,6 +107,8 @@ describe('RebaseController', () => {
     await stakingPool.addStrategy(strategy3.address)
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(rebaseController.address)
+    await priorityPool.setRebaseController(rebaseController.address)
+    await insurancePool.setRebaseController(rebaseController.address)
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(1000))
@@ -155,6 +172,24 @@ describe('RebaseController', () => {
     await expect(rebaseController.performUpkeep(encode([]))).to.be.revertedWith(
       'NoStrategiesToUpdate()'
     )
+  })
+
+  it.only('performUpkeep should work correctly when max loss is exceeded', async () => {
+    await strategy3.simulateSlash(toEther(300))
+    await rebaseController.performUpkeep(encode([2]))
+
+    assert.equal(fromEther(await stakingPool.totalStaked()), 700)
+    assert.equal(await priorityPool.poolStatus(), 0)
+    assert.equal(await insurancePool.claimInProgress(), false)
+
+    await token.transfer(strategy3.address, toEther(300))
+    await rebaseController.updateRewards([2], '0x')
+    await strategy3.simulateSlash(toEther(301))
+    await rebaseController.performUpkeep(encode([2]))
+
+    assert.equal(fromEther(await stakingPool.totalStaked()), 699)
+    assert.equal(await priorityPool.poolStatus(), 2)
+    assert.equal(await insurancePool.claimInProgress(), true)
   })
 
   it('updateRewards should work correctly', async () => {

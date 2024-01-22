@@ -125,7 +125,7 @@ describe('PriorityPool', () => {
     assert.equal((await sq.getAccountIndex(accounts[3])).toNumber(), 4)
     assert.equal((await sq.getAccountIndex(accounts[4])).toNumber(), 2)
 
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     await expect(sq.deposit(toEther(1000), true)).to.be.revertedWith('DepositsDisabled()')
     await sq.setPoolStatus(1)
     await expect(sq.deposit(toEther(1000), true)).to.be.revertedWith('DepositsDisabled()')
@@ -202,7 +202,7 @@ describe('PriorityPool', () => {
     await token.transfer(stakingPool.address, toEther(1))
     await sq.depositQueuedTokens(toEther(100), toEther(1000))
 
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     await expect(sq.depositQueuedTokens(toEther(100), toEther(1000))).to.be.revertedWith(
       'DepositsDisabled()'
     )
@@ -223,7 +223,7 @@ describe('PriorityPool', () => {
     assert.deepEqual(await sq.checkUpkeep('0x'), [false, '0x'])
 
     await token.transfer(stakingPool.address, toEther(1))
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     assert.deepEqual(await sq.checkUpkeep('0x'), [false, '0x'])
 
     await sq.setPoolStatus(1)
@@ -295,7 +295,7 @@ describe('PriorityPool', () => {
     await token.transfer(stakingPool.address, toEther(1))
     await sq.performUpkeep('0x')
 
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     await expect(sq.performUpkeep('0x')).to.be.revertedWith('DepositsDisabled()')
     await sq.setPoolStatus(1)
     await expect(sq.performUpkeep('0x')).to.be.revertedWith('DepositsDisabled()')

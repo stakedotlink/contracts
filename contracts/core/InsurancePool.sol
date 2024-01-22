@@ -22,11 +22,13 @@ contract InsurancePool is StakingRewardsPool {
 
     event InitiateClaim();
     event ExecuteClaim(uint256 amount);
+    event ResolveClaim();
 
     error SenderNotAuthorized();
     error ClaimInProgress();
     error ExceedsMaxClaimAmount();
     error InvalidClaimAmount();
+    error NoClaimInProgress();
 
     function initialize(
         address _lpToken,
@@ -87,14 +89,21 @@ contract InsurancePool is StakingRewardsPool {
      * @param _amount amount of tokens to withdraw
      */
     function executeClaim(uint256 _amount) external onlyOwner {
+        if (!claimInProgress) revert NoClaimInProgress();
         if (_amount > (totalDeposits * maxClaimAmountBP) / 10000) revert ExceedsMaxClaimAmount();
 
-        claimInProgress = false;
         if (_amount != 0) {
             totalDeposits -= _amount;
             token.safeTransfer(msg.sender, _amount);
         }
         emit ExecuteClaim(_amount);
+    }
+
+    function resolveClaim() external onlyRebaseController {
+        if (!claimInProgress) revert NoClaimInProgress();
+
+        claimInProgress = false;
+        emit ResolveClaim();
     }
 
     /**

@@ -1,4 +1,4 @@
-import { BigNumber, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -9,7 +9,7 @@ import {
   deployUpgradeable,
 } from '../utils/helpers'
 import { ERC677, InsurancePool, RewardsPoolTimeBased } from '../../typechain-types'
-import { ethers, network } from 'hardhat'
+import { ethers } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('InsurancePool', () => {
@@ -105,6 +105,9 @@ describe('InsurancePool', () => {
   })
 
   it('claim process should work correctly', async () => {
+    await expect(insurancePool.executeClaim(10)).to.be.revertedWith('NoClaimInProgress()')
+    await expect(insurancePool.resolveClaim()).to.be.revertedWith('NoClaimInProgress()')
+
     await insurancePool.deposit(toEther(1000))
     await insurancePool.connect(signers[1]).deposit(toEther(3000))
     await token.transferAndCall(rewardsPool.address, toEther(1000), '0x')
@@ -119,7 +122,7 @@ describe('InsurancePool', () => {
 
     await insurancePool.executeClaim(toEther(1200))
 
-    assert.equal(await insurancePool.claimInProgress(), false)
+    assert.equal(await insurancePool.claimInProgress(), true)
     assert.equal(fromEther(await rewardsPool.withdrawableRewards(accounts[0])), 250)
     assert.equal(fromEther(await rewardsPool.withdrawableRewards(accounts[1])), 750)
     assert.equal(fromEther(await insurancePool.staked(accounts[0])), 1000)
@@ -129,5 +132,7 @@ describe('InsurancePool', () => {
     assert.equal(fromEther(await insurancePool.totalDeposits()), 2800)
     assert.equal(fromEther(await insurancePool.totalStaked()), 4000)
     assert.equal(fromEther(await stakingToken.balanceOf(insurancePool.address)), 2800)
+
+    await insurancePool.resolveClaim()
   })
 })

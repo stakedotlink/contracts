@@ -49,6 +49,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     mapping(address => uint256) private accountClaimed;
     mapping(address => uint256) private accountSharesClaimed;
 
+    address public rebaseController;
+
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
     event Deposit(address indexed account, uint256 poolAmount, uint256 queueAmount);
@@ -434,20 +436,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice sets the pool's status
      * @param _status pool status
      */
-    function setPoolStatus(PoolStatus _status) external onlyOwner {
-        if (_status == PoolStatus.CLOSED) revert CannotSetClosedStatus();
+    function setPoolStatus(PoolStatus _status) external {
+        if (msg.sender != owner() && msg.sender != rebaseController) revert SenderNotAuthorized();
         if (_status == poolStatus) revert StatusAlreadySet();
         poolStatus = _status;
         emit SetPoolStatus(_status);
-    }
-
-    /**
-     * @notice sets the pool's status to CLOSED
-     */
-    function setPoolStatusClosed() external onlyOwner {
-        if (poolStatus == PoolStatus.CLOSED) revert StatusAlreadySet();
-        poolStatus = PoolStatus.CLOSED;
-        emit SetPoolStatus(PoolStatus.CLOSED);
     }
 
     /**
@@ -467,6 +460,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setDistributionOracle(address _distributionOracle) external onlyOwner {
         distributionOracle = _distributionOracle;
+    }
+
+    /**
+     * @notice sets the address of the rebase controller
+     * @dev this address has authorization to close the pool
+     * @param _rebaseController address of rebase controller
+     */
+    function setRebaseController(address _rebaseController) external onlyOwner {
+        rebaseController = _rebaseController;
     }
 
     /**

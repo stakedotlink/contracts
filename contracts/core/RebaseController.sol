@@ -4,8 +4,10 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IStakingPool.sol";
+import "./interfaces/IPriorityPool.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/ISDLPoolCCIPControllerPrimary.sol";
+import "./interfaces/IInsurancePool.sol";
 
 /**
  * @title Rebase Controller
@@ -13,9 +15,13 @@ import "./interfaces/ISDLPoolCCIPControllerPrimary.sol";
  * @dev Chainlink automation should call updateRewards periodically under normal circumstances and call performUpkeep
  * in the case of a negative rebase in the staking pool
  */
-contract RebaseController {
+contract RebaseController is Ownable {
     IStakingPool public stakingPool;
+    IPriorityPool public priorityPool;
     ISDLPoolCCIPControllerPrimary public sdlPoolCCIPController;
+    IInsurancePool public insurancePool;
+
+    uint256 public maxRebaseLossBP;
 
     mapping(address => bool) public whitelistedCallers;
 
@@ -24,10 +30,21 @@ contract RebaseController {
     error NoStrategiesToUpdate();
     error PositiveDepositChange();
     error SenderNotAuthorized();
+    error InvalidMaxRebaseLoss();
 
-    constructor(address _stakingPool, address _sdlPoolCCIPController) {
+    constructor(
+        address _stakingPool,
+        address _priorityPool,
+        address _sdlPoolCCIPController,
+        address _insurancePool,
+        uint256 _maxRebaseLossBP
+    ) {
         stakingPool = IStakingPool(_stakingPool);
+        priorityPool = IPriorityPool(_priorityPool);
         sdlPoolCCIPController = ISDLPoolCCIPControllerPrimary(_sdlPoolCCIPController);
+        insurancePool = IInsurancePool(_insurancePool);
+        if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
+        maxRebaseLossBP = _maxRebaseLossBP;
     }
 
     /**
@@ -82,7 +99,8 @@ contract RebaseController {
     }
 
     /**
-     * @notice Updates rewards in the case of a negative rebase
+     * @notice Updates rewards in the case of a negative rebase and pauses the priority
+     * pool if losses exceed the maximum
      * @param _performData abi encoded list of strategy indexes to update
      */
     function performUpkeep(bytes calldata _performData) external {
@@ -91,20 +109,29 @@ contract RebaseController {
 
         if (strategiesToUpdate.length == 0) revert NoStrategiesToUpdate();
 
+        int256 totalDepositChange;
+
         for (uint256 i = 0; i < strategiesToUpdate.length; ++i) {
-            if (IStrategy(strategies[strategiesToUpdate[i]]).getDepositChange() >= 0) revert PositiveDepositChange();
+            int256 depositChange = IStrategy(strategies[strategiesToUpdate[i]]).getDepositChange();
+            if (depositChange >= 0) revert PositiveDepositChange();
+            totalDepositChange += depositChange;
+        }
+
+        if (uint256(-10000 * totalDepositChange) / stakingPool.totalSupply() > maxRebaseLossBP) {
+            priorityPool.setPoolStatus(IPriorityPool.PoolStatus(2));
+            insurancePool.initiateClaim();
         }
 
         stakingPool.updateStrategyRewards(strategiesToUpdate, "");
     }
 
     /**
-     * @notice Adds or removes an address from the whitelist for calling updateRewards
-     * @param _caller address to add/remove
-     * @param _shouldWhitelist whether address should be whitelisted
+     * @notice sets the maximum basis point amount of the total amount staked in the staking pool that can be
+     * lost in a single rebase without pausing the pool
+     * @param _maxRebaseLossBP max basis point loss
      */
-    function whitelistCaller(address _caller, bool _shouldWhitelist) external onlyOwner {
-        whitelistedCallers[_caller] = _shouldWhitelist;
-        emit WhitelistCaller(_caller, _shouldWhitelist);
+    function setMaxRebaseLossBP(uint256 _maxRebaseLossBP) external onlyOwner {
+        if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
+        maxRebaseLossBP = _maxRebaseLossBP;
     }
 }
