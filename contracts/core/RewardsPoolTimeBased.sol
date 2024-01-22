@@ -7,7 +7,7 @@ import "./RewardsPool.sol";
 
 /**
  * @title Rewards Pool Time Based
- * @notice Distributes rewards on a per second basis
+ * @notice Handles time based reward distribution for a single asset
  */
 contract RewardsPoolTimeBased is RewardsPool, Ownable {
     using SafeERC20 for IERC677;
