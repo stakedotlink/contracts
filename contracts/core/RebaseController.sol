@@ -21,7 +21,7 @@ contract RebaseController is Ownable {
     ISDLPoolCCIPControllerPrimary public sdlPoolCCIPController;
     IInsurancePool public insurancePool;
 
-    address public rebaseLossBot;
+    address public rebaseBot;
     uint256 public maxRebaseLossBP;
 
     mapping(address => bool) public whitelistedCallers;
@@ -39,20 +39,20 @@ contract RebaseController is Ownable {
         address _priorityPool,
         address _sdlPoolCCIPController,
         address _insurancePool,
-        address _rebaseLossBot,
+        address _rebaseBot,
         uint256 _maxRebaseLossBP
     ) {
         stakingPool = IStakingPool(_stakingPool);
         priorityPool = IPriorityPool(_priorityPool);
         sdlPoolCCIPController = ISDLPoolCCIPControllerPrimary(_sdlPoolCCIPController);
         insurancePool = IInsurancePool(_insurancePool);
-        rebaseLossBot = _rebaseLossBot;
+        rebaseBot = _rebaseBot;
         if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
         maxRebaseLossBP = _maxRebaseLossBP;
     }
 
-    modifier onlyRebaseLossBot() {
-        if (msg.sender != rebaseLossBot) revert SenderNotAuthorized();
+    modifier onlyRebaseBot() {
+        if (msg.sender != rebaseBot) revert SenderNotAuthorized();
         _;
     }
 
@@ -66,8 +66,7 @@ contract RebaseController is Ownable {
         uint256[] calldata _strategyIdxs,
         bytes calldata _data,
         uint256[] calldata _gasLimits
-    ) external {
-        if (!whitelistedCallers[msg.sender]) revert SenderNotAuthorized();
+    ) external onlyRebaseBot {
         if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
 
         stakingPool.updateStrategyRewards(_strategyIdxs, _data);
@@ -121,7 +120,7 @@ contract RebaseController is Ownable {
      * @dev should be called by a custom bot (not CL automation)
      * @param _performData abi encoded list of strategy indexes to update and their total deposit change
      */
-    function performUpkeep(bytes calldata _performData) external onlyRebaseLossBot {
+    function performUpkeep(bytes calldata _performData) external onlyRebaseBot {
         if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
 
         (uint256[] memory strategiesToUpdate, uint256 totalDepositChange) = abi.decode(_performData, (uint256[], uint256));
@@ -150,11 +149,11 @@ contract RebaseController is Ownable {
     }
 
     /**
-     * @notice sets the rebase loss bot
-     * @param _rebaseLossBot address of rebase loss bot
+     * @notice sets the rebase bot
+     * @param _rebaseBot address of rebase bot
      */
-    function setRebaseLossBot(address _rebaseLossBot) external onlyOwner {
-        rebaseLossBot = _rebaseLossBot;
+    function setRebaseLossBot(address _rebaseBot) external onlyOwner {
+        rebaseBot = _rebaseBot;
     }
 
     /**
