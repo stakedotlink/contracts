@@ -12,6 +12,11 @@ abstract contract BaseTest is Test, Utils {
     MerkleDistributor public merkleDistributor;
 
     function init(bool _fork) public {
+        users = Users({
+            admin: payable(makeAddr("Admin")),
+            user1: payable(makeAddr("User1")),
+            user2: payable(makeAddr("User2"))
+        });
         if (_fork) {
             network = vm.createSelectFork(vm.rpcUrl("ethereum"));
         } else {
