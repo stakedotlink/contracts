@@ -709,7 +709,7 @@ describe('StakingPool', () => {
     assert.equal(fromEther(await stakingPool.totalStaked()), 4000)
   })
 
-  it.only('donateTokens should work correctly', async () => {
+  it('donateTokens should work correctly', async () => {
     await stake(1, 1000)
     await stake(2, 3000)
 

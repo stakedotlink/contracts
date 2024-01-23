@@ -31,8 +31,8 @@ describe('RebaseController', () => {
   let ownersRewards: string
   let accounts: string[]
 
-  const decode = (data: any) => ethers.utils.defaultAbiCoder.decode(['uint[]'], data)
-  const encode = (data: any) => ethers.utils.defaultAbiCoder.encode(['uint[]'], [data])
+  const decode = (data: any) => ethers.utils.defaultAbiCoder.decode(['uint256[]', 'uint256'], data)
+  const encode = (data: any) => ethers.utils.defaultAbiCoder.encode(['uint256[]', 'uint256'], data)
 
   before(async () => {
     ;({ accounts } = await getAccounts())
@@ -80,6 +80,7 @@ describe('RebaseController', () => {
       priorityPool.address,
       sdlPoolCCIPController.address,
       insurancePool.address,
+      accounts[0],
       3000,
     ])) as RebaseController
 
@@ -128,6 +129,7 @@ describe('RebaseController', () => {
       decode(data[1])[0].map((v: any) => v.toNumber()),
       [2]
     )
+    assert.equal(fromEther(decode(data[1])[1]), 20)
 
     await strategy1.simulateSlash(toEther(30))
 
@@ -137,6 +139,7 @@ describe('RebaseController', () => {
       decode(data[1])[0].map((v: any) => v.toNumber()),
       [0, 2]
     )
+    assert.equal(fromEther(decode(data[1])[1]), 50)
   })
 
   it('performUpkeep should work correctly', async () => {
@@ -144,7 +147,7 @@ describe('RebaseController', () => {
     await strategy1.simulateSlash(toEther(10))
     await strategy3.simulateSlash(toEther(10))
 
-    await rebaseController.performUpkeep(encode([0, 2]))
+    await rebaseController.performUpkeep(encode([[0, 2], toEther(20)]))
 
     let data = await rebaseController.checkUpkeep('0x00')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
@@ -164,19 +167,24 @@ describe('RebaseController', () => {
       'strategy3 depositChange incorrect'
     )
 
-    await strategy3.simulateSlash(toEther(10))
-
-    await expect(rebaseController.performUpkeep(encode([0, 2]))).to.be.revertedWith(
-      'PositiveDepositChange()'
-    )
-    await expect(rebaseController.performUpkeep(encode([]))).to.be.revertedWith(
+    await expect(rebaseController.performUpkeep(encode([[], 10]))).to.be.revertedWith(
       'NoStrategiesToUpdate()'
     )
+    await expect(rebaseController.performUpkeep(encode([[1], 0]))).to.be.revertedWith(
+      'NoStrategiesToUpdate()'
+    )
+
+    await strategy3.simulateSlash(toEther(301))
+    await rebaseController.performUpkeep(encode([[2], toEther(301)]))
+
+    assert.equal(fromEther(await stakingPool.totalStaked()), 980)
+    assert.equal(await priorityPool.poolStatus(), 2)
+    assert.equal(await insurancePool.claimInProgress(), true)
   })
 
-  it.only('performUpkeep should work correctly when max loss is exceeded', async () => {
+  it('pausing process should work correctly when max loss is exceeded', async () => {
     await strategy3.simulateSlash(toEther(300))
-    await rebaseController.performUpkeep(encode([2]))
+    await rebaseController.performUpkeep(encode([[2], toEther(300)]))
 
     assert.equal(fromEther(await stakingPool.totalStaked()), 700)
     assert.equal(await priorityPool.poolStatus(), 0)
@@ -185,11 +193,22 @@ describe('RebaseController', () => {
     await token.transfer(strategy3.address, toEther(300))
     await rebaseController.updateRewards([2], '0x')
     await strategy3.simulateSlash(toEther(301))
-    await rebaseController.performUpkeep(encode([2]))
+    await rebaseController.performUpkeep(encode([[2], toEther(301)]))
 
-    assert.equal(fromEther(await stakingPool.totalStaked()), 699)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 1000)
     assert.equal(await priorityPool.poolStatus(), 2)
     assert.equal(await insurancePool.claimInProgress(), true)
+    await expect(rebaseController.performUpkeep(encode([[2], 1]))).to.be.revertedWith(
+      'PoolClosed()'
+    )
+    await expect(rebaseController.updateRewards([2], '0x')).to.be.revertedWith('PoolClosed()')
+    assert.equal((await rebaseController.checkUpkeep('0x00'))[0], false)
+
+    await stakingPool.donateTokens(toEther(101))
+    await rebaseController.reopenPool([2])
+    assert.equal(fromEther(await stakingPool.totalStaked()), 800)
+    assert.equal(await priorityPool.poolStatus(), 0)
+    assert.equal(await insurancePool.claimInProgress(), false)
   })
 
   it('updateRewards should work correctly', async () => {

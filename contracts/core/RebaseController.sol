@@ -21,6 +21,7 @@ contract RebaseController is Ownable {
     ISDLPoolCCIPControllerPrimary public sdlPoolCCIPController;
     IInsurancePool public insurancePool;
 
+    address public rebaseLossBot;
     uint256 public maxRebaseLossBP;
 
     mapping(address => bool) public whitelistedCallers;
@@ -31,20 +32,28 @@ contract RebaseController is Ownable {
     error PositiveDepositChange();
     error SenderNotAuthorized();
     error InvalidMaxRebaseLoss();
+    error PoolClosed();
 
     constructor(
         address _stakingPool,
         address _priorityPool,
         address _sdlPoolCCIPController,
         address _insurancePool,
+        address _rebaseLossBot,
         uint256 _maxRebaseLossBP
     ) {
         stakingPool = IStakingPool(_stakingPool);
         priorityPool = IPriorityPool(_priorityPool);
         sdlPoolCCIPController = ISDLPoolCCIPControllerPrimary(_sdlPoolCCIPController);
         insurancePool = IInsurancePool(_insurancePool);
+        rebaseLossBot = _rebaseLossBot;
         if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
         maxRebaseLossBP = _maxRebaseLossBP;
+    }
+
+    modifier onlyRebaseLossBot() {
+        if (msg.sender != rebaseLossBot) revert SenderNotAuthorized();
+        _;
     }
 
     /**
@@ -59,25 +68,33 @@ contract RebaseController is Ownable {
         uint256[] calldata _gasLimits
     ) external {
         if (!whitelistedCallers[msg.sender]) revert SenderNotAuthorized();
+        if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
+
         stakingPool.updateStrategyRewards(_strategyIdxs, _data);
         sdlPoolCCIPController.distributeRewards(_gasLimits);
     }
 
     /**
-     * @notice returns whether or not rewards should be updated due to a negative rebase and the strategies to update
+     * @notice returns whether or not rewards should be updated due to a negative rebase,
+     * the strategies to update, and their total deposit change
+     * @dev should be called by a custom bot (not CL automation)
      * @return upkeepNeeded whether or not rewards should be updated
-     * @return performData abi encoded list of strategy indexes to update
+     * @return performData abi encoded list of strategy indexes to update and their total deposit change
      **/
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) return (false, "0x");
+
         address[] memory strategies = stakingPool.getStrategies();
         bool[] memory strategiesToUpdate = new bool[](strategies.length);
         uint256 totalStrategiesToUpdate;
+        int256 totalDepositChange;
 
         for (uint256 i = 0; i < strategies.length; ++i) {
-            IStrategy strategy = IStrategy(strategies[i]);
-            if (strategy.getDepositChange() < 0) {
+            int256 depositChange = IStrategy(strategies[i]).getDepositChange();
+            if (depositChange < 0) {
                 strategiesToUpdate[i] = true;
                 totalStrategiesToUpdate++;
+                totalDepositChange += depositChange;
             }
         }
 
@@ -92,37 +109,52 @@ contract RebaseController is Ownable {
                 }
             }
 
-            return (true, abi.encode(strategyIdxs));
+            return (true, abi.encode(strategyIdxs, uint256(-1 * totalDepositChange)));
         }
 
         return (false, "0x");
     }
 
     /**
-     * @notice Updates rewards in the case of a negative rebase and pauses the priority
+     * @notice Updates rewards in the case of a negative rebase or pauses the priority
      * pool if losses exceed the maximum
-     * @param _performData abi encoded list of strategy indexes to update
+     * @dev should be called by a custom bot (not CL automation)
+     * @param _performData abi encoded list of strategy indexes to update and their total deposit change
      */
-    function performUpkeep(bytes calldata _performData) external {
-        address[] memory strategies = stakingPool.getStrategies();
-        uint256[] memory strategiesToUpdate = abi.decode(_performData, (uint256[]));
+    function performUpkeep(bytes calldata _performData) external onlyRebaseLossBot {
+        if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
 
-        if (strategiesToUpdate.length == 0) revert NoStrategiesToUpdate();
+        (uint256[] memory strategiesToUpdate, uint256 totalDepositChange) = abi.decode(_performData, (uint256[], uint256));
 
-        int256 totalDepositChange;
+        if (strategiesToUpdate.length == 0 || totalDepositChange == 0) revert NoStrategiesToUpdate();
 
-        for (uint256 i = 0; i < strategiesToUpdate.length; ++i) {
-            int256 depositChange = IStrategy(strategies[strategiesToUpdate[i]]).getDepositChange();
-            if (depositChange >= 0) revert PositiveDepositChange();
-            totalDepositChange += depositChange;
-        }
-
-        if (uint256(-10000 * totalDepositChange) / stakingPool.totalSupply() > maxRebaseLossBP) {
-            priorityPool.setPoolStatus(IPriorityPool.PoolStatus(2));
+        if ((10000 * totalDepositChange) / stakingPool.totalSupply() > maxRebaseLossBP) {
+            priorityPool.setPoolStatus(IPriorityPool.PoolStatus.CLOSED);
             insurancePool.initiateClaim();
+        } else {
+            stakingPool.updateStrategyRewards(strategiesToUpdate, "");
         }
+    }
 
-        stakingPool.updateStrategyRewards(strategiesToUpdate, "");
+    /**
+     * @notice Reopens the priority pool and insurance pool after they were paused as a result
+     * of a significant slashing event and rebases the staking pool
+     * @dev sender should ensure all strategies with losses are included in the index list and
+     * all strategies with gains are excluded
+     * @param _strategyIdxs list of strategy indexes to update
+     */
+    function reopenPool(uint256[] calldata _strategyIdxs) external onlyOwner {
+        priorityPool.setPoolStatus(IPriorityPool.PoolStatus.OPEN);
+        insurancePool.resolveClaim();
+        stakingPool.updateStrategyRewards(_strategyIdxs, "");
+    }
+
+    /**
+     * @notice sets the rebase loss bot
+     * @param _rebaseLossBot address of rebase loss bot
+     */
+    function setRebaseLossBot(address _rebaseLossBot) external onlyOwner {
+        rebaseLossBot = _rebaseLossBot;
     }
 
     /**
