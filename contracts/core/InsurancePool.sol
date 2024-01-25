@@ -92,13 +92,15 @@ contract InsurancePool is StakingRewardsPool {
         if (!claimInProgress) revert NoClaimInProgress();
         if (_amount > (totalDeposits * maxClaimAmountBP) / 10000) revert ExceedsMaxClaimAmount();
 
-        if (_amount != 0) {
-            totalDeposits -= _amount;
-            token.safeTransfer(msg.sender, _amount);
-        }
+        totalDeposits -= _amount;
+        token.safeTransfer(msg.sender, _amount);
+
         emit ExecuteClaim(_amount);
     }
 
+    /**
+     * @notice resolves the claim process
+     */
     function resolveClaim() external onlyRebaseController {
         if (!claimInProgress) revert NoClaimInProgress();
 
