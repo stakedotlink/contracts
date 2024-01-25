@@ -83,7 +83,7 @@ describe('MerkleDistributor', () => {
         await distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
         await expect(
           distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
-        ).to.be.revertedWith('MerkleDistributor: No claimable tokens')
+        ).to.be.revertedWith('MerkleDistributor: Already claimed for current version.')
       })
 
       it('cannot claim more than once: 0 and then 1', async () => {
@@ -110,7 +110,7 @@ describe('MerkleDistributor', () => {
             100,
             tree.getProof(0, wallet0, BigNumber.from(100))
           )
-        ).to.be.revertedWith('MerkleDistributor: No claimable tokens.')
+        ).to.be.revertedWith('MerkleDistributor: Already claimed for current version.')
       })
 
       it('cannot claim more than once: 1 and then 0', async () => {
@@ -137,7 +137,7 @@ describe('MerkleDistributor', () => {
             101,
             tree.getProof(1, wallet1, BigNumber.from(101))
           )
-        ).to.be.revertedWith('MerkleDistributor: No claimable tokens.')
+        ).to.be.revertedWith('MerkleDistributor: Already claimed for current version.')
       })
 
       it('cannot claim for address other than proof', async () => {
@@ -282,12 +282,12 @@ describe('MerkleDistributor', () => {
         await distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
         await expect(
           distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
-        ).to.be.revertedWith('MerkleDistributor: No claimable tokens.')
+        ).to.be.revertedWith('MerkleDistributor: Already claimed for current version.')
 
         await distributor.claimDistribution(token2.address, 0, wallet0, 100, proof0)
         await expect(
           distributor.claimDistribution(token2.address, 0, wallet0, 100, proof0)
-        ).to.be.revertedWith('MerkleDistributor: No claimable tokens.')
+        ).to.be.revertedWith('MerkleDistributor: Already claimed for current version.')
       })
 
       it('cannot add distributions of unequal length', async () => {
@@ -304,38 +304,39 @@ describe('MerkleDistributor', () => {
       it('can update distributions', async () => {
         const newTree = new BalanceTree([
           { account: wallet0, amount: BigNumber.from(200) },
-          { account: wallet1, amount: BigNumber.from(201) },
+          { account: wallet1, amount: BigNumber.from(200) },
         ])
         let proof0 = tree.getProof(0, wallet0, BigNumber.from(100))
 
         await distributor.claimDistribution(token.address, 0, wallet0, 100, proof0)
-        await token.transfer(distributor.address, BigNumber.from(200))
-        await token3.transfer(distributor.address, BigNumber.from(200))
+        await token.transfer(distributor.address, BigNumber.from(400))
+
+        await token3.transfer(distributor.address, BigNumber.from(400))
         await distributor.updateDistributions(
           [token.address, token3.address],
           [newTree.getHexRoot(), newTree.getHexRoot()],
-          [BigNumber.from(200), BigNumber.from(200)],
+          [BigNumber.from(400), BigNumber.from(400)],
           [100, 0]
         )
 
         expect((await distributor.distributions(token.address))[2]).to.eq(100)
-        expect((await distributor.distributions(token.address))[4]).to.eq(401)
+        expect((await distributor.distributions(token.address))[4]).to.eq(601)
 
         proof0 = newTree.getProof(0, wallet0, BigNumber.from(200))
-        let proof1 = newTree.getProof(1, wallet1, BigNumber.from(201))
+        let proof1 = newTree.getProof(1, wallet1, BigNumber.from(200))
 
         await distributor.claimDistribution(token.address, 0, wallet0, 200, proof0)
-        await distributor.claimDistribution(token.address, 1, wallet1, 201, proof1)
+        await distributor.claimDistribution(token.address, 1, wallet1, 200, proof1)
         await distributor.claimDistribution(token3.address, 0, wallet0, 200, proof0)
-        await distributor.claimDistribution(token3.address, 1, wallet1, 201, proof1)
-        expect(await distributor.getClaimed(token.address, wallet0)).to.eq(200)
-        expect(await distributor.getClaimed(token.address, wallet1)).to.eq(201)
+        await distributor.claimDistribution(token3.address, 1, wallet1, 200, proof1)
+        expect(await distributor.getClaimed(token.address, wallet0)).to.eq(300)
+        expect(await distributor.getClaimed(token.address, wallet1)).to.eq(200)
         expect(await distributor.getClaimed(token3.address, wallet0)).to.eq(200)
-        expect(await distributor.getClaimed(token3.address, wallet1)).to.eq(201)
-        expect(await token.balanceOf(wallet0)).to.eq(200)
-        expect(await token.balanceOf(wallet1)).to.eq(201)
+        expect(await distributor.getClaimed(token3.address, wallet1)).to.eq(200)
+        expect(await token.balanceOf(wallet0)).to.eq(300)
+        expect(await token.balanceOf(wallet1)).to.eq(200)
         expect(await token3.balanceOf(wallet0)).to.eq(200)
-        expect(await token3.balanceOf(wallet1)).to.eq(201)
+        expect(await token3.balanceOf(wallet1)).to.eq(200)
       })
 
       it('cannot update distributions of unequal length', async () => {

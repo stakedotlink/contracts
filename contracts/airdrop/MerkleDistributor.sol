@@ -90,6 +90,7 @@ contract MerkleDistributor is Ownable {
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount = _totalAmount;
         distributions[_token].expiryTimestamp = _expiryTimestamp;
+        distributions[_token].version++;
 
         emit DistributionAdded(tokens.length - 1, _token, _totalAmount, _expiryTimestamp);
     }
