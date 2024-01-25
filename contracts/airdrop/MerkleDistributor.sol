@@ -20,7 +20,9 @@ contract MerkleDistributor is Ownable {
         uint256 expiryTimestamp;
         bytes32 merkleRoot;
         uint256 totalAmount;
+        uint256 version;
         mapping(address => uint256) claimed;
+        mapping(address => uint256) lastClaimedVersion;
     }
     address[] public tokens;
     mapping(address => Distribution) public distributions;
@@ -138,6 +140,7 @@ contract MerkleDistributor is Ownable {
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount += _additionalAmount;
         distributions[_token].expiryTimestamp = _expiryTimestamp;
+        distributions[_token].version++;
 
         emit DistributionUpdated(_token, _additionalAmount, _expiryTimestamp);
     }
@@ -183,15 +186,18 @@ contract MerkleDistributor is Ownable {
         bytes32[] calldata _merkleProof
     ) public distributionExists(_token) {
         require(!distributions[_token].isPaused, "MerkleDistributor: Distribution is paused.");
+        require(_amount > 0, "MerkleDistributor: No claimable tokens.");
         Distribution storage distribution = distributions[_token];
 
         bytes32 node = keccak256(abi.encodePacked(_index, _account, _amount));
         require(MerkleProof.verify(_merkleProof, distribution.merkleRoot, node), "MerkleDistributor: Invalid proof.");
+        require(
+            distribution.lastClaimedVersion[_account] < distribution.version,
+            "MerkleDistributor: Already claimed for current version."
+        );
 
-        require(distribution.claimed[_account] < _amount, "MerkleDistributor: No claimable tokens.");
-
-        uint256 amount = _amount - distribution.claimed[_account];
-        distribution.claimed[_account] = _amount;
+        distribution.claimed[_account] += amount;
+        distribution.lastClaimedVersion[_account] = distribution.version;
         IERC20(_token).safeTransfer(_account, amount);
 
         emit Claimed(_token, _index, _account, amount);
