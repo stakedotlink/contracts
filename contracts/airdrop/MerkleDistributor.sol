@@ -196,11 +196,11 @@ contract MerkleDistributor is Ownable {
             "MerkleDistributor: Already claimed for current version."
         );
 
-        distribution.claimed[_account] += amount;
+        distribution.claimed[_account] += _amount;
         distribution.lastClaimedVersion[_account] = distribution.version;
-        IERC20(_token).safeTransfer(_account, amount);
+        IERC20(_token).safeTransfer(_account, _amount);
 
-        emit Claimed(_token, _index, _account, amount);
+        emit Claimed(_token, _index, _account, _amount);
     }
 
     /**
