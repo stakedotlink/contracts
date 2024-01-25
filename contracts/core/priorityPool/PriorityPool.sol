@@ -61,7 +61,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     );
     event SetPoolStatus(PoolStatus status);
     event SetQueueDepositParams(uint128 queueDepositMin, uint128 queueDepositMax);
-    event DepositQueuedTokens(uint256 amount);
+    event DepositTokens(uint256 unusedTokensAmount, uint256 queuedTokensAmount);
 
     error InvalidValue();
     error UnauthorizedToken();
@@ -558,12 +558,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             _depositMax - toDepositFromStakingPool
         );
 
-        totalQueued = _totalQueued - toDepositFromQueue;
-        depositsSinceLastUpdate += toDepositFromQueue;
-        sharesSinceLastUpdate += stakingPool.getSharesByStake(toDepositFromQueue);
         stakingPool.deposit(address(this), toDepositFromQueue);
 
-        emit DepositQueuedTokens(toDepositFromQueue);
+        if (toDepositFromQueue != 0) {
+            totalQueued = _totalQueued - toDepositFromQueue;
+            depositsSinceLastUpdate += toDepositFromQueue;
+            sharesSinceLastUpdate += stakingPool.getSharesByStake(toDepositFromQueue);
+        }
+        emit DepositTokens(toDepositFromStakingPool, toDepositFromQueue);
     }
 
     /**
