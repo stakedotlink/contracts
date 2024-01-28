@@ -41,11 +41,23 @@ describe('RewardsPoolController', () => {
   })
 
   beforeEach(async () => {
-    token1 = (await deploy('ERC677', ['Token1', '1', 1000000000])) as ERC677
+    token1 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Token1',
+      '1',
+      1000000000,
+    ])) as ERC677
     await setupToken(token1, accounts)
-    token2 = (await deploy('ERC677', ['Token2', '2', 1000000000])) as ERC677
+    token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Token2',
+      '2',
+      1000000000,
+    ])) as ERC677
     await setupToken(token2, accounts)
-    stakingToken = (await deploy('ERC677', ['StakingToken', 'ST', 1000000000])) as ERC677
+    stakingToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'StakingToken',
+      'ST',
+      1000000000,
+    ])) as ERC677
     await setupToken(stakingToken, accounts)
 
     controller = (await deployUpgradeable('RewardsPoolControllerMock', [
@@ -69,7 +81,11 @@ describe('RewardsPoolController', () => {
   })
 
   it('should be able to add tokens', async () => {
-    const token3 = (await deploy('ERC677', ['Token3', '3', 1000000000])) as ERC677
+    const token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Token3',
+      '3',
+      1000000000,
+    ])) as ERC677
     const rewardsPool3 = (await deploy('RewardsPool', [
       controller.address,
       token3.address,
@@ -255,9 +271,17 @@ describe('RewardsPoolController', () => {
     let rewardsPool3: RewardsPoolWSD
     let rewardsPool4: RewardsPoolWSD
     beforeEach(async () => {
-      token3 = (await deploy('ERC677', ['Token3', '3', 1000000000])) as ERC677
+      token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+        'Token3',
+        '3',
+        1000000000,
+      ])) as ERC677
       await setupToken(token3, accounts)
-      token4 = (await deploy('ERC677', ['Token4', '4', 1000000000])) as ERC677
+      token4 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+        'Token4',
+        '4',
+        1000000000,
+      ])) as ERC677
       await setupToken(token4, accounts)
 
       wToken3 = (await deploy('WrappedSDTokenMock', [token3.address])) as WrappedSDTokenMock

@@ -59,7 +59,11 @@ async function main() {
   ])
   console.log('SDLPool deployed: ', sdlPool.address)
 
-  const linkToken = await deploy('ERC677', ['Chainlink-Test', 'LINK-TEST', 200000000])
+  const linkToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'Chainlink-Test',
+    'LINK-TEST',
+    200000000,
+  ])
   console.log('LINKToken-TEST deployed: ', linkToken.address)
 
   const stakingPool = await deployUpgradeable('StakingPool', [

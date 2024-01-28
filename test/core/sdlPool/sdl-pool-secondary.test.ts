@@ -76,7 +76,11 @@ describe('SDLPoolSecondary', () => {
 
   beforeEach(async () => {
     sdlToken = (await deploy('StakingAllowance', ['stake.link', 'SDL'])) as StakingAllowance
-    rewardToken = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
+    rewardToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
 
     await sdlToken.mint(accounts[0], toEther(1000000))
     await setupToken(sdlToken, accounts)

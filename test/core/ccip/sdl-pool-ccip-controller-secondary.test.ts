@@ -39,10 +39,26 @@ describe('SDLPoolCCIPControllerSecondary', () => {
   })
 
   beforeEach(async () => {
-    linkToken = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
-    sdlToken = (await deploy('ERC677', ['SDL', 'SDL', 1000000000])) as ERC677
-    token1 = (await deploy('ERC677', ['2', '2', 1000000000])) as ERC677
-    token2 = (await deploy('ERC677', ['2', '2', 1000000000])) as ERC677
+    linkToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
+    sdlToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'SDL',
+      'SDL',
+      1000000000,
+    ])) as ERC677
+    token1 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '2',
+      '2',
+      1000000000,
+    ])) as ERC677
+    token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '2',
+      '2',
+      1000000000,
+    ])) as ERC677
 
     const armProxy = await deploy('CCIPArmProxyMock')
     const router = await deploy('Router', [accounts[0], armProxy.address])

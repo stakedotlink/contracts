@@ -40,7 +40,11 @@ describe('WLOperatorController', () => {
     let operatorWhitelist = (await deploy('OperatorWhitelistMock', [
       [accounts[0]],
     ])) as OperatorWhitelistMock
-    wsdToken = (await deploy('ERC677', ['test', 'test', 100000])) as ERC677
+    wsdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'test',
+      'test',
+      100000,
+    ])) as ERC677
     controller = (await deployUpgradeable('WLOperatorController', [
       accounts[0],
       wsdToken.address,

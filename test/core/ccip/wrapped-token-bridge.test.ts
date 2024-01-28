@@ -31,8 +31,16 @@ describe('WrappedTokenBridge', () => {
   })
 
   beforeEach(async () => {
-    linkToken = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
-    token2 = (await deploy('ERC677', ['2', '2', 1000000000])) as ERC677
+    linkToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
+    token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '2',
+      '2',
+      1000000000,
+    ])) as ERC677
 
     stakingPool = (await deployUpgradeable('StakingPool', [
       linkToken.address,
