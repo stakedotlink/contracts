@@ -15,7 +15,11 @@ describe('LPLMigration', () => {
   })
 
   beforeEach(async () => {
-    lplToken = (await deploy('ERC677', ['LinkPool', 'LPL', 100000000])) as ERC677
+    lplToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'LinkPool',
+      'LPL',
+      100000000,
+    ])) as ERC677
     await setupToken(lplToken, accounts)
 
     sdlToken = (await deploy('StakingAllowance', ['Stake Dot Link', 'SDL'])) as StakingAllowance

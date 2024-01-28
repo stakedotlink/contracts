@@ -30,8 +30,16 @@ describe('KeyValidationOracle', () => {
   })
 
   beforeEach(async () => {
-    token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
-    let wsdToken = (await deploy('ERC677', ['test', 'test', 0])) as ERC677
+    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
+    let wsdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'test',
+      'test',
+      0,
+    ])) as ERC677
     nwlOpController = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
       wsdToken.address,

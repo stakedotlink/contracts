@@ -36,7 +36,11 @@ describe('OperatorVCS', () => {
   })
 
   beforeEach(async () => {
-    token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
+    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
 
     rewardsController = (await deploy('StakingRewardsMock', [token.address])) as StakingRewardsMock
     stakingController = (await deploy('StakingMock', [

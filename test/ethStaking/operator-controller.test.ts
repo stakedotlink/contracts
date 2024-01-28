@@ -37,7 +37,11 @@ describe('OperatorController', () => {
   })
 
   beforeEach(async () => {
-    sdToken = (await deploy('ERC677', ['test', 'test', 50])) as ERC677
+    sdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'test',
+      'test',
+      50,
+    ])) as ERC677
     controller = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
       sdToken.address,
