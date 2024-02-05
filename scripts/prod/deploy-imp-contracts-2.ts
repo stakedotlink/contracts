@@ -11,8 +11,8 @@ async function main() {
   )
 
   const communityVCSAddress = '0xAc12290b097f6893322F5430627e472131fBC1B5'
-  const minRewardsTotal = ethers.utils.parseUnits('1', 18)
-  const minRewardsPerVault = ethers.utils.parseUnits('0.1', 18)
+  const minRewardsTotal = ethers.utils.parseUnits('650', 18)
+  const minRewardsPerVault = ethers.utils.parseUnits('65', 18)
 
   const communityVaultAutomation = await communityVaultAutomationFactory.deploy(
     communityVCSAddress,
