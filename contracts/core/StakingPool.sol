@@ -77,14 +77,12 @@ contract StakingPool is StakingRewardsPool {
      **/
     function deposit(address _account, uint256 _amount) external onlyPriorityPool {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
-        if (_amount > 0) {
-            token.safeTransferFrom(msg.sender, address(this), _amount);
-            depositLiquidity();
-            _mint(_account, _amount);
-            totalStaked += _amount;
-        } else {
-            depositLiquidity();
-        }
+
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        depositLiquidity();
+
+        _mint(_account, _amount);
+        totalStaked += _amount;
     }
 
     /**

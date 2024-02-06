@@ -39,15 +39,10 @@ contract StakingMock is IERC677Receiver {
     function onTokenTransfer(
         address _sender,
         uint256 _value,
-        bytes calldata _data
+        bytes calldata
     ) external {
         require(msg.sender == address(token), "has to be token");
-        if (_data.length != 0) {
-            address sender = abi.decode(_data, (address));
-            principalBalances[sender] += _value;
-        } else {
-            principalBalances[_sender] += _value;
-        }
+        principalBalances[_sender] += _value;
     }
 
     function getStakerLimits() external view returns (uint256, uint256) {
@@ -79,10 +74,6 @@ contract StakingMock is IERC677Receiver {
         removedPrincipal[_staker] += _amount;
     }
 
-    function getMerkleRoot() external view returns (bytes32) {
-        return bytes32(0);
-    }
-
     function isActive() external view returns (bool) {
         return active;
     }
@@ -93,10 +84,5 @@ contract StakingMock is IERC677Receiver {
 
     function setMaxPoolSize(uint256 _maxPoolSize) external {
         maxPoolSize = _maxPoolSize;
-    }
-
-    function setDepositLimits(uint256 _depositMin, uint256 _depositMax) external {
-        depositMin = _depositMin;
-        depositMax = _depositMax;
     }
 }

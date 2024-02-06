@@ -17,7 +17,6 @@
     "solhint": "solhint contracts/**/*.sol"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-foundry": "^1.1.1",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@nomiclabs/hardhat-ethers": "^2.2.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
@@ -33,7 +32,6 @@
     "@types/fs-extra": "^9.0.13",
     "@types/mocha": "^9.1.0",
     "@types/node": "^17.0.14",
-    "cbor": "^9.0.1",
     "chai": "^4.3.6",
     "commander": "^9.4.1",
     "ethereum-waffle": "^3.4.0",

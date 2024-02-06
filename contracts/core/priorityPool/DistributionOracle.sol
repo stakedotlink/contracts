@@ -21,14 +21,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         uint128 requestInProgress;
     }
 
-    struct UpdateData {
-        bytes32 merkleRoot;
-        bytes32 ipfsHash;
-        uint256 amountDistributed;
-        uint256 sharesAmountDistributed;
-    }
-
-    IPriorityPool public immutable priorityPool;
+    IPriorityPool public priorityPool;
 
     bytes32 public jobId;
     uint256 public fee;
@@ -37,15 +30,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
     uint64 public minBlockConfirmations;
     uint128 public minDepositsSinceLastUpdate;
 
-    UpdateStatus public updateStatus;
-
-    uint128 public manualVerificationRequired;
-    uint128 public awaitingManualVerification;
-    UpdateData public updateData;
-
-    event SetUpdateParams(uint64 minTimeBetweenUpdates, uint128 minDepositsSinceLastUpdate, uint64 minBlockConfirmations);
-    event SetChainlinkParams(bytes32 jobId, uint256 fee);
-    event ToggleManualVerification(uint128 manualVerificationRequired);
+    UpdateStatus private updateStatus;
 
     error NotPaused();
     error InsufficientBlockConfirmations();
@@ -53,8 +38,6 @@ contract DistributionOracle is ChainlinkClient, Ownable {
     error UpdateConditionsNotMet();
     error InvalidUpkeepType();
     error RequestInProgress();
-    error NoVerificationPending();
-    error AwaitingManualVerification();
 
     /**
      * @notice Initialize the contract
@@ -86,18 +69,17 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         minDepositsSinceLastUpdate = _minDepositsSinceLastUpdate;
         minBlockConfirmations = _minBlockConfirmations;
         priorityPool = IPriorityPool(_priorityPool);
-        manualVerificationRequired = 1;
     }
 
     /**
      * @notice returns whether a call should be made to performUpkeep to pause or request an update
+     * into the staking pool
      * @dev used by chainlink keepers
      * @return upkeepNeeded whether or not to pause or request update
      * @return performData abi encoded upkeep type to perform
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         bool shouldPauseForUpdate = !priorityPool.paused() &&
-            awaitingManualVerification == 0 &&
             (block.timestamp >= updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) &&
             priorityPool.depositsSinceLastUpdate() >= minDepositsSinceLastUpdate;
 
@@ -106,9 +88,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         }
 
         bool shouldRequestUpdate = priorityPool.paused() &&
-            awaitingManualVerification == 0 &&
-            updateStatus.requestInProgress == 0 &&
-            (block.number >= updateStatus.pausedAtBlockNumber + minBlockConfirmations);
+            (block.number >= updateStatus.pausedAtBlockNumber + minBlockConfirmations) &&
+            updateStatus.requestInProgress == 0;
 
         if (shouldRequestUpdate) {
             return (true, abi.encode(UpkeepType.REQUEST));
@@ -126,7 +107,12 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         UpkeepType upkeepType = abi.decode(_performData, (UpkeepType));
 
         if (upkeepType == UpkeepType.PAUSE) {
-            if (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate) revert UpdateConditionsNotMet();
+            if (
+                (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) ||
+                (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate)
+            ) {
+                revert UpdateConditionsNotMet();
+            }
             _pauseForUpdate();
         } else if (upkeepType == UpkeepType.REQUEST) {
             _requestUpdate();
@@ -167,37 +153,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         uint256 _amountDistributed,
         uint256 _sharesAmountDistributed
     ) public recordChainlinkFulfillment(_requestId) {
-        if (manualVerificationRequired == 1) {
-            updateData = UpdateData(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
-            awaitingManualVerification = 1;
-        } else {
-            priorityPool.updateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
-        }
+        priorityPool.updateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
         updateStatus.requestInProgress = 0;
-    }
-
-    /**
-     * @notice Executes a manual verification update request
-     * */
-    function executeManualVerification() external onlyOwner {
-        if (awaitingManualVerification == 0) revert NoVerificationPending();
-        awaitingManualVerification = 0;
-
-        priorityPool.updateDistribution(
-            updateData.merkleRoot,
-            updateData.ipfsHash,
-            updateData.amountDistributed,
-            updateData.sharesAmountDistributed
-        );
-    }
-
-    /**
-     * @notice Rejects a manual verification update request and requests a new update
-     * */
-    function rejectManualVerificationAndRetry() external onlyOwner {
-        if (awaitingManualVerification == 0) revert NoVerificationPending();
-        awaitingManualVerification = 0;
-        _requestUpdate();
     }
 
     /**
@@ -214,7 +171,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @notice Withdraws LINK tokens
      * @param _amount amount to withdraw
      */
-    function withdrawLink(uint256 _amount) external onlyOwner {
+    function withdrawLink(uint256 _amount) public onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
         if (link.transfer(msg.sender, _amount) != true) revert InsufficientBalance();
     }
@@ -234,15 +191,6 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
         minDepositsSinceLastUpdate = _minDepositsSinceLastUpdate;
         minBlockConfirmations = _minBlockConfirmations;
-        emit SetUpdateParams(_minTimeBetweenUpdates, _minDepositsSinceLastUpdate, _minBlockConfirmations);
-    }
-
-    /**
-     * @notice Toggles whether manual verification is required for updates
-     * */
-    function toggleManualVerification() external onlyOwner {
-        manualVerificationRequired = manualVerificationRequired == 1 ? 0 : 1;
-        emit ToggleManualVerification(manualVerificationRequired);
     }
 
     /**
@@ -253,7 +201,6 @@ contract DistributionOracle is ChainlinkClient, Ownable {
     function setChainlinkParams(bytes32 _jobId, uint256 _fee) external onlyOwner {
         jobId = _jobId;
         fee = _fee;
-        emit SetChainlinkParams(_jobId, _fee);
     }
 
     /**
@@ -261,10 +208,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @dev must always be called before requestUpdate()
      */
     function _pauseForUpdate() private {
-        if (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) revert UpdateConditionsNotMet();
-        if (awaitingManualVerification == 1) revert AwaitingManualVerification();
         priorityPool.pauseForUpdate();
-        updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 0);
+        updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 1);
     }
 
     /**
@@ -278,9 +223,6 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         if (!priorityPool.paused()) revert NotPaused();
         if (block.number < status.pausedAtBlockNumber + minBlockConfirmations) revert InsufficientBlockConfirmations();
         if (status.requestInProgress == 1) revert RequestInProgress();
-        if (awaitingManualVerification == 1) revert AwaitingManualVerification();
-
-        updateStatus.requestInProgress = 1;
 
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfillRequest.selector);
         req.addUint("blockNumber", status.pausedAtBlockNumber);

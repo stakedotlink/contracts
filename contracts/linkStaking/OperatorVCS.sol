@@ -16,8 +16,6 @@ contract OperatorVCS is VaultControllerStrategy {
 
     mapping(address => bool) private vaultMapping;
 
-    bool private preRelease;
-
     event VaultAdded(address indexed operator);
     event WithdrawExtraRewards(address indexed receiver, uint256 amount);
     event SetOperatorRewardPercentage(uint256 rewardPercentage);
@@ -51,7 +49,7 @@ contract OperatorVCS is VaultControllerStrategy {
         Fee[] memory _fees,
         uint256 _maxDepositSizeBP,
         uint256 _operatorRewardPercentage
-    ) public reinitializer(3) {
+    ) public reinitializer(2) {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
                 _token,
@@ -61,17 +59,16 @@ contract OperatorVCS is VaultControllerStrategy {
                 _fees,
                 _maxDepositSizeBP
             );
+        }
 
-            if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
-            operatorRewardPercentage = _operatorRewardPercentage;
-        } else {
-            uint256 totalPrincipal;
-            uint256 numVaults = vaults.length;
-            for (uint256 i = 0; i < numVaults; ++i) {
-                totalPrincipal += vaults[i].getPrincipalDeposits();
-            }
-            totalPrincipalDeposits = totalPrincipal;
-            preRelease = true;
+        // reassaign values to account for changed storage variables in upgrade
+        totalPrincipalDeposits = operatorRewardPercentage;
+        indexOfLastFullVault = 0;
+
+        if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
+        operatorRewardPercentage = _operatorRewardPercentage;
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            vaultMapping[address(vaults[i])] = true;
         }
     }
 
@@ -131,17 +128,6 @@ contract OperatorVCS is VaultControllerStrategy {
             }
         }
         return totalFees;
-    }
-
-    /**
-     * @notice returns the maximum that can be deposited into this strategy
-     * @return maximum deposits
-     */
-    function getMaxDeposits() public view override returns (uint256) {
-        if (preRelease) {
-            return stakeController.isActive() ? 855000 ether : 0;
-        }
-        return super.getMaxDeposits();
     }
 
     /**
@@ -278,14 +264,6 @@ contract OperatorVCS is VaultControllerStrategy {
 
         operatorRewardPercentage = _operatorRewardPercentage;
         emit SetOperatorRewardPercentage(_operatorRewardPercentage);
-    }
-
-    /**
-     * @notice sets pre-release mode
-     * @dev limits staking allocation when true
-     */
-    function togglePreRelease() external onlyOwner {
-        preRelease = !preRelease;
     }
 
     /**
