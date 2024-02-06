@@ -6,8 +6,14 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
-} from '../utils/helpers'
-import { ERC677, SDLPoolMock, StakingPool, PriorityPool, StrategyMock } from '../../typechain-types'
+} from '../../utils/helpers'
+import {
+  ERC677,
+  SDLPoolMock,
+  StakingPool,
+  PriorityPool,
+  StrategyMock,
+} from '../../../typechain-types'
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'

@@ -10,6 +10,8 @@ interface IVault {
 
     function getPrincipalDeposits() external view returns (uint256);
 
+    function getRewards() external view returns (uint256);
+
     function migrate(bytes calldata _data) external;
 
     function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
