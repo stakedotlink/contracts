@@ -14,7 +14,5 @@ interface IStaking {
 
     function isActive() external view returns (bool);
 
-    function getMerkleRoot() external view returns (bytes32);
-
     function migrate(bytes calldata data) external;
 }

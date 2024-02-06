@@ -44,7 +44,7 @@ describe('OperatorVCS', () => {
       rewardsController.address,
       toEther(10),
       toEther(100),
-      toEther(10000000),
+      toEther(10000),
     ])) as StakingMock
     let vaultImplementation = await deployImplementation('OperatorVault')
 
@@ -71,7 +71,7 @@ describe('OperatorVCS', () => {
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
 
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 10; i++) {
       await strategy.addVault(accounts[0], accounts[1], pfAlertsController.address)
     }
 
@@ -84,8 +84,8 @@ describe('OperatorVCS', () => {
 
   it('should be able to add vault', async () => {
     await strategy.addVault(accounts[1], accounts[2], accounts[5])
-    assert.equal((await strategy.getVaults()).length, 16)
-    let vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[15])
+    assert.equal((await strategy.getVaults()).length, 11)
+    let vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[10])
     assert.equal(await vault.token(), token.address)
     assert.equal(await vault.stakeController(), stakingController.address)
     assert.equal(await vault.vaultController(), strategy.address)
@@ -119,24 +119,6 @@ describe('OperatorVCS', () => {
     await stakingPool.updateStrategyRewards([0], encode(0))
     await rewardsController.setReward(vaults[0], toEther(50))
     assert.equal(fromEther(await strategy.getPendingFees()), 2.5)
-  })
-
-  it('getMaxDeposits should work correctly', async () => {
-    await stakingController.setDepositLimits(toEther(1000), toEther(75000))
-    await stakingPool.deposit(accounts[0], toEther(750000))
-    assert.equal(fromEther(await strategy.canDeposit()), 375000)
-    assert.equal(fromEther(await strategy.getMaxDeposits()), 1125000)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
-
-    await strategy.togglePreRelease()
-    assert.equal(fromEther(await strategy.canDeposit()), 105000)
-    assert.equal(fromEther(await strategy.getMaxDeposits()), 855000)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
-
-    await strategy.togglePreRelease()
-    assert.equal(fromEther(await strategy.canDeposit()), 375000)
-    assert.equal(fromEther(await strategy.getMaxDeposits()), 1125000)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
   })
 
   it('updateDeposits should work correctly', async () => {
@@ -276,8 +258,8 @@ describe('OperatorVCS', () => {
     )
 
     await strategy.addVault(accounts[0], ethers.constants.AddressZero, accounts[3])
-    await strategy.setRewardsReceiver(15, accounts[4])
-    let vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[15])
+    await strategy.setRewardsReceiver(10, accounts[4])
+    let vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[10])
     assert.equal(await vault.rewardsReceiver(), accounts[4])
   })
 })

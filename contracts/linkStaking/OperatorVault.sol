@@ -56,19 +56,17 @@ contract OperatorVault is Vault {
         address _operator,
         address _rewardsReceiver
     ) public reinitializer(3) {
-        if (vaultController == address(0)) {
+        if (operator == address(0)) {
             __Vault_init(_token, _vaultController, _stakeController, _rewardsController);
+            setOperator(_operator);
         } else {
             stakeController.migrate("");
             stakeController = IStaking(_stakeController);
-            rewardsController = IStakingRewards(_rewardsController);
             trackedTotalDeposits = SafeCast.toUint128(getTotalDeposits());
+            rewardsController = IStakingRewards(_rewardsController);
         }
         pfAlertsController = IPFAlertsController(_pfAlertsController);
         rewardsReceiver = _rewardsReceiver;
-        if (operator == address(0) && _operator != address(0)) {
-            setOperator(_operator);
-        }
     }
 
     /**

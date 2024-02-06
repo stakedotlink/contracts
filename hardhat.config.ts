@@ -4,7 +4,6 @@ import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 import '@nomiclabs/hardhat-etherscan'
-import '@nomicfoundation/hardhat-foundry'
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -64,15 +63,6 @@ const config: HardhatUserConfig = {
     compilers: [
       {
         version: '0.8.15',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
-      {
-        version: '0.7.6',
         settings: {
           optimizer: {
             enabled: true,
