@@ -10,8 +10,10 @@ abstract contract BaseTest is Test, Utils {
     Users internal users;
     uint256 internal network;
     MerkleDistributor public merkleDistributor;
+    address owner;
 
     function init(bool _fork) public {
+        owner = address(this);
         if (_fork) {
             network = vm.createSelectFork(vm.rpcUrl("ethereum"));
         } else {
