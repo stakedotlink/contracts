@@ -68,7 +68,6 @@ contract MerkleDistributorTest is BaseTest {
     ];
 
 
-
     uint256 tokenSupply = 1000000000;
     uint256 _version1 = 1;
     uint256 _version2 = 2;
@@ -76,8 +75,6 @@ contract MerkleDistributorTest is BaseTest {
 
     ERC677 _testToken = new ERC677("Token", "TKN", tokenSupply);
     ERC677 _testToken2 = new ERC677("Coin", "COI", tokenSupply);
-
-
     
 
     function setUp() public {
