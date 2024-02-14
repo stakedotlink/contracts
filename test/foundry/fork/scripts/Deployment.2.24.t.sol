@@ -39,22 +39,22 @@ contract Deployment is BaseTest {
         vm.stopPrank();
     }
 
-    function testDeployment_upgrade_successful() public {
+    function testFork_upgrade_successful() public {
         assertEq(address(communityVCS), address(getValue("CommunityVCS")));
         assertEq(address(stakingPool), getValue("StakingPool"));
         assertEq(address(priorityPool), getValue("PriorityPool"));
     }
 
-    function testDeployment_CommunityVaultAutomation_success() public {
+    function testFork_CommunityVaultAutomation_success() public {
         assertEq(communityVaultAutomation.minRewardsTotal(), minRewardsTotal);
         assertEq(communityVaultAutomation.minRewardsPerVault(), minRewardsPerVault);
     }
 
-    function testDeployment_StakingPool_owner() public {
+    function testFork_StakingPool_owner() public {
         assertEq(stakingPool.priorityPool(), address(priorityPool));
     }
 
-    function testDeployment_PriorityPool_owner() public {
+    function testFork_PriorityPool_owner() public {
         assertEq(address(priorityPool.stakingPool()), address(stakingPool));
     }
 }
