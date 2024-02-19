@@ -25,9 +25,17 @@ describe('InsurancePool', () => {
   })
 
   beforeEach(async () => {
-    token = (await deploy('ERC677', ['Token1', '1', 1000000000])) as ERC677
+    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Token1',
+      '1',
+      1000000000,
+    ])) as ERC677
     await setupToken(token, accounts)
-    stakingToken = (await deploy('ERC677', ['StakingToken', 'ST', 1000000000])) as ERC677
+    stakingToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'StakingToken',
+      'ST',
+      1000000000,
+    ])) as ERC677
     await setupToken(stakingToken, accounts)
 
     insurancePool = (await deployUpgradeable('InsurancePool', [

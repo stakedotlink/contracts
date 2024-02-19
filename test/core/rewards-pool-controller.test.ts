@@ -457,7 +457,11 @@ describe('RewardsPoolController', () => {
     beforeEach(async () => {
       await network.provider.send('evm_setIntervalMining', [0])
 
-      token3 = (await deploy('ERC677', ['Token3', '3', 1000000000])) as ERC677
+      token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+        'Token3',
+        '3',
+        1000000000,
+      ])) as ERC677
       await setupToken(token3, accounts)
 
       tbRewardsPool = (await deploy('RewardsPoolTimeBased', [

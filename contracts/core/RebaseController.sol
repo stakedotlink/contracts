@@ -24,15 +24,11 @@ contract RebaseController is Ownable {
     address public rebaseBot;
     uint256 public maxRebaseLossBP;
 
-    mapping(address => bool) public whitelistedCallers;
-
-    event WhitelistCaller(address indexed caller, bool shouldWhitelist);
-
     error NoStrategiesToUpdate();
     error PositiveDepositChange();
-    error SenderNotAuthorized();
     error InvalidMaxRebaseLoss();
     error PoolClosed();
+    error SenderNotAuthorized();
 
     constructor(
         address _stakingPool,
@@ -74,7 +70,7 @@ contract RebaseController is Ownable {
     }
 
     /**
-     * @notice returns whether or not rewards should be updated due to a negative rebase,
+     * @notice returns whether or not rewards should be updated due to a neagtive rebase,
      * the strategies to update, and their total deposit change
      * @dev should be called by a custom bot (not CL automation)
      * @return upkeepNeeded whether or not rewards should be updated
