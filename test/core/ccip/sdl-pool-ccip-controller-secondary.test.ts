@@ -77,7 +77,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
 
     await router.applyRampUpdates([[77, onRamp.address]], [], [[77, offRamp.address]])
 
-    let boostController = await deploy('LinearBoostController', [4 * 365 * 86400, 4])
+    let boostController = await deploy('LinearBoostController', [10, 4 * 365 * 86400, 4])
     sdlPool = (await deployUpgradeable('SDLPoolSecondary', [
       'reSDL',
       'reSDL',
@@ -430,9 +430,13 @@ describe('SDLPoolCCIPControllerSecondary', () => {
   it('recoverTokens should work correctly', async () => {
     await linkToken.transfer(controller.address, toEther(1000))
     await sdlToken.transfer(controller.address, toEther(2000))
-    await controller.recoverTokens([linkToken.address, sdlToken.address], accounts[3])
+    await controller.recoverTokens(
+      [linkToken.address, sdlToken.address],
+      [toEther(1000), toEther(2000)],
+      accounts[3]
+    )
 
-    assert.equal(fromEther(await linkToken.balanceOf(accounts[3])), 1100)
+    assert.equal(fromEther(await linkToken.balanceOf(accounts[3])), 1000)
     assert.equal(fromEther(await sdlToken.balanceOf(accounts[3])), 2000)
   })
 })

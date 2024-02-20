@@ -11,6 +11,12 @@ interface ISDLPoolSecondary is ISDLPool {
     function shouldUpdate() external view returns (bool);
 }
 
+/**
+ * @title SDL Pool CCIP Controller Secondary
+ * @notice Acts as interface between CCIP and secondary SDL Pools
+ * @dev deployed on secondary chains, should always hold a small protocol owned reSDL
+ * position to negate certain edge cases
+ */
 contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     using SafeERC20 for IERC20;
 
@@ -72,16 +78,18 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
 
     /**
      * @notice Handles the outgoing transfer of an reSDL token to the primary chain
+     * @param _destinationChainSelector id of the destination chain
      * @param _sender sender of the transfer
      * @param _tokenId id of token
      * @return the destination address
      * @return the token being transferred
      **/
     function handleOutgoingRESDL(
-        uint64,
+        uint64 _destinationChainSelector,
         address _sender,
         uint256 _tokenId
     ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
+        if (_destinationChainSelector != primaryChainSelector) revert InvalidDestination();
         return (primaryChainDestination, ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, address(this)));
     }
 

@@ -49,6 +49,7 @@ contract SDLPoolSecondary is SDLPool {
     error UpdateInProgress();
     error NoUpdateInProgress();
     error TooManyQueuedLocks();
+    error LockWithdrawn();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -268,6 +269,7 @@ contract SDLPoolSecondary is SDLPool {
         delete locks[_lockId].amount;
         delete lockOwners[_lockId];
         balances[_sender] -= 1;
+        delete tokenApprovals[_lockId];
 
         uint256 totalAmount = lock.amount + lock.boostAmount;
         effectiveBalances[_sender] -= totalAmount;
@@ -432,6 +434,8 @@ contract SDLPoolSecondary is SDLPool {
         uint64 _lockingDuration
     ) internal onlyLockOwner(_lockId, _owner) {
         Lock memory lock = _getQueuedLockState(_lockId);
+        if (lock.amount == 0) revert LockWithdrawn();
+
         LockUpdate memory lockUpdate = LockUpdate(updateBatchIndex, _updateLock(lock, _amount, _lockingDuration));
         queuedLockUpdates[_lockId].push(lockUpdate);
         queuedRESDLSupplyChange +=
@@ -471,21 +475,21 @@ contract SDLPoolSecondary is SDLPool {
                         delete locks[lockId];
                         delete lockOwners[lockId];
                         balances[_owner] -= 1;
-                        if (tokenApprovals[lockId] != address(0)) delete tokenApprovals[lockId];
+                        delete tokenApprovals[lockId];
                         emit Transfer(_owner, address(0), lockId);
                     } else {
                         locks[lockId].amount = updateLockState.amount;
                     }
                     sdlToken.safeTransfer(_owner, uint256(-1 * baseAmountDiff));
-                } else if (boostAmountDiff < 0) {
+                } else if (boostAmountDiff < 0 && updateLockState.boostAmount == 0) {
                     locks[lockId].expiry = updateLockState.expiry;
                     locks[lockId].boostAmount = 0;
                     emit InitiateUnlock(_owner, lockId, updateLockState.expiry);
                 } else {
                     locks[lockId] = updateLockState;
-                    uint256 totalDiff = uint256(baseAmountDiff + boostAmountDiff);
-                    effectiveBalances[_owner] += totalDiff;
-                    totalEffectiveBalance += totalDiff;
+                    int256 totalDiff = baseAmountDiff + boostAmountDiff;
+                    effectiveBalances[_owner] = uint256(int256(effectiveBalances[_owner]) + totalDiff);
+                    totalEffectiveBalance = uint256(int256(totalEffectiveBalance) + totalDiff);
                     emit UpdateLock(
                         _owner,
                         lockId,

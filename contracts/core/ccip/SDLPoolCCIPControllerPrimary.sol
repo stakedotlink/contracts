@@ -8,6 +8,11 @@ interface ISDLPoolPrimary is ISDLPool {
     function handleIncomingUpdate(uint256 _numNewRESDLTokens, int256 _totalRESDLSupplyChange) external returns (uint256);
 }
 
+/**
+ * @title SDL Pool CCIP Controller Secondary
+ * @notice Acts as interface between CCIP and primary SDL Pool
+ * @dev deployed only on primary chain
+ */
 contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     using SafeERC20 for IERC20;
 

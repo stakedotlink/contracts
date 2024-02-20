@@ -54,6 +54,7 @@ describe('SDLPoolPrimary', () => {
     await setupToken(sdlToken, accounts)
 
     boostController = (await deploy('LinearBoostController', [
+      10,
       4 * 365 * DAY,
       4,
     ])) as LinearBoostController
@@ -1320,6 +1321,6 @@ describe('SDLPoolPrimary', () => {
 
     await expect(
       sdlPool.connect(signers[1]).transferFrom(accounts[1], accounts[0], 1)
-    ).to.be.revertedWith('TransferToCCIPController()')
+    ).to.be.revertedWith('TransferToInvalidAddress()')
   })
 })

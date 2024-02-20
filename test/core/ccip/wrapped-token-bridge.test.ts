@@ -102,10 +102,10 @@ describe('WrappedTokenBridge', () => {
   })
 
   it('getFee should work correctly', async () => {
-    assert.equal(fromEther(await bridge.getFee(77, false)), 2)
-    assert.equal(fromEther(await bridge.getFee(77, true)), 3)
-    await expect(bridge.getFee(78, false)).to.be.reverted
-    await expect(bridge.getFee(78, true)).to.be.reverted
+    assert.equal(fromEther(await bridge.getFee(77, 1000, false)), 2)
+    assert.equal(fromEther(await bridge.getFee(77, 1000, true)), 3)
+    await expect(bridge.getFee(78, 1000, false)).to.be.reverted
+    await expect(bridge.getFee(78, 1000, true)).to.be.reverted
   })
 
   it('transferTokens should work correctly with LINK fee', async () => {
@@ -272,7 +272,11 @@ describe('WrappedTokenBridge', () => {
   it('recoverTokens should work correctly', async () => {
     await linkToken.transfer(bridge.address, toEther(1000))
     await stakingPool.transfer(bridge.address, toEther(2000))
-    await bridge.recoverTokens([linkToken.address, stakingPool.address], accounts[3])
+    await bridge.recoverTokens(
+      [linkToken.address, stakingPool.address],
+      [toEther(1000), toEther(2000)],
+      accounts[3]
+    )
 
     assert.equal(fromEther(await linkToken.balanceOf(accounts[3])), 1000)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[3])), 2000)

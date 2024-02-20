@@ -68,7 +68,7 @@ describe('RESDLTokenBridge', () => {
 
     await router.applyRampUpdates([[77, onRamp.address]], [], [[77, offRamp.address]])
 
-    let boostController = await deploy('LinearBoostController', [4 * 365 * 86400, 4])
+    let boostController = await deploy('LinearBoostController', [10, 4 * 365 * 86400, 4])
     sdlPool = (await deployUpgradeable('SDLPoolPrimary', [
       'reSDL',
       'reSDL',

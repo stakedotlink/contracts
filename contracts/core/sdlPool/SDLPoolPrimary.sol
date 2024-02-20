@@ -33,10 +33,11 @@ contract SDLPoolPrimary is SDLPool {
         address _sdlToken,
         address _boostController
     ) public reinitializer(2) {
-        if (delegatorPool == address(0)) {
+        if (ccipController == address(0)) {
             __SDLPoolBase_init(_name, _symbol, _sdlToken, _boostController);
         } else {
             delegatorPool = ccipController;
+            delete ccipController;
         }
     }
 
@@ -186,6 +187,7 @@ contract SDLPoolPrimary is SDLPool {
         delete locks[_lockId].amount;
         delete lockOwners[_lockId];
         balances[_sender] -= 1;
+        delete tokenApprovals[_lockId];
 
         uint256 totalAmount = lock.amount + lock.boostAmount;
         effectiveBalances[_sender] -= totalAmount;
@@ -231,6 +233,7 @@ contract SDLPoolPrimary is SDLPool {
     function handleIncomingUpdate(uint256 _numNewRESDLTokens, int256 _totalRESDLSupplyChange)
         external
         onlyCCIPController
+        updateRewards(ccipController)
         returns (uint256)
     {
         uint256 mintStartIndex;

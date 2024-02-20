@@ -44,6 +44,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
 
     string public baseURI;
 
+    uint256[3] __gap;
+
     event InitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event Withdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
     event CreateLock(
@@ -67,9 +69,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error InvalidLockId();
     error InvalidLockingDuration();
     error TransferFromIncorrectOwner();
-    error TransferToZeroAddress();
+    error TransferToInvalidAddress();
     error TransferToNonERC721Implementer();
-    error TransferToCCIPController();
     error ApprovalToCurrentOwner();
     error ApprovalToCaller();
     error InvalidValue();
@@ -458,8 +459,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         uint256 _lockId
     ) internal virtual {
         if (_from != ownerOf(_lockId)) revert TransferFromIncorrectOwner();
-        if (_to == address(0)) revert TransferToZeroAddress();
-        if (_to == ccipController) revert TransferToCCIPController();
+        if (_to == address(0) || _to == ccipController || _to == _from) revert TransferToInvalidAddress();
 
         delete tokenApprovals[_lockId];
 
