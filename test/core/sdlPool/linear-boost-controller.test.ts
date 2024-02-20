@@ -9,6 +9,7 @@ describe('LinearBoostController', () => {
 
   beforeEach(async () => {
     boostController = (await deploy('LinearBoostController', [
+      10,
       4 * 365 * DAY,
       4,
     ])) as LinearBoostController
@@ -40,7 +41,10 @@ describe('LinearBoostController', () => {
 
     assert.equal(fromEther(await boostController.getBoostAmount(toEther(5), 2 * 365 * DAY)), 30)
     await expect(boostController.getBoostAmount(toEther(5), 2 * 365 * DAY + 1)).to.be.revertedWith(
-      'MaxLockingDurationExceeded()'
+      'InvalidLockingDuration()'
+    )
+    await expect(boostController.getBoostAmount(toEther(5), 9)).to.be.revertedWith(
+      'InvalidLockingDuration()'
     )
   })
 })

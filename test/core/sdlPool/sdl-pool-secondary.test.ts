@@ -86,6 +86,7 @@ describe('SDLPoolSecondary', () => {
     await setupToken(sdlToken, accounts)
 
     boostController = (await deploy('LinearBoostController', [
+      10,
       4 * 365 * DAY,
       4,
     ])) as LinearBoostController

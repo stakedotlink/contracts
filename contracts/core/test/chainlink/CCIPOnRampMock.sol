@@ -38,15 +38,16 @@ contract CCIPOnRampMock {
         return requestData[requestData.length - 1];
     }
 
-    function getFee(Client.EVM2AnyMessage calldata _message) external view returns (uint256) {
+    function getFee(uint64, Client.EVM2AnyMessage calldata _message) external view returns (uint256) {
         return _message.feeToken == linkToken ? 2 ether : 3 ether;
     }
 
-    function getPoolBySourceToken(address _token) public view returns (address) {
+    function getPoolBySourceToken(uint64, address _token) public view returns (address) {
         return tokenPools[_token];
     }
 
     function forwardFromRouter(
+        uint64,
         Client.EVM2AnyMessage calldata _message,
         uint256 _feeTokenAmount,
         address _originalSender

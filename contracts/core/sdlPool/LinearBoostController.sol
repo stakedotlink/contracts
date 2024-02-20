@@ -8,20 +8,28 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @notice Handles boost calculations
  */
 contract LinearBoostController is Ownable {
+    uint64 public minLockingDuration;
     uint64 public maxLockingDuration;
     uint64 public maxBoost;
 
-    event SetMaxLockingDuration(uint256 _maxLockingDuration);
-    event SetMaxBoost(uint256 _maxBoost);
+    event SetMinLockingDuration(uint64 _minLockingDuration);
+    event SetMaxLockingDuration(uint64 _maxLockingDuration);
+    event SetMaxBoost(uint64 _maxBoost);
 
-    error MaxLockingDurationExceeded();
+    error InvalidLockingDuration();
 
     /**
      * @notice initializes the contract state
+     * @param _minLockingDuration minimum non-zero locking duration in seconds
      * @param _maxLockingDuration maximum locking duration in seconds
      * @param _maxBoost maximum boost multiplier
      */
-    constructor(uint64 _maxLockingDuration, uint64 _maxBoost) {
+    constructor(
+        uint64 _minLockingDuration,
+        uint64 _maxLockingDuration,
+        uint64 _maxBoost
+    ) {
+        minLockingDuration = _minLockingDuration;
         maxLockingDuration = _maxLockingDuration;
         maxBoost = _maxBoost;
     }
@@ -34,8 +42,18 @@ contract LinearBoostController is Ownable {
      * @return amount of boost balance received in addition to the unboosted balance
      */
     function getBoostAmount(uint256 _amount, uint64 _lockingDuration) external view returns (uint256) {
-        if (_lockingDuration > maxLockingDuration) revert MaxLockingDurationExceeded();
+        if ((_lockingDuration != 0 && _lockingDuration < minLockingDuration) || _lockingDuration > maxLockingDuration)
+            revert InvalidLockingDuration();
         return (_amount * uint256(maxBoost) * uint256(_lockingDuration)) / uint256(maxLockingDuration);
+    }
+
+    /**
+     * @notice sets the minimum non-zero locking duration
+     * @param _minLockingDuration min non-zero locking duration in seconds
+     */
+    function setMinLockingDuration(uint64 _minLockingDuration) external onlyOwner {
+        minLockingDuration = _minLockingDuration;
+        emit SetMinLockingDuration(_minLockingDuration);
     }
 
     /**

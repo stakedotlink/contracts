@@ -3,11 +3,10 @@ pragma solidity 0.8.15;
 
 import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
-import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/IWrappedLST.sol";
+import "./base/CCIPReceiver.sol";
 
 /**
  * @title Wrapped token bridge
@@ -16,7 +15,7 @@ import "../interfaces/IWrappedLST.sol";
  * - can wrap tokens and initiate a CCIP transfer of the wrapped tokens to a destination chain
  * - can receive a CCIP transfer of wrapped tokens, unwrap them, and send them to the receiver
  */
-contract WrappedTokenBridge is Ownable, CCIPReceiver {
+contract WrappedTokenBridge is CCIPReceiver {
     using SafeERC20 for IERC20;
 
     IERC20 linkToken;
@@ -119,13 +118,18 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
     /**
      * @notice Returns the current fee for a token transfer
      * @param _destinationChainSelector id of destination chain
+     * @param _amount amount of tokens to transfer
      * @param _payNative whether fee should be paid natively or with LINK
      * @return fee current fee
      **/
-    function getFee(uint64 _destinationChainSelector, bool _payNative) external view returns (uint256) {
+    function getFee(
+        uint64 _destinationChainSelector,
+        uint256 _amount,
+        bool _payNative
+    ) external view returns (uint256) {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             address(this),
-            1000 ether,
+            _amount,
             _payNative ? address(0) : address(linkToken)
         );
 
@@ -133,16 +137,20 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
     }
 
     /**
-     * @notice Recovers tokens that were accidentally sent to this contract
-     * @param _tokens list of tokens to recover
-     * @param _receiver address to receive recovered tokens
+     * @notice Withdraws tokens held by this contract
+     * @param _tokens list of tokens to withdraw
+     * @param _amounts list of corresponding amounts to withdraw
+     * @param _receiver address to receive tokens
      **/
-    function recoverTokens(address[] calldata _tokens, address _receiver) external onlyOwner {
+    function recoverTokens(
+        address[] calldata _tokens,
+        uint256[] calldata _amounts,
+        address _receiver
+    ) external onlyOwner {
         if (_receiver == address(0)) revert InvalidReceiver();
 
         for (uint256 i = 0; i < _tokens.length; ++i) {
-            IERC20 tokenToTransfer = IERC20(_tokens[i]);
-            tokenToTransfer.safeTransfer(_receiver, tokenToTransfer.balanceOf(address(this)));
+            IERC20(_tokens[i]).safeTransfer(_receiver, _amounts[i]);
         }
     }
 
@@ -220,7 +228,7 @@ contract WrappedTokenBridge is Ownable, CCIPReceiver {
             receiver: abi.encode(_receiver),
             data: "",
             tokenAmounts: tokenAmounts,
-            extraArgs: "0x",
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 0})),
             feeToken: _feeTokenAddress
         });
 
