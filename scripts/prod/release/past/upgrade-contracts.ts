@@ -9,9 +9,9 @@ import {
   RewardsPoolWSD,
   SDLPool,
   StakingPool,
-} from '../../typechain-types'
-import { getContract } from '../utils/deployment'
-import { getAccounts } from '../utils/helpers'
+} from '../../../../typechain-types'
+import { getContract } from '../../../utils/deployment'
+import { getAccounts } from '../../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
