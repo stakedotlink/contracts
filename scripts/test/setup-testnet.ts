@@ -123,7 +123,7 @@ async function main() {
     },
     {
       SDLToken: 'StakingAllowance',
-      LINKToken: 'ERC677',
+      LINKToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
       LINK_StakingPool: 'StakingPool',
       LINK_PriorityPool: 'PriorityPool',
       LINK_WrappedSDToken: 'WrappedSDToken',

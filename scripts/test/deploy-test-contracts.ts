@@ -83,8 +83,8 @@ async function main() {
       sfrxETHToken: sfrxETHToken.address,
     },
     {
-      LPLToken: 'ERC677',
-      LINKToken: 'ERC677',
+      LPLToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
+      LINKToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
       LINK_OwnersRewardsPoolV1: 'OwnersRewardsPoolV1',
       stETHToken: 'ERC20',
       rETHToken: 'ERC20',
