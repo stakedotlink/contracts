@@ -41,6 +41,8 @@ jobs:
         run: yarn compile
 
       - name: Run tests
+        env:
+            ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
         run: |
           yarn test
-          forge test --no-match-test testFork -vvv
+          forge test --no-match-test testFork -vvv --ffi
