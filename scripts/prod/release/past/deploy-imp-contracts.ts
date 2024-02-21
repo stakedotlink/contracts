@@ -1,6 +1,6 @@
 import { ethers, upgrades } from 'hardhat'
-import { DelegatorPool, OperatorVCS, StakingPool } from '../../typechain-types'
-import { getContract } from '../utils/deployment'
+import { DelegatorPool, OperatorVCS, StakingPool } from '../../../../typechain-types'
+import { getContract } from '../../../utils/deployment'
 
 async function main() {
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool

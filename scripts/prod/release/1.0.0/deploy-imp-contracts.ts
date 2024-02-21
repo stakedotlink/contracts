@@ -1,6 +1,6 @@
 import { ethers, upgrades, run } from 'hardhat'
-import { getContract } from '../utils/deployment'
-import { StakingPool, PriorityPool, CommunityVCS } from '../../typechain-types'
+import { getContract } from '../../../utils/deployment'
+import { StakingPool, PriorityPool, CommunityVCS } from '../../../../typechain-types'
 
 async function main() {
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool

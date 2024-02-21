@@ -1,4 +1,4 @@
-import { updateDeployments, deploy } from '../../utils/deployment'
+import { updateDeployments, deploy } from '../../../../utils/deployment'
 
 const multisig = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 const beneficiary = '0x311500AfdF67046989D006Ca38059F6807889238'

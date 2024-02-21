@@ -1,6 +1,6 @@
 import { ethers, upgrades } from 'hardhat'
-import { getContract } from '../../utils/deployment'
-import { SDLPool } from '../../../typechain-types'
+import { getContract } from '../../../../utils/deployment'
+import { SDLPool } from '../../../../../typechain-types'
 
 async function main() {
   const sdlPool = (await getContract('SDLPool')) as SDLPool

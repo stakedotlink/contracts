@@ -1,6 +1,6 @@
-import { ERC677, PriorityPool, SDLPool, StakingPool } from '../../typechain-types'
-import { updateDeployments, getContract, deployUpgradeable } from '../utils/deployment'
-import { toEther } from '../utils/helpers'
+import { ERC677, PriorityPool, SDLPool, StakingPool } from '../../../../typechain-types'
+import { updateDeployments, getContract, deployUpgradeable } from '../../../utils/deployment'
+import { toEther } from '../../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
