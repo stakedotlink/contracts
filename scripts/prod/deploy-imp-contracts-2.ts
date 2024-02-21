@@ -6,27 +6,6 @@ async function main() {
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
   const priorityPool = (await getContract('LINK_PriorityPool')) as PriorityPool
   const communityVCS = (await getContract('LINK_CommunityVCS')) as CommunityVCS
-  const communityVaultAutomationFactory = await ethers.getContractFactory(
-    'CommunityVaultAutomation'
-  )
-
-  const communityVCSAddress = '0xAc12290b097f6893322F5430627e472131fBC1B5'
-  const minRewardsTotal = ethers.utils.parseUnits('650', 18)
-  const minRewardsPerVault = ethers.utils.parseUnits('65', 18)
-
-  const communityVaultAutomation = await communityVaultAutomationFactory.deploy(
-    communityVCSAddress,
-    minRewardsTotal,
-    minRewardsPerVault
-  )
-  await communityVaultAutomation.deployed()
-  await communityVaultAutomation.deployTransaction.wait(5)
-  console.log('CommunityVaultAutomation deployed at:', communityVaultAutomation.address)
-  await verifyContract(communityVaultAutomation.address, [
-    communityVCSAddress,
-    minRewardsTotal,
-    minRewardsPerVault,
-  ])
 
   const stakingPoolImp = (await upgrades.prepareUpgrade(
     stakingPool.address,
