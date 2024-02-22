@@ -9,9 +9,9 @@ import { getAccounts } from '../utils/helpers'
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
 // New implementation addresses for the contracts
-const priorityPoolNewImplementation = '0xYourNewPriorityPoolAddress'
-const stakingPoolNewImplementation = '0xYourNewStakingPoolAddress'
-const communityVCSNewImplementation = '0xYourNewCommunityVCSAddress'
+const priorityPoolNewImplementation = '0x0bC122c224b875cA79250A54a08a6e5df8dEF817'
+const stakingPoolNewImplementation = '0xEBc52afCFC9495Ec083264Ed68E8e6F454E5F715'
+const communityVCSNewImplementation = '0x96418D70832d08CF683Be81Ee9890e1337FAd41b'
 
 async function main() {
   const { signers } = await getAccounts()
