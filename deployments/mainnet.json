@@ -170,5 +170,9 @@
   "LINK_PP_DistributionOracle": {
     "address": "0x2285AC429cCCAaE7cC1E27BfBe617bC626B443CF",
     "artifact": "DistributionOracle"
+  },
+  "stLINK_WrappedTokenBridge": {
+    "address": "0x6C1E2D2c55C83De945e3f37dF694cdE8452C1E82",
+    "artifact": "stLINK_WrappedTokenBridge"
   }
 }
