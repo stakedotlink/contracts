@@ -73,6 +73,8 @@ describe('RebaseController', () => {
       'symbol',
       accounts[0],
       3000,
+      10,
+      100,
     ])) as InsurancePool
 
     rebaseController = (await deploy('RebaseController', [

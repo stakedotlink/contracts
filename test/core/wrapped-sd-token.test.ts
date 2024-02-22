@@ -63,6 +63,7 @@ describe('WrappedSDToken', () => {
     await stakingPool.setRebaseController(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
+    await stakingPool.deposit(accounts[0], 1000)
   })
 
   it('token metadata should be correct', async () => {

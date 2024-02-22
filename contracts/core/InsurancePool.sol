@@ -20,27 +20,38 @@ contract InsurancePool is StakingRewardsPool {
     uint256 public maxClaimAmountBP;
     bool public claimInProgress;
 
+    uint64 public withdrawalDelayDuration;
+    uint64 public withdrawalWindowDuration;
+    mapping(address => uint64) private withdrawalRequests;
+
     event InitiateClaim();
     event ExecuteClaim(uint256 amount);
     event ResolveClaim();
+    event RequestWithdrawal(address indexed account, uint64 withdrawalStartTime);
+    event SetWithdrawalParams(uint64 withdrawalDelayDuration, uint64 withdrawalWindowDuration);
 
     error SenderNotAuthorized();
     error ClaimInProgress();
     error ExceedsMaxClaimAmount();
     error InvalidClaimAmount();
     error NoClaimInProgress();
+    error WithdrawalWindowInactive();
 
     function initialize(
         address _lpToken,
         string memory _liquidTokenName,
         string memory _liquidTokenSymbol,
         address _rebaseController,
-        uint256 _maxClaimAmountBP
+        uint256 _maxClaimAmountBP,
+        uint64 _withdrawalDelayDuration,
+        uint64 _withdrawalWindowDuration
     ) public initializer {
         __StakingRewardsPool_init(_lpToken, _liquidTokenName, _liquidTokenSymbol);
         rebaseController = _rebaseController;
         if (_maxClaimAmountBP > 9000) revert InvalidClaimAmount();
         maxClaimAmountBP = _maxClaimAmountBP;
+        withdrawalDelayDuration = _withdrawalDelayDuration;
+        withdrawalWindowDuration = _withdrawalWindowDuration;
     }
 
     modifier onlyRebaseController() {
@@ -55,9 +66,12 @@ contract InsurancePool is StakingRewardsPool {
 
     /**
      * @notice deposits tokens into the pool
+     * @dev will delete any active or upcoming withdrawal window
      * @param _amount amount of tokens to deposit
      */
     function deposit(uint256 _amount) external whileNoClaimInProgress {
+        if (withdrawalRequests[msg.sender] != 0) delete withdrawalRequests[msg.sender];
+
         rewardsPool.updateReward(msg.sender);
         token.safeTransferFrom(msg.sender, address(this), _amount);
         _mint(msg.sender, _amount);
@@ -69,10 +83,43 @@ contract InsurancePool is StakingRewardsPool {
      * @param _amount amount of tokens to withdraw
      */
     function withdraw(uint256 _amount) external whileNoClaimInProgress {
+        if (!canWithdraw(msg.sender)) revert WithdrawalWindowInactive();
+
         rewardsPool.updateReward(msg.sender);
         _burn(msg.sender, _amount);
         totalDeposits -= _amount;
         token.safeTransfer(msg.sender, _amount);
+    }
+
+    /**
+     * @notice requests a withdrawal and initiates the withdrawal delay period
+     */
+    function requestWithdrawal() external {
+        uint64 withdrawalStartTime = uint64(block.timestamp) + withdrawalDelayDuration;
+        withdrawalRequests[msg.sender] = withdrawalStartTime;
+        emit RequestWithdrawal(msg.sender, withdrawalStartTime);
+    }
+
+    /**
+     * @notice returns whether an account's withdrawal is active
+     * @param _account address of account
+     * @return canWithdraw whether withdrawal window is active
+     */
+    function canWithdraw(address _account) public view returns (bool) {
+        if (withdrawalDelayDuration == 0) return true;
+        (uint64 start, uint64 end) = getWithdrawalWindow(_account);
+        return block.timestamp >= start && block.timestamp < end;
+    }
+
+    /**
+     * @notice returns an account's current active or upcoming withdrawal window
+     * @param _account address of account
+     * @return start time and end time of withdrawal window
+     */
+    function getWithdrawalWindow(address _account) public view returns (uint64, uint64) {
+        uint64 withdrawalStartTime = withdrawalRequests[_account];
+        if (withdrawalDelayDuration == 0 || block.timestamp >= withdrawalStartTime + withdrawalWindowDuration) return (0, 0);
+        return (withdrawalStartTime, withdrawalStartTime + withdrawalWindowDuration);
     }
 
     /**
@@ -152,6 +199,17 @@ contract InsurancePool is StakingRewardsPool {
     function setMaxClaimAmountBP(uint256 _maxClaimAmountBP) external onlyOwner {
         if (_maxClaimAmountBP > 9000) revert InvalidClaimAmount();
         maxClaimAmountBP = _maxClaimAmountBP;
+    }
+
+    /**
+     * @notice sets the withdrawal parameters
+     * @param _withdrawalDelayDuration amount of time required to wait before withdrawaing
+     * @param _withdrawalWindowDuration amount of time a withdrawal can be executed for after the delay has elapsed
+     */
+    function setWithdrawalParams(uint64 _withdrawalDelayDuration, uint64 _withdrawalWindowDuration) external onlyOwner {
+        withdrawalDelayDuration = _withdrawalDelayDuration;
+        withdrawalWindowDuration = _withdrawalWindowDuration;
+        emit SetWithdrawalParams(_withdrawalDelayDuration, _withdrawalWindowDuration);
     }
 
     /**

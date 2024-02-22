@@ -70,7 +70,7 @@ contract RewardsPoolTimeBased is RewardsPool, Ownable {
 
         uint256 remainingRewards = timeOfLastRewardUpdate >= epochExpiry
             ? 0
-            : (epochExpiry - timeOfLastRewardUpdate) * getLastRewardPerSecond();
+            : ((epochExpiry - timeOfLastRewardUpdate) * epochRewardsAmount) / epochDuration;
 
         totalRewards += _rewardsAmount;
         epochRewardsAmount = remainingRewards + _rewardsAmount;

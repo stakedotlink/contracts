@@ -71,6 +71,8 @@ describe('PriorityPool', () => {
     for (let i = 0; i < signers.length; i++) {
       await token.connect(signers[i]).approve(sq.address, ethers.constants.MaxUint256)
     }
+
+    await sq.deposit(1000, false)
   })
 
   it('deposit should work correctly', async () => {
@@ -136,6 +138,7 @@ describe('PriorityPool', () => {
 
   it('depositQueuedTokens should work correctly', async () => {
     await sq.deposit(toEther(2000), true)
+    await sq.withdraw(1000, 0, 0, [], true)
     await token.transfer(strategy.address, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await sq.connect(signers[1]).deposit(toEther(500), true)
@@ -235,6 +238,7 @@ describe('PriorityPool', () => {
 
   it('performUpkeep should work corectly', async () => {
     await sq.deposit(toEther(2000), true)
+    await sq.withdraw(1000, 0, 0, [], true)
     await token.transfer(strategy.address, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await sq.connect(signers[1]).deposit(toEther(500), true)
@@ -594,6 +598,7 @@ describe('PriorityPool', () => {
     await stakingPool.connect(signers[1]).approve(sq.address, ethers.constants.MaxUint256)
     await stakingPool.connect(signers[2]).approve(sq.address, ethers.constants.MaxUint256)
     await sq.deposit(toEther(1000), true)
+    await sq.withdraw(1000, 0, 0, [], true)
     await token.transfer(strategy.address, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await sq.connect(signers[1]).deposit(toEther(100), true)

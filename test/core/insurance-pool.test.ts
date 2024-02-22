@@ -44,6 +44,8 @@ describe('InsurancePool', () => {
       'symbol',
       accounts[0],
       3000,
+      0,
+      0,
     ])) as InsurancePool
 
     rewardsPool = (await deploy('RewardsPoolTimeBased', [
@@ -59,11 +61,13 @@ describe('InsurancePool', () => {
       .connect(signers[1])
       .approve(insurancePool.address, ethers.constants.MaxUint256)
     await token.approve(rewardsPool.address, ethers.constants.MaxUint256)
+    await insurancePool.deposit(1000)
   })
 
   it('deposit should work correctly', async () => {
     await insurancePool.deposit(toEther(1000))
     await insurancePool.connect(signers[1]).deposit(toEther(3000))
+    await insurancePool.withdraw(1000)
 
     assert.equal(fromEther(await insurancePool.balanceOf(accounts[0])), 1000)
     assert.equal(fromEther(await insurancePool.balanceOf(accounts[1])), 3000)
@@ -87,8 +91,16 @@ describe('InsurancePool', () => {
   })
 
   it('withdraw should work correctly', async () => {
+    await insurancePool.setWithdrawalParams(10, 100)
     await insurancePool.deposit(toEther(1200))
     await insurancePool.connect(signers[1]).deposit(toEther(3000))
+
+    await expect(insurancePool.withdraw(toEther(200))).to.be.revertedWith(
+      'WithdrawalWindowInactive()'
+    )
+
+    await insurancePool.requestWithdrawal()
+    await time.increase(10)
     await insurancePool.withdraw(toEther(200))
 
     assert.equal(fromEther(await insurancePool.balanceOf(accounts[0])), 1000)
@@ -105,6 +117,8 @@ describe('InsurancePool', () => {
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 0)
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[1])), 0)
 
+    await insurancePool.connect(signers[1]).requestWithdrawal()
+    await time.increase(10)
     await insurancePool.connect(signers[1]).withdraw(toEther(100))
 
     assert.equal(fromEther(await rewardsPool.rewardPerToken()), 0.25)
