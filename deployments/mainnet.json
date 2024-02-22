@@ -173,6 +173,6 @@
   },
   "stLINK_WrappedTokenBridge": {
     "address": "0x6C1E2D2c55C83De945e3f37dF694cdE8452C1E82",
-    "artifact": "stLINK_WrappedTokenBridge"
+    "artifact": "WrappedTokenBridge"
   }
 }
