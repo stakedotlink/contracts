@@ -30,18 +30,15 @@ const config: HardhatUserConfig = {
       url: 'http://127.0.0.1:8545',
       accounts,
     },
-    rinkeby: {
-      url: '',
-      accounts,
-    },
-    ropsten: {
-      url: '',
-      accounts,
-    },
     mainnet: {
       url: 'http://localhost:1248',
       accounts: 'remote',
       timeout: 600000,
+    },
+    arbitrum: {
+      url: '',
+      chainId: 42161,
+      accounts,
     },
     testnet: {
       url: '',

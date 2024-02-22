@@ -30,7 +30,7 @@ async function main() {
       SDLToken: sdlToken.address,
       LINK_WrappedSDToken: wrappedSDToken.address,
     },
-    { SDLToken: 'BurnMintERC677', LINK_wrappedSDToken: 'BurnMintERC677' }
+    { SDLToken: 'BurnMintERC677', LINK_WrappedSDToken: 'BurnMintERC677' }
   )
 }
 
