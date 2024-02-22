@@ -25,9 +25,9 @@ async function main() {
     ethAdapter,
   })
 
-  const priorityPool = (await getContract('PriorityPool')) as PriorityPool
-  const stakingPool = (await getContract('StakingPool')) as StakingPool
-  const communityVCS = (await getContract('CommunityVCS')) as CommunityVCS
+  const priorityPool = (await getContract('LINK_PriorityPool')) as PriorityPool
+  const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
+  const communityVCS = (await getContract('LINK_CommunityVCS')) as CommunityVCS
 
   const safeTransactionData: MetaTransactionData[] = [
     {
