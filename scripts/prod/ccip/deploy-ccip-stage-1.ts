@@ -25,7 +25,7 @@ async function main() {
     {
       stLINK_WrappedTokenBridge: wrappedTokenBridge.address,
     },
-    { stLINK_wrappedTokenBridge: 'WrappedTokenBridge' }
+    { stLINK_WrappedTokenBridge: 'WrappedTokenBridge' }
   )
 }
 
