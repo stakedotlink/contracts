@@ -28,7 +28,7 @@ contract SDLPoolSecondary is SDLPool {
     mapping(address => NewLockPointer[]) internal newLocksByOwner;
 
     uint128 public updateBatchIndex;
-    uint64 public updateInProgress;
+    uint64 internal updateInProgress;
     uint64 internal updateNeeded;
     int256 public queuedRESDLSupplyChange;
 
@@ -354,6 +354,14 @@ contract SDLPoolSecondary is SDLPool {
      **/
     function shouldUpdate() external view returns (bool) {
         return updateNeeded == 1 && updateInProgress == 0;
+    }
+
+    /**
+     * @notice returns whether an update is in progress
+     * @return whether update is in progress
+     **/
+    function isUpdateInProgress() external view returns (bool) {
+        return updateInProgress == 1;
     }
 
     /**

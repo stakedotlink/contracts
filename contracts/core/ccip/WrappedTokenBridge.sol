@@ -108,7 +108,7 @@ contract WrappedTokenBridge is CCIPReceiver {
         uint256 _amount,
         bool _payNative,
         uint256 _maxLINKFee
-    ) external payable onlyOwner returns (bytes32 messageId) {
+    ) external payable returns (bytes32 messageId) {
         if (_payNative == false && msg.value != 0) revert InvalidMsgValue();
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
