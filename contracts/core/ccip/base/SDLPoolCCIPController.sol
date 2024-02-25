@@ -102,6 +102,10 @@ abstract contract SDLPoolCCIPController is CCIPReceiver {
         }
     }
 
+    /**
+     * @notice Processes a received message
+     * @param _message CCIP message
+     **/
     function ccipReceive(Client.Any2EVMMessage calldata _message) external override onlyRouter {
         _verifyCCIPSender(_message);
 

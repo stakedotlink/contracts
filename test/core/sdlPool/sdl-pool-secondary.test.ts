@@ -1500,7 +1500,7 @@ describe('SDLPoolSecondary', () => {
       [2, 300]
     )
     await sdlPool.handleOutgoingUpdate()
-    assert.equal((await sdlPool.updateInProgress()).toNumber(), 1)
+    assert.equal(await sdlPool.isUpdateInProgress(), true)
     assert.equal(await sdlPool.shouldUpdate(), false)
     assert.equal((await sdlPool.updateBatchIndex()).toNumber(), 2)
     assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
@@ -1558,7 +1558,7 @@ describe('SDLPoolSecondary', () => {
       [0, -50]
     )
     await sdlPool.handleOutgoingUpdate()
-    assert.equal((await sdlPool.updateInProgress()).toNumber(), 1)
+    assert.equal(await sdlPool.isUpdateInProgress(), true)
     assert.equal(await sdlPool.shouldUpdate(), false)
     assert.equal((await sdlPool.updateBatchIndex()).toNumber(), 3)
     assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
