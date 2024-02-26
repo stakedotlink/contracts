@@ -89,6 +89,11 @@ abstract contract SDLPoolCCIPController is CCIPReceiver {
         ISDLPool.RESDLToken calldata _reSDLToken
     ) external virtual;
 
+    /**
+     * @notice Sends a CCIP message
+     * @param _destinationChainSelector id of destination chain
+     * @param _evmToAnyMessage CCIP message
+     **/
     function ccipSend(uint64 _destinationChainSelector, Client.EVM2AnyMessage calldata _evmToAnyMessage)
         external
         payable
