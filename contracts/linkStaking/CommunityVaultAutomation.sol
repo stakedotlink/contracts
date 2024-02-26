@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import {CommunityVCS} from "./CommunityVCS.sol";
 import {IVault} from "./interfaces/IVault.sol";
-import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
