@@ -9,8 +9,8 @@ import {
   SDLPoolCCIPControllerSecondary,
   SDLPoolSecondary,
 } from '../../../typechain-types'
-import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { Signer } from 'ethers'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const parseLock = (lock: any) => ({
   amount: fromEther(lock[0]),
@@ -93,7 +93,8 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       77,
       accounts[4],
       toEther(10),
-      '0x',
+      accounts[0],
+      100,
     ])) as SDLPoolCCIPControllerSecondary
 
     await linkToken.transfer(controller.address, toEther(100))
@@ -155,25 +156,7 @@ describe('SDLPoolCCIPControllerSecondary', () => {
     })
   })
 
-  it('checkUpkeep should work correctly', async () => {
-    await token1.transfer(tokenPool.address, toEther(1000))
-    let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
-    await sdlPool.addToken(token1.address, rewardsPool1.address)
-
-    assert.equal((await controller.checkUpkeep('0x'))[0], false)
-    assert.equal(await controller.shouldUpdate(), false)
-
-    await offRamp
-      .connect(signers[4])
-      .executeSingleMessage(
-        ethers.utils.formatBytes32String('messageId'),
-        77,
-        '0x',
-        controller.address,
-        [{ token: token1.address, amount: toEther(25) }]
-      )
-
-    assert.equal((await controller.checkUpkeep('0x'))[0], false)
+  it('shouldUpdate should work correctly', async () => {
     assert.equal(await controller.shouldUpdate(), false)
 
     await sdlToken.transferAndCall(
@@ -182,50 +165,34 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
     )
 
-    assert.equal((await controller.checkUpkeep('0x'))[0], false)
-    assert.equal(await controller.shouldUpdate(), false)
-
-    await offRamp
-      .connect(signers[4])
-      .executeSingleMessage(
-        ethers.utils.formatBytes32String('messageId'),
-        77,
-        '0x',
-        controller.address,
-        [{ token: token1.address, amount: toEther(25) }]
-      )
-
-    assert.equal((await controller.checkUpkeep('0x'))[0], true)
     assert.equal(await controller.shouldUpdate(), true)
 
-    await controller.performUpkeep('0x')
-    assert.equal((await controller.checkUpkeep('0x'))[0], false)
+    await controller.executeUpdate(1)
+    assert.equal(await controller.shouldUpdate(), false)
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
+    )
+
+    assert.equal(await controller.shouldUpdate(), false)
+
+    await time.increase(100)
+
     assert.equal(await controller.shouldUpdate(), false)
   })
 
-  it('performUpkeep should work correctly', async () => {
-    await token1.transfer(tokenPool.address, toEther(1000))
-    let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
-    await sdlPool.addToken(token1.address, rewardsPool1.address)
-
-    await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
+  it('executeUpdate should work correctly', async () => {
+    await expect(controller.executeUpdate(1)).to.be.revertedWith('UpdateConditionsNotMet()')
 
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
     )
-    await offRamp
-      .connect(signers[4])
-      .executeSingleMessage(
-        ethers.utils.formatBytes32String('messageId'),
-        77,
-        '0x',
-        controller.address,
-        [{ token: token1.address, amount: toEther(25) }]
-      )
-    await controller.performUpkeep('0x')
-    await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
+    await controller.executeUpdate(1)
+    await expect(controller.executeUpdate(1)).to.be.revertedWith('UpdateConditionsNotMet()')
 
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
@@ -246,6 +213,10 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       [1, 200]
     )
     assert.equal(lastRequestMsg[3], linkToken.address)
+    assert.equal(
+      lastRequestMsg[4],
+      '0x97a657c9' + ethers.utils.defaultAbiCoder.encode(['uint256'], [1]).slice(2)
+    )
 
     await offRamp
       .connect(signers[4])
@@ -256,21 +227,13 @@ describe('SDLPoolCCIPControllerSecondary', () => {
         controller.address,
         []
       )
-    await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
+    await expect(controller.executeUpdate(1)).to.be.revertedWith('UpdateConditionsNotMet()')
 
     await sdlPool.connect(signers[1]).withdraw(2, toEther(10))
-    await expect(controller.performUpkeep('0x')).to.be.revertedWith('UpdateConditionsNotMet()')
+    await expect(controller.executeUpdate(1)).to.be.revertedWith('UpdateConditionsNotMet()')
 
-    await offRamp
-      .connect(signers[4])
-      .executeSingleMessage(
-        ethers.utils.formatBytes32String('messageId'),
-        77,
-        '0x',
-        controller.address,
-        [{ token: token1.address, amount: toEther(25) }]
-      )
-    await controller.performUpkeep('0x')
+    await time.increase(100)
+    await controller.executeUpdate(2)
 
     lastRequestData = await onRamp.getLastRequestData()
     lastRequestMsg = await onRamp.getLastRequestMessage()
@@ -291,6 +254,10 @@ describe('SDLPoolCCIPControllerSecondary', () => {
       [0, -10]
     )
     assert.equal(lastRequestMsg[3], linkToken.address)
+    assert.equal(
+      lastRequestMsg[4],
+      '0x97a657c9' + ethers.utils.defaultAbiCoder.encode(['uint256'], [2]).slice(2)
+    )
   })
 
   it('ccipReceive should work correctly for reward distributions', async () => {
@@ -374,25 +341,12 @@ describe('SDLPoolCCIPControllerSecondary', () => {
   })
 
   it('ccipReceive should work correctly for incoming updates', async () => {
-    await token1.transfer(tokenPool.address, toEther(1000))
-    let rewardsPool1 = await deploy('RewardsPool', [sdlPool.address, token1.address])
-    await sdlPool.addToken(token1.address, rewardsPool1.address)
-
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(300),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
-    await offRamp
-      .connect(signers[4])
-      .executeSingleMessage(
-        ethers.utils.formatBytes32String('messageId'),
-        77,
-        '0x',
-        controller.address,
-        [{ token: token1.address, amount: toEther(30) }]
-      )
-    await controller.performUpkeep('0x')
+    await controller.executeUpdate(1)
 
     let success: any = await offRamp
       .connect(signers[5])

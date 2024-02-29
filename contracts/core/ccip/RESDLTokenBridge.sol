@@ -22,8 +22,6 @@ contract RESDLTokenBridge is Ownable {
     ISDLPool public sdlPool;
     ISDLPoolCCIPController public sdlPoolCCIPController;
 
-    mapping(uint64 => bytes) public extraArgsByChain;
-
     event TokenTransferred(
         bytes32 indexed messageId,
         uint64 indexed destinationChainSelector,
@@ -40,7 +38,6 @@ contract RESDLTokenBridge is Ownable {
         address receiver,
         uint256 tokenId
     );
-    event SetExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
 
     error InsufficientFee();
     error TransferFailed();
@@ -80,13 +77,15 @@ contract RESDLTokenBridge is Ownable {
      * @param _tokenId id of reSDL token
      * @param _payNative whether fee should be paid natively or with LINK
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
+     * @param _gasLimit gas limit to use for CCIP message on destination chain
      **/
     function transferRESDL(
         uint64 _destinationChainSelector,
         address _receiver,
         uint256 _tokenId,
         bool _payNative,
-        uint256 _maxLINKFee
+        uint256 _maxLINKFee,
+        uint256 _gasLimit
     ) external payable returns (bytes32 messageId) {
         if (msg.sender != sdlPool.ownerOf(_tokenId)) revert SenderNotAuthorized();
         if (_receiver == address(0)) revert InvalidReceiver();
@@ -97,7 +96,6 @@ contract RESDLTokenBridge is Ownable {
             msg.sender,
             _tokenId
         );
-        bytes memory extraArgs = extraArgsByChain[_destinationChainSelector];
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             _receiver,
@@ -105,7 +103,7 @@ contract RESDLTokenBridge is Ownable {
             reSDLToken,
             destination,
             _payNative ? address(0) : address(linkToken),
-            extraArgs
+            _gasLimit
         );
 
         uint256 fees = IRouterClient(sdlPoolCCIPController.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
@@ -138,29 +136,24 @@ contract RESDLTokenBridge is Ownable {
      * @notice Returns the current fee for an reSDL transfer
      * @param _destinationChainSelector id of destination chain
      * @param _payNative whether fee should be paid natively or with LINK
+     * @param _gasLimit gas limit to use for CCIP message on destination chain
      * @return fee current fee
      **/
-    function getFee(uint64 _destinationChainSelector, bool _payNative) external view returns (uint256) {
+    function getFee(
+        uint64 _destinationChainSelector,
+        bool _payNative,
+        uint256 _gasLimit
+    ) external view returns (uint256) {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             address(this),
             0,
             ISDLPool.RESDLToken(0, 0, 0, 0, 0),
             address(this),
             _payNative ? address(0) : address(linkToken),
-            extraArgsByChain[_destinationChainSelector]
+            _gasLimit
         );
 
         return IRouterClient(sdlPoolCCIPController.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
-    }
-
-    /**
-     * @notice Sets the extra args used for sending reSDL to a chain
-     * @param _chainSelector id of chain
-     * @param _extraArgs extra args as defined in CCIP API
-     **/
-    function setExtraArgs(uint64 _chainSelector, bytes calldata _extraArgs) external onlyOwner {
-        extraArgsByChain[_chainSelector] = _extraArgs;
-        emit SetExtraArgs(_chainSelector, _extraArgs);
     }
 
     /**
@@ -199,7 +192,7 @@ contract RESDLTokenBridge is Ownable {
      * @param _reSDLToken reSDL token
      * @param _destination address of destination contract
      * @param _feeTokenAddress address of token that fees will be paid in
-     * @param _extraArgs encoded args as defined in CCIP API
+     * @param _gasLimit gas limit to use for CCIP message on destination chain
      **/
     function _buildCCIPMessage(
         address _receiver,
@@ -207,7 +200,7 @@ contract RESDLTokenBridge is Ownable {
         ISDLPool.RESDLToken memory _reSDLToken,
         address _destination,
         address _feeTokenAddress,
-        bytes memory _extraArgs
+        uint256 _gasLimit
     ) internal view returns (Client.EVM2AnyMessage memory) {
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
         Client.EVMTokenAmount memory tokenAmount = Client.EVMTokenAmount({
@@ -228,7 +221,7 @@ contract RESDLTokenBridge is Ownable {
                 _reSDLToken.expiry
             ),
             tokenAmounts: tokenAmounts,
-            extraArgs: _extraArgs,
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: _gasLimit})),
             feeToken: _feeTokenAddress
         });
 

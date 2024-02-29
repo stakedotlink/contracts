@@ -163,7 +163,7 @@ describe('RewardsInitiator', () => {
     await strategy1.simulateSlash(toEther(10))
     await strategy3.simulateSlash(toEther(10))
 
-    await rewardsInitiator.updateRewards([0, 2], '0x')
+    await rewardsInitiator.updateRewards([0, 2], '0x', [])
 
     assert.equal(fromEther(await strategy1.getDepositChange()), 0)
     assert.equal(fromEther(await strategy2.getDepositChange()), 100)
@@ -173,7 +173,7 @@ describe('RewardsInitiator', () => {
     await token.transfer(strategy2.address, toEther(10))
     await token.transfer(strategy3.address, toEther(20))
 
-    await rewardsInitiator.updateRewards([0, 1, 2], '0x')
+    await rewardsInitiator.updateRewards([0, 1, 2], '0x', [])
 
     assert.equal(fromEther(await strategy1.getDepositChange()), 0)
     assert.equal(fromEther(await strategy2.getDepositChange()), 0)
