@@ -16,23 +16,28 @@ interface ISDLPoolPrimary is ISDLPool {
 contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     using SafeERC20 for IERC20;
 
+    struct QueuedUpdate {
+        uint64 chainSelector;
+        uint192 mintStartIndex;
+    }
+
     uint64[] internal whitelistedChains;
     mapping(uint64 => address) public whitelistedDestinations;
-
-    mapping(uint64 => bytes) public updateExtraArgsByChain;
-    mapping(uint64 => bytes) public rewardsExtraArgsByChain;
     mapping(uint64 => uint256) public reSDLSupplyByChain;
 
     mapping(address => address) public wrappedRewardTokens;
 
     address public rewardsInitiator;
+    address public updateInitiator;
+
+    QueuedUpdate[] internal queuedUpdates;
 
     event DistributeRewards(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
-    event ChainAdded(uint64 indexed chainSelector, address destination, bytes updateExtraArgs, bytes rewardsExtraArgs);
+    event ChainAdded(uint64 indexed chainSelector, address destination);
     event ChainRemoved(uint64 indexed chainSelector, address destination);
-    event SetUpdateExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
-    event SetRewardsExtraArgs(uint64 indexed chainSelector, bytes extraArgs);
     event SetWrappedRewardToken(address indexed token, address rewardToken);
+
+    error InvalidLength();
 
     /**
      * @notice Initializes the contract
@@ -41,24 +46,34 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @param _sdlToken address of the SDL token
      * @param _sdlPool address of the SDL Pool
      * @param _maxLINKFee max fee to be paid on an outgoing message
+     * @param _updateInitiator address of the update initiator
      **/
     constructor(
         address _router,
         address _linkToken,
         address _sdlToken,
         address _sdlPool,
-        uint256 _maxLINKFee
-    ) SDLPoolCCIPController(_router, _linkToken, _sdlToken, _sdlPool, _maxLINKFee) {}
+        uint256 _maxLINKFee,
+        address _updateInitiator
+    ) SDLPoolCCIPController(_router, _linkToken, _sdlToken, _sdlPool, _maxLINKFee) {
+        updateInitiator = _updateInitiator;
+    }
 
     modifier onlyRewardsInitiator() {
         if (msg.sender != rewardsInitiator) revert SenderNotAuthorized();
         _;
     }
 
+    modifier onlyUpdateInitiator() {
+        if (msg.sender != updateInitiator) revert SenderNotAuthorized();
+        _;
+    }
+
     /**
      * @notice Claims and distributes rewards between all secondary chains
+     * @param _gasLimits list of gas limits to use for CCIP messages on secondary chains
      **/
-    function distributeRewards() external onlyRewardsInitiator {
+    function distributeRewards(uint256[] calldata _gasLimits) external onlyRewardsInitiator {
         uint256 totalRESDL = ISDLPoolPrimary(sdlPool).effectiveBalanceOf(address(this));
         address[] memory tokens = ISDLPoolPrimary(sdlPool).supportedTokens();
         uint256 numDestinations = whitelistedChains.length;
@@ -93,8 +108,23 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         }
 
         for (uint256 i = 0; i < numDestinations; ++i) {
-            _distributeRewards(whitelistedChains[i], tokens, distributionAmounts[i]);
+            _distributeRewards(whitelistedChains[i], tokens, distributionAmounts[i], _gasLimits[i]);
         }
+    }
+
+    /**
+     * @notice Executes all queued updates
+     * @param _gasLimits list of gas limits to use for CCIP messages on secondary chains
+     **/
+    function executeQueuedUpdates(uint256[] calldata _gasLimits) external onlyUpdateInitiator {
+        if (_gasLimits.length == 0 || _gasLimits.length != queuedUpdates.length) revert InvalidLength();
+
+        for (uint256 i = 0; i < _gasLimits.length; ++i) {
+            QueuedUpdate memory update = queuedUpdates[i];
+            _ccipSendUpdate(update.chainSelector, update.mintStartIndex, _gasLimits[i]);
+        }
+
+        delete queuedUpdates;
     }
 
     /**
@@ -147,25 +177,24 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     }
 
     /**
+     * @notice Returns a list of all queued updates
+     * @return list of queued updates
+     **/
+    function getQueuedUpdates() external view returns (QueuedUpdate[] memory) {
+        return queuedUpdates;
+    }
+
+    /**
      * @notice Whitelists a new chain
      * @param _chainSelector id of chain
      * @param _destination address to receive CCIP messages on chain
-     * @param _updateExtraArgs extraArgs for sending updates to this destination as defined in CCIP docs
-     * @param _rewardsExtraArgs extraArgs for sending rewards to this destination as defined in CCIP docs
      **/
-    function addWhitelistedChain(
-        uint64 _chainSelector,
-        address _destination,
-        bytes calldata _updateExtraArgs,
-        bytes calldata _rewardsExtraArgs
-    ) external onlyOwner {
+    function addWhitelistedChain(uint64 _chainSelector, address _destination) external onlyOwner {
         if (whitelistedDestinations[_chainSelector] != address(0)) revert AlreadyAdded();
         if (_destination == address(0)) revert InvalidDestination();
         whitelistedChains.push(_chainSelector);
         whitelistedDestinations[_chainSelector] = _destination;
-        updateExtraArgsByChain[_chainSelector] = _updateExtraArgs;
-        rewardsExtraArgsByChain[_chainSelector] = _rewardsExtraArgs;
-        emit ChainAdded(_chainSelector, _destination, _updateExtraArgs, _rewardsExtraArgs);
+        emit ChainAdded(_chainSelector, _destination);
     }
 
     /**
@@ -184,8 +213,6 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         }
 
         delete whitelistedDestinations[_chainSelector];
-        delete updateExtraArgsByChain[_chainSelector];
-        delete rewardsExtraArgsByChain[_chainSelector];
     }
 
     /**
@@ -210,28 +237,6 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     }
 
     /**
-     * @notice Sets the extra args used for sending updates to a chain
-     * @param _chainSelector id of chain
-     * @param _updateExtraArgs extra args as defined in CCIP API
-     **/
-    function setUpdateExtraArgs(uint64 _chainSelector, bytes calldata _updateExtraArgs) external onlyOwner {
-        if (whitelistedDestinations[_chainSelector] == address(0)) revert InvalidDestination();
-        updateExtraArgsByChain[_chainSelector] = _updateExtraArgs;
-        emit SetUpdateExtraArgs(_chainSelector, _updateExtraArgs);
-    }
-
-    /**
-     * @notice Sets the extra args used for sending rewards to a chain
-     * @param _chainSelector id of chain
-     * @param _rewardsExtraArgs extra args as defined in CCIP API
-     **/
-    function setRewardsExtraArgs(uint64 _chainSelector, bytes calldata _rewardsExtraArgs) external onlyOwner {
-        if (whitelistedDestinations[_chainSelector] == address(0)) revert InvalidDestination();
-        rewardsExtraArgsByChain[_chainSelector] = _rewardsExtraArgs;
-        emit SetRewardsExtraArgs(_chainSelector, _rewardsExtraArgs);
-    }
-
-    /**
      * @notice Sets the rewards initiator
      * @dev this address has sole authority to update rewards
      * @param _rewardsInitiator address of rewards initiator
@@ -241,15 +246,26 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     }
 
     /**
+     * @notice Sets the update initiator
+     * @dev this address has sole authority to send update responses to secondary chains
+     * @param _updateInitiator address of update initiator
+     **/
+    function setUpdateInitiator(address _updateInitiator) external onlyOwner {
+        updateInitiator = _updateInitiator;
+    }
+
+    /**
      * @notice Distributes rewards to a single chain
      * @param _destinationChainSelector id of chain
      * @param _rewardTokens list of reward tokens to distribute
      * @param _rewardTokenAmounts list of reward token amounts to distribute
+     * @param _gasLimit gas limit to use for CCIP message on destination chain
      **/
     function _distributeRewards(
         uint64 _destinationChainSelector,
         address[] memory _rewardTokens,
-        uint256[] memory _rewardTokenAmounts
+        uint256[] memory _rewardTokenAmounts,
+        uint256 _gasLimit
     ) internal {
         address destination = whitelistedDestinations[_destinationChainSelector];
         if (destination == address(0)) revert InvalidDestination();
@@ -279,7 +295,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             0,
             rewardTokens,
             rewardTokenAmounts,
-            rewardsExtraArgsByChain[_destinationChainSelector]
+            _gasLimit
         );
 
         IRouterClient router = IRouterClient(this.getRouter());
@@ -309,7 +325,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
         uint256 mintStartIndex = ISDLPoolPrimary(sdlPool).handleIncomingUpdate(numNewRESDLTokens, totalRESDLSupplyChange);
 
-        _ccipSendUpdate(sourceChainSelector, mintStartIndex);
+        queuedUpdates.push(QueuedUpdate(sourceChainSelector, uint192(mintStartIndex)));
 
         emit MessageReceived(_message.messageId, sourceChainSelector);
     }
@@ -318,14 +334,19 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @notice Sends an update to a secondary chain
      * @param _destinationChainSelector id of destination chain
      * @param _mintStartIndex first index to be used for minting new reSDL tokens
+     * @param _gasLimit gas limit to use for CCIP message on destination chain
      **/
-    function _ccipSendUpdate(uint64 _destinationChainSelector, uint256 _mintStartIndex) internal {
+    function _ccipSendUpdate(
+        uint64 _destinationChainSelector,
+        uint256 _mintStartIndex,
+        uint256 _gasLimit
+    ) internal {
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             whitelistedDestinations[_destinationChainSelector],
             _mintStartIndex,
             new address[](0),
             new uint256[](0),
-            updateExtraArgsByChain[_destinationChainSelector]
+            _gasLimit
         );
 
         IRouterClient router = IRouterClient(this.getRouter());
@@ -344,14 +365,14 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @param _mintStartIndex first index to be used for minting new reSDL tokens
      * @param _tokens list of tokens to transfer
      * @param _tokenAmounts list of token amounts to transfer
-     * @param _extraArgs encoded args as defined in CCIP API
+     * @param _gasLimit gas limit to use for CCIP message on destination chain
      **/
     function _buildCCIPMessage(
         address _destination,
         uint256 _mintStartIndex,
         address[] memory _tokens,
         uint256[] memory _tokenAmounts,
-        bytes memory _extraArgs
+        uint256 _gasLimit
     ) internal view returns (Client.EVM2AnyMessage memory) {
         bool isRewardDistribution = _tokens.length != 0;
 
@@ -364,7 +385,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             receiver: abi.encode(_destination),
             data: isRewardDistribution ? bytes("") : abi.encode(_mintStartIndex),
             tokenAmounts: tokenAmounts,
-            extraArgs: _extraArgs,
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: _gasLimit})),
             feeToken: address(linkToken)
         });
 

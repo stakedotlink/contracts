@@ -44,7 +44,7 @@ contract SDLPoolCCIPControllerMock {
         sdlPool.handleIncomingRESDL(_receiver, _tokenId, _reSDLToken);
     }
 
-    function distributeRewards() external {
+    function distributeRewards(uint256[] calldata) external {
         rewardsDistributed++;
     }
 

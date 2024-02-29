@@ -34,11 +34,16 @@ contract RewardsInitiator is Ownable {
      * @notice updates strategy rewards in the staking pool and distributes rewards to cross-chain SDL pools
      * @param _strategyIdxs indexes of strategies to update rewards for
      * @param _data encoded data to be passed to each strategy
+     * @param _gasLimits list of gas limits to use for CCIP messages on secondary chains
      **/
-    function updateRewards(uint256[] calldata _strategyIdxs, bytes calldata _data) external {
+    function updateRewards(
+        uint256[] calldata _strategyIdxs,
+        bytes calldata _data,
+        uint256[] calldata _gasLimits
+    ) external {
         if (!whitelistedCallers[msg.sender]) revert SenderNotAuthorized();
         stakingPool.updateStrategyRewards(_strategyIdxs, _data);
-        sdlPoolCCIPController.distributeRewards();
+        sdlPoolCCIPController.distributeRewards(_gasLimits);
     }
 
     /**
