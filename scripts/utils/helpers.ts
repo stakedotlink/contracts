@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { BigNumber } from 'ethers'
+import { BigNumber, Signer } from 'ethers'
 import { ERC677 } from '../../typechain-types'
 
 export const toEther = (amount: string | number) => {
@@ -10,7 +10,7 @@ export const fromEther = (amount: BigNumber) => {
   return Number(ethers.utils.formatEther(amount))
 }
 
-export const getAccounts = async () => {
+export const getAccounts = async (): Promise<any> => {
   const signers = await ethers.getSigners()
   const accounts = await Promise.all(signers.map(async (signer) => signer.getAddress()))
   return { signers, accounts }
