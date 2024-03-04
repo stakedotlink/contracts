@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/ISDLPool.sol";
@@ -13,7 +12,7 @@ import "../interfaces/ISDLPoolCCIPController.sol";
  * @title reSDL Token Bridge
  * @notice Handles CCIP transfers of reSDL NFTs
  */
-contract RESDLTokenBridge is Ownable {
+contract RESDLTokenBridge {
     using SafeERC20 for IERC20;
 
     IERC20 public linkToken;
