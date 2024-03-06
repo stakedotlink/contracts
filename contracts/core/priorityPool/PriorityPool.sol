@@ -11,6 +11,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "../interfaces/IStakingPool.sol";
 import "../interfaces/ISDLPool.sol";
+import "../interfaces/IWithdrawalPool.sol";
 
 /**
  * @title Priority Pool
@@ -51,6 +52,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     address public rebaseController;
 
+    IWithdrawalPool public withdrawalPool;
+    uint256 public withdrawalPoolDepositMin;
+
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
     event Deposit(address indexed account, uint256 poolAmount, uint256 queueAmount);
@@ -63,7 +67,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     );
     event SetPoolStatus(PoolStatus status);
     event SetQueueDepositParams(uint128 queueDepositMin, uint128 queueDepositMax);
-    event DepositTokens(uint256 unusedTokensAmount, uint256 queuedTokensAmount);
+    event DepositTokens(
+        uint256 withdrawalPoolAmount,
+        uint256 unusedTokensAmount,
+        uint256 queuedTokensAmount
+    );
+    event SetWithdrawalPoolDepositMin(uint256 withdrawalPoolDepositMin);
 
     error InvalidValue();
     error UnauthorizedToken();
@@ -78,6 +87,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error SenderNotAuthorized();
     error InvalidAmount();
     error StatusAlreadySet();
+    error InsufficientLiquidity();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -89,13 +99,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _token address of asset token
      * @param _stakingPool address of staking pool
      * @param _sdlPool address of SDL pool
-     * @param _queueDepositMin min amount of tokens needed to execute deposit
-     * @param _queueDepositMax max amount of tokens in a single deposit
+     * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
+     * @param _queueDepositMin min amount of tokens required for strategy deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
      **/
     function initialize(
         address _token,
         address _stakingPool,
         address _sdlPool,
+        uint256 _withdrawalPoolDepositMin,
         uint128 _queueDepositMin,
         uint128 _queueDepositMax
     ) public initializer {
@@ -105,6 +117,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
         sdlPool = ISDLPool(_sdlPool);
+        withdrawalPoolDepositMin = _withdrawalPoolDepositMin;
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         accounts.push(address(0));
@@ -198,13 +211,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
         if (_value == 0) revert InvalidValue();
 
+        bool shouldQueue = abi.decode(_calldata, (bool));
+
         if (msg.sender == address(token)) {
-            bool shouldQueue = abi.decode(_calldata, (bool));
             _deposit(_sender, _value, shouldQueue);
         } else if (msg.sender == address(stakingPool)) {
-            _withdraw(_value);
-            token.safeTransfer(_sender, _value);
-            emit Withdraw(_sender, _value);
+            uint256 amountQueued = _withdraw(_sender, _value, shouldQueue);
+            token.safeTransfer(_sender, _value - amountQueued);
         } else {
             revert UnauthorizedToken();
         }
@@ -230,13 +243,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
      * @param _merkleProof merkle proof for sender's merkle tree entry
      * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
+     * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the full withdrawal amount cannot be satisfied
      */
     function withdraw(
         uint256 _amountToWithdraw,
         uint256 _amount,
         uint256 _sharesAmount,
         bytes32[] calldata _merkleProof,
-        bool _shouldUnqueue
+        bool _shouldUnqueue,
+        bool _shouldQueueWithdrawal
     ) external {
         if (_amountToWithdraw == 0) revert InvalidAmount();
 
@@ -274,11 +289,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 address(this),
                 toWithdraw
             );
-            _withdraw(toWithdraw);
-            emit Withdraw(account, toWithdraw);
+            toWithdraw = _withdraw(account, toWithdraw, _shouldQueueWithdrawal);
         }
 
-        token.safeTransfer(account, _amountToWithdraw);
+        token.safeTransfer(account, _amountToWithdraw - toWithdraw);
     }
 
     /**
@@ -349,36 +363,47 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice deposits queued and/or unused tokens
      * @dev allows bypassing of the stored deposit limits
-     * @param _queueDepositMin min amount of tokens required for deposit
-     * @param _queueDepositMax max amount of tokens that can be deposited at once
+     * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
+     * @param _queueDepositMin min amount of tokens required for strategy deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
      */
-    function depositQueuedTokens(uint256 _queueDepositMin, uint256 _queueDepositMax) external {
-        _depositQueuedTokens(_queueDepositMin, _queueDepositMax);
+    function depositQueuedTokens(
+        uint256 _withdrawalPoolDepositMin,
+        uint256 _queueDepositMin,
+        uint256 _queueDepositMax
+    ) external {
+        _depositQueuedTokens(_withdrawalPoolDepositMin, _queueDepositMin, _queueDepositMax);
     }
 
     /**
      * @notice returns whether a call should be made to performUpkeep to deposit queued/unused tokens
-     * into the staking pool
+     * into the staking pool and/or withdrawal pool
      * @dev used by chainlink keepers
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();
+
+        if (poolStatus != PoolStatus.OPEN) return (false, bytes(""));
+
         return (
-            poolStatus == PoolStatus.OPEN &&
-                strategyDepositRoom >= queueDepositMin &&
-                (totalQueued + unusedDeposits) >= queueDepositMin,
+            (queuedWithdrawals >= withdrawalPoolDepositMin &&
+                totalQueued >= withdrawalPoolDepositMin) ||
+                (strategyDepositRoom >= queueDepositMin &&
+                    (totalQueued + unusedDeposits) >= queueDepositMin),
             bytes("")
         );
     }
 
     /**
      * @notice deposits queued and/or unused tokens
-     * @dev will revert if less than queueDepositMin tokens can be deposited
+     * @dev will revert if the amount of tokens that can be deposited is less than the queued and withdrawal
+     * pool deposit minimums
      * @dev used by chainlink keepers
      */
     function performUpkeep(bytes calldata) external {
-        _depositQueuedTokens(queueDepositMin, queueDepositMax);
+        _depositQueuedTokens(withdrawalPoolDepositMin, queueDepositMin, queueDepositMax);
     }
 
     /**
@@ -464,9 +489,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the minimum and maximum amount that can be deposited
-     * @param _queueDepositMin min amount of tokens required for deposit
-     * @param _queueDepositMax max amount of tokens that can be deposited at once
+     * @notice sets the minimum and maximum amount that can be deposited into strategies at once
+     * @param _queueDepositMin min amount of tokens required for strategy deposit
+     * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
      */
     function setQueueDepositParams(
         uint128 _queueDepositMin,
@@ -475,6 +500,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
+    }
+
+    /**
+     * @notice sets the minimum amount that can be deposited into the withdrawal pool
+     * @param _withdrawalPoolDepositMin min amount of tokens required for deposit
+     */
+    function setWithdrawalPoolDepositMin(uint128 _withdrawalPoolDepositMin) external onlyOwner {
+        withdrawalPoolDepositMin = _withdrawalPoolDepositMin;
+        emit SetWithdrawalPoolDepositMin(_withdrawalPoolDepositMin);
     }
 
     /**
@@ -495,9 +529,17 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits asset tokens into the staking pool and/or queue
-     * @dev tokens will be deposited into staking pool if there is room and the queue is empty, otherwise
-     * they will be queued if `_shouldQueue` is true; remaining tokens will be returned to sender
+     * @notice sets the withdrawal pool
+     * @param _withdrawalPool address of withdrawal pool
+     */
+    function setWithdrawalPool(address _withdrawalPool) external onlyOwner {
+        withdrawalPool = IWithdrawalPool(_withdrawalPool);
+    }
+
+    /**
+     * @notice deposits asset tokens into the withdrawal pool, staking pool, and/or queue
+     * @dev tokens will be deposited into the withdrawal pool and/or staking pool if there is room and the queue
+     * is empty, otherwise they will be queued if `_shouldQueue` is true; remaining tokens will be returned to sender
      * @param _account account to deposit for
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued
@@ -508,11 +550,22 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 toDeposit = _amount;
 
         if (totalQueued == 0) {
-            uint256 canDeposit = stakingPool.canDeposit();
-            if (canDeposit != 0) {
-                uint256 toDepositIntoPool = toDeposit <= canDeposit ? toDeposit : canDeposit;
-                stakingPool.deposit(_account, toDepositIntoPool);
-                toDeposit -= toDepositIntoPool;
+            uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
+            if (queuedWithdrawals != 0) {
+                uint256 toDepositIntoQueue = toDeposit <= queuedWithdrawals
+                    ? toDeposit
+                    : queuedWithdrawals;
+                withdrawalPool.deposit(toDepositIntoQueue);
+                toDeposit -= toDepositIntoQueue;
+            }
+
+            if (toDeposit != 0) {
+                uint256 canDeposit = stakingPool.canDeposit();
+                if (canDeposit != 0) {
+                    uint256 toDepositIntoPool = toDeposit <= canDeposit ? toDeposit : canDeposit;
+                    stakingPool.deposit(_account, toDepositIntoPool);
+                    toDeposit -= toDepositIntoPool;
+                }
             }
         }
 
@@ -534,60 +587,121 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice withdraws asset tokens
      * @dev will swap LSD tokens for queued tokens if possible followed by withdrawing
-     * from the staking pool if necessary (assumes staking pool will revert if there is insufficient withdrawal room)
+     * from the staking pool, and then queuing any remaining tokens for withdrawal
+     * @param _account account to withdraw for
      * @param _amount amount to withdraw
+     * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
+     * @return the amount of tokens that were queued for withdrawal
      **/
-    function _withdraw(uint256 _amount) internal {
+    function _withdraw(
+        address _account,
+        uint256 _amount,
+        bool _shouldQueueWithdrawal
+    ) internal returns (uint256) {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
-        uint256 toWithdrawFromQueue = _amount <= totalQueued ? _amount : totalQueued;
-        uint256 toWithdrawFromPool = _amount - toWithdrawFromQueue;
+        uint256 toWithdraw = _amount;
 
-        if (toWithdrawFromQueue != 0) {
-            totalQueued -= toWithdrawFromQueue;
-            depositsSinceLastUpdate += toWithdrawFromQueue;
-            sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
+        if (withdrawalPool.getTotalQueuedWithdrawals() == 0) {
+            uint256 toWithdrawFromQueue = toWithdraw <= totalQueued ? toWithdraw : totalQueued;
+
+            if (toWithdrawFromQueue != 0) {
+                totalQueued -= toWithdrawFromQueue;
+                depositsSinceLastUpdate += toWithdrawFromQueue;
+                sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
+                toWithdraw -= toWithdrawFromQueue;
+            }
+
+            if (toWithdraw != 0) {
+                uint256 toWithdrawFromPool = MathUpgradeable.min(
+                    stakingPool.canWithdraw(),
+                    toWithdraw
+                );
+                if (toWithdrawFromPool != 0) {
+                    stakingPool.withdraw(address(this), address(this), toWithdrawFromPool);
+                    toWithdraw -= toWithdrawFromPool;
+                }
+            }
         }
 
-        if (toWithdrawFromPool != 0) {
-            stakingPool.withdraw(address(this), address(this), toWithdrawFromPool);
+        if (toWithdraw != 0) {
+            if (!_shouldQueueWithdrawal) revert InsufficientLiquidity();
+            withdrawalPool.queueWithdrawal(_account, toWithdraw);
         }
+
+        emit Withdraw(_account, _amount - toWithdraw);
+        return toWithdraw;
     }
 
     /**
      * @notice deposits queued and/or unused tokens
-     * @dev will prioritize unused deposits sitting in staking pool before queued deposits in this pool
+     * @dev will prioritize withdrawal pool deposits, then unused staking pool deposits, then new staking pool deposits
+     * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
      * @param _depositMin min amount of tokens required to deposit
+     * @param _depositMax max amount of tokens that can be deposited into strategies at once
      **/
-    function _depositQueuedTokens(uint256 _depositMin, uint256 _depositMax) internal {
+    function _depositQueuedTokens(
+        uint256 _withdrawalPoolDepositMin,
+        uint256 _depositMin,
+        uint256 _depositMax
+    ) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
-        uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
-        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin)
-            revert InsufficientDepositRoom();
-
         uint256 _totalQueued = totalQueued;
+
+        uint256 toDepositIntoWithdrawalPool;
+        uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
+        if (
+            queuedWithdrawals >= _withdrawalPoolDepositMin &&
+            _totalQueued >= _withdrawalPoolDepositMin
+        ) {
+            toDepositIntoWithdrawalPool = MathUpgradeable.min(queuedWithdrawals, _totalQueued);
+            withdrawalPool.deposit(toDepositIntoWithdrawalPool);
+            _totalQueued -= toDepositIntoWithdrawalPool;
+        }
+
+        uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
+        if (
+            (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin) &&
+            toDepositIntoWithdrawalPool == 0
+        ) {
+            revert InsufficientDepositRoom();
+        }
+
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();
         uint256 canDeposit = _totalQueued + unusedDeposits;
-        if (canDeposit == 0 || canDeposit < _depositMin) revert InsufficientQueuedTokens();
-
-        uint256 toDepositFromStakingPool = MathUpgradeable.min(
-            MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
-            _depositMax
-        );
-        uint256 toDepositFromQueue = MathUpgradeable.min(
-            MathUpgradeable.min(_totalQueued, strategyDepositRoom - toDepositFromStakingPool),
-            _depositMax - toDepositFromStakingPool
-        );
-
-        stakingPool.deposit(address(this), toDepositFromQueue);
-
-        if (toDepositFromQueue != 0) {
-            totalQueued = _totalQueued - toDepositFromQueue;
-            depositsSinceLastUpdate += toDepositFromQueue;
-            sharesSinceLastUpdate += stakingPool.getSharesByStake(toDepositFromQueue);
+        if ((canDeposit == 0 || canDeposit < _depositMin) && toDepositIntoWithdrawalPool == 0) {
+            revert InsufficientQueuedTokens();
         }
-        emit DepositTokens(toDepositFromStakingPool, toDepositFromQueue);
+
+        if (strategyDepositRoom >= _depositMin && canDeposit >= _depositMin) {
+            uint256 toDepositFromStakingPool = MathUpgradeable.min(
+                MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
+                _depositMax
+            );
+            uint256 toDepositFromQueue = MathUpgradeable.min(
+                MathUpgradeable.min(_totalQueued, strategyDepositRoom - toDepositFromStakingPool),
+                _depositMax - toDepositFromStakingPool
+            );
+
+            stakingPool.deposit(address(this), toDepositFromQueue);
+            _totalQueued -= toDepositFromQueue;
+
+            emit DepositTokens(
+                toDepositIntoWithdrawalPool,
+                toDepositFromStakingPool,
+                toDepositFromQueue
+            );
+        } else {
+            emit DepositTokens(toDepositIntoWithdrawalPool, 0, 0);
+        }
+
+        if (_totalQueued != totalQueued) {
+            uint256 diff = totalQueued - _totalQueued;
+            depositsSinceLastUpdate += diff;
+            sharesSinceLastUpdate += stakingPool.getSharesByStake(diff);
+            totalQueued = _totalQueued;
+        }
     }
 
     /**
