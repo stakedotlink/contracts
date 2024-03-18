@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.15;
+
+interface ISequencerVault {
+    function getTotalDeposits() external view returns (uint256);
+
+    function getPendingRewards() external view returns (uint256);
+
+    function updateDeposits(uint256 _minRewards, uint32 _l2Gas)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256
+        );
+
+    function deposit(uint256 _amount) external;
+}
