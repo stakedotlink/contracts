@@ -329,6 +329,16 @@ contract SequencerVCS is Strategy {
     }
 
     /**
+     * @notice relocks sequencer rewards for a list of vaults
+     * @param _vaults list of vaults
+     */
+    function relockRewards(uint256[] calldata _vaults) external {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            vaults[_vaults[i]].relockRewards();
+        }
+    }
+
+    /**
      * @notice deploys a new vault and adds it to this strategy
      * @param _pubkey public key of sequencer
      * @param _signer signer address of sequencer

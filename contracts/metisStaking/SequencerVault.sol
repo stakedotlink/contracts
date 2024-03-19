@@ -35,6 +35,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     error SenderNotAuthorized();
     error ZeroAddress();
+    error NoRewards();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -193,6 +194,15 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
 
         return (totalDeposits, opRewards, claimedRewards);
+    }
+
+    /**
+     * @notice relocks sequencer rewards
+     * @dev will revert if there is insufficient space in sequencer to lock rewards
+     */
+    function relockRewards() external {
+        if (seqId == 0 || getRewards() == 0) revert NoRewards();
+        lockingPool.relock(seqId, 0, true);
     }
 
     /**
