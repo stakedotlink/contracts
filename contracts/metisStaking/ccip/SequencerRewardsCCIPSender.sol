@@ -8,12 +8,18 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+/**
+ * @title Sequencer Rewards CCIP Sender
+ * @notice Receives sequencer rewards on METIS and transfers them back Ethereum through CCIP
+ */
 contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IRouterClient public router;
     IERC20Upgradeable public linkToken;
     IERC20Upgradeable public metisToken;
+
+    address public transferInitiator;
 
     uint64 public destinationChainSelector;
     address public destinationReceiver;
@@ -25,6 +31,7 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     error FeeExceedsLimit();
     error ZeroAddress();
     error NoRewards();
+    error SenderNotAuthorized();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -60,10 +67,18 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice reverts if sender is not transfer initiator
+     **/
+    modifier onlyTransferInitiator() {
+        if (msg.sender != transferInitiator) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
      * @notice Transfers reward tokens to the destination chain
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
      **/
-    function transferRewards(uint256 _maxLINKFee) external returns (bytes32 messageId) {
+    function transferRewards(uint256 _maxLINKFee) external onlyTransferInitiator returns (bytes32 messageId) {
         uint256 amount = metisToken.balanceOf(address(this));
         if (amount == 0) revert NoRewards();
 
@@ -84,6 +99,14 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
      **/
     function withdrawFeeTokens(uint256 _amount) external onlyOwner {
         linkToken.safeTransfer(msg.sender, _amount);
+    }
+
+    /**
+     * @notice Sets the address authorized to initiate rewards transfers
+     * @param _transferInitiator address of transfer initiator
+     **/
+    function setTransferInitiator(address _transferInitiator) external onlyOwner {
+        transferInitiator = _transferInitiator;
     }
 
     /**

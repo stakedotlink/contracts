@@ -10,6 +10,11 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "./interfaces/ISequencerVCS.sol";
 import "./interfaces/IMetisLockingPool.sol";
 
+/**
+ * @title Sequencer Vault
+ * @notice Vault contract for depositing METIS collateral into the Metis locking pool -
+ * each vault represents a single sequencer
+ */
 contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -121,8 +126,8 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return rewards balance
      */
     function getRewards() public view returns (uint256) {
-        (, uint256 rewards, , , , , , , , , , , ) = lockingPool.sequencers(seqId);
-        return rewards;
+        (, uint256 reward, , , , , , , , , , , ) = lockingPool.sequencers(seqId);
+        return reward;
     }
 
     /**

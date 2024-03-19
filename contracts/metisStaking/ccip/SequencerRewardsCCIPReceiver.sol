@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../core/ccip/base/CCIPReceiver.sol";
 import "../interfaces/ISequencerVCS.sol";
 
+/**
+ * @title Sequencer Rewards CCIP Receiver
+ * @notice Handles the receipt of sequencer rewards sent from METIS through CCIP
+ */
 contract SequencerRewardsCCIPReceiver is CCIPReceiver {
     using SafeERC20 for IERC20;
 
@@ -27,7 +31,7 @@ contract SequencerRewardsCCIPReceiver is CCIPReceiver {
      * @param _metisToken address of the METIS token
      * @param _sequencerVCS address of the METIS staking strategy
      * @param _stakingPool address of the METIS staking pool
-     * @param _whitelistedSender address authorized to send rewards from Metis to this contract
+     * @param _whitelistedSender address authorized to send rewards to this contract
      **/
     constructor(
         address _router,
@@ -61,8 +65,8 @@ contract SequencerRewardsCCIPReceiver is CCIPReceiver {
         address tokenAddress = _message.destTokenAmounts[0].token;
         uint256 tokenAmount = _message.destTokenAmounts[0].amount;
 
-        if (sender != whitelistedSender) revert InvalidSender();
         if (tokenAddress != address(metisToken)) revert InvalidMessage();
+        if (sender != whitelistedSender) revert InvalidSender();
 
         sequencerVCS.handleIncomingL2Rewards(tokenAmount);
         metisToken.safeTransfer(stakingPool, tokenAmount);

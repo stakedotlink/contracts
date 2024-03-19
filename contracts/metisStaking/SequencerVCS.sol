@@ -8,6 +8,10 @@ import "../core/base/Strategy.sol";
 import "./interfaces/ISequencerVault.sol";
 import "./interfaces/IMetisLockingInfo.sol";
 
+/**
+ * @title Sequencer Vault Controller Strategy
+ * @notice Strategy for managing multiple Metis sequencer staking vaults
+ */
 contract SequencerVCS is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -171,16 +175,22 @@ contract SequencerVCS is Strategy {
     }
 
     /**
+     * @notice returns the total amount of queued tokens
+     * @return total queued tokens
+     */
+    function getTotalQueuedTokens() external view returns (uint256) {
+        return token.balanceOf(address(this));
+    }
+
+    /**
      * @notice deposits queued tokens into vaults
      * @dev called by deposit controller bot once certain conditions are met as defined offchain
      * @param _vaults list of vaults to deposit into
      * @param _amounts amount to deposit into each vault
      */
     function depositQueuedTokens(uint256[] calldata _vaults, uint256[] calldata _amounts) external onlyDepositController {
-        uint256 totalAmount;
         for (uint256 i = 0; i < _vaults.length; ++i) {
             vaults[_vaults[i]].deposit(_amounts[i]);
-            totalAmount += _amounts[i];
         }
     }
 
