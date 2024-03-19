@@ -67,7 +67,7 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice reverts if sender is not transfer initiator
+     * @notice Reverts if sender is not transfer initiator
      **/
     modifier onlyTransferInitiator() {
         if (msg.sender != transferInitiator) revert SenderNotAuthorized();

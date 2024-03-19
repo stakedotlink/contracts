@@ -55,7 +55,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of METIS token
      * @param _stakingPool address of the staking pool that controls this strategy
      * @param _lockingInfo address of Metis locking info contract
@@ -96,7 +96,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice reverts if sender is not deposit controller
+     * @notice Reverts if sender is not deposit controller
      **/
     modifier onlyDepositController() {
         if (msg.sender != depositController) revert SenderNotAuthorized();
@@ -104,7 +104,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice reverts if sender is not CCIP controller
+     * @notice Reverts if sender is not CCIP controller
      **/
     modifier onlyCCIPController() {
         if (msg.sender != ccipController) revert SenderNotAuthorized();
@@ -112,7 +112,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice deposits tokens into this strategy from the staking pool
+     * @notice Deposits tokens into this strategy from the staking pool
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyStakingPool {
@@ -121,14 +121,14 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice withdrawals are not yet implemented
+     * @notice Withdrawals are not yet implemented
      */
     function withdraw(uint256) external view onlyStakingPool {
         revert("withdrawals not yet implemented");
     }
 
     /**
-     * @notice returns a list of all vaults controlled by this contract
+     * @notice Returns a list of all vaults controlled by this contract
      * @return  list of vault addresses
      */
     function getVaults() external view returns (ISequencerVault[] memory) {
@@ -148,7 +148,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the total unclaimed operator rewards across all vaults
+     * @notice Returns the total unclaimed operator rewards across all vaults
      * @return unclaimed operator rewards
      * @return rewards available to withdraw
      */
@@ -157,7 +157,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice used by vaults to withdraw operator rewards
+     * @notice Used by vaults to withdraw operator rewards
      * @param _receiver address to receive rewards
      * @param _amount amount to withdraw
      */
@@ -175,7 +175,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the total amount of queued tokens
+     * @notice Returns the total amount of queued tokens
      * @return total queued tokens
      */
     function getTotalQueuedTokens() external view returns (uint256) {
@@ -183,7 +183,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice deposits queued tokens into vaults
+     * @notice Deposits queued tokens into vaults
      * @dev called by deposit controller bot once certain conditions are met as defined offchain
      * @param _vaults list of vaults to deposit into
      * @param _amounts amount to deposit into each vault
@@ -195,7 +195,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the deposit change since deposits were last updated
+     * @notice Returns the deposit change since deposits were last updated
      * @dev deposit change could be positive or negative depending on reward rate and whether
      * any slashing occurred
      * @return deposit change
@@ -209,7 +209,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the total amount of fees that will be paid on the next call to updateDeposits()
+     * @notice Returns the total amount of fees that will be paid on the next call to updateDeposits()
      * @return total fees
      */
     function getPendingFees() external view override returns (uint256) {
@@ -230,7 +230,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice updates deposit accounting and calculates fees on newly earned rewards
+     * @notice Updates deposit accounting and calculates fees on newly earned rewards
      * @param _data encoded minRewards (uint256) - min amount of rewards required to claim (set 0 to skip reward claiming)
      * and l2Gas (uint32) - gas limit for reward bridging
      * @return depositChange change in deposits since last update
@@ -293,7 +293,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice handles an incoming CCIP transfer of rewards from l2
+     * @notice Handles an incoming CCIP transfer of rewards from l2
      * @param _amount amount received
      */
     function handleIncomingL2Rewards(uint256 _amount) external onlyCCIPController {
@@ -305,7 +305,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the total amount of deposits as tracked in this strategy
+     * @notice Returns the total amount of deposits as tracked in this strategy
      * @return total deposits
      */
     function getTotalDeposits() public view override returns (uint256) {
@@ -313,7 +313,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the maximum that can be deposited into this strategy
+     * @notice Returns the maximum that can be deposited into this strategy
      * @return maximum deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
@@ -321,7 +321,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the minimum that must remain this strategy
+     * @notice Returns the minimum that must remain this strategy
      * @return minimum deposits
      */
     function getMinDeposits() public view virtual override returns (uint256) {
@@ -329,7 +329,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice relocks sequencer rewards for a list of vaults
+     * @notice Relocks sequencer rewards for a list of vaults
      * @param _vaults list of vaults
      */
     function relockRewards(uint256[] calldata _vaults) external {
@@ -339,7 +339,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice deploys a new vault and adds it to this strategy
+     * @notice Deploys a new vault and adds it to this strategy
      * @param _pubkey public key of sequencer
      * @param _signer signer address of sequencer
      * @param _rewardsReceiver address authorized to claim rewards for the vault
@@ -369,7 +369,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice upgrades vaults to a new implementation contract
+     * @notice Upgrades vaults to a new implementation contract
      * @param _startIndex index of first vault to upgrade
      * @param _numVaults number of vaults to upgrade starting at _startIndex
      * @param _data optional encoded function call to be executed after upgrade
@@ -390,7 +390,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns a list of all fees and fee receivers
+     * @notice Returns a list of all fees and fee receivers
      * @return list of fees
      */
     function getFees() external view returns (Fee[] memory) {
@@ -398,7 +398,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice adds a new fee
+     * @notice Adds a new fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
@@ -408,7 +408,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice updates an existing fee
+     * @notice Updates an existing fee
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -430,7 +430,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice sets the basis point amount of an operator's earned rewards that they receive
+     * @notice Sets the basis point amount of an operator's earned rewards that they receive
      * @dev stakingPool.updateStrategyRewards is called to credit all past operator rewards at
      * the old rate before the reward percentage changes
      * @param _operatorRewardPercentage basis point amount
@@ -445,7 +445,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
+     * @notice Sets a new vault implementation contract to be used when deploying/upgrading vaults
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
@@ -455,7 +455,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice sets the deposit controller
+     * @notice Sets the deposit controller
      * @dev this address is authorized to deposit queued tokens
      * @param _depositController address of deposit controller
      */
@@ -464,7 +464,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice sets the CCIP controller
+     * @notice Sets the CCIP controller
      * @param _ccipController address of CCIP controller
      */
     function setCCIPController(address _ccipController) external onlyOwner {
@@ -472,7 +472,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice updates rewards for all strategies controlled by the staking pool
+     * @notice Updates rewards for all strategies controlled by the staking pool
      * @dev called before operatorRewardPercentage is changed to
      * credit any past rewards at the old rate
      */
@@ -486,7 +486,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns the sum of all fees
+     * @notice Returns the sum of all fees
      * @return sum of fees in basis points
      **/
     function _totalFeesBasisPoints() private view returns (uint256) {
@@ -498,7 +498,7 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice returns whether an address belongs to a contract
+     * @notice Returns whether an address belongs to a contract
      * @param _address address to check
      * @return true if address is contract, false otherwise
      */

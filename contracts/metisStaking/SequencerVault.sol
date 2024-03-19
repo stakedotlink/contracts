@@ -43,7 +43,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of METIS token
      * @param _vaultController address of the strategy that controls this vault
      * @param _lockingPool address of Metis locking pool contract
@@ -73,7 +73,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice reverts if sender is not vaultController
+     * @notice Reverts if sender is not vaultController
      **/
     modifier onlyVaultController() {
         if (msg.sender != address(vaultController)) revert SenderNotAuthorized();
@@ -81,7 +81,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice reverts if sender is not rewardsReceiver
+     * @notice Reverts if sender is not rewardsReceiver
      **/
     modifier onlyRewardsReceiver() {
         if (msg.sender != rewardsReceiver) revert SenderNotAuthorized();
@@ -89,7 +89,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice deposits tokens into the Metis locking pool
+     * @notice Deposits tokens into the Metis locking pool
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyVaultController {
@@ -105,7 +105,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the total balance of this sequencer in the Metis locking pool
+     * @notice Returns the total balance of this sequencer in the Metis locking pool
      * @dev includes principal plus any rewards
      * @return total balance
      */
@@ -114,7 +114,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the principal balance of this sequencer in the Metis locking pool
+     * @notice Returns the principal balance of this sequencer in the Metis locking pool
      * @return principal balance
      */
     function getPrincipalDeposits() public view returns (uint256) {
@@ -123,7 +123,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the claimable rewards balance of this sequencer in the Metis locking pool
+     * @notice Returns the claimable rewards balance of this sequencer in the Metis locking pool
      * @return rewards balance
      */
     function getRewards() public view returns (uint256) {
@@ -132,7 +132,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice withdraws the unclaimed operator rewards for this vault
+     * @notice Withdraws the unclaimed operator rewards for this vault
      */
     function withdrawRewards() external onlyRewardsReceiver {
         uint256 amountWithdrawn = vaultController.withdrawOperatorRewards(rewardsReceiver, unclaimedRewards);
@@ -142,7 +142,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the amount of operator rewards that will be earned by this vault on the next update
+     * @notice Returns the amount of operator rewards that will be earned by this vault on the next update
      * @return newly earned rewards
      */
     function getPendingRewards() public view returns (uint256) {
@@ -156,7 +156,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice updates the deposit and reward accounting for this vault
+     * @notice Updates the deposit and reward accounting for this vault
      * @dev will only pay out rewards if the vault is net positive when accounting for lost deposits
      * @param _minRewards min amount of rewards to claim (set 0 to skip reward claiming)
      * @param _l2Gas bridge reward to L2 gasLimit
@@ -197,7 +197,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice relocks sequencer rewards
+     * @notice Relocks sequencer rewards
      * @dev will revert if there is insufficient space in sequencer to lock rewards
      */
     function relockRewards() external {
@@ -206,7 +206,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice sets the rewards receiver
+     * @notice Sets the rewards receiver
      * @dev this address is authorized to withdraw rewards for this vault and/or change the rewardsReceiver
      * to a new a address
      * @param _rewardsReceiver rewards receiver address
