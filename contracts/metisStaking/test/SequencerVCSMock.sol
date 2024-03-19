@@ -19,8 +19,9 @@ contract SequencerVCSMock {
     uint256 public withdrawalPercentage;
 
     ISequencerVault public vault;
-
     address public rewardRecipient;
+
+    uint256 public lastL2RewardsAmount;
 
     constructor(
         address _token,
@@ -52,6 +53,10 @@ contract SequencerVCSMock {
         )
     {
         return vault.updateDeposits(_minRewards, 0);
+    }
+
+    function handleIncomingL2Rewards(uint256 _amount) external {
+        lastL2RewardsAmount = _amount;
     }
 
     function addVault(address _vault) external {
