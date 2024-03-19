@@ -127,7 +127,6 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice withdraws the unclaimed operator rewards for this vault
-     * @dev reverts if sender is not rewardsReceiver
      */
     function withdrawRewards() external onlyRewardsReceiver {
         uint256 amountWithdrawn = vaultController.withdrawOperatorRewards(rewardsReceiver, unclaimedRewards);

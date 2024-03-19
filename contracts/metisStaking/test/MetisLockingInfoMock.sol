@@ -12,6 +12,7 @@ contract MetisLockingInfoMock {
     using SafeERC20 for IERC20;
 
     IERC20 public token;
+    address public manager;
 
     uint256 public minLock;
     uint256 public maxLock;
@@ -45,5 +46,9 @@ contract MetisLockingInfoMock {
     function setDepositLimits(uint256 _minLock, uint256 _maxLock) external {
         minLock = _minLock;
         maxLock = _maxLock;
+    }
+
+    function setManager(address _manager) external {
+        manager = _manager;
     }
 }
