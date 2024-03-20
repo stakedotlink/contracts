@@ -43,6 +43,7 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
      * @param _router address of the CCIP router
      * @param _linkToken address of the LINK token
      * @param _metisToken address of the METIS token
+     * @param _transferInitiator address authorized to initiate rewards transfers
      * @param _destinationChainSelector id of destination chain
      * @param _extraArgs extra args for reward token CCIP transfer
      **/
@@ -50,6 +51,7 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
         address _router,
         address _linkToken,
         address _metisToken,
+        address _transferInitiator,
         uint64 _destinationChainSelector,
         bytes memory _extraArgs
     ) public initializer {
@@ -59,6 +61,7 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
         router = IRouterClient(_router);
         linkToken = IERC20Upgradeable(_linkToken);
         metisToken = IERC20Upgradeable(_metisToken);
+        transferInitiator = _transferInitiator;
         destinationChainSelector = _destinationChainSelector;
         extraArgs = _extraArgs;
 

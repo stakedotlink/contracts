@@ -49,6 +49,7 @@ describe('SequencerRewardsCCIPSender', () => {
       router.address,
       linkToken.address,
       token.address,
+      accounts[0],
       77,
       '0x1111',
     ])) as SequencerRewardsCCIPSender
