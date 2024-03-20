@@ -26,7 +26,11 @@ describe('MerkleDistributor', () => {
     wallet0 = accounts[1]
     wallet1 = accounts[2]
 
-    token = (await deploy('ERC677', ['Token', 'TKN', 1000000])) as ERC677
+    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Token',
+      'TKN',
+      1000000,
+    ])) as ERC677
   })
 
   describe('#claim', () => {
@@ -209,8 +213,16 @@ describe('MerkleDistributor', () => {
       let token2: ERC677
       let token3: ERC677
       beforeEach('deploy', async () => {
-        token2 = (await deploy('ERC677', ['Token', 'TKN', 1000000])) as ERC677
-        token3 = (await deploy('ERC677', ['Token', 'TKN', 1000000])) as ERC677
+        token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+          'Token',
+          'TKN',
+          1000000,
+        ])) as ERC677
+        token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+          'Token',
+          'TKN',
+          1000000,
+        ])) as ERC677
         tree = new BalanceTree([
           { account: wallet0, amount: BigNumber.from(100) },
           { account: wallet1, amount: BigNumber.from(101) },

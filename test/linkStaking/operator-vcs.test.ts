@@ -36,7 +36,11 @@ describe('OperatorVCS', () => {
   })
 
   beforeEach(async () => {
-    token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
+    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
 
     rewardsController = (await deploy('StakingRewardsMock', [token.address])) as StakingRewardsMock
     stakingController = (await deploy('StakingMock', [
@@ -70,6 +74,7 @@ describe('OperatorVCS', () => {
 
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
+    await stakingPool.setRewardsInitiator(accounts[0])
 
     for (let i = 0; i < 15; i++) {
       await strategy.addVault(accounts[0], accounts[1], pfAlertsController.address)

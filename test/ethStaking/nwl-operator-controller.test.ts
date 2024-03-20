@@ -59,7 +59,11 @@ describe('NWLOperatorController', () => {
   })
 
   beforeEach(async () => {
-    wsdToken = (await deploy('ERC677', ['test', 'test', 100000])) as ERC677
+    wsdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'test',
+      'test',
+      100000,
+    ])) as ERC677
     controller = (await deployUpgradeable('NWLOperatorController', [
       accounts[0],
       wsdToken.address,

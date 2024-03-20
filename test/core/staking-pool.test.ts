@@ -38,7 +38,11 @@ describe('StakingPool', () => {
   })
 
   beforeEach(async () => {
-    token = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
+    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
     await setupToken(token, accounts)
 
     erc677Receiver = (await deploy('ERC677ReceiverMock')) as ERC677ReceiverMock
@@ -76,6 +80,7 @@ describe('StakingPool', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
     await stakingPool.setPriorityPool(accounts[0])
+    await stakingPool.setRewardsInitiator(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
   })

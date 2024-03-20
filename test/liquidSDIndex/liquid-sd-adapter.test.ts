@@ -14,7 +14,11 @@ describe('LSDIndexAdapter', () => {
   })
 
   beforeEach(async () => {
-    lsd = (await deploy('ERC677', ['Liquid SD Token', 'LSD', 100000000])) as ERC677
+    lsd = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Liquid SD Token',
+      'LSD',
+      100000000,
+    ])) as ERC677
     adapter = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd.address,
       accounts[0],

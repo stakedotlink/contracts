@@ -25,8 +25,16 @@ describe('LiquidSDIndexPool', () => {
   })
 
   beforeEach(async () => {
-    lsd1 = (await deploy('ERC677', ['Liquid SD Token 1', 'LSD1', 100000000])) as ERC677
-    lsd2 = (await deploy('ERC677', ['Liquid SD Token 2', 'LSD2', 100000000])) as ERC677
+    lsd1 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Liquid SD Token 1',
+      'LSD1',
+      100000000,
+    ])) as ERC677
+    lsd2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Liquid SD Token 2',
+      'LSD2',
+      100000000,
+    ])) as ERC677
     await setupToken(lsd1, accounts)
     await setupToken(lsd2, accounts)
 
@@ -64,7 +72,11 @@ describe('LiquidSDIndexPool', () => {
   })
 
   it('addLSDToken should work correctly', async () => {
-    let lsd3 = (await deploy('ERC677', ['Liquid SD Token 2', 'LSD2', 100000000])) as ERC677
+    let lsd3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Liquid SD Token 2',
+      'LSD2',
+      100000000,
+    ])) as ERC677
     let adapter3 = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd3.address,
       pool.address,
@@ -93,7 +105,11 @@ describe('LiquidSDIndexPool', () => {
   })
 
   it('removeLSDToken should work correctly', async () => {
-    let lsd3 = (await deploy('ERC677', ['Liquid SD Token 2', 'LSD2', 100000000])) as ERC677
+    let lsd3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Liquid SD Token 2',
+      'LSD2',
+      100000000,
+    ])) as ERC677
     let adapter3 = (await deployUpgradeable('LSDIndexAdapterMock', [
       lsd3.address,
       pool.address,

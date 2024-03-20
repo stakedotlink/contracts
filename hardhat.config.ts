@@ -31,12 +31,13 @@ const config: HardhatUserConfig = {
       url: 'http://127.0.0.1:8545',
       accounts,
     },
-    rinkeby: {
+    sepolia: {
       url: '',
       accounts,
     },
-    ropsten: {
+    'arbitrum-sepolia': {
       url: '',
+      chainId: 421614,
       accounts,
     },
     mainnet: {
@@ -63,11 +64,20 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.15',
+        version: '0.8.19',
         settings: {
           optimizer: {
             enabled: true,
             runs: 200,
+          },
+        },
+      },
+      {
+        version: '0.8.15',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 115,
           },
         },
       },

@@ -1,11 +1,11 @@
 {
   "LPLToken": {
     "address": "0x99295f1141d58a99e939f7be6bbe734916a875b8",
-    "artifact": "ERC677"
+    "artifact": "contracts/core/tokens/base/ERC677.sol:ERC677"
   },
   "LINKToken": {
     "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
-    "artifact": "ERC677"
+    "artifact": "contracts/core/tokens/base/ERC677.sol:ERC677"
   },
   "SDLToken": {
     "address": "0xA95C5ebB86E0dE73B4fB8c47A45B792CFeA28C23",
@@ -170,5 +170,9 @@
   "LINK_PP_DistributionOracle": {
     "address": "0x2285AC429cCCAaE7cC1E27BfBe617bC626B443CF",
     "artifact": "DistributionOracle"
+  },
+  "stLINK_WrappedTokenBridge": {
+    "address": "0x6C1E2D2c55C83De945e3f37dF694cdE8452C1E82",
+    "artifact": "WrappedTokenBridge"
   }
 }

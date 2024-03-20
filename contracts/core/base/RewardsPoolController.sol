@@ -22,6 +22,9 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
     event AddToken(address indexed token, address rewardsPool);
     event RemoveToken(address indexed token, address rewardsPool);
 
+    error InvalidToken();
+    error NothingToDistribute();
+
     function __RewardsPoolController_init() public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -107,11 +110,11 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _token token address
      */
     function distributeToken(address _token) public {
-        require(isTokenSupported(_token), "Token not supported");
+        if (!isTokenSupported(_token)) revert InvalidToken();
 
         IERC20Upgradeable token = IERC20Upgradeable(_token);
         uint256 balance = token.balanceOf(address(this));
-        require(balance > 0, "Cannot distribute zero balance");
+        if (balance == 0) revert NothingToDistribute();
 
         token.safeTransfer(address(tokenPools[_token]), balance);
         tokenPools[_token].distributeRewards();
@@ -148,8 +151,8 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _token token to add
      * @param _rewardsPool token rewards pool to add
      **/
-    function addToken(address _token, address _rewardsPool) public onlyOwner {
-        require(!isTokenSupported(_token), "Token is already supported");
+    function addToken(address _token, address _rewardsPool) public virtual onlyOwner {
+        if (isTokenSupported(_token)) revert InvalidToken();
 
         tokenPools[_token] = IRewardsPool(_rewardsPool);
         tokens.push(_token);
@@ -166,7 +169,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _token address of token
      **/
     function removeToken(address _token) external onlyOwner {
-        require(isTokenSupported(_token), "Token is not supported");
+        if (!isTokenSupported(_token)) revert InvalidToken();
 
         IRewardsPool rewardsPool = tokenPools[_token];
         delete (tokenPools[_token]);

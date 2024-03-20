@@ -6,10 +6,18 @@ async function main() {
     throw Error('Test contracts can only be deployed on test networks')
   }
 
-  const lplToken = await deploy('ERC677', ['LinkPool', 'LPL', 100000000])
+  const lplToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'LinkPool',
+    'LPL',
+    100000000,
+  ])
   console.log('LPLToken deployed: ', lplToken.address)
 
-  const linkToken = await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])
+  const linkToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'Chainlink',
+    'LINK',
+    1000000000,
+  ])
   console.log('LINKToken deployed: ', linkToken.address)
 
   const multicall = await deploy('Multicall3', [])
@@ -40,10 +48,26 @@ async function main() {
   )
   await tx.wait()
 
-  const stETHToken = await deploy('ERC677', ['Lido stETH', 'stETH', 1000000000])
-  const rETHToken = await deploy('ERC677', ['RocketPool rETH', 'rETH', 1000000000])
-  const cbETHToken = await deploy('ERC677', ['Coinbase cbETH', 'cbETH', 1000000000])
-  const sfrxETHToken = await deploy('ERC677', ['Frax sfrxETH', 'sfrxETH', 1000000000])
+  const stETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'Lido stETH',
+    'stETH',
+    1000000000,
+  ])
+  const rETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'RocketPool rETH',
+    'rETH',
+    1000000000,
+  ])
+  const cbETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'Coinbase cbETH',
+    'cbETH',
+    1000000000,
+  ])
+  const sfrxETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'Frax sfrxETH',
+    'sfrxETH',
+    1000000000,
+  ])
 
   updateDeployments(
     {
@@ -59,8 +83,8 @@ async function main() {
       sfrxETHToken: sfrxETHToken.address,
     },
     {
-      LPLToken: 'ERC677',
-      LINKToken: 'ERC677',
+      LPLToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
+      LINKToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
       LINK_OwnersRewardsPoolV1: 'OwnersRewardsPoolV1',
       stETHToken: 'ERC20',
       rETHToken: 'ERC20',

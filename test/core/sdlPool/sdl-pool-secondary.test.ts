@@ -9,11 +9,10 @@ import {
   deployUpgradeable,
 } from '../../utils/helpers'
 import {
-  DelegatorPool,
   ERC677,
   LinearBoostController,
   RewardsPool,
-  SDLPool,
+  SDLPoolSecondary,
   StakingAllowance,
 } from '../../../typechain-types'
 import { ethers } from 'hardhat'
@@ -21,24 +20,55 @@ import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const DAY = 86400
 
-const parseLocks = (locks: any) =>
-  locks.map((l: any) => ({
-    amount: fromEther(l.amount),
-    boostAmount: Number(fromEther(l.boostAmount).toFixed(4)),
-    startTime: l.startTime.toNumber(),
-    duration: l.duration.toNumber(),
-    expiry: l.expiry.toNumber(),
-  }))
+const parseLock = (lock: any) => ({
+  amount: fromEther(lock.amount),
+  boostAmount: Number(fromEther(lock.boostAmount).toFixed(4)),
+  startTime: lock.startTime.toNumber(),
+  duration: lock.duration.toNumber(),
+  expiry: lock.expiry.toNumber(),
+})
 
-describe('SDLPool', () => {
+const parseLocks = (locks: any) => locks.map((l: any) => parseLock(l))
+
+const parseNewLocks = (locks: any) => [parseLocks(locks[0]), locks[1].map((v: any) => v.toNumber())]
+
+const parseLockUpdates = (locks: any) =>
+  locks.map((lock: any) =>
+    lock.map((update: any) => ({
+      updateBatchIndex: update[0].toNumber(),
+      lock: parseLock(update.lock),
+    }))
+  )
+
+describe('SDLPoolSecondary', () => {
   let sdlToken: StakingAllowance
   let rewardToken: ERC677
   let rewardsPool: RewardsPool
   let boostController: LinearBoostController
-  let sdlPool: SDLPool
-  let delegatorPool: DelegatorPool
+  let sdlPool: SDLPoolSecondary
   let signers: Signer[]
   let accounts: string[]
+
+  const mintLock = async (lock = true, signerIndex = 0) => {
+    await sdlToken
+      .connect(signers[signerIndex])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(100),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, lock ? 365 * DAY : 0])
+      )
+    let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await sdlPool.handleOutgoingUpdate()
+    await sdlPool.handleIncomingUpdate(1)
+    await sdlPool.executeQueuedOperations([])
+    return ts
+  }
+
+  const updateLocks = async (mintIndex = 0, ids = [1]) => {
+    await sdlPool.handleOutgoingUpdate()
+    await sdlPool.handleIncomingUpdate(mintIndex)
+    await sdlPool.executeQueuedOperations(ids)
+  }
 
   before(async () => {
     ;({ signers, accounts } = await getAccounts())
@@ -46,30 +76,28 @@ describe('SDLPool', () => {
 
   beforeEach(async () => {
     sdlToken = (await deploy('StakingAllowance', ['stake.link', 'SDL'])) as StakingAllowance
-    rewardToken = (await deploy('ERC677', ['Chainlink', 'LINK', 1000000000])) as ERC677
+    rewardToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      'Chainlink',
+      'LINK',
+      1000000000,
+    ])) as ERC677
 
     await sdlToken.mint(accounts[0], toEther(1000000))
     await setupToken(sdlToken, accounts)
 
-    delegatorPool = (await deployUpgradeable('DelegatorPool', [
-      sdlToken.address,
-      'Staked SDL',
-      'stSDL',
-      [],
-    ])) as DelegatorPool
-
     boostController = (await deploy('LinearBoostController', [
+      10,
       4 * 365 * DAY,
       4,
     ])) as LinearBoostController
 
-    sdlPool = (await deployUpgradeable('SDLPool', [
+    sdlPool = (await deployUpgradeable('SDLPoolSecondary', [
       'Reward Escrowed SDL',
       'reSDL',
       sdlToken.address,
       boostController.address,
-      delegatorPool.address,
-    ])) as SDLPool
+      5,
+    ])) as SDLPoolSecondary
 
     rewardsPool = (await deploy('RewardsPool', [
       sdlPool.address,
@@ -77,6 +105,7 @@ describe('SDLPool', () => {
     ])) as RewardsPool
 
     await sdlPool.addToken(rewardToken.address, rewardsPool.address)
+    await sdlPool.setCCIPController(accounts[0])
   })
 
   it('token name and symbol should be correct', async () => {
@@ -110,28 +139,57 @@ describe('SDLPool', () => {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
 
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 0)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 0)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1000)
+
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [
+      [
+        { amount: 100, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      ],
+      [1, 1],
+    ])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [
+      [{ amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 }],
+      [1],
+    ])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[2])), [
+      [{ amount: 300, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 }],
+      [1],
+    ])
+
+    await sdlPool.handleOutgoingUpdate()
+    await sdlPool.handleIncomingUpdate(1)
+    await sdlPool.executeQueuedOperations([])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+    await sdlPool.connect(signers[2]).executeQueuedOperations([])
+
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 1000)
     assert.equal(fromEther(await sdlPool.totalStaked()), 1000)
-    assert.equal((await sdlPool.lastLockId()).toNumber(), 4)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1000)
     assert.deepEqual(parseLocks(await sdlPool.getLocks([1, 2, 3, 4])), [
       { amount: 100, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
       { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
       { amount: 300, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
-      { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
     ])
 
     assert.equal(await sdlPool.ownerOf(1), accounts[0])
-    assert.equal(await sdlPool.ownerOf(2), accounts[1])
-    assert.equal(await sdlPool.ownerOf(3), accounts[2])
-    assert.equal(await sdlPool.ownerOf(4), accounts[0])
+    assert.equal(await sdlPool.ownerOf(2), accounts[0])
+    assert.equal(await sdlPool.ownerOf(3), accounts[1])
+    assert.equal(await sdlPool.ownerOf(4), accounts[2])
+
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [[], []])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [[], []])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[2])), [[], []])
 
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 500)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 500)
+    assert.equal((await sdlPool.lastLockId()).toNumber(), 4)
     assert.equal((await sdlPool.balanceOf(accounts[0])).toNumber(), 2)
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => v.toNumber()),
-      [1, 4]
+      [1, 2]
     )
 
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 200)
@@ -139,7 +197,7 @@ describe('SDLPool', () => {
     assert.equal((await sdlPool.balanceOf(accounts[1])).toNumber(), 1)
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => v.toNumber()),
-      [2]
+      [3]
     )
 
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[2])), 300)
@@ -147,7 +205,7 @@ describe('SDLPool', () => {
     assert.equal((await sdlPool.balanceOf(accounts[2])).toNumber(), 1)
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => v.toNumber()),
-      [3]
+      [4]
     )
   })
 
@@ -180,28 +238,55 @@ describe('SDLPool', () => {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
 
+    assert.equal(Number(fromEther(await sdlPool.queuedRESDLSupplyChange()).toFixed(4)), 1982.1918)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 0)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 0)
+    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1000)
+
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [
+      [
+        { amount: 100, boostAmount: 100, startTime: ts1, duration: 365 * DAY, expiry: 0 },
+        { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      ],
+      [1, 1],
+    ])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [
+      [{ amount: 200, boostAmount: 800, startTime: ts2, duration: 4 * 365 * DAY, expiry: 0 }],
+      [1],
+    ])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[2])), [
+      [{ amount: 300, boostAmount: 82.1918, startTime: ts3, duration: 100 * DAY, expiry: 0 }],
+      [1],
+    ])
+
+    await sdlPool.handleOutgoingUpdate()
+    await sdlPool.handleIncomingUpdate(1)
+    await sdlPool.executeQueuedOperations([])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+    await sdlPool.connect(signers[2]).executeQueuedOperations([])
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(Number(fromEther(await sdlPool.totalEffectiveBalance()).toFixed(4)), 1982.1918)
     assert.equal(Number(fromEther(await sdlPool.totalStaked()).toFixed(4)), 1982.1918)
     assert.equal((await sdlPool.lastLockId()).toNumber(), 4)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1000)
     assert.deepEqual(parseLocks(await sdlPool.getLocks([1, 2, 3, 4])), [
       { amount: 100, boostAmount: 100, startTime: ts1, duration: 365 * DAY, expiry: 0 },
+      { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
       { amount: 200, boostAmount: 800, startTime: ts2, duration: 4 * 365 * DAY, expiry: 0 },
       { amount: 300, boostAmount: 82.1918, startTime: ts3, duration: 100 * DAY, expiry: 0 },
-      { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
     ])
 
     assert.equal(await sdlPool.ownerOf(1), accounts[0])
-    assert.equal(await sdlPool.ownerOf(2), accounts[1])
-    assert.equal(await sdlPool.ownerOf(3), accounts[2])
-    assert.equal(await sdlPool.ownerOf(4), accounts[0])
+    assert.equal(await sdlPool.ownerOf(2), accounts[0])
+    assert.equal(await sdlPool.ownerOf(3), accounts[1])
+    assert.equal(await sdlPool.ownerOf(4), accounts[2])
 
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 600)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 600)
     assert.equal((await sdlPool.balanceOf(accounts[0])).toNumber(), 2)
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => v.toNumber()),
-      [1, 4]
+      [1, 2]
     )
 
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 1000)
@@ -209,7 +294,7 @@ describe('SDLPool', () => {
     assert.equal((await sdlPool.balanceOf(accounts[1])).toNumber(), 1)
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => v.toNumber()),
-      [2]
+      [3]
     )
 
     assert.equal(
@@ -220,19 +305,37 @@ describe('SDLPool', () => {
     assert.equal((await sdlPool.balanceOf(accounts[2])).toNumber(), 1)
     assert.deepEqual(
       (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => v.toNumber()),
-      [3]
+      [4]
     )
   })
 
   it('should be able to lock an existing stake', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock(false)
+
     await sdlPool.extendLockDuration(1, 365 * DAY)
     let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
 
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 100, boostAmount: 100, startTime: ts, duration: 365 * DAY, expiry: 0 },
+        },
+      ],
+    ])
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 100)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 100)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 100)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 100)
+    assert.equal(fromEther(await sdlPool.staked(accounts[0])), 100)
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
+      { amount: 100, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+    ])
+    await expect(sdlPool.extendLockDuration(1, 100)).to.be.revertedWith('InvalidLockingDuration()')
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 200)
     assert.equal(fromEther(await sdlPool.totalStaked()), 200)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 200)
@@ -240,38 +343,93 @@ describe('SDLPool', () => {
     assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
       { amount: 100, boostAmount: 100, startTime: ts, duration: 365 * DAY, expiry: 0 },
     ])
+    await expect(sdlPool.extendLockDuration(1, 100)).to.be.revertedWith('InvalidLockingDuration()')
   })
 
   it('should be able extend the duration of a lock', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
-    await sdlPool.extendLockDuration(1, 2 * 365 * DAY)
-    let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    let ts1 = await mintLock()
 
+    await sdlPool.extendLockDuration(1, 2 * 365 * DAY)
+    let ts2 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: {
+            amount: 100,
+            boostAmount: 200,
+            startTime: ts2,
+            duration: 2 * 365 * DAY,
+            expiry: 0,
+          },
+        },
+      ],
+    ])
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 100)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 200)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 200)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 200)
+    assert.equal(fromEther(await sdlPool.staked(accounts[0])), 200)
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
+      { amount: 100, boostAmount: 100, startTime: ts1, duration: 365 * DAY, expiry: 0 },
+    ])
+    await expect(sdlPool.extendLockDuration(1, 365 * DAY)).to.be.revertedWith(
+      'InvalidLockingDuration()'
+    )
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 300)
     assert.equal(fromEther(await sdlPool.totalStaked()), 300)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 300)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 300)
     assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
-      { amount: 100, boostAmount: 200, startTime: ts, duration: 2 * 365 * DAY, expiry: 0 },
+      { amount: 100, boostAmount: 200, startTime: ts2, duration: 2 * 365 * DAY, expiry: 0 },
     ])
+    await expect(sdlPool.extendLockDuration(1, 365 * DAY)).to.be.revertedWith(
+      'InvalidLockingDuration()'
+    )
   })
 
   it('should be able add more stake without locking', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock(false)
+
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(200),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
     )
 
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: {
+            amount: 300,
+            boostAmount: 0,
+            startTime: 0,
+            duration: 0,
+            expiry: 0,
+          },
+        },
+      ],
+    ])
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 200)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 100)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 100)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 100)
+    assert.equal(fromEther(await sdlPool.staked(accounts[0])), 100)
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
+      { amount: 100, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+    ])
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 300)
     assert.equal(fromEther(await sdlPool.totalStaked()), 300)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 300)
@@ -282,24 +440,42 @@ describe('SDLPool', () => {
   })
 
   it('should be able to add more stake to a lock with and without extending the duration', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    let ts0 = await mintLock()
+
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(200),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 365 * DAY])
     )
-    let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    let ts1 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
 
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 300, boostAmount: 300, startTime: ts1, duration: 365 * DAY, expiry: 0 },
+        },
+      ],
+    ])
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 400)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 200)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 200)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 200)
+    assert.equal(fromEther(await sdlPool.staked(accounts[0])), 200)
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
+      { amount: 100, boostAmount: 100, startTime: ts0, duration: 365 * DAY, expiry: 0 },
+    ])
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 600)
     assert.equal(fromEther(await sdlPool.totalStaked()), 600)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 600)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 600)
     assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
-      { amount: 300, boostAmount: 300, startTime: ts, duration: 365 * DAY, expiry: 0 },
+      { amount: 300, boostAmount: 300, startTime: ts1, duration: 365 * DAY, expiry: 0 },
     ])
 
     await sdlToken.transferAndCall(
@@ -307,14 +483,41 @@ describe('SDLPool', () => {
       toEther(200),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 2 * 365 * DAY])
     )
-    ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    let ts2 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
 
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1])), [
+      [
+        {
+          updateBatchIndex: 3,
+          lock: {
+            amount: 500,
+            boostAmount: 1000,
+            startTime: ts2,
+            duration: 2 * 365 * DAY,
+            expiry: 0,
+          },
+        },
+      ],
+    ])
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 900)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 600)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 600)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 600)
+    assert.equal(fromEther(await sdlPool.staked(accounts[0])), 600)
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
+      { amount: 300, boostAmount: 300, startTime: ts1, duration: 365 * DAY, expiry: 0 },
+    ])
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 1500)
     assert.equal(fromEther(await sdlPool.totalStaked()), 1500)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 1500)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 1500)
     assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
-      { amount: 500, boostAmount: 1000, startTime: ts, duration: 2 * 365 * DAY, expiry: 0 },
+      { amount: 500, boostAmount: 1000, startTime: ts2, duration: 2 * 365 * DAY, expiry: 0 },
     ])
   })
 
@@ -334,11 +537,7 @@ describe('SDLPool', () => {
       )
     ).to.be.revertedWith('InvalidValue()')
 
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock(false)
     await expect(
       sdlToken.transferAndCall(
         sdlPool.address,
@@ -356,11 +555,7 @@ describe('SDLPool', () => {
   })
 
   it('should not be able to decrease the duration of a lock', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
 
     await expect(
       sdlToken.transferAndCall(
@@ -375,21 +570,12 @@ describe('SDLPool', () => {
   })
 
   it('should not be able to extend the duration of a lock to 0', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
-
+    await mintLock()
     await expect(sdlPool.extendLockDuration(1, 0)).to.be.revertedWith('InvalidLockingDuration()')
   })
 
   it('only the lock owner should be able to update a lock, lock id must be valid', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
 
     await expect(sdlPool.connect(signers[1]).extendLockDuration(1, 366 * DAY)).to.be.revertedWith(
       'SenderNotAuthorized()'
@@ -414,16 +600,45 @@ describe('SDLPool', () => {
   })
 
   it('should be able to initiate an unlock', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
-    let ts1 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    let ts1 = await mintLock()
     await time.increase(200 * DAY)
+
     await sdlPool.initiateUnlock(1)
     let ts2 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
 
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: {
+            amount: 100,
+            boostAmount: 0,
+            startTime: ts1,
+            duration: 365 * DAY,
+            expiry: ts2 + (365 / 2) * DAY,
+          },
+        },
+      ],
+    ])
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1])), [
+      {
+        amount: 100,
+        boostAmount: 100,
+        startTime: ts1,
+        duration: 365 * DAY,
+        expiry: 0,
+      },
+    ])
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), -100)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 100)
+    assert.equal(fromEther(await sdlPool.totalStaked()), 100)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 100)
+    assert.equal(fromEther(await sdlPool.staked(accounts[0])), 100)
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 100)
     assert.equal(fromEther(await sdlPool.totalStaked()), 100)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 100)
@@ -440,12 +655,8 @@ describe('SDLPool', () => {
   })
 
   it('should not be able to initiate unlock until half of locking period has elapsed', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
-    let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    let ts = await mintLock()
+
     await time.setNextBlockTimestamp(ts + (365 / 2) * DAY - 1)
     await expect(sdlPool.initiateUnlock(1)).to.be.revertedWith('HalfDurationNotElapsed()')
     await time.setNextBlockTimestamp(ts + (365 / 2) * DAY)
@@ -453,11 +664,7 @@ describe('SDLPool', () => {
   })
 
   it('only the lock owner should be able to initiate an unlock, lock id must be valid', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
     await time.increase(365 * DAY)
     await expect(sdlPool.connect(signers[1]).initiateUnlock(1)).to.be.revertedWith(
       'SenderNotAuthorized()'
@@ -466,19 +673,17 @@ describe('SDLPool', () => {
   })
 
   it('should be able to update a lock after an unlock has been initiated', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
     await time.increase(200 * DAY)
     await sdlPool.initiateUnlock(1)
+    await updateLocks()
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 365 * DAY])
     )
     let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks()
 
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 400)
     assert.equal(fromEther(await sdlPool.totalStaked()), 400)
@@ -498,6 +703,7 @@ describe('SDLPool', () => {
     await sdlPool.initiateUnlock(1)
     await sdlPool.extendLockDuration(1, 2 * 365 * DAY)
     ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks()
 
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 600)
     assert.equal(fromEther(await sdlPool.totalStaked()), 600)
@@ -515,11 +721,7 @@ describe('SDLPool', () => {
   })
 
   it('should be able to update a lock after a lock has been fully unlocked', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
     await time.increase(200 * DAY)
     await sdlPool.initiateUnlock(1)
     await time.increase(200 * DAY)
@@ -528,6 +730,7 @@ describe('SDLPool', () => {
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
     )
+    await updateLocks()
 
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 200)
     assert.equal(fromEther(await sdlPool.totalStaked()), 200)
@@ -545,12 +748,7 @@ describe('SDLPool', () => {
   })
 
   it('should be able to withdraw and burn lock NFT', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
-    let ts1 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    let ts1 = await mintLock()
     await time.increase(200 * DAY)
     await sdlPool.initiateUnlock(1)
     let ts2 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
@@ -559,6 +757,11 @@ describe('SDLPool', () => {
     let startingBalance = await sdlToken.balanceOf(accounts[0])
     await sdlPool.withdraw(1, toEther(20))
 
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), -120)
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther((await sdlToken.balanceOf(accounts[0])).sub(startingBalance)), 20)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 80)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 80)
@@ -578,6 +781,11 @@ describe('SDLPool', () => {
     startingBalance = await sdlToken.balanceOf(accounts[0])
     await sdlPool.withdraw(1, toEther(80))
 
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), -80)
+
+    await updateLocks()
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
     assert.equal(fromEther((await sdlToken.balanceOf(accounts[0])).sub(startingBalance)), 80)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 0)
     assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 0)
@@ -593,14 +801,11 @@ describe('SDLPool', () => {
   })
 
   it('should be able withdraw tokens that were never locked', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock(false)
 
     let startingBalance = await sdlToken.balanceOf(accounts[0])
     await sdlPool.withdraw(1, toEther(20))
+    await updateLocks()
 
     assert.equal(fromEther((await sdlToken.balanceOf(accounts[0])).sub(startingBalance)), 20)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 80)
@@ -620,6 +825,7 @@ describe('SDLPool', () => {
 
     startingBalance = await sdlToken.balanceOf(accounts[0])
     await sdlPool.withdraw(1, toEther(80))
+    await updateLocks()
 
     assert.equal(fromEther((await sdlToken.balanceOf(accounts[0])).sub(startingBalance)), 80)
     assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 0)
@@ -636,16 +842,13 @@ describe('SDLPool', () => {
   })
 
   it('should only be able to withdraw once full lock period has elapsed', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
 
     await expect(sdlPool.withdraw(1, toEther(1))).to.be.revertedWith('UnlockNotInitiated()')
 
     await time.increase(200 * DAY)
     await sdlPool.initiateUnlock(1)
+    await updateLocks()
 
     await expect(sdlPool.withdraw(1, toEther(1))).to.be.revertedWith('TotalDurationNotElapsed()')
 
@@ -654,14 +857,11 @@ describe('SDLPool', () => {
   })
 
   it('only the lock owner should be able to withdraw, lock id must be valid', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
-    )
+    await mintLock()
 
     await time.increase(200 * DAY)
     await sdlPool.initiateUnlock(1)
+    await updateLocks()
     await time.increase(200 * DAY)
 
     await expect(sdlPool.connect(signers[1]).withdraw(1, toEther(1))).to.be.revertedWith(
@@ -694,12 +894,17 @@ describe('SDLPool', () => {
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 2 * 365 * DAY])
       )
     let ts3 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks(1, [])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+    await sdlPool.connect(signers[2]).executeQueuedOperations([])
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(400),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 3 * 365 * DAY])
     )
     let ts4 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+
+    await updateLocks(4, [])
 
     await sdlPool.transferFrom(accounts[0], accounts[1], 1)
     await sdlPool.connect(signers[2]).transferFrom(accounts[2], accounts[3], 3)
@@ -775,12 +980,17 @@ describe('SDLPool', () => {
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 2 * 365 * DAY])
       )
     let ts3 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks(1, [])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+    await sdlPool.connect(signers[2]).executeQueuedOperations([])
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(400),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 3 * 365 * DAY])
     )
     let ts4 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+
+    await updateLocks(4, [])
 
     await sdlPool.functions['safeTransferFrom(address,address,uint256)'](
       accounts[0],
@@ -876,12 +1086,17 @@ describe('SDLPool', () => {
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 2 * 365 * DAY])
       )
     let ts3 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks(1, [])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+    await sdlPool.connect(signers[2]).executeQueuedOperations([])
     await sdlToken.transferAndCall(
       sdlPool.address,
       toEther(400),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 3 * 365 * DAY])
     )
     let ts4 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+
+    await updateLocks(4, [])
 
     await sdlPool.functions['safeTransferFrom(address,address,uint256,bytes)'](
       accounts[0],
@@ -960,11 +1175,7 @@ describe('SDLPool', () => {
   })
 
   it('safeTransferFrom should revert on transfer to non ERC721 receivers', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock()
 
     await expect(
       sdlPool.functions['safeTransferFrom(address,address,uint256,bytes)'](
@@ -995,6 +1206,7 @@ describe('SDLPool', () => {
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
+    await updateLocks(1, [])
 
     await expect(sdlPool.connect(signers[2]).approve(accounts[1], 1)).to.be.revertedWith(
       'SenderNotAuthorized()'
@@ -1033,6 +1245,7 @@ describe('SDLPool', () => {
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
+    await updateLocks(1, [])
 
     await sdlPool.setApprovalForAll(accounts[1], true)
     await sdlPool.setApprovalForAll(accounts[2], true)
@@ -1053,21 +1266,13 @@ describe('SDLPool', () => {
   })
 
   it('should be able to distribute rewards', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock(false)
     await rewardToken.transferAndCall(sdlPool.address, toEther(1000), '0x')
     assert.equal(fromEther(await rewardsPool.withdrawableRewards(accounts[0])), 1000)
   })
 
   it('creating, modifying, or transferring locks should update rewards', async () => {
-    await sdlToken.transferAndCall(
-      sdlPool.address,
-      toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
-    )
+    await mintLock(false)
     await rewardToken.transferAndCall(sdlPool.address, toEther(1000), '0x')
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 0)
 
@@ -1076,6 +1281,7 @@ describe('SDLPool', () => {
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
+    await updateLocks(2, [])
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 1000)
 
     await rewardToken.transferAndCall(sdlPool.address, toEther(1000), '0x')
@@ -1084,10 +1290,12 @@ describe('SDLPool', () => {
       toEther(100),
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
     )
+    await updateLocks(0, [1])
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 2000)
 
     await rewardToken.transferAndCall(sdlPool.address, toEther(1000), '0x')
     await sdlPool.extendLockDuration(2, 10000)
+    await updateLocks(0, [2])
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 3000)
 
     await rewardToken.transferAndCall(sdlPool.address, toEther(1000), '0x')
@@ -1107,100 +1315,631 @@ describe('SDLPool', () => {
         toEther(290),
         ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
       )
+    await sdlPool.handleOutgoingUpdate()
+    await sdlPool.handleIncomingUpdate(3)
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
     await rewardToken.transferAndCall(sdlPool.address, toEther(1000), '0x')
     await sdlPool.transferFrom(accounts[0], accounts[1], 1)
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[0])), 5500)
     assert.equal(fromEther(await rewardsPool.userRewards(accounts[1])), 500)
   })
 
-  it('migration from delegator pool should work correctly', async () => {
-    let dpRewardsPool = (await deploy('RewardsPool', [
-      delegatorPool.address,
-      rewardToken.address,
-    ])) as RewardsPool
-
-    await delegatorPool.addToken(rewardToken.address, dpRewardsPool.address)
-
-    for (let i = 0; i < 2; i++) {
-      await sdlToken.connect(signers[i]).transferAndCall(delegatorPool.address, toEther(250), '0x')
-      assert.equal(fromEther(await delegatorPool.balanceOf(accounts[i])), 250)
-      assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[i])), 250)
-      assert.equal(fromEther(await delegatorPool.lockedBalanceOf(accounts[i])), 0)
-    }
-    for (let i = 2; i < 4; i++) {
-      await sdlToken
-        .connect(signers[i])
-        .transferAndCall(
-          delegatorPool.address,
-          toEther(1000),
-          ethers.utils.defaultAbiCoder.encode(['uint256'], [toEther(400)])
-        )
-      assert.equal(fromEther(await delegatorPool.balanceOf(accounts[i])), 1000)
-      assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[i])), 600)
-      assert.equal(fromEther(await delegatorPool.lockedBalanceOf(accounts[i])), 400)
-    }
-    await rewardToken.transferAndCall(delegatorPool.address, toEther(1000), '0x')
-    await rewardToken.transfer(accounts[5], await rewardToken.balanceOf(accounts[0]))
-    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 2500)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 0)
-
-    await expect(delegatorPool.migrate(toEther(10), 0)).to.be.revertedWith(
-      'Cannot migrate until contract is retired'
+  it('handleOutoingRESDL should work correctly', async () => {
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
-    await expect(sdlPool.migrate(accounts[2], toEther(100), 0)).to.be.revertedWith(
-      'SenderNotAuthorized()'
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(200),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 20000])
+    )
+    let ts1 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks(1, [])
+    await time.increase(20000)
+    await sdlPool.initiateUnlock(2)
+    let ts2 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(300),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * DAY])
+    )
+    let ts3 = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    await updateLocks(3, [2])
+
+    assert.deepEqual(
+      parseLocks([await sdlPool.callStatic.handleOutgoingRESDL(accounts[0], 1, accounts[4])])[0],
+      { amount: 100, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 }
+    )
+    await sdlPool.handleOutgoingRESDL(accounts[0], 1, accounts[4])
+    await expect(sdlPool.ownerOf(1)).to.be.revertedWith('InvalidLockId()')
+    assert.equal(fromEther(await sdlToken.balanceOf(accounts[4])), 100)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 800)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 800)
+    assert.equal((await sdlPool.balanceOf(accounts[0])).toNumber(), 2)
+
+    assert.deepEqual(
+      parseLocks([await sdlPool.callStatic.handleOutgoingRESDL(accounts[0], 2, accounts[5])])[0],
+      { amount: 200, boostAmount: 0, startTime: ts1, duration: 20000, expiry: ts2 + 10000 }
+    )
+    await sdlPool.handleOutgoingRESDL(accounts[0], 2, accounts[5])
+    await expect(sdlPool.ownerOf(2)).to.be.revertedWith('InvalidLockId()')
+    assert.equal(fromEther(await sdlToken.balanceOf(accounts[5])), 200)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 600)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 600)
+    assert.equal((await sdlPool.balanceOf(accounts[0])).toNumber(), 1)
+
+    assert.deepEqual(
+      parseLocks([await sdlPool.callStatic.handleOutgoingRESDL(accounts[0], 3, accounts[6])])[0],
+      { amount: 300, boostAmount: 300, startTime: ts3, duration: 365 * DAY, expiry: 0 }
+    )
+    await sdlPool.handleOutgoingRESDL(accounts[0], 3, accounts[6])
+    await expect(sdlPool.ownerOf(3)).to.be.revertedWith('InvalidLockId()')
+    assert.equal(fromEther(await sdlToken.balanceOf(accounts[6])), 300)
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 0)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 0)
+    assert.equal((await sdlPool.balanceOf(accounts[0])).toNumber(), 0)
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(100),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+    await updateLocks(4, [])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+    await rewardToken.transferAndCall(sdlPool.address, toEther(10000), '0x')
+
+    let rewards1 = await rewardsPool.withdrawableRewards(accounts[1])
+    let rewards2 = await rewardsPool.withdrawableRewards(accounts[0])
+
+    await sdlPool.handleOutgoingRESDL(accounts[0], 4, accounts[2])
+
+    assert.isTrue((await rewardsPool.withdrawableRewards(accounts[1])).eq(rewards1))
+    assert.isTrue((await rewardsPool.withdrawableRewards(accounts[0])).eq(rewards2))
+  })
+
+  it('handleIncomingRESDL should work correctly', async () => {
+    await mintLock(false)
+    await expect(
+      sdlPool.handleIncomingRESDL(accounts[1], 1, {
+        amount: toEther(100),
+        boostAmount: toEther(50),
+        startTime: 123,
+        duration: 456,
+        expiry: 789,
+      })
+    ).to.be.revertedWith('InvalidLockId()')
+
+    await sdlPool.handleIncomingRESDL(accounts[1], 7, {
+      amount: toEther(100),
+      boostAmount: toEther(50),
+      startTime: 123,
+      duration: 456,
+      expiry: 0,
+    })
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([7]))[0], {
+      amount: 100,
+      boostAmount: 50,
+      startTime: 123,
+      duration: 456,
+      expiry: 0,
+    })
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 250)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 150)
+    assert.equal(await sdlPool.ownerOf(7), accounts[1])
+    assert.equal((await sdlPool.balanceOf(accounts[1])).toNumber(), 1)
+    assert.equal((await sdlPool.lastLockId()).toNumber(), 7)
+
+    await sdlPool.handleIncomingRESDL(accounts[2], 9, {
+      amount: toEther(200),
+      boostAmount: toEther(400),
+      startTime: 1,
+      duration: 2,
+      expiry: 3,
+    })
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([9]))[0], {
+      amount: 200,
+      boostAmount: 400,
+      startTime: 1,
+      duration: 2,
+      expiry: 3,
+    })
+    assert.equal(fromEther(await sdlPool.totalEffectiveBalance()), 850)
+    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[2])), 600)
+    assert.equal(await sdlPool.ownerOf(9), accounts[2])
+    assert.equal((await sdlPool.balanceOf(accounts[2])).toNumber(), 1)
+    assert.equal((await sdlPool.lastLockId()).toNumber(), 9)
+
+    await rewardToken.transferAndCall(sdlPool.address, toEther(10000), '0x')
+
+    let rewards1 = await rewardsPool.withdrawableRewards(accounts[3])
+    let rewards2 = await rewardsPool.withdrawableRewards(accounts[0])
+
+    await sdlPool.handleIncomingRESDL(accounts[3], 10, {
+      amount: toEther(50),
+      boostAmount: toEther(100),
+      startTime: 1,
+      duration: 2,
+      expiry: 3,
+    })
+
+    assert.isTrue((await rewardsPool.withdrawableRewards(accounts[3])).eq(rewards1))
+    assert.isTrue((await rewardsPool.withdrawableRewards(accounts[0])).eq(rewards2))
+  })
+
+  it('handleOutgoingUpdate and handleIncomingUpdate should work correctly', async () => {
+    assert.equal(await sdlPool.shouldUpdate(), false)
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(200),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+
+    assert.equal(await sdlPool.shouldUpdate(), true)
+    assert.equal((await sdlPool.updateBatchIndex()).toNumber(), 1)
+    assert.deepEqual(
+      await sdlPool.callStatic
+        .handleOutgoingUpdate()
+        .then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      [2, 300]
+    )
+    await sdlPool.handleOutgoingUpdate()
+    assert.equal(await sdlPool.isUpdateInProgress(), true)
+    assert.equal(await sdlPool.shouldUpdate(), false)
+    assert.equal((await sdlPool.updateBatchIndex()).toNumber(), 2)
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
+    await expect(sdlPool.handleOutgoingUpdate()).to.be.revertedWith('UpdateInProgress()')
+
+    await sdlPool.handleIncomingUpdate(7)
+    assert.equal((await sdlPool.lastLockId()).toNumber(), 8)
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [
+      [
+        {
+          amount: 100,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [1],
+    ])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [
+      [
+        {
+          amount: 200,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [1],
+    ])
+    await expect(sdlPool.handleIncomingUpdate(0)).to.be.revertedWith('NoUpdateInProgress()')
+
+    await sdlPool.executeQueuedOperations([])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+
+    assert.equal(await sdlPool.ownerOf(7), accounts[0])
+    assert.equal(await sdlPool.ownerOf(8), accounts[1])
+
+    await sdlPool.withdraw(7, toEther(60))
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(10),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [8, 0])
+      )
+
+    assert.equal(await sdlPool.shouldUpdate(), true)
+    assert.equal((await sdlPool.updateBatchIndex()).toNumber(), 2)
+    assert.deepEqual(
+      await sdlPool.callStatic
+        .handleOutgoingUpdate()
+        .then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      [0, -50]
+    )
+    await sdlPool.handleOutgoingUpdate()
+    assert.equal(await sdlPool.isUpdateInProgress(), true)
+    assert.equal(await sdlPool.shouldUpdate(), false)
+    assert.equal((await sdlPool.updateBatchIndex()).toNumber(), 3)
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 0)
+    await expect(sdlPool.handleOutgoingUpdate()).to.be.revertedWith('UpdateInProgress()')
+
+    await sdlPool.handleIncomingUpdate(0)
+    assert.equal((await sdlPool.lastLockId()).toNumber(), 8)
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([7, 8])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 40, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 210, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+    ])
+
+    await expect(sdlPool.handleIncomingUpdate(0)).to.be.revertedWith('NoUpdateInProgress()')
+  })
+
+  it('queueing new locks should work correctly', async () => {
+    assert.equal(await sdlPool.shouldUpdate(), false)
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
 
-    await delegatorPool.retireDelegatorPool([accounts[2], accounts[3]], sdlPool.address)
-    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 500)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1200)
-    assert.equal(fromEther(await delegatorPool.totalSupply()), 500)
-    for (let i = 2; i < 4; i++) {
-      assert.equal(fromEther(await delegatorPool.balanceOf(accounts[i])), 0)
-      assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[i])), 0)
-      assert.equal(fromEther(await delegatorPool.lockedBalanceOf(accounts[i])), 0)
-      assert.equal(fromEther(await delegatorPool.approvedLockedBalanceOf(accounts[i])), 0)
-      assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[i])), 600)
-      assert.equal(fromEther(await rewardToken.balanceOf(accounts[i])), 400)
-    }
+    assert.equal(await sdlPool.shouldUpdate(), true)
 
-    await delegatorPool.migrate(toEther(100), 0)
-    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 400)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1300)
-    assert.equal(fromEther(await delegatorPool.totalSupply()), 400)
-    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[0])), 150)
-    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[0])), 150)
-    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 100)
-    assert.equal(fromEther(await rewardToken.balanceOf(accounts[0])), 100)
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(200),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 300)
+    await updateLocks(1, [])
+    await sdlPool.executeQueuedOperations([])
 
-    await expect(delegatorPool.migrate(toEther(200), 0)).to.be.revertedWith('Insufficient balance')
-    await expect(delegatorPool.migrate(0, 0)).to.be.revertedWith('Invalid amount')
+    assert.equal(await sdlPool.shouldUpdate(), false)
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [[], []])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [
+      [
+        {
+          amount: 200,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [1],
+    ])
 
-    await delegatorPool.migrate(toEther(150), 0)
-    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 250)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1450)
-    assert.equal(fromEther(await delegatorPool.totalSupply()), 250)
-    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[0])), 0)
-    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[0])), 0)
-    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 250)
-    assert.equal(fromEther(await rewardToken.balanceOf(accounts[0])), 100)
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(300),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
 
-    await delegatorPool.connect(signers[1]).migrate(toEther(100), 365 * DAY)
-    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 150)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1550)
-    assert.equal(fromEther(await delegatorPool.totalSupply()), 150)
-    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[1])), 150)
-    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[1])), 150)
-    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 200)
-    assert.equal(fromEther(await rewardToken.balanceOf(accounts[1])), 100)
+    assert.equal(await sdlPool.shouldUpdate(), true)
 
-    await delegatorPool.connect(signers[1]).migrate(toEther(150), 2 * 365 * DAY)
-    assert.equal(fromEther(await sdlToken.balanceOf(delegatorPool.address)), 0)
-    assert.equal(fromEther(await sdlToken.balanceOf(sdlPool.address)), 1700)
-    assert.equal(fromEther(await delegatorPool.totalSupply()), 0)
-    assert.equal(fromEther(await delegatorPool.balanceOf(accounts[1])), 0)
-    assert.equal(fromEther(await delegatorPool.availableBalanceOf(accounts[1])), 0)
-    assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[1])), 650)
-    assert.equal(fromEther(await rewardToken.balanceOf(accounts[1])), 100)
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(400),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+
+    assert.equal(fromEther(await sdlPool.queuedRESDLSupplyChange()), 700)
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [
+      [
+        {
+          amount: 300,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [2],
+    ])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [
+      [
+        {
+          amount: 200,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+        {
+          amount: 400,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [1, 2],
+    ])
+
+    await updateLocks(3, [])
+    await updateLocks(0, [])
+
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(500),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [[], []])
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[1])), [
+      [
+        {
+          amount: 200,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+        {
+          amount: 400,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+        {
+          amount: 500,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [1, 2, 4],
+    ])
+
+    await updateLocks(12, [])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+
+    assert.deepEqual(
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => v.toNumber()),
+      [1, 3]
+    )
+    assert.deepEqual(
+      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => v.toNumber()),
+      [2, 4, 12]
+    )
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1, 2, 3, 4, 12])), [
+      { amount: 100, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 300, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 500, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+    ])
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(600),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlPool.handleOutgoingUpdate()
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(700),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlPool.handleIncomingUpdate(15)
+    await sdlPool.executeQueuedOperations([])
+
+    assert.deepEqual(
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => v.toNumber()),
+      [1, 3, 15]
+    )
+    assert.deepEqual(parseNewLocks(await sdlPool.getQueuedNewLocksByOwner(accounts[0])), [
+      [
+        {
+          amount: 700,
+          boostAmount: 0,
+          startTime: 0,
+          duration: 0,
+          expiry: 0,
+        },
+      ],
+      [6],
+    ])
+  })
+
+  it('queueing lock updates should work correctly', async () => {
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(200),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+    await updateLocks(1, [])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([])
+
+    assert.equal(await sdlPool.shouldUpdate(), false)
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
+    )
+
+    assert.equal(await sdlPool.shouldUpdate(), true)
+
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(200),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [2, 0])
+      )
+
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1, 2])), [
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+    ])
+
+    await updateLocks(0, [1])
+
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1, 2])), [
+      [],
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+    ])
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1, 2])), [
+      { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 200, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+    ])
+
+    await updateLocks(0, [])
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
+    )
+    await sdlToken
+      .connect(signers[1])
+      .transferAndCall(
+        sdlPool.address,
+        toEther(200),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [2, 0])
+      )
+    await updateLocks(0, [])
+
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1, 2])), [
+      [
+        {
+          updateBatchIndex: 4,
+          lock: { amount: 300, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+      [
+        {
+          updateBatchIndex: 2,
+          lock: { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+        {
+          updateBatchIndex: 4,
+          lock: { amount: 600, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+    ])
+
+    await sdlPool.executeQueuedOperations([1])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([2])
+    await sdlPool.executeQueuedOperations([1])
+    await sdlPool.connect(signers[1]).executeQueuedOperations([2])
+
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1, 2])), [[], []])
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1, 2])), [
+      { amount: 300, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 600, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+    ])
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
+    )
+    await sdlPool.handleOutgoingUpdate()
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
+    )
+    await sdlPool.handleIncomingUpdate(0)
+    await sdlPool.executeQueuedOperations([1])
+
+    assert.deepEqual(parseLockUpdates(await sdlPool.getQueuedLockUpdates([1, 2])), [
+      [
+        {
+          updateBatchIndex: 6,
+          lock: { amount: 500, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+        },
+      ],
+      [],
+    ])
+    assert.deepEqual(parseLocks(await sdlPool.getLocks([1, 2])), [
+      { amount: 400, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+      { amount: 600, boostAmount: 0, startTime: 0, duration: 0, expiry: 0 },
+    ])
+  })
+
+  it('should not be able to queue more locks than the limit', async () => {
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+    )
+    await expect(
+      sdlToken.transferAndCall(
+        sdlPool.address,
+        toEther(100),
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      )
+    ).to.be.revertedWith('TooManyQueuedLocks()')
+
+    await updateLocks(1, [])
+    await sdlPool.executeQueuedOperations([])
+
+    await sdlToken.transferAndCall(
+      sdlPool.address,
+      toEther(100),
+      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [1, 0])
+    )
   })
 })
