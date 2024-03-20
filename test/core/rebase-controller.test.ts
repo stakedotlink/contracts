@@ -193,7 +193,7 @@ describe('RebaseController', () => {
     assert.equal(await insurancePool.claimInProgress(), false)
 
     await token.transfer(strategy3.address, toEther(300))
-    await rebaseController.updateRewards([2], '0x')
+    await rebaseController.updateRewards([2], '0x', [])
     await strategy3.simulateSlash(toEther(301))
     await rebaseController.performUpkeep(encode([[2], toEther(301)]))
 
@@ -203,7 +203,7 @@ describe('RebaseController', () => {
     await expect(rebaseController.performUpkeep(encode([[2], 1]))).to.be.revertedWith(
       'PoolClosed()'
     )
-    await expect(rebaseController.updateRewards([2], '0x')).to.be.revertedWith('PoolClosed()')
+    await expect(rebaseController.updateRewards([2], '0x', [])).to.be.revertedWith('PoolClosed()')
     assert.equal((await rebaseController.checkUpkeep('0x00'))[0], false)
 
     await stakingPool.donateTokens(toEther(101))
