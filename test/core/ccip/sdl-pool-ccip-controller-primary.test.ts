@@ -111,7 +111,7 @@ describe('SDLPoolCCIPControllerPrimary', () => {
 
     await sdlPool.setCCIPController(controller.address)
     await controller.setRESDLTokenBridge(accounts[5])
-    await controller.setRewardsInitiator(accounts[0])
+    await controller.setRebaseController(accounts[0])
     await controller.addWhitelistedChain(77, accounts[4])
   })
 

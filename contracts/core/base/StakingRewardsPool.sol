@@ -12,6 +12,8 @@ import "../tokens/base/ERC677Upgradeable.sol";
  * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
 abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    uint256 private constant DEAD_SHARES = 10**3;
+
     IERC20Upgradeable public token;
 
     mapping(address => uint256) private shares;
@@ -183,6 +185,12 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      */
     function _mintShares(address _recipient, uint256 _amount) internal {
         require(_recipient != address(0), "Mint to the zero address");
+
+        if (totalShares == 0) {
+            shares[address(0)] = DEAD_SHARES;
+            totalShares = DEAD_SHARES;
+            _amount -= DEAD_SHARES;
+        }
 
         totalShares += _amount;
         shares[_recipient] += _amount;

@@ -8,7 +8,7 @@ import "./interfaces/IStrategy.sol";
 
 /**
  * @title Staking Pool
- * @notice Allows users to stake an asset and receive derivative tokens 1:1, then deposits staked
+ * @notice Allows users to stake an asset and receive liquid staking tokens 1:1, then deposits staked
  * assets into strategy contracts
  */
 contract StakingPool is StakingRewardsPool {
@@ -26,10 +26,12 @@ contract StakingPool is StakingRewardsPool {
     Fee[] private fees;
 
     address public priorityPool;
-    address public rewardsInitiator;
+    address public rebaseController;
     uint16 private poolIndex; // deprecated
 
     event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
+    event Burn(address indexed account, uint256 amount);
+    event DonateTokens(address indexed sender, uint256 amount);
 
     error SenderNotAuthorized();
 
@@ -40,11 +42,11 @@ contract StakingPool is StakingRewardsPool {
 
     function initialize(
         address _token,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol,
+        string memory _liquidTokenName,
+        string memory _liquidTokenSymbol,
         Fee[] memory _fees
     ) public initializer {
-        __StakingRewardsPool_init(_token, _derivativeTokenName, _derivativeTokenSymbol);
+        __StakingRewardsPool_init(_token, _liquidTokenName, _liquidTokenSymbol);
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
@@ -73,7 +75,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice stakes asset tokens and mints derivative tokens
+     * @notice stakes asset tokens and mints liquid staking tokens
      * @param _account account to stake for
      * @param _amount amount to stake
      **/
@@ -90,7 +92,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice withdraws asset tokens and burns derivative tokens
+     * @notice withdraws asset tokens and burns liquid staking tokens
      * @dev will withdraw from strategies if not enough liquidity
      * @param _account account to withdraw for
      * @param _receiver address to receive withdrawal
@@ -345,7 +347,7 @@ contract StakingPool is StakingRewardsPool {
      * @param _data encoded data to be passed to each strategy
      **/
     function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external {
-        if (msg.sender != rewardsInitiator && !_strategyExists(msg.sender)) revert SenderNotAuthorized();
+        if (msg.sender != rebaseController && !_strategyExists(msg.sender)) revert SenderNotAuthorized();
         _updateStrategyRewards(_strategyIdxs, _data);
     }
 
@@ -371,6 +373,26 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
+     * @notice Burns the senders liquid staking tokens, effectively donating their underlying stake to the pool
+     * @param _amount amount to burn
+     **/
+    function burn(uint256 _amount) external {
+        _burn(msg.sender, _amount);
+        emit Burn(msg.sender, _amount);
+    }
+
+    /**
+     * @notice Deposits asset tokens into the pool without minting liquid staking tokens,
+     * effectively donating them to the pool
+     * @param _amount amount to deposit
+     **/
+    function donateTokens(uint256 _amount) external {
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        totalStaked += _amount;
+        emit DonateTokens(msg.sender, _amount);
+    }
+
+    /**
      * @notice Sets the priority pool
      * @param _priorityPool address of priority pool
      **/
@@ -379,12 +401,12 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice Sets the rewards initiator
+     * @notice Sets the rebase controller
      * @dev this address has sole authority to update rewards
-     * @param _rewardsInitiator address of rewards initiator
+     * @param _rebaseController address of rebase controller
      **/
-    function setRewardsInitiator(address _rewardsInitiator) external onlyOwner {
-        rewardsInitiator = _rewardsInitiator;
+    function setRebaseController(address _rebaseController) external onlyOwner {
+        rebaseController = _rebaseController;
     }
 
     /**

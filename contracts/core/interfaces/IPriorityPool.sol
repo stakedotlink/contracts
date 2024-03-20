@@ -2,11 +2,21 @@
 pragma solidity 0.8.15;
 
 interface IPriorityPool {
+    enum PoolStatus {
+        OPEN,
+        DRAINING,
+        CLOSED
+    }
+
     function paused() external view returns (bool);
 
     function depositsSinceLastUpdate() external view returns (uint256);
 
+    function poolStatus() external view returns (PoolStatus);
+
     function pauseForUpdate() external;
+
+    function setPoolStatus(PoolStatus _status) external;
 
     function updateDistribution(
         bytes32 _merkleRoot,

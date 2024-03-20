@@ -12,7 +12,9 @@ contract ERC677Upgradeable is ERC20Upgradeable {
         uint256 _totalSupply
     ) public onlyInitializing {
         __ERC20_init(_tokenName, _tokenSymbol);
-        _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
+        if (_totalSupply != 0) {
+            _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
+        }
     }
 
     function transferAndCall(

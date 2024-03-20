@@ -171,7 +171,7 @@ describe('EthStakingStrategy', () => {
     await strategy.setRewardsReceiver(rewardsReceiver.address)
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
     await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
   })
 
