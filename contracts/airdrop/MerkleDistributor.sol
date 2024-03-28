@@ -23,6 +23,12 @@ contract MerkleDistributor is Ownable {
         string ipfsHash;
         mapping(address => uint256) claimed;
     }
+
+    struct ClaimedDistributionInfo {
+        uint256 claimedAmount;
+        address tokenAddress;
+        string ipfsHash;
+    }
     address[] public tokens;
     mapping(address => Distribution) public distributions;
 
@@ -264,24 +270,25 @@ contract MerkleDistributor is Ownable {
     }
 
     /**
-     * @notice Returns the claimed amounts for a user across all distributions
+     * @notice Returns detailed claimed amounts for a user across all distributions
      * @param _user Address of the user
-     * @return claimedAmounts Array of amounts claimed by the user from each distribution
-     * @return tokenAddresses Array of token addresses corresponding to each claimed amount
+     * @return distributionInfos Array of structs containing each distribution's claimed amount, token address, and IPFS hash
      */
-    function getUserClaimedAmounts(
+    function getUserClaimedDistributions(
         address _user
-    ) external view returns (uint256[] memory claimedAmounts, address[] memory tokenAddresses) {
+    ) external view returns (ClaimedDistributionInfo[] memory distributionInfos) {
         uint256 tokenCount = tokens.length;
-        claimedAmounts = new uint256[](tokenCount);
-        tokenAddresses = new address[](tokenCount);
+        distributionInfos = new ClaimedDistributionInfo[](tokenCount);
 
         for (uint256 i = 0; i < tokenCount; i++) {
             address token = tokens[i];
-            claimedAmounts[i] = distributions[token].claimed[_user];
-            tokenAddresses[i] = token;
+            distributionInfos[i] = ClaimedDistributionInfo({
+                claimedAmount: distributions[token].claimed[_user],
+                tokenAddress: token,
+                ipfsHash: distributions[token].ipfsHash
+            });
         }
 
-        return (claimedAmounts, tokenAddresses);
+        return distributionInfos;
     }
 }
