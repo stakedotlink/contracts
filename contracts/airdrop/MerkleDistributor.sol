@@ -274,9 +274,11 @@ contract MerkleDistributor is Ownable {
      * @param _user Address of the user
      * @return distributionInfos Array of structs containing each distribution's claimed amount, token address, and IPFS hash
      */
-    function getUserClaimedDistributions(
-        address _user
-    ) external view returns (ClaimedDistributionInfo[] memory distributionInfos) {
+    function getUserClaimedDistributions(address _user)
+        external
+        view
+        returns (ClaimedDistributionInfo[] memory distributionInfos)
+    {
         uint256 tokenCount = tokens.length;
         distributionInfos = new ClaimedDistributionInfo[](tokenCount);
 
