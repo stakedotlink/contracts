@@ -20,13 +20,20 @@ contract MerkleDistributor is Ownable {
         uint256 expiryTimestamp;
         bytes32 merkleRoot;
         uint256 totalAmount;
+        string ipfsHash;
         mapping(address => uint256) claimed;
     }
     address[] public tokens;
     mapping(address => Distribution) public distributions;
 
     event Claimed(address indexed token, uint256 index, address indexed account, uint256 amount);
-    event DistributionAdded(uint256 indexed tokenIndex, address indexed token, uint256 totalAmount, uint256 expiryTimestamp);
+    event DistributionAdded(
+        uint256 indexed tokenIndex,
+        address indexed token,
+        uint256 totalAmount,
+        uint256 expiryTimestamp,
+        string ipfsHash
+    );
     event DistributionUpdated(address indexed token, uint256 additionalAmount, uint256 expiryTimestamp);
     event SetExpiryTimestamp(address indexed token, uint256 expiryTimestamp);
 
@@ -55,7 +62,8 @@ contract MerkleDistributor is Ownable {
         address[] calldata _tokens,
         bytes32[] calldata _merkleRoots,
         uint256[] calldata _totalAmounts,
-        uint256[] calldata _expiryTimestamps
+        uint256[] calldata _expiryTimestamps,
+        string memory _ipfsHash
     ) external onlyOwner {
         require(
             _tokens.length == _merkleRoots.length && _tokens.length == _totalAmounts.length,
@@ -63,7 +71,7 @@ contract MerkleDistributor is Ownable {
         );
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i], _expiryTimestamps[i]);
+            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i], _expiryTimestamps[i], _ipfsHash[i]);
         }
     }
 
@@ -78,7 +86,8 @@ contract MerkleDistributor is Ownable {
         address _token,
         bytes32 _merkleRoot,
         uint256 _totalAmount,
-        uint256 _expiryTimestamp
+        uint256 _expiryTimestamp,
+        string memory _ipfsHash
     ) public onlyOwner {
         require(distributions[_token].token == address(0), "MerkleDistributor: Distribution is already added.");
         require(IERC20(_token).balanceOf(address(this)) >= _totalAmount, "MerkleDistributor: Insufficient balance.");
@@ -88,8 +97,9 @@ contract MerkleDistributor is Ownable {
         distributions[_token].merkleRoot = _merkleRoot;
         distributions[_token].totalAmount = _totalAmount;
         distributions[_token].expiryTimestamp = _expiryTimestamp;
+        distributions[_token].ipfsHash = _ipfsHash;
 
-        emit DistributionAdded(tokens.length - 1, _token, _totalAmount, _expiryTimestamp);
+        emit DistributionAdded(tokens.length - 1, _token, _totalAmount, _expiryTimestamp, _ipfsHash);
     }
 
     /**
@@ -248,5 +258,12 @@ contract MerkleDistributor is Ownable {
         require(_expiryTimestamp >= distributions[_token].expiryTimestamp, "MerkleDistributor: Invalid expiry timestamp.");
         distributions[_token].expiryTimestamp = _expiryTimestamp;
         emit SetExpiryTimestamp(_token, _expiryTimestamp);
+    }
+
+    /**
+     * @notice returns the addresses of all token distributions
+     **/
+    function getTokenDistributionAddresses() external view returns (address[] memory) {
+        return tokens;
     }
 }
