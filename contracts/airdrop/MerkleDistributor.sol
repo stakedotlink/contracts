@@ -63,15 +63,18 @@ contract MerkleDistributor is Ownable {
         bytes32[] calldata _merkleRoots,
         uint256[] calldata _totalAmounts,
         uint256[] calldata _expiryTimestamps,
-        string memory _ipfsHash
+        string[] calldata _ipfsHashes
     ) external onlyOwner {
         require(
-            _tokens.length == _merkleRoots.length && _tokens.length == _totalAmounts.length,
+            _tokens.length == _merkleRoots.length &&
+                _tokens.length == _totalAmounts.length &&
+                _tokens.length == _expiryTimestamps.length &&
+                _tokens.length == _ipfsHashes.length,
             "MerkleDistributor: Array lengths need to match."
         );
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i], _expiryTimestamps[i], _ipfsHash[i]);
+            addDistribution(_tokens[i], _merkleRoots[i], _totalAmounts[i], _expiryTimestamps[i], _ipfsHashes[i]);
         }
     }
 
@@ -261,9 +264,24 @@ contract MerkleDistributor is Ownable {
     }
 
     /**
-     * @notice returns the addresses of all token distributions
-     **/
-    function getTokenDistributionAddresses() external view returns (address[] memory) {
-        return tokens;
+     * @notice Returns the claimed amounts for a user across all distributions
+     * @param _user Address of the user
+     * @return claimedAmounts Array of amounts claimed by the user from each distribution
+     * @return tokenAddresses Array of token addresses corresponding to each claimed amount
+     */
+    function getUserClaimedAmounts(
+        address _user
+    ) external view returns (uint256[] memory claimedAmounts, address[] memory tokenAddresses) {
+        uint256 tokenCount = tokens.length;
+        claimedAmounts = new uint256[](tokenCount);
+        tokenAddresses = new address[](tokenCount);
+
+        for (uint256 i = 0; i < tokenCount; i++) {
+            address token = tokens[i];
+            claimedAmounts[i] = distributions[token].claimed[_user];
+            tokenAddresses[i] = token;
+        }
+
+        return (claimedAmounts, tokenAddresses);
     }
 }
