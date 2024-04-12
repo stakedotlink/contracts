@@ -156,6 +156,22 @@ abstract contract SDLPoolCCIPController is CCIPReceiver {
     }
 
     /**
+     * @notice Sets the CCIP router
+     * @param _router router address
+     **/
+    function setRouter(address _router) external override onlyOwner {
+        if (_router == address(0)) revert InvalidRouter(address(0));
+
+        address curRouter = getRouter();
+        linkToken.approve(curRouter, 0);
+        sdlToken.approve(curRouter, 0);
+
+        linkToken.approve(_router, type(uint256).max);
+        sdlToken.approve(_router, type(uint256).max);
+        i_router = _router;
+    }
+
+    /**
      * @notice Verifies the sender of a CCIP message is whitelisted
      * @param _message CCIP message
      **/

@@ -51,7 +51,7 @@ abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165, Ownable {
 
     /// @notice Sets the router
     /// @param _router router address
-    function setRouter(address _router) external onlyOwner {
+    function setRouter(address _router) external virtual onlyOwner {
         if (_router == address(0)) revert InvalidRouter(address(0));
         i_router = _router;
     }

@@ -43,5 +43,5 @@ interface IMetisLockingPool {
         bool _lockReward
     ) external;
 
-    function withdrawRewards(uint256 _seqId, uint32 _l2Gas) external;
+    function withdrawRewards(uint256 _seqId, uint32 _l2Gas) external payable;
 }

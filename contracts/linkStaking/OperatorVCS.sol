@@ -287,18 +287,4 @@ contract OperatorVCS is VaultControllerStrategy {
     function togglePreRelease() external onlyOwner {
         preRelease = !preRelease;
     }
-
-    /**
-     * @notice updates rewards for all strategies controlled by the staking pool
-     * @dev called before operatorRewardPercentage is changed to
-     * credit any past rewards at the old rate
-     */
-    function _updateStrategyRewards() private {
-        address[] memory strategies = stakingPool.getStrategies();
-        uint256[] memory strategyIdxs = new uint256[](strategies.length);
-        for (uint256 i = 0; i < strategies.length; ++i) {
-            strategyIdxs[i] = i;
-        }
-        stakingPool.updateStrategyRewards(strategyIdxs, "");
-    }
 }

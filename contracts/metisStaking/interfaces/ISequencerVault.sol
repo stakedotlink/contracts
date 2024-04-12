@@ -8,6 +8,7 @@ interface ISequencerVault {
 
     function updateDeposits(uint256 _minRewards, uint32 _l2Gas)
         external
+        payable
         returns (
             uint256,
             uint256,
@@ -16,7 +17,7 @@ interface ISequencerVault {
 
     function deposit(uint256 _amount) external;
 
-    function relockRewards() external;
+    function relockRewards() external returns (uint256);
 
     function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
 

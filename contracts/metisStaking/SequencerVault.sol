@@ -35,7 +35,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     error SenderNotAuthorized();
     error ZeroAddress();
-    error NoRewards();
+    error SequencerNotInitialized();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -158,14 +158,15 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Updates the deposit and reward accounting for this vault
      * @dev will only pay out rewards if the vault is net positive when accounting for lost deposits
-     * @param _minRewards min amount of rewards to claim (set 0 to skip reward claiming)
-     * @param _l2Gas bridge reward to L2 gasLimit
+     * @param _minRewards min amount of rewards to relock/claim (set 0 to skip reward claiming)
+     * @param _l2Gas L2 gasLimit for bridging rewards
      * @return the current total deposits in this vault
      * @return the operator rewards earned by this vault since the last update
      * @return the rewards that were claimed in this update
      */
     function updateDeposits(uint256 _minRewards, uint32 _l2Gas)
         external
+        payable
         onlyVaultController
         returns (
             uint256,
@@ -187,22 +188,21 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         uint256 claimedRewards;
         if (_minRewards != 0 && rewards >= _minRewards) {
-            lockingPool.withdrawRewards(seqId, _l2Gas);
-            trackedTotalDeposits -= SafeCastUpgradeable.toUint128(rewards);
-            totalDeposits -= rewards;
-            claimedRewards = rewards;
+            if (principal + rewards <= vaultController.getVaultDepositMax()) {
+                lockingPool.relock(seqId, 0, true);
+            } else {
+                lockingPool.withdrawRewards{value: msg.value}(seqId, _l2Gas);
+                trackedTotalDeposits -= SafeCastUpgradeable.toUint128(rewards);
+                totalDeposits -= rewards;
+                claimedRewards = rewards;
+            }
+        }
+
+        if (address(this).balance != 0) {
+            payable(msg.sender).transfer(address(this).balance);
         }
 
         return (totalDeposits, opRewards, claimedRewards);
-    }
-
-    /**
-     * @notice Relocks sequencer rewards
-     * @dev will revert if there is insufficient space in sequencer to lock rewards
-     */
-    function relockRewards() external {
-        if (seqId == 0 || getRewards() == 0) revert NoRewards();
-        lockingPool.relock(seqId, 0, true);
     }
 
     /**

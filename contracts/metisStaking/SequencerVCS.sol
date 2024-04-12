@@ -41,11 +41,10 @@ contract SequencerVCS is Strategy {
     event VaultAdded(address signer);
     event SetOperatorRewardPercentage(uint256 operatorRewardPercentage);
     event SetVaultImplementation(address vaultImplementation);
-    event UpgradedVaults(uint256 startIndex, uint256 numVaults, bytes data);
+    event UpgradedVaults(uint256[] vaults);
 
     error FeesTooLarge();
     error AddressNotContract();
-    error InvalidPercentage();
     error SenderNotAuthorized();
     error ZeroAddress();
 
@@ -89,9 +88,9 @@ contract SequencerVCS is Strategy {
         for (uint256 i = 0; i < _fees.length; ++i) {
             fees.push(_fees[i]);
         }
-        if (_totalFeesBasisPoints() > 5000) revert FeesTooLarge();
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
 
-        if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
+        if (_operatorRewardPercentage > 3000) revert FeesTooLarge();
         operatorRewardPercentage = _operatorRewardPercentage;
     }
 
@@ -231,8 +230,8 @@ contract SequencerVCS is Strategy {
 
     /**
      * @notice Updates deposit accounting and calculates fees on newly earned rewards
-     * @param _data encoded minRewards (uint256) - min amount of rewards required to claim (set 0 to skip reward claiming)
-     * and l2Gas (uint32) - gas limit for reward bridging
+     * @param _data encoded minRewards (uint256) - min amount of rewards required to relock/claim (set 0 to skip reward claiming),
+     * l2Gas (uint32) - per vault gas limit for reward bridging, and l2Fee (uint256) - per vault fee to pay for reward bridging
      * @return depositChange change in deposits since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
@@ -246,7 +245,9 @@ contract SequencerVCS is Strategy {
             uint256[] memory amounts
         )
     {
-        (uint256 minRewards, uint32 l2Gas) = _data.length == 0 ? (0, 0) : abi.decode(_data, (uint256, uint32));
+        (uint256 minRewards, uint32 l2Gas, uint256 l2Fee) = _data.length == 0
+            ? (0, 0, 0)
+            : abi.decode(_data, (uint256, uint32, uint256));
 
         uint256 vaultDeposits;
         uint256 operatorRewards;
@@ -254,7 +255,10 @@ contract SequencerVCS is Strategy {
 
         uint256 vaultCount = vaults.length;
         for (uint256 i = 0; i < vaultCount; ++i) {
-            (uint256 deposits, uint256 opRewards, uint256 claimed) = vaults[i].updateDeposits(minRewards, l2Gas);
+            (uint256 deposits, uint256 opRewards, uint256 claimed) = vaults[i].updateDeposits{value: l2Fee}(
+                minRewards,
+                l2Gas
+            );
             vaultDeposits += deposits;
             operatorRewards += opRewards;
             claimedRewards += claimed;
@@ -317,7 +321,7 @@ contract SequencerVCS is Strategy {
      * @return maximum deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
-        return vaults.length * lockingInfo.maxLock();
+        return vaults.length * getVaultDepositMax();
     }
 
     /**
@@ -329,13 +333,32 @@ contract SequencerVCS is Strategy {
     }
 
     /**
-     * @notice Relocks sequencer rewards for a list of vaults
-     * @param _vaults list of vaults
+     * @notice Returns the minimum that can be deposited into a vault
+     * @return minimum vault deposit
      */
-    function relockRewards(uint256[] calldata _vaults) external {
-        for (uint256 i = 0; i < _vaults.length; ++i) {
-            vaults[_vaults[i]].relockRewards();
-        }
+    function getVaultDepositMin() public view returns (uint256) {
+        return lockingInfo.minLock();
+    }
+
+    /**
+     * @notice Returns the maximum that can be deposited into a vault
+     * @return maximum vault deposit
+     */
+    function getVaultDepositMax() public view returns (uint256) {
+        return lockingInfo.maxLock();
+    }
+
+    /**
+     * @notice Receives ETH transfers
+     */
+    receive() external payable {}
+
+    /**
+     * @notice Withdraws ETH sitting in the contract
+     * @param _amount amount to withdraw
+     */
+    function withdrawETH(uint256 _amount) external onlyOwner {
+        payable(msg.sender).transfer(_amount);
     }
 
     /**
@@ -370,23 +393,18 @@ contract SequencerVCS is Strategy {
 
     /**
      * @notice Upgrades vaults to a new implementation contract
-     * @param _startIndex index of first vault to upgrade
-     * @param _numVaults number of vaults to upgrade starting at _startIndex
-     * @param _data optional encoded function call to be executed after upgrade
+     * @param _vaults list of vault indexes to upgrade
+     * @param _data list of encoded function calls to be executed for each vault after upgrade
      */
-    function upgradeVaults(
-        uint256 _startIndex,
-        uint256 _numVaults,
-        bytes memory _data
-    ) external onlyOwner {
-        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
-            if (_data.length == 0) {
-                vaults[i].upgradeTo(vaultImplementation);
+    function upgradeVaults(uint256[] calldata _vaults, bytes[] memory _data) external onlyOwner {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            if (_data[i].length == 0) {
+                vaults[_vaults[i]].upgradeTo(vaultImplementation);
             } else {
-                vaults[i].upgradeToAndCall(vaultImplementation, _data);
+                vaults[_vaults[i]].upgradeToAndCall(vaultImplementation, _data[i]);
             }
         }
-        emit UpgradedVaults(_startIndex, _numVaults, _data);
+        emit UpgradedVaults(_vaults);
     }
 
     /**
@@ -399,16 +417,21 @@ contract SequencerVCS is Strategy {
 
     /**
      * @notice Adds a new fee
+     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
+     * the old rate before the percentage changes
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
+        _updateStrategyRewards();
         fees.push(Fee(_receiver, _feeBasisPoints));
-        if (_totalFeesBasisPoints() > 5000) revert FeesTooLarge();
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }
 
     /**
      * @notice Updates an existing fee
+     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
+     * the old rate before the percentage changes
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -418,6 +441,8 @@ contract SequencerVCS is Strategy {
         address _receiver,
         uint256 _feeBasisPoints
     ) external onlyOwner {
+        _updateStrategyRewards();
+
         if (_feeBasisPoints == 0) {
             fees[_index] = fees[fees.length - 1];
             fees.pop();
@@ -426,7 +451,7 @@ contract SequencerVCS is Strategy {
             fees[_index].basisPoints = _feeBasisPoints;
         }
 
-        if (_totalFeesBasisPoints() > 5000) revert FeesTooLarge();
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }
 
     /**
@@ -436,7 +461,7 @@ contract SequencerVCS is Strategy {
      * @param _operatorRewardPercentage basis point amount
      */
     function setOperatorRewardPercentage(uint256 _operatorRewardPercentage) public onlyOwner {
-        if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
+        if (_operatorRewardPercentage > 3000) revert FeesTooLarge();
 
         _updateStrategyRewards();
 
@@ -473,8 +498,7 @@ contract SequencerVCS is Strategy {
 
     /**
      * @notice Updates rewards for all strategies controlled by the staking pool
-     * @dev called before operatorRewardPercentage is changed to
-     * credit any past rewards at the old rate
+     * @dev called before fees are changed to credit any past rewards at the old rate
      */
     function _updateStrategyRewards() private {
         address[] memory strategies = stakingPool.getStrategies();

@@ -131,10 +131,16 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Sets the CCIP router
-     * @param _router addres of router
+     * @param _router router address
      **/
     function setRouter(address _router) external onlyOwner {
         if (_router == address(0)) revert ZeroAddress();
+
+        linkToken.approve(address(router), 0);
+        metisToken.approve(address(router), 0);
+
+        linkToken.approve(_router, type(uint256).max);
+        metisToken.approve(_router, type(uint256).max);
         router = IRouterClient(_router);
     }
 
