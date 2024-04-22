@@ -85,6 +85,7 @@ describe('SequencerVCS', () => {
     vaults = await strategy.getVaults()
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
+    await signers[0].sendTransaction({ to: strategy.address, value: toEther(10) })
   })
 
   it('getVaults should work correctly', async () => {
@@ -260,6 +261,7 @@ describe('SequencerVCS', () => {
 
   it('updateDeposits should work correctly with reward withdrawals', async () => {
     await stakingPool.deposit(accounts[0], toEther(1000))
+    await metisLockingInfo.setMaxLock(toEther(100))
     await strategy.depositQueuedTokens(
       [0, 1, 2, 3, 4],
       [toEther(100), toEther(100), toEther(100), toEther(100), toEther(100)]
@@ -271,7 +273,10 @@ describe('SequencerVCS', () => {
 
     await stakingPool.updateStrategyRewards(
       [0],
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint32'], [toEther(10), 0])
+      ethers.utils.defaultAbiCoder.encode(
+        ['uint256', 'uint32', 'uint256'],
+        [toEther(10), 0, toEther(1)]
+      )
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 1020)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1020)
@@ -283,7 +288,10 @@ describe('SequencerVCS', () => {
 
     await stakingPool.updateStrategyRewards(
       [0],
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint32'], [toEther(10), 0])
+      ethers.utils.defaultAbiCoder.encode(
+        ['uint256', 'uint32', 'uint256'],
+        [toEther(10), 0, toEther(1)]
+      )
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 1044)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1044)
@@ -293,12 +301,16 @@ describe('SequencerVCS', () => {
   it('handleIncomingL2Rewards should work correctly', async () => {
     await stakingPool.deposit(accounts[0], toEther(1000))
     await strategy.depositQueuedTokens([0], [toEther(100)])
+    await metisLockingInfo.setMaxLock(toEther(100))
 
     await metisLockingPool.addReward(1, toEther(10))
 
     await stakingPool.updateStrategyRewards(
       [0],
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint32'], [toEther(10), 0])
+      ethers.utils.defaultAbiCoder.encode(
+        ['uint256', 'uint32', 'uint256'],
+        [toEther(10), 0, toEther(1)]
+      )
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 1010)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1010)
@@ -353,12 +365,10 @@ describe('SequencerVCS', () => {
     await stakingPool.deposit(accounts[0], toEther(300))
     await strategy.depositQueuedTokens([0], [toEther(300)])
 
-    await expect(strategy.setOperatorRewardPercentage(10001)).to.be.revertedWith(
-      'InvalidPercentage()'
-    )
+    await expect(strategy.setOperatorRewardPercentage(10001)).to.be.revertedWith('FeesTooLarge()')
     await metisLockingPool.addReward(1, toEther(100))
-    await strategy.setOperatorRewardPercentage(5000)
-    assert.equal((await strategy.operatorRewardPercentage()).toNumber(), 5000)
+    await strategy.setOperatorRewardPercentage(1500)
+    assert.equal((await strategy.operatorRewardPercentage()).toNumber(), 1500)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 400)
   })
 
@@ -369,7 +379,7 @@ describe('SequencerVCS', () => {
     let newVaultImplementation = (await deployImplementation('SequencerVaultV2Mock')) as string
     await strategy.setVaultImplementation(newVaultImplementation)
 
-    await strategy.upgradeVaults(0, 2, '0x')
+    await strategy.upgradeVaults([0, 1], ['0x', '0x'])
     for (let i = 0; i < 2; i++) {
       let vault = (await ethers.getContractAt(
         'SequencerVaultV2Mock',
@@ -378,14 +388,20 @@ describe('SequencerVCS', () => {
       assert.equal(await vault.isUpgraded(), true)
     }
 
-    await strategy.upgradeVaults(2, 2, vaultInterface.encodeFunctionData('initializeV2', [2]))
+    await strategy.upgradeVaults(
+      [2, 3],
+      [
+        vaultInterface.encodeFunctionData('initializeV2', [2]),
+        vaultInterface.encodeFunctionData('initializeV2', [3]),
+      ]
+    )
     for (let i = 2; i < 4; i++) {
       let vault = (await ethers.getContractAt(
         'SequencerVaultV2Mock',
         vaults[i]
       )) as SequencerVaultV2Mock
       assert.equal(await vault.isUpgraded(), true)
-      assert.equal((await vault.getVersion()).toNumber(), 2)
+      assert.equal((await vault.getVersion()).toNumber(), i)
     }
   })
 

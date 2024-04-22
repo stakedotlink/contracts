@@ -188,7 +188,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         uint256 claimedRewards;
         if (_minRewards != 0 && rewards >= _minRewards) {
-            if (principal + rewards <= vaultController.getVaultDepositMax()) {
+            if ((principal + rewards) <= vaultController.getVaultDepositMax()) {
                 lockingPool.relock(seqId, 0, true);
             } else {
                 lockingPool.withdrawRewards{value: msg.value}(seqId, _l2Gas);

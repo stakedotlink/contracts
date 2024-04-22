@@ -37,18 +37,25 @@ contract MetisLockingInfoMock {
         token.safeTransferFrom(_owner, address(this), _amount);
     }
 
-    function increaseLocked(address _owner, uint256 _amount) external {
-        if (_amount + locked[_owner] > maxLock) revert InvalidAmount();
-        locked[_owner] += _amount;
+    function increaseLocked(
+        address _owner,
+        uint256 _amount,
+        uint256 _rewardsAmount
+    ) external {
+        if (_amount + _rewardsAmount + locked[_owner] > maxLock) revert InvalidAmount();
+        locked[_owner] += _amount + _rewardsAmount;
         token.safeTransferFrom(_owner, address(this), _amount);
-    }
-
-    function setDepositLimits(uint256 _minLock, uint256 _maxLock) external {
-        minLock = _minLock;
-        maxLock = _maxLock;
     }
 
     function setManager(address _manager) external {
         manager = _manager;
+    }
+
+    function setMaxLock(uint256 _maxLock) external {
+        maxLock = _maxLock;
+    }
+
+    function setMinLock(uint256 _minLock) external {
+        maxLock = _minLock;
     }
 }

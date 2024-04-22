@@ -7,7 +7,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 interface ILockingInfoMock {
     function newSequencer(address _owner, uint256 _amount) external;
 
-    function increaseLocked(address _owner, uint256 _amount) external;
+    function increaseLocked(
+        address _owner,
+        uint256 _amount,
+        uint256 _rewardsAmount
+    ) external;
 }
 
 /**
@@ -47,6 +51,7 @@ contract MetisLockingPoolMock {
     mapping(address => uint256) public seqOwners;
 
     error InvalidAmount();
+    error InvalidMsgValue();
 
     constructor(address _token, address _lockingInfo) {
         token = IERC20(_token);
@@ -70,13 +75,19 @@ contract MetisLockingPoolMock {
     function relock(
         uint256 _seqId,
         uint256 _amount,
-        bool
+        bool _lockReward
     ) external {
-        sequencers[_seqId].amount += _amount;
-        lockingInfo.increaseLocked(msg.sender, _amount);
+        uint256 rewards;
+        if (_lockReward) {
+            rewards = sequencers[_seqId].reward;
+            sequencers[_seqId].reward = 0;
+        }
+        sequencers[_seqId].amount += _amount + rewards;
+        lockingInfo.increaseLocked(msg.sender, _amount, rewards);
     }
 
-    function withdrawRewards(uint256 _seqId, uint32) external {
+    function withdrawRewards(uint256 _seqId, uint32) external payable {
+        if (msg.value == 0) revert InvalidMsgValue();
         sequencers[_seqId].reward = 0;
     }
 

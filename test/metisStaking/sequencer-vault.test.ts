@@ -40,7 +40,12 @@ describe('SequencerVault', () => {
       metisLockingInfo.address,
     ])) as MetisLockingPoolMock
 
-    strategy = (await deploy('SequencerVCSMock', [token.address, 1000, 5000])) as SequencerVCSMock
+    strategy = (await deploy('SequencerVCSMock', [
+      token.address,
+      metisLockingInfo.address,
+      1000,
+      5000,
+    ])) as SequencerVCSMock
 
     vault = (await deployUpgradeable('SequencerVault', [
       token.address,
@@ -113,6 +118,7 @@ describe('SequencerVault', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
+    await metisLockingInfo.setMaxLock(toEther(100))
     await strategy.deposit(toEther(100))
     await metisLockingPool.addReward(1, toEther(10))
     assert.deepEqual(
@@ -164,13 +170,26 @@ describe('SequencerVault', () => {
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 114)
 
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(toEther(19))).map((v) => fromEther(v)),
+      (await strategy.callStatic.updateDeposits(toEther(19), { value: toEther(1) })).map((v) =>
+        fromEther(v)
+      ),
       [95, 0, 19]
     )
-    await strategy.updateDeposits(toEther(19))
+    await strategy.updateDeposits(toEther(19), { value: toEther(1) })
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
     assert.equal(fromEther(await vault.unclaimedRewards()), 1.4)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 95)
+
+    await metisLockingInfo.setMaxLock(toEther(120))
+    await metisLockingPool.addReward(1, toEther(7))
+    assert.deepEqual(
+      (await strategy.callStatic.updateDeposits(toEther(7))).map((v) => fromEther(v)),
+      [102, 0.7, 0]
+    )
+    await strategy.updateDeposits(toEther(7))
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.unclaimedRewards()), 2.1)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 102)
 
     await expect(vault.updateDeposits(0, 0)).to.be.revertedWith('SenderNotAuthorized()')
   })

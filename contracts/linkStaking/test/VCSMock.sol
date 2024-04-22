@@ -43,4 +43,8 @@ contract VCSMock is VaultControllerStrategy {
     function deployVault(bytes memory _data) external {
         _deployVault(_data);
     }
+
+    function addFeeBypassUpdate(address _receiver, uint256 _feeBasisPoints) external {
+        fees.push(Fee(_receiver, _feeBasisPoints));
+    }
 }

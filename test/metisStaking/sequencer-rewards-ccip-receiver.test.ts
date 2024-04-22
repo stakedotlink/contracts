@@ -7,6 +7,7 @@ import {
   CCIPTokenPoolMock,
   SequencerRewardsCCIPReceiver,
   SequencerVCSMock,
+  MetisLockingInfoMock,
 } from '../../typechain-types'
 import { Signer } from 'ethers'
 
@@ -58,7 +59,18 @@ describe('SequencerRewardsCCIPReceiver', () => {
 
     await router.applyRampUpdates([], [], [[77, offRamp.address]])
 
-    strategy = (await deploy('SequencerVCSMock', [token.address, 1000, 5000])) as SequencerVCSMock
+    let metisLockingInfo = (await deploy('MetisLockingInfoMock', [
+      token.address,
+      toEther(100),
+      toEther(10000),
+    ])) as MetisLockingInfoMock
+
+    strategy = (await deploy('SequencerVCSMock', [
+      token.address,
+      metisLockingInfo.address,
+      1000,
+      5000,
+    ])) as SequencerVCSMock
 
     ccipReceiver = (await deploy('SequencerRewardsCCIPReceiver', [
       router.address,

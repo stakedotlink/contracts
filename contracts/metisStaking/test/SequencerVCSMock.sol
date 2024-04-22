@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/ISequencerVault.sol";
+import "../interfaces/IMetisLockingInfo.sol";
 
 /**
  * @title Sequencer VCS Mock
@@ -14,6 +15,7 @@ contract SequencerVCSMock {
     using SafeERC20 for IERC20;
 
     IERC20 public token;
+    IMetisLockingInfo public lockingInfo;
 
     uint256 public operatorRewardPercentage;
     uint256 public withdrawalPercentage;
@@ -25,13 +27,19 @@ contract SequencerVCSMock {
 
     constructor(
         address _token,
+        address _lockingInfo,
         uint256 _operatorRewardPercentage,
         uint256 _withdrawalPercentage
     ) {
         token = IERC20(_token);
+        lockingInfo = IMetisLockingInfo(_lockingInfo);
         operatorRewardPercentage = _operatorRewardPercentage;
         withdrawalPercentage = _withdrawalPercentage;
         rewardRecipient = address(9);
+    }
+
+    function getVaultDepositMax() external returns (uint256) {
+        return lockingInfo.maxLock();
     }
 
     function deposit(uint256 _amount) external {
@@ -46,13 +54,14 @@ contract SequencerVCSMock {
 
     function updateDeposits(uint256 _minRewards)
         external
+        payable
         returns (
             uint256,
             uint256,
             uint256
         )
     {
-        return vault.updateDeposits(_minRewards, 0);
+        return vault.updateDeposits{value: msg.value}(_minRewards, 0);
     }
 
     function handleIncomingL2Rewards(uint256 _amount) external {
@@ -67,4 +76,6 @@ contract SequencerVCSMock {
     function setWithdrawalPercentage(uint256 _withdrawalPercentage) external {
         withdrawalPercentage = _withdrawalPercentage;
     }
+
+    receive() external payable {}
 }

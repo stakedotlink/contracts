@@ -17,8 +17,6 @@ interface ISequencerVault {
 
     function deposit(uint256 _amount) external;
 
-    function relockRewards() external returns (uint256);
-
     function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
 
     function upgradeTo(address _newImplementation) external;
