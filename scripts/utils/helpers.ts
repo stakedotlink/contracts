@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { BigNumber, Signer } from 'ethers'
+import { BigNumber } from 'ethers'
 import { ERC677 } from '../../typechain-types'
 
 export const toEther = (amount: string | number) => {

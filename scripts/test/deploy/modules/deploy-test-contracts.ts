@@ -1,11 +1,6 @@
-import { network } from 'hardhat'
-import { updateDeployments, deploy } from '../utils/deployment'
+import { updateDeployments, deploy } from '../../../utils/deployment'
 
-async function main() {
-  if (network.name != 'localhost' && network.name != 'testnet') {
-    throw Error('Test contracts can only be deployed on test networks')
-  }
-
+export async function deployTestContracts() {
   const lplToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
     'LinkPool',
     'LPL',
@@ -48,27 +43,6 @@ async function main() {
   )
   await tx.wait()
 
-  const stETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
-    'Lido stETH',
-    'stETH',
-    1000000000,
-  ])
-  const rETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
-    'RocketPool rETH',
-    'rETH',
-    1000000000,
-  ])
-  const cbETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
-    'Coinbase cbETH',
-    'cbETH',
-    1000000000,
-  ])
-  const sfrxETHToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
-    'Frax sfrxETH',
-    'sfrxETH',
-    1000000000,
-  ])
-
   updateDeployments(
     {
       LPLToken: lplToken.address,
@@ -77,26 +51,11 @@ async function main() {
       LINK_OwnersRewardsPoolV1: ownersRewardsPoolV1.address,
       PoolAllowanceV1: poolAllowance.address,
       Multicall3: multicall.address,
-      stETHToken: stETHToken.address,
-      rETHToken: rETHToken.address,
-      cbETHToken: cbETHToken.address,
-      sfrxETHToken: sfrxETHToken.address,
     },
     {
       LPLToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
       LINKToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
       LINK_OwnersRewardsPoolV1: 'OwnersRewardsPoolV1',
-      stETHToken: 'ERC20',
-      rETHToken: 'ERC20',
-      cbETHToken: 'ERC20',
-      sfrxETHToken: 'ERC20',
     }
   )
 }
-
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
