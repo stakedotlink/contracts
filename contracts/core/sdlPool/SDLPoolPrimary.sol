@@ -275,6 +275,14 @@ contract SDLPoolPrimary is SDLPool {
     }
 
     /**
+     * @notice sets the delegator pool addres
+     * @param _delegatorPool address of delegator pool
+     */
+    function setDelegatorPool(address _delegatorPool) external onlyOwner {
+        delegatorPool = _delegatorPool;
+    }
+
+    /**
      * @notice stores a new lock
      * @param _owner owner of lock
      * @param _amount amount to stake
