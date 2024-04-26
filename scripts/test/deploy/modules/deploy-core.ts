@@ -22,6 +22,11 @@ const SDLPoolPrimaryArgs = {
   derivativeTokenName: 'Reward Escrowed SDL', // SDL staking derivative token name
   derivativeTokenSymbol: 'reSDL', // SDL staking derivative token symbol
 }
+// Delegator Pool (deprecated)
+const DelegatorPool = {
+  derivativeTokenName: 'Staked SDL', // SDL staking derivative token name
+  derivativeTokenSymbol: 'stSDL', // SDL staking derivative token symbol
+}
 
 export async function deployCore() {
   const lplToken = (await getContract('LPLToken')) as ERC677
@@ -31,6 +36,14 @@ export async function deployCore() {
 
   const lplMigration = await deploy('LPLMigration', [lplToken.address, sdlToken.address])
   console.log('LPLMigration deployed: ', lplMigration.address)
+
+  const delegatorPool = await deployUpgradeable('DelegatorPool', [
+    sdlToken.address,
+    DelegatorPool.derivativeTokenName,
+    DelegatorPool.derivativeTokenSymbol,
+    [],
+  ])
+  console.log('DelegatorPool deployed: ', delegatorPool.address)
 
   const lbc = await deploy('LinearBoostController', [
     LinearBoostControllerArgs.minLockingDuration,
@@ -47,12 +60,15 @@ export async function deployCore() {
   ])
   console.log('SDLPoolPrimary deployed: ', sdlPoolPrimary.address)
 
+  await (await sdlPoolPrimary.setDelegatorPool(delegatorPool.address)).wait()
+
   updateDeployments(
     {
       SDLToken: sdlToken.address,
       LPLMigration: lplMigration.address,
       LinearBoostController: lbc.address,
       SDLPoolPrimary: sdlPoolPrimary.address,
+      DelegatorPool: delegatorPool.address,
     },
     { SDLToken: 'StakingAllowance' }
   )
