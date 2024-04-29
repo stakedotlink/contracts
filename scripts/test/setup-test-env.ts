@@ -342,6 +342,8 @@ async function main() {
   )
 
   printDeployments()
+
+  console.log('setup-test-env-ready')
 }
 
 main()
