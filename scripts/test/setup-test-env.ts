@@ -80,8 +80,8 @@ async function main() {
 
   // LINK Staking
 
-  tx = await LINK_StakingPool.updateFee(0, ethers.constants.AddressZero, 0)
-  await tx.wait()
+  await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
+  await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
 
   const strategyMockLINK = (await deployUpgradeable('StrategyMock', [
     linkToken.address,
@@ -275,20 +275,18 @@ async function main() {
   tx = await strategyMockLINK.setMaxDeposits(toEther(2200))
   await tx.wait()
 
-  // CHECK why depositQueuedTokens does not work
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000))
+  await tx.wait()
 
-  // tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100))
-  // await tx.wait()
-
-  // tx = await LINK_PriorityPool.pauseForUpdate()
-  // await tx.wait()
-  // tx = await LINK_PriorityPool.updateDistribution(
-  //   '0x52171b32a0a6c33f6756c5c33673790b66945c4f1c4ec4a81932e60b06b5a321',
-  //   '0x6310F1189600F807FAC771D10706B6665628B99797054447F58F4C8A05971B83',
-  //   toEther(200),
-  //   toEther(100)
-  // )
-  // await tx.wait()
+  tx = await LINK_PriorityPool.pauseForUpdate()
+  await tx.wait()
+  tx = await LINK_PriorityPool.updateDistribution(
+    '0x52171b32a0a6c33f6756c5c33673790b66945c4f1c4ec4a81932e60b06b5a321',
+    '0x6310F1189600F807FAC771D10706B6665628B99797054447F58F4C8A05971B83',
+    toEther(200),
+    toEther(100)
+  )
+  await tx.wait()
 
   // Account 7
 
@@ -314,12 +312,10 @@ async function main() {
     )
   await tx.wait()
 
-  // CHECK why depositQueuedTokens does not work
-
-  // tx = await strategyMockLINK.setMaxDeposits(toEther(6200))
-  // await tx.wait()
-  // tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000))
-  // await tx.wait()
+  tx = await strategyMockLINK.setMaxDeposits(toEther(6200))
+  await tx.wait()
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000))
+  await tx.wait()
 
   const vestingStart = 1695312000 // Sep 21 2023 12pm EDT
   const vestingDuration = 4 * 365 * 86400 // 4 years

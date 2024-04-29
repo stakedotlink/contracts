@@ -122,7 +122,7 @@ const WrappedSDTokenArgs = {
 const StakingPoolArgs = {
   derivativeTokenName: 'Staked LINK', // LINK staking derivative token name
   derivativeTokenSymbol: 'stLINK', // LINK staking derivative token symbol
-  fees: [['0x6879826450e576B401c4dDeff2B7755B1e85d97c', 300]], // fee receivers & percentage amounts in basis points
+  fees: [], // fee receivers & percentage amounts in basis points
 }
 // LINK Priority Pool
 const PriorityPoolArgs = {

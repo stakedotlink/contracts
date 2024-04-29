@@ -104,7 +104,7 @@ abstract contract VaultControllerStrategy is Strategy {
         totalDeposits += deposited;
         totalPrincipalDeposits += deposited;
 
-        if (deposited != _amount) {
+        if (deposited < _amount) {
             token.safeTransfer(address(stakingPool), _amount - deposited);
         }
     }
