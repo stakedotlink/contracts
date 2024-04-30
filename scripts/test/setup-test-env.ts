@@ -7,18 +7,15 @@ import {
   printDeployments,
 } from '../utils/deployment'
 import {
-  CurveMock,
-  DelegatorPool,
-  ERC20,
-  ERC677,
-  LiquidSDIndexPool,
   LPLMigration,
-  LSDIndexAdapterMock,
-  PriorityPool,
-  SDLPool,
   StakingAllowance,
   StakingPool,
+  ERC677,
   StrategyMock,
+  PriorityPool,
+  DelegatorPool,
+  CurveMock,
+  SDLPoolPrimary,
 } from '../../typechain-types'
 import { ethers } from 'hardhat'
 
@@ -64,21 +61,17 @@ data:
 
 async function main() {
   const { signers, accounts } = await getAccounts()
-  const linkToken = (await getContract('LINKToken')) as ERC677
-  const lplToken = (await getContract('LPLToken')) as ERC677
   const sdlToken = (await getContract('SDLToken')) as StakingAllowance
   const lplMigration = (await getContract('LPLMigration')) as LPLMigration
+  const LINK_StakingPool = (await getContract('LINK_StakingPool')) as StakingPool
+  const linkToken = (await getContract('LINKToken')) as ERC677
+  const LINK_PriorityPool = (await getContract('LINK_PriorityPool')) as PriorityPool
+  const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
+  const lplToken = (await getContract('LPLToken')) as ERC677
+
   const poolOwnersV1 = (await getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
-  const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
-  const sdlPool = (await getContract('SDLPool')) as SDLPool
-  const LINK_StakingPool = (await getContract('LINK_StakingPool')) as StakingPool
-  const ETH_LiquidSDIndexPool = (await getContract('ETH_LiquidSDIndexPool')) as LiquidSDIndexPool
-  const stETHToken = (await getContract('stETHToken')) as ERC20
-  const rETHToken = (await getContract('rETHToken')) as ERC20
-  const cbETHToken = (await getContract('cbETHToken')) as ERC20
-  const sfrxETHToken = (await getContract('sfrxETHToken')) as ERC20
-  const LINK_PriorityPool = (await getContract('LINK_PriorityPool')) as PriorityPool
+  const sdlPool = (await getContract('SDLPoolPrimary')) as SDLPoolPrimary
 
   // LPL migration
 
@@ -87,8 +80,9 @@ async function main() {
 
   // LINK Staking
 
-  tx = await LINK_StakingPool.updateFee(0, ethers.constants.AddressZero, 0)
-  await tx.wait()
+  await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
+  await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
+
   const strategyMockLINK = (await deployUpgradeable('StrategyMock', [
     linkToken.address,
     LINK_StakingPool.address,
@@ -115,69 +109,6 @@ async function main() {
       stLINK_DelegatorRewardsPool: 'RewardsPool',
     }
   )
-
-  // ETH Liquid SD Index
-
-  const lidoAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
-    stETHToken.address,
-    ETH_LiquidSDIndexPool.address,
-    toEther(1),
-  ])) as LSDIndexAdapterMock
-
-  const rocketPoolAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
-    rETHToken.address,
-    ETH_LiquidSDIndexPool.address,
-    toEther(1.2),
-  ])) as LSDIndexAdapterMock
-
-  const coinbaseAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
-    cbETHToken.address,
-    ETH_LiquidSDIndexPool.address,
-    toEther(1.03),
-  ])) as LSDIndexAdapterMock
-
-  const fraxAdapter = (await deployUpgradeable('LSDIndexAdapterMock', [
-    sfrxETHToken.address,
-    ETH_LiquidSDIndexPool.address,
-    toEther(1.03),
-  ])) as LSDIndexAdapterMock
-
-  tx = await ETH_LiquidSDIndexPool.addLSDToken(stETHToken.address, lidoAdapter.address, [10000])
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.addLSDToken(
-    rETHToken.address,
-    rocketPoolAdapter.address,
-    [7500, 2500]
-  )
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.addLSDToken(
-    cbETHToken.address,
-    coinbaseAdapter.address,
-    [5200, 1800, 3000]
-  )
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.addLSDToken(
-    sfrxETHToken.address,
-    fraxAdapter.address,
-    [4600, 1600, 2700, 1100]
-  )
-  await tx.wait()
-
-  updateDeployments(
-    {
-      ixETH_LidoLSDIndexAdapter: lidoAdapter.address,
-      ixETH_RocketPoolLSDIndexAdapter: rocketPoolAdapter.address,
-      ixETH_CoinbaseLSDIndexAdapter: coinbaseAdapter.address,
-      ixETH_FraxLSDIndexAdapter: fraxAdapter.address,
-    },
-    {
-      ixETH_LidoLSDIndexAdapter: 'LidoLSDIndexAdapter',
-      ixETH_RocketPoolLSDIndexAdapter: 'RocketPoolLSDIndexAdapter',
-      ixETH_CoinbaseLSDIndexAdapter: 'CoinbaseLSDIndexAdapter',
-      ixETH_FraxLSDIndexAdapter: 'FraxLSDIndexAdapter',
-    }
-  )
-
   // Basic Curve Mock
 
   const curveMock = (await deploy('CurveMock', [
@@ -199,14 +130,6 @@ async function main() {
     tx = await lplToken.transfer(accounts[i], toEther(10000))
     await tx.wait()
     tx = await linkToken.transfer(accounts[i], toEther(10000))
-    await tx.wait()
-    tx = await stETHToken.transfer(accounts[i], toEther(10000))
-    await tx.wait()
-    tx = await rETHToken.transfer(accounts[i], toEther(10000))
-    await tx.wait()
-    tx = await cbETHToken.transfer(accounts[i], toEther(10000))
-    await tx.wait()
-    tx = await sfrxETHToken.transfer(accounts[i], toEther(10000))
     await tx.wait()
   }
 
@@ -272,21 +195,7 @@ async function main() {
       ethers.utils.defaultAbiCoder.encode(['bool'], [false])
     )
   await tx.wait()
-  tx = await stETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(100))
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(stETHToken.address, toEther(100))
-  await tx.wait()
-  tx = await rETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(rETHToken.address, toEther(50))
-  await tx.wait()
-  tx = await cbETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(cbETHToken.address, toEther(50))
-  await tx.wait()
-  tx = await sfrxETHToken.connect(signers[3]).approve(ETH_LiquidSDIndexPool.address, toEther(50))
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.connect(signers[3]).deposit(sfrxETHToken.address, toEther(50))
+
   await tx.wait()
   tx = await LINK_StakingPool.transferAndCall(delegatorPool.address, toEther(100), '0x')
   await tx.wait()
@@ -314,6 +223,7 @@ async function main() {
       ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
     )
   await tx.wait()
+
   tx = await linkToken
     .connect(signers[5])
     .transferAndCall(
@@ -349,17 +259,10 @@ async function main() {
   tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')
   await tx.wait()
 
-  tx = await stETHToken.transfer(lidoAdapter.address, toEther(10))
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.updateRewards()
-  await tx.wait()
-  tx = await stETHToken.transfer(lidoAdapter.address, toEther(10))
-  await tx.wait()
-  tx = await ETH_LiquidSDIndexPool.updateRewards()
-  await tx.wait()
-
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
+
+  await LINK_StakingPool.setRewardsInitiator(accounts[0])
   tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
@@ -371,7 +274,8 @@ async function main() {
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(2200))
   await tx.wait()
-  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000))
+
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000))
   await tx.wait()
 
   tx = await LINK_PriorityPool.pauseForUpdate()
@@ -434,6 +338,8 @@ async function main() {
   )
 
   printDeployments()
+
+  console.log('setup-test-env-ready')
 }
 
 main()
