@@ -385,7 +385,7 @@ describe('StakingPool', () => {
   })
 
   it('fee splitting should work correctly', async () => {
-    await stakingPool.addFee(accounts[0], 2000)
+    await stakingPool.addFee(accounts[0], 1000)
     await strategy1.setFeeBasisPoints(1000)
     await strategy3.setFeeBasisPoints(1000)
 
@@ -399,17 +399,17 @@ describe('StakingPool', () => {
 
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[1])),
-      2196,
+      2248,
       'Account-1 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[2])),
-      1098,
+      1124,
       'Account-2 balance incorrect'
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[3])),
-      2196,
+      2248,
       'Account-3 balance incorrect'
     )
 
@@ -420,7 +420,7 @@ describe('StakingPool', () => {
     )
     assert.equal(
       fromEther(await stakingPool.balanceOf(accounts[0])),
-      160 + 260,
+      160 + 130,
       'Strategy fee balance incorrect'
     )
     assert.equal(

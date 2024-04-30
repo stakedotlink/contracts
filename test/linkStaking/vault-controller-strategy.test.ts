@@ -17,6 +17,7 @@ import {
   CommunityVault,
   StakingRewardsMock,
   CommunityVaultV2Mock,
+  StakingPool,
 } from '../../typechain-types'
 import { Interface } from 'ethers/lib/utils'
 
@@ -257,7 +258,7 @@ describe('VaultControllerStrategy', () => {
     await strategy.deposit(toEther(300))
 
     await rewardsController.setReward(vaults[0], toEther(100))
-    await strategy.addFee(accounts[3], 1000)
+    await strategy.addFeeBypassUpdate(accounts[3], 1000)
     let data = await strategy.callStatic.updateDeposits('0x')
 
     assert.equal(fromEther(data.depositChange), 100)
@@ -343,7 +344,7 @@ describe('VaultControllerStrategy', () => {
     let newVaultImplementation = (await deployImplementation('CommunityVaultV2Mock')) as string
     await strategy.setVaultImplementation(newVaultImplementation)
 
-    await strategy.upgradeVaults(0, 5, '0x')
+    await strategy.upgradeVaults([0, 1, 2, 3, 4], ['0x', '0x', '0x', '0x', '0x'])
     for (let i = 0; i < 5; i++) {
       let vault = (await ethers.getContractAt(
         'CommunityVaultV2Mock',
@@ -352,14 +353,23 @@ describe('VaultControllerStrategy', () => {
       assert.equal(await vault.isUpgraded(), true)
     }
 
-    await strategy.upgradeVaults(5, 5, vaultInterface.encodeFunctionData('initializeV2', [2]))
+    await strategy.upgradeVaults(
+      [5, 6, 7, 8, 9],
+      [
+        vaultInterface.encodeFunctionData('initializeV2', [5]),
+        vaultInterface.encodeFunctionData('initializeV2', [6]),
+        vaultInterface.encodeFunctionData('initializeV2', [7]),
+        vaultInterface.encodeFunctionData('initializeV2', [8]),
+        vaultInterface.encodeFunctionData('initializeV2', [9]),
+      ]
+    )
     for (let i = 5; i < 10; i++) {
       let vault = (await ethers.getContractAt(
         'CommunityVaultV2Mock',
         vaults[i]
       )) as CommunityVaultV2Mock
       assert.equal(await vault.isUpgraded(), true)
-      assert.equal((await vault.getVersion()).toNumber(), 2)
+      assert.equal((await vault.getVersion()).toNumber(), i)
     }
   })
 

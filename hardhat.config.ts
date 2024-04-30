@@ -100,6 +100,28 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+    overrides: {
+      'contracts/metisStaking/SequencerVault.sol': {
+        version: '0.8.15',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 115,
+          },
+          viaIR: true,
+        },
+      },
+      'contracts/metisStaking/test/SequencerVaultV2Mock.sol': {
+        version: '0.8.15',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 115,
+          },
+          viaIR: true,
+        },
+      },
+    },
   },
 }
 

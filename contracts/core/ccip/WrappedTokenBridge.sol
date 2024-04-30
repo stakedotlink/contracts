@@ -155,6 +155,22 @@ contract WrappedTokenBridge is CCIPReceiver {
     }
 
     /**
+     * @notice Sets the CCIP router
+     * @param _router router address
+     **/
+    function setRouter(address _router) external override onlyOwner {
+        if (_router == address(0)) revert InvalidRouter(address(0));
+
+        address curRouter = getRouter();
+        linkToken.approve(curRouter, 0);
+        wrappedToken.approve(curRouter, 0);
+
+        linkToken.approve(_router, type(uint256).max);
+        wrappedToken.approve(_router, type(uint256).max);
+        i_router = _router;
+    }
+
+    /**
      * @notice Wraps and transfers tokens to a destination chain
      * @param _destinationChainSelector id of destination chain
      * @param _sender address of token sender

@@ -48,7 +48,7 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
-        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
     }
 
     modifier onlyPriorityPool() {
@@ -282,7 +282,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         fees.push(Fee(_receiver, _feeBasisPoints));
-        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
     }
 
     /**
@@ -306,7 +306,7 @@ contract StakingPool is StakingRewardsPool {
             fees[_index].basisPoints = _feeBasisPoints;
         }
 
-        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
     }
 
     /**

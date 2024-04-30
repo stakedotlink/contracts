@@ -37,10 +37,11 @@ abstract contract VaultControllerStrategy is Strategy {
 
     uint256[9] private __gap;
 
-    event UpgradedVaults(uint256 startIndex, uint256 numVaults, bytes data);
+    event UpgradedVaults(uint256[] vaults);
     event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
     event SetVaultImplementation(address vaultImplementation);
 
+    error FeesTooLarge();
     error InvalidBasisPoints();
 
     /**
@@ -71,7 +72,7 @@ abstract contract VaultControllerStrategy is Strategy {
         for (uint256 i = 0; i < _fees.length; ++i) {
             fees.push(_fees[i]);
         }
-        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
 
         if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
         maxDepositSizeBP = _maxDepositSizeBP;
@@ -234,21 +235,19 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice upgrades vaults to a new implementation contract
-     * @dev reverts if sender is not owner
-     * @param _startIndex index of first vault to upgrade
-     * @param _numVaults number of vaults to upgrade starting at _startIndex
-     * @param _data optional encoded function call to be executed after upgrade
+     * @notice Upgrades vaults to a new implementation contract
+     * @param _vaults list of vault indexes to upgrade
+     * @param _data list of encoded function calls to be executed for each vault after upgrade
      */
-    function upgradeVaults(
-        uint256 _startIndex,
-        uint256 _numVaults,
-        bytes memory _data
-    ) external onlyOwner {
-        for (uint256 i = _startIndex; i < _startIndex + _numVaults; ++i) {
-            _upgradeVault(i, _data);
+    function upgradeVaults(uint256[] calldata _vaults, bytes[] memory _data) external onlyOwner {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            if (_data[i].length == 0) {
+                vaults[_vaults[i]].upgradeTo(vaultImplementation);
+            } else {
+                vaults[_vaults[i]].upgradeToAndCall(vaultImplementation, _data[i]);
+            }
         }
-        emit UpgradedVaults(_startIndex, _numVaults, _data);
+        emit UpgradedVaults(_vaults);
     }
 
     /**
@@ -261,22 +260,21 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice adds a new fee
-     * @dev
-     * - reverts if sender is not owner
-     * - reverts if total fees exceed 50%
+     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
+     * the old rate before the percentage changes
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
+        _updateStrategyRewards();
         fees.push(Fee(_receiver, _feeBasisPoints));
-        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }
 
     /**
      * @notice updates an existing fee
-     * @dev
-     * - reverts if sender is not owner
-     * - reverts if total fees exceed 50%
+     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
+     * the old rate before the percentage changes
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -286,7 +284,7 @@ abstract contract VaultControllerStrategy is Strategy {
         address _receiver,
         uint256 _feeBasisPoints
     ) external onlyOwner {
-        require(_index < fees.length, "Fee does not exist");
+        _updateStrategyRewards();
 
         if (_feeBasisPoints == 0) {
             fees[_index] = fees[fees.length - 1];
@@ -296,7 +294,7 @@ abstract contract VaultControllerStrategy is Strategy {
             fees[_index].basisPoints = _feeBasisPoints;
         }
 
-        require(_totalFeesBasisPoints() <= 5000, "Total fees must be <= 50%");
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }
 
     /**
@@ -372,17 +370,16 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice upgrades a vault controlled by this strategy
-     * @param _vaultIdx index of vault to upgrade
-     * @param _data optional encoded function call to be executed after upgrade
+     * @notice Updates rewards for all strategies controlled by the staking pool
+     * @dev called before fees are changed to credit any past rewards at the old rate
      */
-    function _upgradeVault(uint256 _vaultIdx, bytes memory _data) internal {
-        IVault vault = vaults[_vaultIdx];
-        if (_data.length == 0) {
-            vault.upgradeTo(vaultImplementation);
-        } else {
-            vault.upgradeToAndCall(vaultImplementation, _data);
+    function _updateStrategyRewards() internal {
+        address[] memory strategies = stakingPool.getStrategies();
+        uint256[] memory strategyIdxs = new uint256[](strategies.length);
+        for (uint256 i = 0; i < strategies.length; ++i) {
+            strategyIdxs[i] = i;
         }
+        stakingPool.updateStrategyRewards(strategyIdxs, "");
     }
 
     /**
