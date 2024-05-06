@@ -9,6 +9,10 @@ async function compile() {
     console.log('yarn compile - process (' + child.pid + '): ' + data)
   })
 
+  child.stderr.on('data', (data) => {
+    console.error('yarn compile - process (' + child.pid + ') (stderr): ' + data)
+  })
+
   return await new Promise((resolve) => {
     child.on('close', () => {
       resolve('success')
@@ -20,7 +24,11 @@ async function startHardhat() {
   const child = child_process.spawn('npx', ['yarn', 'start'])
 
   child.stdout.on('data', (data) => {
-    console.log('yarn compile - process (' + child.pid + '): ' + data)
+    console.log('yarn start - process (' + child.pid + '): ' + data)
+  })
+
+  child.stderr.on('data', (data) => {
+    console.error('yarn start - process (' + child.pid + ') (stderr): ' + data)
   })
 
   return await new Promise((resolve) => {
@@ -39,6 +47,10 @@ async function deploy() {
     console.log('yarn deploy - process (' + child.pid + '): ' + data)
   })
 
+  child.stderr.on('data', (data) => {
+    console.error('yarn deploy - process (' + child.pid + ') (stderr): ' + data)
+  })
+
   return await new Promise((resolve) => {
     child.on('close', () => {
       resolve('success')
@@ -51,6 +63,10 @@ async function testnEnv() {
 
   child.stdout.on('data', (data) => {
     console.log('yarn setup-test-env - process (' + child.pid + '): ' + data)
+  })
+
+  child.stderr.on('data', (data) => {
+    console.error('yarn setup-test-env - process (' + child.pid + ') (stderr): ' + data)
   })
 
   return await new Promise((resolve) => {
