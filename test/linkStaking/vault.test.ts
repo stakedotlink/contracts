@@ -9,7 +9,10 @@ import {
   fromEther,
 } from '../utils/helpers'
 import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+
+const unbondingPeriod = 28 * 86400
+const claimPeriod = 7 * 86400
 
 describe('Vault', () => {
   async function deployFixture() {
@@ -35,6 +38,8 @@ describe('Vault', () => {
       toEther(10),
       toEther(100),
       toEther(10000),
+      unbondingPeriod,
+      claimPeriod,
     ])) as StakingMock
     adrs.stakingController = await stakingController.getAddress()
 
@@ -71,10 +76,31 @@ describe('Vault', () => {
     )
   })
 
-  it('should not be able to withdraw', async () => {
-    const { vault } = await loadFixture(deployFixture)
+  it('should be able to unbond', async () => {
+    const { adrs, vault, stakingController } = await loadFixture(deployFixture)
 
-    await expect(vault.withdraw(toEther(10))).to.be.revertedWith('withdrawals not yet implemented')
+    await vault.deposit(toEther(100))
+    await vault.unbond()
+    let ts: any = (await ethers.provider.getBlock('latest'))?.timestamp
+    assert.equal(
+      (await stakingController.getClaimPeriodEndsAt(adrs.vault)).toNumber(),
+      ts + unbondingPeriod + claimPeriod
+    )
+  })
+
+  it('should be able to withdraw', async () => {
+    const { adrs, vault, token } = await loadFixture(deployFixture)
+
+    await vault.deposit(toEther(100))
+    await vault.unbond()
+
+    await expect(vault.withdraw(toEther(30))).to.be.revertedWith('NotInClaimPeriod()')
+
+    await time.increase(unbondingPeriod + 1)
+
+    await vault.withdraw(toEther(30))
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 70)
   })
 
   it('getPrincipalDeposits should work correctly', async () => {
@@ -108,5 +134,23 @@ describe('Vault', () => {
     await vault.deposit(toEther(150))
     await rewardsController.setReward(adrs.vault, toEther(40))
     assert.equal(fromEther(await vault.getTotalDeposits()), 290)
+  })
+
+  it('unbondingActive should work correctly', async () => {
+    const { vault } = await loadFixture(deployFixture)
+
+    assert.equal(await vault.unbondingActive(), false)
+
+    await vault.deposit(toEther(100))
+    assert.equal(await vault.unbondingActive(), false)
+
+    await vault.unbond()
+    assert.equal(await vault.unbondingActive(), true)
+
+    await time.increase(unbondingPeriod + 1)
+    assert.equal(await vault.unbondingActive(), true)
+
+    await time.increase(claimPeriod)
+    assert.equal(await vault.unbondingActive(), false)
   })
 })

@@ -65,10 +65,19 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice withdrawals are not yet implemented
+     * @notice withdraws tokens from the Chainlink staking contract
+     * @param _amount amount to withdraw
      */
-    function withdraw(uint256) external view onlyVaultController {
-        revert("withdrawals not yet implemented");
+    function withdraw(uint256 _amount) external virtual onlyVaultController {
+        stakeController.unstake(_amount, false);
+        token.safeTransfer(vaultController, _amount);
+    }
+
+    /**
+     * @notice unbonds tokens in the Chainlink staking contract
+     */
+    function unbond() external onlyVaultController {
+        stakeController.unbond();
     }
 
     /**
@@ -94,6 +103,14 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function getRewards() public view returns (uint256) {
         return rewardsController.getReward(address(this));
+    }
+
+    /**
+     * @notice returns whether the unbonding or claim period is active for this contract in the Chainlink staking contract
+     * @return rewards balance
+     */
+    function unbondingActive() external view returns (bool) {
+        return block.timestamp < stakeController.getClaimPeriodEndsAt(address(this));
     }
 
     /**

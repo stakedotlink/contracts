@@ -9,7 +9,10 @@ import {
   StakingMock,
   StakingRewardsMock,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+
+const unbondingPeriod = 28 * 86400
+const claimPeriod = 7 * 86400
 
 describe('OperatorVault', () => {
   async function deployFixture() {
@@ -34,6 +37,8 @@ describe('OperatorVault', () => {
       toEther(10),
       toEther(100),
       toEther(10000),
+      unbondingPeriod,
+      claimPeriod,
     ])) as StakingMock
     adrs.stakingController = await stakingController.getAddress()
 
@@ -84,6 +89,23 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getTotalDeposits()), 200)
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 200)
+  })
+
+  it('withdraw should work correctly', async () => {
+    const { adrs, strategy, token, stakingController, vault } = await loadFixture(deployFixture)
+
+    await strategy.unbond()
+
+    await expect(strategy.withdraw(toEther(30))).to.be.revertedWith('NotInClaimPeriod()')
+
+    await time.increase(unbondingPeriod + 1)
+
+    await strategy.withdraw(toEther(30))
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 70)
+    assert.equal(fromEther(await stakingController.getStakerPrincipal(adrs.vault)), 70)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 70)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 70)
   })
 
   it('raiseAlert should work correctly', async () => {

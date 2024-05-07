@@ -16,5 +16,11 @@ interface IStaking {
 
     function getMerkleRoot() external view returns (bytes32);
 
+    function getClaimPeriodEndsAt(address _staker) external view returns (uint256);
+
     function migrate(bytes calldata data) external;
+
+    function unbond() external;
+
+    function unstake(uint256 _amount, bool _shouldClaimReward) external;
 }

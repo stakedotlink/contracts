@@ -99,6 +99,16 @@ contract OperatorVault is Vault {
     }
 
     /**
+     * @notice withdraws tokens from the Chainlink staking contract
+     * @param _amount amount to withdraw
+     */
+    function withdraw(uint256 _amount) external override onlyVaultController {
+        trackedTotalDeposits -= SafeCast.toUint128(_amount);
+        stakeController.unstake(_amount, false);
+        token.safeTransfer(vaultController, _amount);
+    }
+
+    /**
      * @notice returns the principal balance of this contract in the Chainlink staking contract
      * @return principal balance
      */
