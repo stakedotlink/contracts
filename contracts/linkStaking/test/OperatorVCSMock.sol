@@ -35,6 +35,15 @@ contract OperatorVCSMock {
         vault.deposit(_amount);
     }
 
+    function withdraw(uint256 _amount) external {
+        vault.withdraw(_amount);
+        token.safeTransfer(msg.sender, _amount);
+    }
+
+    function unbond() external {
+        vault.unbond();
+    }
+
     function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
         uint256 withdrawalAmount = (_amount * withdrawalPercentage) / 10000;
         return withdrawalAmount;

@@ -30,6 +30,8 @@ describe('CommunityVault', () => {
       toEther(10),
       toEther(100),
       toEther(10000),
+      28 * 86400,
+      7 * 86400,
     ])) as StakingMock
 
     vault = (await deployUpgradeable('CommunityVault', [

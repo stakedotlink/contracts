@@ -9,6 +9,10 @@ import {
   fromEther,
 } from '../utils/helpers'
 import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../typechain-types'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
+
+const unbondingPeriod = 28 * 86400
+const claimPeriod = 7 * 86400
 
 describe('Vault', () => {
   let token: ERC677
@@ -36,6 +40,8 @@ describe('Vault', () => {
       toEther(10),
       toEther(100),
       toEther(10000),
+      unbondingPeriod,
+      claimPeriod,
     ])) as StakingMock
 
     vault = (await deployUpgradeable('CommunityVault', [
@@ -66,8 +72,27 @@ describe('Vault', () => {
     )
   })
 
-  it('should not be able to withdraw', async () => {
-    await expect(vault.withdraw(toEther(10))).to.be.revertedWith('withdrawals not yet implemented')
+  it('should be able to unbond', async () => {
+    await vault.deposit(toEther(100))
+    await vault.unbond()
+    let ts = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+    assert.equal(
+      (await stakingController.getClaimPeriodEndsAt(vault.address)).toNumber(),
+      ts + unbondingPeriod + claimPeriod
+    )
+  })
+
+  it('should be able to withdraw', async () => {
+    await vault.deposit(toEther(100))
+    await vault.unbond()
+
+    await expect(vault.withdraw(toEther(30))).to.be.revertedWith('NotInClaimPeriod()')
+
+    await time.increase(unbondingPeriod + 1)
+
+    await vault.withdraw(toEther(30))
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
+    assert.equal(fromEther(await token.balanceOf(stakingController.address)), 70)
   })
 
   it('getPrincipalDeposits should work correctly', async () => {
@@ -95,5 +120,21 @@ describe('Vault', () => {
     await vault.deposit(toEther(150))
     await rewardsController.setReward(vault.address, toEther(40))
     assert.equal(fromEther(await vault.getTotalDeposits()), 290)
+  })
+
+  it('unbondingActive should work correctly', async () => {
+    assert.equal(await vault.unbondingActive(), false)
+
+    await vault.deposit(toEther(100))
+    assert.equal(await vault.unbondingActive(), false)
+
+    await vault.unbond()
+    assert.equal(await vault.unbondingActive(), true)
+
+    await time.increase(unbondingPeriod + 1)
+    assert.equal(await vault.unbondingActive(), true)
+
+    await time.increase(claimPeriod)
+    assert.equal(await vault.unbondingActive(), false)
   })
 })
