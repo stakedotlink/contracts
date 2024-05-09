@@ -1,9 +1,6 @@
 name: CI
 on: [push]
 
-env:
-  FOUNDRY_PROFILE: ci
-
 jobs:
   ci:
     name: Lint & Test
@@ -19,11 +16,6 @@ jobs:
         with:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
 
       - name: Install Yarn dependencies
         run: yarn install
