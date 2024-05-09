@@ -4,7 +4,6 @@ import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 import '@nomiclabs/hardhat-etherscan'
-import '@nomicfoundation/hardhat-foundry'
 
 const balance = '100000000000000000000000'
 const accounts = [

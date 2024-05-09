@@ -7,9 +7,5 @@ deployments/localhost.json
 .openzeppelin/unknown-31337.json
 .openzeppelin/unknown-7777.json
 .envrc
-forge-cache/
 .vscode
-out
-cache_forge
-test/foundry/simulation
 .openzeppelin/unknown-1337.json
