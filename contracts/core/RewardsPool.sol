@@ -25,6 +25,9 @@ contract RewardsPool {
     event Withdraw(address indexed account, uint256 amount);
     event DistributeRewards(address indexed sender, uint256 amountStaked, uint256 amount);
 
+    error SenderNotAuthorized();
+    error NothingStaked();
+
     constructor(address _controller, address _token) {
         controller = IRewardsPoolController(_controller);
         token = IERC677(_token);
@@ -55,7 +58,7 @@ contract RewardsPool {
      * @param _account account to withdraw for
      **/
     function withdraw(address _account) external {
-        require(msg.sender == address(controller), "Controller only");
+        if (msg.sender != address(controller)) revert SenderNotAuthorized();
         _withdraw(_account);
     }
 
@@ -67,7 +70,7 @@ contract RewardsPool {
         uint256,
         bytes calldata
     ) external {
-        require(msg.sender == address(token), "Only callable by token");
+        if (msg.sender != address(token)) revert SenderNotAuthorized();
         distributeRewards();
     }
 
@@ -75,7 +78,6 @@ contract RewardsPool {
      * @notice distributes new rewards that have been deposited
      **/
     function distributeRewards() public virtual {
-        require(controller.totalStaked() > 0, "Cannot distribute when nothing is staked");
         uint256 toDistribute = token.balanceOf(address(this)) - totalRewards;
         totalRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
@@ -113,9 +115,9 @@ contract RewardsPool {
      * @notice updates rewardPerToken
      * @param _reward deposited reward amount
      **/
-    function _updateRewardPerToken(uint256 _reward) internal {
+    function _updateRewardPerToken(uint256 _reward) internal virtual {
         uint256 totalStaked = controller.totalStaked();
-        require(totalStaked > 0, "Staked amount must be > 0");
+        if (totalStaked == 0) revert NothingStaked();
         rewardPerToken += ((_reward * 1e18) / totalStaked);
     }
 }

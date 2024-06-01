@@ -11,7 +11,9 @@ contract ERC677 is ERC20 {
         string memory _tokenSymbol,
         uint256 _totalSupply
     ) ERC20(_tokenName, _tokenSymbol) {
-        _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
+        if (_totalSupply != 0) {
+            _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
+        }
     }
 
     function transferAndCall(

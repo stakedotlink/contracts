@@ -74,7 +74,7 @@ describe('OperatorVCS', () => {
 
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
 
     for (let i = 0; i < 15; i++) {
       await strategy.addVault(accounts[0], accounts[1], pfAlertsController.address)
@@ -85,6 +85,7 @@ describe('OperatorVCS', () => {
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
     await token.transfer(rewardsController.address, toEther(10000))
     await token.transfer(pfAlertsController.address, toEther(10000))
+    await stakingPool.deposit(accounts[0], 1000)
   })
 
   it('should be able to add vault', async () => {
@@ -210,6 +211,7 @@ describe('OperatorVCS', () => {
 
   it('updateDeposits should work correctly with reward withdrawals', async () => {
     await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.withdraw(accounts[0], accounts[0], 1000)
     await rewardsController.setReward(vaults[1], toEther(5))
     await rewardsController.setReward(vaults[3], toEther(7))
     await rewardsController.setReward(vaults[5], toEther(8))

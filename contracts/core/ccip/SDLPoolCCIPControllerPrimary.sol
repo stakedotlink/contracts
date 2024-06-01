@@ -27,7 +27,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
     mapping(address => address) public wrappedRewardTokens;
 
-    address public rewardsInitiator;
+    address public rebaseController;
     address public updateInitiator;
 
     QueuedUpdate[] internal queuedUpdates;
@@ -59,8 +59,8 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         updateInitiator = _updateInitiator;
     }
 
-    modifier onlyRewardsInitiator() {
-        if (msg.sender != rewardsInitiator) revert SenderNotAuthorized();
+    modifier onlyRebaseController() {
+        if (msg.sender != rebaseController) revert SenderNotAuthorized();
         _;
     }
 
@@ -73,7 +73,7 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @notice Claims and distributes rewards between all secondary chains
      * @param _gasLimits list of gas limits to use for CCIP messages on secondary chains
      **/
-    function distributeRewards(uint256[] calldata _gasLimits) external onlyRewardsInitiator {
+    function distributeRewards(uint256[] calldata _gasLimits) external onlyRebaseController {
         uint256 totalRESDL = ISDLPoolPrimary(sdlPool).effectiveBalanceOf(address(this));
         address[] memory tokens = ISDLPoolPrimary(sdlPool).supportedTokens();
         uint256 numDestinations = whitelistedChains.length;
@@ -237,12 +237,12 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     }
 
     /**
-     * @notice Sets the rewards initiator
+     * @notice Sets the rebase controller
      * @dev this address has sole authority to update rewards
-     * @param _rewardsInitiator address of rewards initiator
+     * @param _rebaseController address of rebase controller
      **/
-    function setRewardsInitiator(address _rewardsInitiator) external onlyOwner {
-        rewardsInitiator = _rewardsInitiator;
+    function setRebaseController(address _rebaseController) external onlyOwner {
+        rebaseController = _rebaseController;
     }
 
     /**

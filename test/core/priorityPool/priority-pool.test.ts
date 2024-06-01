@@ -65,12 +65,14 @@ describe('PriorityPool', () => {
 
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(sq.address)
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
     await sq.setDistributionOracle(accounts[0])
 
     for (let i = 0; i < signers.length; i++) {
       await token.connect(signers[i]).approve(sq.address, ethers.constants.MaxUint256)
     }
+
+    await sq.deposit(1000, false)
   })
 
   it('deposit should work correctly', async () => {
@@ -125,7 +127,7 @@ describe('PriorityPool', () => {
     assert.equal((await sq.getAccountIndex(accounts[3])).toNumber(), 4)
     assert.equal((await sq.getAccountIndex(accounts[4])).toNumber(), 2)
 
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     await expect(sq.deposit(toEther(1000), true)).to.be.revertedWith('DepositsDisabled()')
     await sq.setPoolStatus(1)
     await expect(sq.deposit(toEther(1000), true)).to.be.revertedWith('DepositsDisabled()')
@@ -136,6 +138,7 @@ describe('PriorityPool', () => {
 
   it('depositQueuedTokens should work correctly', async () => {
     await sq.deposit(toEther(2000), true)
+    await sq.withdraw(1000, 0, 0, [], true)
     await token.transfer(strategy.address, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await sq.connect(signers[1]).deposit(toEther(500), true)
@@ -202,7 +205,7 @@ describe('PriorityPool', () => {
     await token.transfer(stakingPool.address, toEther(1))
     await sq.depositQueuedTokens(toEther(100), toEther(1000))
 
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     await expect(sq.depositQueuedTokens(toEther(100), toEther(1000))).to.be.revertedWith(
       'DepositsDisabled()'
     )
@@ -223,7 +226,7 @@ describe('PriorityPool', () => {
     assert.deepEqual(await sq.checkUpkeep('0x'), [false, '0x'])
 
     await token.transfer(stakingPool.address, toEther(1))
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     assert.deepEqual(await sq.checkUpkeep('0x'), [false, '0x'])
 
     await sq.setPoolStatus(1)
@@ -235,6 +238,7 @@ describe('PriorityPool', () => {
 
   it('performUpkeep should work corectly', async () => {
     await sq.deposit(toEther(2000), true)
+    await sq.withdraw(1000, 0, 0, [], true)
     await token.transfer(strategy.address, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await sq.connect(signers[1]).deposit(toEther(500), true)
@@ -295,7 +299,7 @@ describe('PriorityPool', () => {
     await token.transfer(stakingPool.address, toEther(1))
     await sq.performUpkeep('0x')
 
-    await sq.setPoolStatusClosed()
+    await sq.setPoolStatus(2)
     await expect(sq.performUpkeep('0x')).to.be.revertedWith('DepositsDisabled()')
     await sq.setPoolStatus(1)
     await expect(sq.performUpkeep('0x')).to.be.revertedWith('DepositsDisabled()')
@@ -594,6 +598,7 @@ describe('PriorityPool', () => {
     await stakingPool.connect(signers[1]).approve(sq.address, ethers.constants.MaxUint256)
     await stakingPool.connect(signers[2]).approve(sq.address, ethers.constants.MaxUint256)
     await sq.deposit(toEther(1000), true)
+    await sq.withdraw(1000, 0, 0, [], true)
     await token.transfer(strategy.address, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await sq.connect(signers[1]).deposit(toEther(100), true)

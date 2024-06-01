@@ -80,9 +80,10 @@ describe('StakingPool', () => {
     await stakingPool.addStrategy(strategy2.address)
     await stakingPool.addStrategy(strategy3.address)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
+    await stakingPool.deposit(accounts[0], 1000)
   })
 
   it('derivative token metadata should be correct', async () => {
@@ -692,5 +693,35 @@ describe('StakingPool', () => {
 
     await token.transfer(stakingPool.address, toEther(1000))
     assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 11000)
+  })
+
+  it('burn should work correctly', async () => {
+    await stake(1, 1000)
+    await stake(2, 3000)
+
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 3000)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 4000)
+
+    await stakingPool.connect(signers[2]).burn(toEther(500))
+
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[1])).toFixed(3)), 1142.857)
+    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[2])).toFixed(3)), 2857.143)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 4000)
+  })
+
+  it('donateTokens should work correctly', async () => {
+    await stake(1, 1000)
+    await stake(2, 3000)
+
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 3000)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 4000)
+
+    await stakingPool.donateTokens(toEther(500))
+
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 1125)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 3375)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 4500)
   })
 })

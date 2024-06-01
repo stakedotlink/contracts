@@ -127,7 +127,7 @@ describe('LiquidSDIndexPool', () => {
       'Composition targets must sum to 100%'
     )
 
-    await pool.connect(signers[1]).withdraw(toEther(3000))
+    await pool.connect(signers[1]).withdraw(toEther(2999))
     await pool.removeLSDToken(lsd2.address, [2000, 8000])
 
     assert.deepEqual(await pool.getLSDTokens(), [lsd1.address, lsd3.address])
