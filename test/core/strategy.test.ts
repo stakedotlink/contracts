@@ -41,7 +41,7 @@ describe('Strategy', () => {
   })
 
   it('should be able to upgrade contract, state should persist', async () => {
-    await strategy.deposit(toEther(1000))
+    await strategy.deposit(toEther(1000), '0x')
 
     let StrategyV2 = await ethers.getContractFactory('StrategyMockV2')
     let upgradedImpAddress = (await upgrades.prepareUpgrade(strategy.address, StrategyV2, {
@@ -50,7 +50,7 @@ describe('Strategy', () => {
     await strategy.upgradeTo(upgradedImpAddress)
 
     let upgraded = await ethers.getContractAt('StrategyMockV2', strategy.address)
-    assert.equal(await upgraded.contractVersion(), 2, 'contract not upgraded')
+    assert.equal((await upgraded.contractVersion()).toNumber(), 2, 'contract not upgraded')
     assert.equal(fromEther(await upgraded.getTotalDeposits()), 1000, 'state not persisted')
     assert.equal(fromEther(await token.balanceOf(upgraded.address)), 1000, 'balance not persisted')
   })

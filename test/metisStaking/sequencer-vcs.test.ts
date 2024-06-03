@@ -76,7 +76,7 @@ describe('SequencerVCS', () => {
     await metisLockingInfo.setManager(metisLockingPool.address)
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
 
     for (let i = 0; i < 5; i++) {
       await strategy.addVault('0x5555', accounts[1], accounts[2])
@@ -106,17 +106,17 @@ describe('SequencerVCS', () => {
   })
 
   it('deposit should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(50))
+    await stakingPool.deposit(accounts[0], toEther(50), ['0x'])
     assert.equal(fromEther(await token.balanceOf(strategy.address)), 50)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 50)
 
-    await stakingPool.deposit(accounts[0], toEther(200))
+    await stakingPool.deposit(accounts[0], toEther(200), ['0x'])
     assert.equal(fromEther(await token.balanceOf(strategy.address)), 250)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 250)
   })
 
   it('depositQueuedTokens should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     assert.equal(fromEther(await strategy.getTotalDeposits()), 5000)
@@ -133,7 +133,7 @@ describe('SequencerVCS', () => {
   })
 
   it('getDepositChange should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
@@ -154,7 +154,7 @@ describe('SequencerVCS', () => {
   })
 
   it('getPendingFees should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     await metisLockingPool.addReward(1, toEther(100))
@@ -182,19 +182,19 @@ describe('SequencerVCS', () => {
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
     assert.equal(fromEther(await strategy.getMinDeposits()), 0)
 
-    await stakingPool.deposit(accounts[0], toEther(2000))
+    await stakingPool.deposit(accounts[0], toEther(2000), ['0x'])
     assert.equal(fromEther(await strategy.canDeposit()), 3000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
     assert.equal(fromEther(await strategy.getMinDeposits()), 2000)
 
-    await stakingPool.deposit(accounts[0], toEther(3000))
+    await stakingPool.deposit(accounts[0], toEther(3000), ['0x'])
     assert.equal(fromEther(await strategy.canDeposit()), 0)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
     assert.equal(fromEther(await strategy.getMinDeposits()), 5000)
   })
 
   it('updateDeposits should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(400))
+    await stakingPool.deposit(accounts[0], toEther(400), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(200), toEther(200)])
 
     await stakingPool.updateStrategyRewards([0], '0x')
@@ -226,7 +226,7 @@ describe('SequencerVCS', () => {
   })
 
   it('updateDeposits should work correctly with slashing', async () => {
-    await stakingPool.deposit(accounts[0], toEther(400))
+    await stakingPool.deposit(accounts[0], toEther(400), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(200), toEther(200)])
 
     await metisLockingPool.addReward(2, toEther(100))
@@ -260,7 +260,7 @@ describe('SequencerVCS', () => {
   })
 
   it('updateDeposits should work correctly with reward withdrawals', async () => {
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x'])
     await metisLockingInfo.setMaxLock(toEther(100))
     await strategy.depositQueuedTokens(
       [0, 1, 2, 3, 4],
@@ -299,7 +299,7 @@ describe('SequencerVCS', () => {
   })
 
   it('handleIncomingL2Rewards should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x'])
     await strategy.depositQueuedTokens([0], [toEther(100)])
     await metisLockingInfo.setMaxLock(toEther(100))
 
@@ -324,7 +324,7 @@ describe('SequencerVCS', () => {
   })
 
   it('withdrawOperatorRewards should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(200))
+    await stakingPool.deposit(accounts[0], toEther(200), ['0x'])
     await strategy.depositQueuedTokens([0, 1], [toEther(100), toEther(100)])
 
     let vault = (await ethers.getContractAt('SequencerVault', vaults[0])) as SequencerVault
@@ -362,7 +362,7 @@ describe('SequencerVCS', () => {
   })
 
   it('setOperatorRewardPercentage should work correctly', async () => {
-    await stakingPool.deposit(accounts[0], toEther(300))
+    await stakingPool.deposit(accounts[0], toEther(300), ['0x'])
     await strategy.depositQueuedTokens([0], [toEther(300)])
 
     await expect(strategy.setOperatorRewardPercentage(10001)).to.be.revertedWith('FeesTooLarge()')

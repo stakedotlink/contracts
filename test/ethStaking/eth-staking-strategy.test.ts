@@ -57,7 +57,7 @@ describe('EthStakingStrategy', () => {
 
   async function stake(amount: number) {
     await wETH.wrap({ value: toEther(amount) })
-    await stakingPool.deposit(accounts[0], toEther(amount))
+    await stakingPool.deposit(accounts[0], toEther(amount), ['0x'])
   }
 
   before(async () => {
@@ -185,7 +185,7 @@ describe('EthStakingStrategy', () => {
   it('should not be able to withdraw from strategy', async () => {
     await stake(2)
     await assertThrowsAsync(async () => {
-      await stakingPool.withdraw(accounts[0], accounts[0], toEther(1))
+      await stakingPool.withdraw(accounts[0], accounts[0], toEther(1), ['0x'])
     }, 'revert')
   })
 

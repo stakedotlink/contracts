@@ -209,7 +209,7 @@ contract EthStakingStrategy is Strategy {
      * @notice deposits wETH from StakingPool into this strategy
      * @param _amount amount of wETH to deposit
      */
-    function deposit(uint256 _amount) external onlyStakingPool {
+    function deposit(uint256 _amount, bytes calldata) external onlyStakingPool {
         require(_amount <= canDeposit(), "Insufficient deposit room");
         token.transferFrom(address(stakingPool), address(this), _amount);
         totalDeposits += _amount;
@@ -221,7 +221,7 @@ contract EthStakingStrategy is Strategy {
      * @dev not implemented yet
      * @param _amount amount of ETH to withdraw
      */
-    function withdraw(uint256 _amount) external onlyStakingPool {
+    function withdraw(uint256 _amount, bytes calldata) external onlyStakingPool {
         revert("Not implemented yet");
     }
 

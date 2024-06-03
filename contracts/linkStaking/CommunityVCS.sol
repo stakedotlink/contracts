@@ -30,6 +30,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _fees list of fees to be paid on rewards
      * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
      * that can be deposited at once
+     * @param _vaultMaxDeposits maximum deposit limit for a single vault
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
      *
@@ -41,20 +42,34 @@ contract CommunityVCS is VaultControllerStrategy {
         address _vaultImplementation,
         Fee[] memory _fees,
         uint256 _maxDepositSizeBP,
+        uint256 _vaultMaxDeposits,
         uint128 _vaultDeploymentThreshold,
         uint128 _vaultDeploymentAmount
     ) public initializer {
-        __VaultControllerStrategy_init(
-            _token,
-            _stakingPool,
-            _stakeController,
-            _vaultImplementation,
-            _fees,
-            _maxDepositSizeBP
-        );
-        vaultDeploymentThreshold = _vaultDeploymentThreshold;
-        vaultDeploymentAmount = _vaultDeploymentAmount;
-        _deployVaults(_vaultDeploymentAmount);
+        if (address(token) == address(0)) {
+            __VaultControllerStrategy_init(
+                _token,
+                _stakingPool,
+                _stakeController,
+                _vaultImplementation,
+                _fees,
+                _maxDepositSizeBP,
+                _vaultMaxDeposits
+            );
+            vaultDeploymentThreshold = _vaultDeploymentThreshold;
+            vaultDeploymentAmount = _vaultDeploymentAmount;
+            _deployVaults(_vaultDeploymentAmount);
+            globalVaultState = GlobalVaultState(5, 0, 0, 0);
+        } else {
+            globalVaultState = GlobalVaultState(5, 0, 0, uint64(maxDepositSizeBP + 1));
+            maxDepositSizeBP = _maxDepositSizeBP;
+            delete withdrawalController;
+            vaultMaxDeposits = _vaultMaxDeposits;
+        }
+
+        for (uint64 i = 0; i < 5; ++i) {
+            vaultGroups.push(VaultGroup(i, 0));
+        }
     }
 
     /**
@@ -101,7 +116,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @dev used by chainlink keepers
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        return ((vaults.length - 1 - indexOfLastFullVault) < vaultDeploymentThreshold, bytes(""));
+        return ((vaults.length - globalVaultState.depositIndex) < vaultDeploymentThreshold, bytes(""));
     }
 
     /**
@@ -110,7 +125,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @dev used by chainlink keepers
      */
     function performUpkeep(bytes calldata) external {
-        if ((vaults.length - 1 - indexOfLastFullVault) >= vaultDeploymentThreshold) revert VaultsAboveThreshold();
+        if ((vaults.length - globalVaultState.depositIndex) >= vaultDeploymentThreshold) revert VaultsAboveThreshold();
         _deployVaults(vaultDeploymentAmount);
     }
 
