@@ -19,7 +19,13 @@ import {
 } from '../../typechain-types'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
+const unbondingPeriod = 28 * 86400
+const claimPeriod = 7 * 86400
+
 const encode = (data: any) => ethers.AbiCoder.defaultAbiCoder().encode(['uint'], [data])
+const encodeVaults = (vaults: number[]) => {
+  return ethers.AbiCoder.defaultAbiCoder().encode(['uint64[]'], [vaults])
+}
 
 describe('OperatorVCS', () => {
   async function deployFixture() {
@@ -44,6 +50,8 @@ describe('OperatorVCS', () => {
       toEther(10),
       toEther(100),
       toEther(10000000),
+      unbondingPeriod,
+      claimPeriod,
     ])) as StakingMock
     adrs.stakingController = await stakingController.getAddress()
 
@@ -69,6 +77,7 @@ describe('OperatorVCS', () => {
       vaultImplementation,
       [[accounts[4], 500]],
       9000,
+      toEther(100),
       1000,
     ])) as OperatorVCS
     adrs.strategy = await strategy.getAddress()
@@ -86,7 +95,7 @@ describe('OperatorVCS', () => {
     await token.approve(adrs.stakingPool, ethers.MaxUint256)
     await token.transfer(adrs.rewardsController, toEther(10000))
     await token.transfer(adrs.pfAlertsController, toEther(10000))
-    await stakingPool.deposit(accounts[0], 1000)
+    await stakingPool.deposit(accounts[0], 1000, [encodeVaults([])])
 
     return {
       signers,
@@ -150,7 +159,7 @@ describe('OperatorVCS', () => {
     const { accounts, strategy, stakingController, stakingPool } = await loadFixture(deployFixture)
 
     await stakingController.setDepositLimits(toEther(1000), toEther(75000))
-    await stakingPool.deposit(accounts[0], toEther(750000))
+    await stakingPool.deposit(accounts[0], toEther(750000), [encodeVaults([])])
     assert.equal(fromEther(await strategy.canDeposit()), 375000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 1125000)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
@@ -170,7 +179,7 @@ describe('OperatorVCS', () => {
     const { accounts, adrs, strategy, stakingPool, rewardsController, token, vaults } =
       await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(400))
+    await stakingPool.deposit(accounts[0], toEther(400), [encodeVaults([])])
 
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 400)
@@ -206,7 +215,7 @@ describe('OperatorVCS', () => {
       deployFixture
     )
 
-    await stakingPool.deposit(accounts[0], toEther(400))
+    await stakingPool.deposit(accounts[0], toEther(400), [encodeVaults([])])
     await rewardsController.setReward(vaults[2], toEther(100))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 500)
@@ -241,8 +250,8 @@ describe('OperatorVCS', () => {
     const { accounts, adrs, strategy, stakingPool, rewardsController, token, vaults } =
       await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(1000))
-    await stakingPool.withdraw(accounts[0], accounts[0], 1000)
+    await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
+    await stakingPool.withdraw(accounts[0], accounts[0], 1000, [encodeVaults([])])
     await rewardsController.setReward(vaults[1], toEther(5))
     await rewardsController.setReward(vaults[3], toEther(7))
     await rewardsController.setReward(vaults[5], toEther(8))
@@ -266,7 +275,7 @@ describe('OperatorVCS', () => {
     const { signers, accounts, adrs, strategy, stakingPool, rewardsController, vaults } =
       await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(10))
+    await stakingPool.deposit(accounts[0], toEther(10), [encodeVaults([])])
 
     let vault = (await ethers.getContractAt('OperatorVault', vaults[0])) as OperatorVault
 
@@ -309,7 +318,7 @@ describe('OperatorVCS', () => {
       strategy,
       'InvalidPercentage()'
     )
-    await stakingPool.deposit(accounts[0], toEther(300))
+    await stakingPool.deposit(accounts[0], toEther(300), [encodeVaults([])])
     await rewardsController.setReward(vaults[1], toEther(100))
     await strategy.setOperatorRewardPercentage(5000)
     assert.equal(Number(await strategy.operatorRewardPercentage()), 5000)

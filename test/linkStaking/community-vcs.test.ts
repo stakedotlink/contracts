@@ -12,6 +12,13 @@ import {
 import { ERC677, CommunityVCS, StakingMock, StakingRewardsMock } from '../../typechain-types'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
+const unbondingPeriod = 28 * 86400
+const claimPeriod = 7 * 86400
+
+const encodeVaults = (vaults: number[]) => {
+  return ethers.AbiCoder.defaultAbiCoder().encode(['uint64[]'], [vaults])
+}
+
 describe('CommunityVCS', () => {
   async function deployFixture() {
     const { accounts } = await getAccounts()
@@ -36,6 +43,8 @@ describe('CommunityVCS', () => {
       toEther(10),
       toEther(100),
       toEther(10000),
+      unbondingPeriod,
+      claimPeriod,
     ])) as StakingMock
     adrs.stakingController = await stakingController.getAddress()
 
@@ -48,6 +57,7 @@ describe('CommunityVCS', () => {
       vaultImplementation,
       [[accounts[4], 500]],
       9000,
+      toEther(10000),
       10,
       20,
     ])) as CommunityVCS
@@ -77,26 +87,26 @@ describe('CommunityVCS', () => {
   it('checkUpkeep should work correctly', async () => {
     const { strategy } = await loadFixture(deployFixture)
 
-    await strategy.deposit(toEther(1000))
+    await strategy.deposit(toEther(1000), encodeVaults([]))
     assert.equal((await strategy.checkUpkeep('0x'))[0], false)
 
-    await strategy.deposit(toEther(90))
+    await strategy.deposit(toEther(90), encodeVaults([]))
     assert.equal((await strategy.checkUpkeep('0x'))[0], false)
 
-    await strategy.deposit(toEther(10))
+    await strategy.deposit(toEther(10), encodeVaults([]))
     assert.equal((await strategy.checkUpkeep('0x'))[0], true)
   })
 
   it('performUpkeep should work correctly', async () => {
     const { strategy } = await loadFixture(deployFixture)
 
-    await strategy.deposit(toEther(1000))
+    await strategy.deposit(toEther(1000), encodeVaults([]))
     expect(strategy.performUpkeep('0x')).to.be.revertedWith('VaultsAboveThreshold()')
 
-    await strategy.deposit(toEther(90))
+    await strategy.deposit(toEther(90), encodeVaults([]))
     expect(strategy.performUpkeep('0x')).to.be.revertedWith('VaultsAboveThreshold()')
 
-    await strategy.deposit(toEther(10))
+    await strategy.deposit(toEther(10), encodeVaults([]))
     await strategy.performUpkeep('0x')
     assert.equal((await strategy.getVaults()).length, 40)
     assert.equal((await strategy.checkUpkeep('0x'))[0], false)
@@ -106,7 +116,7 @@ describe('CommunityVCS', () => {
     const { adrs, strategy, rewardsController, token } = await loadFixture(deployFixture)
 
     let vaults = await strategy.getVaults()
-    await strategy.deposit(toEther(1000))
+    await strategy.deposit(toEther(1000), encodeVaults([]))
     await rewardsController.setReward(vaults[1], toEther(5))
     await rewardsController.setReward(vaults[3], toEther(7))
     await rewardsController.setReward(vaults[5], toEther(8))
