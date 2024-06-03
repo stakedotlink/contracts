@@ -159,7 +159,7 @@ describe('EthStakingStrategy', () => {
 
     async function stake(amount: number) {
       await wETH.wrap({ value: toEther(amount) })
-      await stakingPool.deposit(accounts[0], toEther(amount))
+      await stakingPool.deposit(accounts[0], toEther(amount), ['0x'])
     }
 
     await strategy.setNWLOperatorController(adrs.nwlOperatorController)
@@ -203,9 +203,9 @@ describe('EthStakingStrategy', () => {
     const { accounts, stakingPool, stake } = await loadFixture(deployFixture)
 
     await stake(2)
-    await expect(stakingPool.withdraw(accounts[0], accounts[0], toEther(1))).to.be.revertedWith(
-      'Not enough liquidity available to withdraw'
-    )
+    await expect(
+      stakingPool.withdraw(accounts[0], accounts[0], toEther(1), ['0x'])
+    ).to.be.revertedWith('Not enough liquidity available to withdraw')
   })
 
   it('depositEther should work correctly', async () => {

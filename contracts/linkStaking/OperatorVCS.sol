@@ -23,7 +23,6 @@ contract OperatorVCS is VaultControllerStrategy {
     event SetOperatorRewardPercentage(uint256 rewardPercentage);
 
     error InvalidPercentage();
-    error SenderNotAuthorized();
     error UnauthorizedToken();
     error NoExtraRewards();
 
@@ -41,6 +40,7 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _fees list of fees to be paid on rewards
      * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
      * that can be deposited at once
+     * @param _vaultMaxDeposits maximum deposit limit for a single vault
      * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
      **/
     function initialize(
@@ -50,6 +50,7 @@ contract OperatorVCS is VaultControllerStrategy {
         address _vaultImplementation,
         Fee[] memory _fees,
         uint256 _maxDepositSizeBP,
+        uint256 _vaultMaxDeposits,
         uint256 _operatorRewardPercentage
     ) public reinitializer(3) {
         if (address(token) == address(0)) {
@@ -59,19 +60,22 @@ contract OperatorVCS is VaultControllerStrategy {
                 _stakeController,
                 _vaultImplementation,
                 _fees,
-                _maxDepositSizeBP
+                _maxDepositSizeBP,
+                _vaultMaxDeposits
             );
 
             if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
             operatorRewardPercentage = _operatorRewardPercentage;
+            globalVaultState = GlobalVaultState(5, 0, 0, 0);
         } else {
-            uint256 totalPrincipal;
-            uint256 numVaults = vaults.length;
-            for (uint256 i = 0; i < numVaults; ++i) {
-                totalPrincipal += vaults[i].getPrincipalDeposits();
-            }
-            totalPrincipalDeposits = totalPrincipal;
-            preRelease = true;
+            globalVaultState = GlobalVaultState(5, 0, 0, uint64(maxDepositSizeBP + 1));
+            maxDepositSizeBP = _maxDepositSizeBP;
+            delete withdrawalController;
+            vaultMaxDeposits = _vaultMaxDeposits;
+        }
+
+        for (uint64 i = 0; i < 5; ++i) {
+            vaultGroups.push(VaultGroup(i, 0));
         }
     }
 
