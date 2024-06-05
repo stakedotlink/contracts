@@ -70,7 +70,7 @@ contract OperatorVCS is VaultControllerStrategy {
         } else {
             globalVaultState = GlobalVaultState(5, 0, 0, uint64(maxDepositSizeBP + 1));
             maxDepositSizeBP = _maxDepositSizeBP;
-            delete withdrawalController;
+            delete fundFlowController;
             vaultMaxDeposits = _vaultMaxDeposits;
         }
 

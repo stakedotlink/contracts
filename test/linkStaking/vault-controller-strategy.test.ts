@@ -17,7 +17,7 @@ import {
   CommunityVault,
   StakingRewardsMock,
   CommunityVaultV2Mock,
-  WithdrawalController,
+  FundFlowController,
 } from '../../typechain-types'
 import { Interface } from 'ethers'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
@@ -100,23 +100,23 @@ describe('VaultControllerStrategy', () => {
     await strategy.addVaults(vaults)
     await token.approve(adrs.strategy, ethers.MaxUint256)
 
-    const withdrawalController = (await deployUpgradeable('WithdrawalController', [
+    const fundFlowController = (await deployUpgradeable('FundFlowController', [
       adrs.strategy,
       adrs.strategy2,
       unbondingPeriod,
       claimPeriod,
       5,
-    ])) as WithdrawalController
-    adrs.withdrawalController = await withdrawalController.getAddress()
+    ])) as FundFlowController
+    adrs.fundFlowController = await fundFlowController.getAddress()
 
-    await strategy.setWithdrawalController(withdrawalController.address)
-    await strategy2.setWithdrawalController(withdrawalController.address)
+    await strategy.setFundFlowController(fundFlowController.address)
+    await strategy2.setFundFlowController(fundFlowController.address)
 
     async function updateVaultGroups(
       curGroupVaultsToUnbond: number[],
       nextGroupVaultsTotalUnbonded: number
     ) {
-      return await withdrawalController.executeUpdate(
+      return await fundFlowController.executeUpdate(
         ethers.AbiCoder.defaultAbiCoder().encode(
           ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
           [curGroupVaultsToUnbond, toEther(nextGroupVaultsTotalUnbonded), [], 0]
@@ -134,7 +134,7 @@ describe('VaultControllerStrategy', () => {
       strategy2,
       vaults,
       vaultContracts,
-      withdrawalController,
+      fundFlowController,
       updateVaultGroups,
     }
   }
@@ -202,12 +202,6 @@ describe('VaultControllerStrategy', () => {
     await strategy.withdraw(toEther(200), encodeVaults([4, 9]))
 
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 460)
-
-    //0 - 250
-    //1 - 30
-    //2 - 100
-    //3 - 80
-    //4 - 0
 
     await strategy.deposit(toEther(50), encodeVaults([0, 1, 6]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 510)
