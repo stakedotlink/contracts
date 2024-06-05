@@ -10,7 +10,7 @@ import "../../core/interfaces/IERC677.sol";
 import "../../core/base/Strategy.sol";
 import "../interfaces/IVault.sol";
 import "../interfaces/IStaking.sol";
-import "../interfaces/IWithdrawalController.sol";
+import "../interfaces/IFundFlowController.sol";
 
 /**
  * @title Vault Controller Strategy
@@ -47,7 +47,7 @@ abstract contract VaultControllerStrategy is Strategy {
 
     uint256 public maxDepositSizeBP;
 
-    IWithdrawalController public withdrawalController;
+    IFundFlowController public fundFlowController;
     uint256 internal totalUnbonded;
 
     VaultGroup[] public vaultGroups;
@@ -107,8 +107,8 @@ abstract contract VaultControllerStrategy is Strategy {
         vaultMaxDeposits = _vaultMaxDeposits;
     }
 
-    modifier onlyWithdrawalController() {
-        if (msg.sender != address(withdrawalController)) revert SenderNotAuthorized();
+    modifier onlyFundFlowController() {
+        if (msg.sender != address(fundFlowController)) revert SenderNotAuthorized();
         _;
     }
 
@@ -163,7 +163,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice withdrawals are not yet implemented
      */
     function withdraw(uint256 _amount, bytes calldata _data) external onlyStakingPool {
-        if (!withdrawalController.claimPeriodActive() || _amount > totalUnbonded)
+        if (!fundFlowController.claimPeriodActive() || _amount > totalUnbonded)
             revert InsufficientTokensUnbonded();
 
         GlobalVaultState memory globalState = globalVaultState;
@@ -217,7 +217,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256[] calldata _curGroupVaultsToUnbond,
         uint256 _nextGroup,
         uint256 _nextGroupTotalUnbonded
-    ) external onlyWithdrawalController {
+    ) external onlyFundFlowController {
         for (uint256 i = 0; i < _curGroupVaultsToUnbond.length; ++i) {
             vaults[_curGroupVaultsToUnbond[i]].unbond();
         }
@@ -331,9 +331,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function getMinDeposits() public view virtual override returns (uint256) {
         return
-            withdrawalController.claimPeriodActive()
-                ? totalDeposits - totalUnbonded
-                : totalDeposits;
+            fundFlowController.claimPeriodActive() ? totalDeposits - totalUnbonded : totalDeposits;
     }
 
     /**
@@ -434,10 +432,10 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice sets the address authorized to unbond tokens in the Chainlink staking contract
-     * @param _withdrawalController address of withdrawal controller
+     * @param _fundFlowController address of fund flow controller
      */
-    function setWithdrawalController(address _withdrawalController) external onlyOwner {
-        withdrawalController = IWithdrawalController(_withdrawalController);
+    function setFundFlowController(address _fundFlowController) external onlyOwner {
+        fundFlowController = IFundFlowController(_fundFlowController);
     }
 
     /**
