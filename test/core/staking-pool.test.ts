@@ -25,11 +25,15 @@ describe('StakingPool', () => {
 
   async function stake(account: number, amount: number) {
     await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-    await stakingPool.deposit(accounts[account], toEther(amount))
+    await stakingPool.deposit(accounts[account], toEther(amount), ['0x', '0x', '0x'])
   }
 
   async function withdraw(account: number, amount: number) {
-    await stakingPool.withdraw(accounts[account], accounts[account], toEther(amount))
+    await stakingPool.withdraw(accounts[account], accounts[account], toEther(amount), [
+      '0x',
+      '0x',
+      '0x',
+    ])
   }
 
   before(async () => {
@@ -83,7 +87,7 @@ describe('StakingPool', () => {
     await stakingPool.setRebaseController(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
-    await stakingPool.deposit(accounts[0], 1000)
+    await stakingPool.deposit(accounts[0], 1000, ['0x', '0x'])
   })
 
   it('derivative token metadata should be correct', async () => {
@@ -139,7 +143,7 @@ describe('StakingPool', () => {
   })
 
   it('should be able to remove strategies', async () => {
-    await stakingPool.removeStrategy(1, '0x')
+    await stakingPool.removeStrategy(1, '0x', '0x')
     let strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
@@ -147,7 +151,7 @@ describe('StakingPool', () => {
       'Remaining strategies incorrect'
     )
 
-    await stakingPool.removeStrategy(1, '0x')
+    await stakingPool.removeStrategy(1, '0x', '0x')
     strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
@@ -158,7 +162,7 @@ describe('StakingPool', () => {
 
   it('should not be able remove nonexistent strategy', async () => {
     await assertThrowsAsync(async () => {
-      await stakingPool.removeStrategy(3, '0x')
+      await stakingPool.removeStrategy(3, '0x', '0x')
     }, 'revert')
   })
 
@@ -188,27 +192,27 @@ describe('StakingPool', () => {
 
   it('should be able to deposit into strategy', async () => {
     await token.transfer(stakingPool.address, toEther(1000))
-    await stakingPool.strategyDeposit(0, toEther(300))
+    await stakingPool.strategyDeposit(0, toEther(300), '0x')
     assert.equal(fromEther(await token.balanceOf(strategy1.address)), 300, 'Tokens not deposited')
   })
 
   it('should not be able to deposit into nonexistent strategy', async () => {
     await token.transfer(stakingPool.address, toEther(1000))
     await assertThrowsAsync(async () => {
-      await stakingPool.strategyDeposit(3, toEther(1))
+      await stakingPool.strategyDeposit(3, toEther(1), '0x')
     }, 'revert')
   })
 
   it('should be able to withdraw from strategy', async () => {
     await token.transfer(stakingPool.address, toEther(1000))
-    await stakingPool.strategyDeposit(0, toEther(300))
-    await stakingPool.strategyWithdraw(0, toEther(100))
+    await stakingPool.strategyDeposit(0, toEther(300), '0x')
+    await stakingPool.strategyWithdraw(0, toEther(100), '0x')
     assert.equal(fromEther(await token.balanceOf(strategy1.address)), 200, 'Tokens not withdrawn')
   })
 
   it('should not be able to withdraw from nonexistent strategy', async () => {
     await assertThrowsAsync(async () => {
-      await stakingPool.strategyWithdraw(3, toEther(1))
+      await stakingPool.strategyWithdraw(3, toEther(1), '0x')
     }, 'revert')
   })
 
@@ -307,7 +311,7 @@ describe('StakingPool', () => {
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
-    await stakingPool.strategyWithdraw(0, toEther(100))
+    await stakingPool.strategyWithdraw(0, toEther(100), '0x')
     await withdraw(3, 2000)
     assert.equal(
       fromEther(await token.balanceOf(strategy1.address)),

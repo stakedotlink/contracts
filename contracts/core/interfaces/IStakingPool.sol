@@ -4,17 +4,30 @@ pragma solidity 0.8.15;
 import "./IStakingRewardsPool.sol";
 
 interface IStakingPool is IStakingRewardsPool {
-    function deposit(address _account, uint256 _amount) external;
+    function deposit(
+        address _account,
+        uint256 _amount,
+        bytes[] calldata _data
+    ) external;
 
     function withdraw(
         address _account,
         address _receiver,
-        uint256 _amount
+        uint256 _amount,
+        bytes[] calldata _data
     ) external;
 
-    function strategyDeposit(uint256 _index, uint256 _amount) external;
+    function strategyDeposit(
+        uint256 _index,
+        uint256 _amount,
+        bytes calldata _data
+    ) external;
 
-    function strategyWithdraw(uint256 _index, uint256 _amount) external;
+    function strategyWithdraw(
+        uint256 _index,
+        uint256 _amount,
+        bytes calldata _data
+    ) external;
 
     function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external;
 

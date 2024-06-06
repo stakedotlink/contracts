@@ -2,9 +2,9 @@
 pragma solidity 0.8.15;
 
 interface IStrategy {
-    function deposit(uint256 _amount) external;
+    function deposit(uint256 _amount, bytes calldata _data) external;
 
-    function withdraw(uint256 _amount) external;
+    function withdraw(uint256 _amount, bytes calldata _data) external;
 
     function updateDeposits(bytes calldata _data)
         external
