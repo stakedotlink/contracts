@@ -191,7 +191,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev can receive both asset tokens (deposit) and LSD tokens (withdrawal)
      * @param _sender of the token transfer
      * @param _value of the token transfer
-     * @param _calldata encoded shouldQueue (bool)
+     * @param _calldata encoded shouldQueue (bool) and calldata to pass to staking pool (bytes[])
      **/
     function onTokenTransfer(
         address _sender,
@@ -200,12 +200,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     ) external {
         if (_value == 0) revert InvalidValue();
 
-        bool shouldQueue = abi.decode(_calldata, (bool));
+        (bool shouldQueue, bytes[] memory data) = abi.decode(_calldata, (bool, bytes[]));
 
         if (msg.sender == address(token)) {
-            _deposit(_sender, _value, shouldQueue);
+            _deposit(_sender, _value, shouldQueue, data);
         } else if (msg.sender == address(stakingPool)) {
-            uint256 amountQueued = _withdraw(_sender, _value, shouldQueue);
+            uint256 amountQueued = _withdraw(_sender, _value, shouldQueue, data);
             token.safeTransfer(_sender, _value - amountQueued);
         } else {
             revert UnauthorizedToken();
@@ -216,11 +216,16 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice deposits asset tokens into the staking pool and/or queue
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued if there's no room in the staking pool
+     * @param _data optional deposit data passed to staking pool
      */
-    function deposit(uint256 _amount, bool _shouldQueue) external {
+    function deposit(
+        uint256 _amount,
+        bool _shouldQueue,
+        bytes[] calldata _data
+    ) external {
         if (_amount == 0) revert InvalidAmount();
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        _deposit(msg.sender, _amount, _shouldQueue);
+        _deposit(msg.sender, _amount, _shouldQueue, _data);
     }
 
     /**
@@ -233,6 +238,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _merkleProof merkle proof for sender's merkle tree entry
      * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the full withdrawal amount cannot be satisfied
+     * @param _data optional withdrawal data passed to staking pool
      */
     function withdraw(
         uint256 _amountToWithdraw,
@@ -240,7 +246,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 _sharesAmount,
         bytes32[] calldata _merkleProof,
         bool _shouldUnqueue,
-        bool _shouldQueueWithdrawal
+        bool _shouldQueueWithdrawal,
+        bytes[] calldata _data
     ) external {
         if (_amountToWithdraw == 0) revert InvalidAmount();
 
@@ -271,7 +278,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         if (toWithdraw != 0) {
             IERC20Upgradeable(address(stakingPool)).safeTransferFrom(account, address(this), toWithdraw);
-            toWithdraw = _withdraw(account, toWithdraw, _shouldQueueWithdrawal);
+            toWithdraw = _withdraw(account, toWithdraw, _shouldQueueWithdrawal, _data);
         }
 
         token.safeTransfer(account, _amountToWithdraw - toWithdraw);
@@ -343,13 +350,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
      * @param _queueDepositMin min amount of tokens required for strategy deposit
      * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
+     * @param _data optional deposit data passed to staking pool
      */
     function depositQueuedTokens(
         uint256 _withdrawalPoolDepositMin,
         uint256 _queueDepositMin,
-        uint256 _queueDepositMax
+        uint256 _queueDepositMax,
+        bytes[] calldata _data
     ) external {
-        _depositQueuedTokens(_withdrawalPoolDepositMin, _queueDepositMin, _queueDepositMax);
+        _depositQueuedTokens(_withdrawalPoolDepositMin, _queueDepositMin, _queueDepositMax, _data);
     }
 
     /**
@@ -377,8 +386,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * pool deposit minimums
      * @dev used by chainlink keepers
      */
-    function performUpkeep(bytes calldata) external {
-        _depositQueuedTokens(withdrawalPoolDepositMin, queueDepositMin, queueDepositMax);
+    function performUpkeep(bytes calldata _performData) external {
+        bytes[] memory depositData = abi.decode(_performData, (bytes[]));
+
+        _depositQueuedTokens(withdrawalPoolDepositMin, queueDepositMin, queueDepositMax, depositData);
     }
 
     /**
@@ -514,11 +525,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _account account to deposit for
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued
+     * @param _data optional deposit data passed to staking pool
      **/
     function _deposit(
         address _account,
         uint256 _amount,
-        bool _shouldQueue
+        bool _shouldQueue,
+        bytes[] memory _data
     ) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
@@ -536,7 +549,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 uint256 canDeposit = stakingPool.canDeposit();
                 if (canDeposit != 0) {
                     uint256 toDepositIntoPool = toDeposit <= canDeposit ? toDeposit : canDeposit;
-                    stakingPool.deposit(_account, toDepositIntoPool);
+                    stakingPool.deposit(_account, toDepositIntoPool, _data);
                     toDeposit -= toDepositIntoPool;
                 }
             }
@@ -564,12 +577,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
+     * @param _data optional withdrawal data passed to staking pool
      * @return the amount of tokens that were queued for withdrawal
      **/
     function _withdraw(
         address _account,
         uint256 _amount,
-        bool _shouldQueueWithdrawal
+        bool _shouldQueueWithdrawal,
+        bytes[] memory _data
     ) internal returns (uint256) {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
@@ -588,7 +603,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             if (toWithdraw != 0) {
                 uint256 toWithdrawFromPool = MathUpgradeable.min(stakingPool.canWithdraw(), toWithdraw);
                 if (toWithdrawFromPool != 0) {
-                    stakingPool.withdraw(address(this), address(this), toWithdrawFromPool);
+                    stakingPool.withdraw(address(this), address(this), toWithdrawFromPool, _data);
                     toWithdraw -= toWithdrawFromPool;
                 }
             }
@@ -609,11 +624,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
      * @param _depositMin min amount of tokens required to deposit
      * @param _depositMax max amount of tokens that can be deposited into strategies at once
+     * @param _data optional deposit data passed to staking pool
      **/
     function _depositQueuedTokens(
         uint256 _withdrawalPoolDepositMin,
         uint256 _depositMin,
-        uint256 _depositMax
+        uint256 _depositMax,
+        bytes[] memory _data
     ) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
@@ -648,7 +665,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 _depositMax - toDepositFromStakingPool
             );
 
-            stakingPool.deposit(address(this), toDepositFromQueue);
+            stakingPool.deposit(address(this), toDepositFromQueue, _data);
             _totalQueued -= toDepositFromQueue;
 
             emit DepositTokens(toDepositIntoWithdrawalPool, toDepositFromStakingPool, toDepositFromQueue);
