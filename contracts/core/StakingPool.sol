@@ -83,16 +83,21 @@ contract StakingPool is StakingRewardsPool {
      * @notice stakes asset tokens and mints liquid staking tokens
      * @param _account account to stake for
      * @param _amount amount to stake
+     * @param _data optional deposit data passed to strategies
      **/
-    function deposit(address _account, uint256 _amount) external onlyPriorityPool {
+    function deposit(
+        address _account,
+        uint256 _amount,
+        bytes[] calldata _data
+    ) external onlyPriorityPool {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
         if (_amount > 0) {
             token.safeTransferFrom(msg.sender, address(this), _amount);
-            depositLiquidity();
+            depositLiquidity(_data);
             _mint(_account, _amount);
             totalStaked += _amount;
         } else {
-            depositLiquidity();
+            depositLiquidity(_data);
         }
     }
 
@@ -102,11 +107,13 @@ contract StakingPool is StakingRewardsPool {
      * @param _account account to withdraw for
      * @param _receiver address to receive withdrawal
      * @param _amount amount to withdraw
+     * @param _data optional withdrawal data passed to strategies
      **/
     function withdraw(
         address _account,
         address _receiver,
-        uint256 _amount
+        uint256 _amount,
+        bytes[] calldata _data
     ) external onlyPriorityPool {
         uint256 toWithdraw = _amount;
         if (_amount == type(uint256).max) {
@@ -115,7 +122,7 @@ contract StakingPool is StakingRewardsPool {
 
         uint256 balance = token.balanceOf(address(this));
         if (toWithdraw > balance) {
-            _withdrawLiquidity(toWithdraw - balance);
+            _withdrawLiquidity(toWithdraw - balance, _data);
         }
         require(
             token.balanceOf(address(this)) >= toWithdraw,
@@ -131,20 +138,30 @@ contract StakingPool is StakingRewardsPool {
      * @notice deposits assets into a strategy
      * @param _index index of strategy
      * @param _amount amount to deposit
+     * @param _data optional deposit data passed to strategy
      **/
-    function strategyDeposit(uint256 _index, uint256 _amount) external onlyOwner {
+    function strategyDeposit(
+        uint256 _index,
+        uint256 _amount,
+        bytes calldata _data
+    ) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
-        IStrategy(strategies[_index]).deposit(_amount);
+        IStrategy(strategies[_index]).deposit(_amount, _data);
     }
 
     /**
      * @notice withdraws assets from a strategy
      * @param _index index of strategy
      * @param _amount amount to withdraw
+     * @param _data optional withdrawal data passed to strategy
      **/
-    function strategyWithdraw(uint256 _index, uint256 _amount) external onlyOwner {
+    function strategyWithdraw(
+        uint256 _index,
+        uint256 _amount,
+        bytes calldata _data
+    ) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
-        IStrategy(strategies[_index]).withdraw(_amount);
+        IStrategy(strategies[_index]).withdraw(_amount, _data);
     }
 
     /**
@@ -244,9 +261,14 @@ contract StakingPool is StakingRewardsPool {
     /**
      * @notice removes a strategy
      * @param _index index of strategy
-     * @param _strategyUpdateData encoded data to be passed to strategy
+     * @param _strategyUpdateData optional update data passed to strategy
+     * @param _strategyWithdrawalData optional withdrawal data passed to strategy
      **/
-    function removeStrategy(uint256 _index, bytes memory _strategyUpdateData) external onlyOwner {
+    function removeStrategy(
+        uint256 _index,
+        bytes memory _strategyUpdateData,
+        bytes calldata _strategyWithdrawalData
+    ) external onlyOwner {
         require(_index < strategies.length, "Strategy does not exist");
 
         uint256[] memory idxs = new uint256[](1);
@@ -256,7 +278,7 @@ contract StakingPool is StakingRewardsPool {
         IStrategy strategy = IStrategy(strategies[_index]);
         uint256 totalStrategyDeposits = strategy.getTotalDeposits();
         if (totalStrategyDeposits > 0) {
-            strategy.withdraw(totalStrategyDeposits);
+            strategy.withdraw(totalStrategyDeposits, _strategyWithdrawalData);
         }
 
         for (uint256 i = _index; i < strategies.length - 1; i++) {
@@ -364,19 +386,20 @@ contract StakingPool is StakingRewardsPool {
 
     /**
      * @notice deposits available liquidity into strategies by order of priority
+     * @param _data optional call data passed to strategies
      * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
      **/
-    function depositLiquidity() public {
+    function depositLiquidity(bytes[] calldata _data) public {
         uint256 toDeposit = token.balanceOf(address(this));
         if (toDeposit > 0) {
             for (uint256 i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
                 uint256 strategyCanDeposit = strategy.canDeposit();
                 if (strategyCanDeposit >= toDeposit) {
-                    strategy.deposit(toDeposit);
+                    strategy.deposit(toDeposit, _data[i]);
                     break;
                 } else if (strategyCanDeposit > 0) {
-                    strategy.deposit(strategyCanDeposit);
+                    strategy.deposit(strategyCanDeposit, _data[i]);
                     toDeposit -= strategyCanDeposit;
                 }
             }
@@ -433,8 +456,9 @@ contract StakingPool is StakingRewardsPool {
      * @dev withdraws from strategies[strategies.length - 1], then strategies[strategies.length - 2], and so on
      * until withdraw amount is reached
      * @param _amount amount to withdraw
+     * @param _data optional call data passed to strategies
      **/
-    function _withdrawLiquidity(uint256 _amount) private {
+    function _withdrawLiquidity(uint256 _amount, bytes[] calldata _data) private {
         uint256 toWithdraw = _amount;
 
         for (uint256 i = strategies.length; i > 0; i--) {
@@ -442,10 +466,10 @@ contract StakingPool is StakingRewardsPool {
             uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
 
             if (strategyCanWithdrawdraw >= toWithdraw) {
-                strategy.withdraw(toWithdraw);
+                strategy.withdraw(toWithdraw, _data[i - 1]);
                 break;
             } else if (strategyCanWithdrawdraw > 0) {
-                strategy.withdraw(strategyCanWithdrawdraw);
+                strategy.withdraw(strategyCanWithdrawdraw, _data[i - 1]);
                 toWithdraw -= strategyCanWithdrawdraw;
             }
         }
