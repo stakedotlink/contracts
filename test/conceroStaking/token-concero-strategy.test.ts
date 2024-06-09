@@ -10,7 +10,7 @@ import {
 } from '../../typechain-types'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 
-describe('ConceroStrategy', () => {
+describe('TokenConceroStrategy', () => {
   let token: ERC20
   let conceroPool: ConceroPoolMock
   let strategy: ConceroStrategy
@@ -40,7 +40,7 @@ describe('ConceroStrategy', () => {
 
     withdrawalPool = (await deploy('WithdrawalPoolMock', [toEther(100)])) as WithdrawalPoolMock
 
-    strategy = (await deployUpgradeable('ConceroStrategy', [
+    strategy = (await deployUpgradeable('TokenConceroStrategy', [
       token.address,
       stakingPool.address,
       conceroPool.address,
@@ -144,9 +144,6 @@ describe('ConceroStrategy', () => {
 
     await conceroPool.addReward(strategy.address, token.address, toEther(50))
     assert.equal(fromEther(await strategy.getDepositChange()), 150)
-
-    await token.transfer(strategy.address, toEther(25))
-    assert.equal(fromEther(await strategy.getDepositChange()), 175)
 
     await stakingPool.updateStrategyRewards([0], '0x')
     await conceroPool.addReward(strategy.address, token.address, toEther(50))

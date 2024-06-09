@@ -4,16 +4,16 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../core/interfaces/IERC677.sol";
-import "../core/base/Strategy.sol";
-import "../core/interfaces/IWithdrawalPool.sol";
-import "./interfaces/IConceroPool.sol";
+import "../../core/interfaces/IERC677.sol";
+import "../../core/base/Strategy.sol";
+import "../../core/interfaces/IWithdrawalPool.sol";
+import "../interfaces/IConceroPool.sol";
 
 /**
  * @title Concero Strategy
- * @notice Manages deposits in the Concero pool
+ * @notice Base strategy contract that manages deposits in the Concero pool
  */
-contract ConceroStrategy is Strategy {
+abstract contract ConceroStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IConceroPool public conceroPool;
@@ -33,11 +33,6 @@ contract ConceroStrategy is Strategy {
     error InsufficientQueuedWithdrawals();
     error UnnecessaryRequest();
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     /**
      * @notice initializes contract
      * @param _token address of asset token
@@ -48,7 +43,7 @@ contract ConceroStrategy is Strategy {
      * @param _minTimeBetweenWithdrawalRequests mimimum time between withdrawal requests
      * @param _withdrawalRequestThreshold minimum amount of queued withdrawals needed to request a withdrawal
      **/
-    function initialize(
+    function __ConceroStrategy_init(
         address _token,
         address _stakingPool,
         address _conceroPool,
@@ -56,39 +51,13 @@ contract ConceroStrategy is Strategy {
         uint256 _maxDeposits,
         uint64 _minTimeBetweenWithdrawalRequests,
         uint128 _withdrawalRequestThreshold
-    ) public initializer {
+    ) public onlyInitializing {
         __Strategy_init(_token, _stakingPool);
         conceroPool = IConceroPool(_conceroPool);
-        token.safeApprove(_conceroPool, type(uint256).max);
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
         maxDeposits = _maxDeposits;
         minTimeBetweenWithdrawalRequests = _minTimeBetweenWithdrawalRequests;
         withdrawalRequestThreshold = _withdrawalRequestThreshold;
-    }
-
-    /**
-     * @notice deposits tokens from the staking pool into the Concero pool
-     * @dev reverts if sender is not stakingPool
-     * @param _amount amount to deposit
-     */
-    function deposit(uint256 _amount, bytes calldata) external onlyStakingPool {
-        token.safeTransferFrom(msg.sender, address(this), _amount);
-        conceroPool.depositToken(address(token), _amount);
-        totalDeposits += _amount;
-    }
-
-    /**
-     * @notice withdraws tokens from the Concero pool and sends them to the staking pool
-     * @dev reverts if sender is not stakingPool
-     * @param _amount amount to withdraw
-     */
-    function withdraw(uint256 _amount, bytes calldata) external onlyStakingPool {
-        uint256 availableBalance = conceroPool.availableToWithdraw(address(token));
-        if (_amount > availableBalance) revert InsufficientAvailableBalance();
-
-        totalDeposits -= _amount;
-        conceroPool.withdrawLiquidityRequest(address(token), _amount);
-        token.safeTransfer(msg.sender, _amount);
     }
 
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
@@ -96,7 +65,7 @@ contract ConceroStrategy is Strategy {
 
         uint256 totalQueuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         if (totalQueuedWithdrawals < withdrawalRequestThreshold) return (false, "");
-        if (totalQueuedWithdrawals <= conceroPool.availableToWithdraw(address(token))) return (false, "");
+        if (totalQueuedWithdrawals <= conceroPool.availableToWithdraw(_getConceroPoolToken())) return (false, "");
 
         return (true, "");
     }
@@ -106,20 +75,18 @@ contract ConceroStrategy is Strategy {
 
         uint256 totalQueuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         if (totalQueuedWithdrawals < withdrawalRequestThreshold) revert InsufficientQueuedWithdrawals();
-        if (totalQueuedWithdrawals <= conceroPool.availableToWithdraw(address(token))) revert UnnecessaryRequest();
+        if (totalQueuedWithdrawals <= conceroPool.availableToWithdraw(_getConceroPoolToken())) revert UnnecessaryRequest();
 
-        conceroPool.withdrawLiquidityRequest(address(token), totalQueuedWithdrawals);
+        conceroPool.withdrawLiquidityRequest(_getConceroPoolToken(), totalQueuedWithdrawals);
         timeOfLastWithdrawalRequest = uint64(block.timestamp);
     }
 
     /**
      * @notice returns the deposit change since deposits were last updated
-     * @dev deposit change could be positive or negative depending on reward rate and whether
-     * any slashing occurred
      * @return deposit change
      */
     function getDepositChange() public view returns (int) {
-        uint256 totalBalance = token.balanceOf(address(this)) + conceroPool.s_userBalances(address(token), address(this));
+        uint256 totalBalance = conceroPool.s_userBalances(_getConceroPoolToken(), address(this));
         return int(totalBalance) - int(totalDeposits);
     }
 
@@ -140,21 +107,12 @@ contract ConceroStrategy is Strategy {
         )
     {
         depositChange = getDepositChange();
-        uint256 newTotalDeposits = totalDeposits;
 
         if (depositChange > 0) {
-            newTotalDeposits += uint256(depositChange);
+            totalDeposits += uint256(depositChange);
         } else if (depositChange < 0) {
-            newTotalDeposits -= uint256(depositChange * -1);
+            totalDeposits -= uint256(depositChange * -1);
         }
-
-        uint256 balance = token.balanceOf(address(this));
-        if (balance != 0) {
-            token.safeTransfer(address(stakingPool), balance);
-            newTotalDeposits -= balance;
-        }
-
-        totalDeposits = newTotalDeposits;
 
         return (depositChange, new address[](0), new uint256[](0));
     }
@@ -180,7 +138,7 @@ contract ConceroStrategy is Strategy {
      * @return minimum deposits
      */
     function getMinDeposits() public view override returns (uint256) {
-        uint256 availableBalance = conceroPool.availableToWithdraw(address(token));
+        uint256 availableBalance = conceroPool.availableToWithdraw(_getConceroPoolToken());
         return availableBalance >= totalDeposits ? 0 : totalDeposits - availableBalance;
     }
 
@@ -206,5 +164,13 @@ contract ConceroStrategy is Strategy {
      */
     function setWithdrawalRequestThreshold(uint128 _withdrawalRequestThreshold) external onlyOwner {
         withdrawalRequestThreshold = _withdrawalRequestThreshold;
+    }
+
+    /**
+     * @notice returns the token address for this strategy as stored in the Concero pool
+     * @return token address
+     */
+    function _getConceroPoolToken() internal view virtual returns (address) {
+        return address(token);
     }
 }
