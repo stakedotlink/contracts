@@ -60,6 +60,10 @@ abstract contract ConceroStrategy is Strategy {
         withdrawalRequestThreshold = _withdrawalRequestThreshold;
     }
 
+    /**
+     * @notice returns whether a withdrawal request should be initiated
+     * @return true if withdrawal request should be initiated, false otherwise
+     */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         if (block.timestamp < timeOfLastWithdrawalRequest + minTimeBetweenWithdrawalRequests) return (false, "");
 
@@ -70,6 +74,9 @@ abstract contract ConceroStrategy is Strategy {
         return (true, "");
     }
 
+    /**
+     * @notice initiates a withdrawal request for the sum of all queued withdrawals
+     */
     function performUpkeep(bytes calldata) external {
         if (block.timestamp < timeOfLastWithdrawalRequest + minTimeBetweenWithdrawalRequests) revert MinTimeNotElapsed();
 
