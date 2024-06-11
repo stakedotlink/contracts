@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../interfaces/IStakingPool.sol";
+import "../interfaces/IPriorityPool.sol";
 
 /**
  * @title Withdrawal Pool
@@ -27,7 +28,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     IERC20Upgradeable public token;
     IERC20Upgradeable public lst;
-    address public priorityPool;
+    IPriorityPool public priorityPool;
 
     Withdrawal[] internal queuedWithdrawals;
     mapping(address => uint256[]) internal queuedWithdrawalsByAccount;
@@ -42,12 +43,13 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     event QueueWithdrawal(address indexed account, uint256 amount);
     event Withdraw(address indexed account, uint256 amount);
-    event Deposit(uint256 amount);
+    event WithdrawalsFinalized(uint256 amount);
     event SetMinWithdrawalAmount(uint256 minWithdrawalAmount);
 
     error SenderNotAuthorized();
     error InvalidWithdrawalId();
     error AmountTooSmall();
+    error NoUpkeepNeeded();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -71,14 +73,15 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         __Ownable_init();
         token = IERC20Upgradeable(_token);
         lst = IERC20Upgradeable(_lst);
-        priorityPool = _priorityPool;
+        lst.safeApprove(_priorityPool, type(uint256).max);
+        priorityPool = IPriorityPool(_priorityPool);
         minWithdrawalAmount = _minWithdrawalAmount;
         withdrawalBatches.push(WithdrawalBatch(0, 0));
         queuedWithdrawals.push(Withdrawal(0, 0));
     }
 
     modifier onlyPriorityPool() {
-        if (msg.sender != priorityPool) revert SenderNotAuthorized();
+        if (msg.sender != address(priorityPool)) revert SenderNotAuthorized();
         _;
     }
 
@@ -274,7 +277,50 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     function deposit(uint256 _amount) external onlyPriorityPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         lst.safeTransfer(msg.sender, _amount);
+        _finalizeWithdrawals(_amount);
+    }
 
+    /**
+     * @notice Returns whether withdrawals should be executed based on available withdrawal space
+     * @return true if withdrawal should be executed, false otherwise
+     */
+    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        if (_getStakeByShares(totalQueuedShareWithdrawals) != 0 && priorityPool.canWithdraw(address(this), 0) != 0) {
+            return (true, "");
+        }
+        return (false, "");
+    }
+
+    /**
+     * @notice Executes withdrawals if there is sufficient available withdrawal space
+     * @param _performData encoded withdrawal data to be passed to strategies
+     */
+    function performUpkeep(bytes calldata _performData) external {
+        uint256 canWithdraw = priorityPool.canWithdraw(address(this), 0);
+        uint256 totalQueued = _getStakeByShares(totalQueuedShareWithdrawals);
+        if (totalQueued == 0 || canWithdraw == 0) revert NoUpkeepNeeded();
+
+        uint256 toWithdraw = totalQueued > canWithdraw ? canWithdraw : totalQueued;
+        bytes[] memory data = abi.decode(_performData, (bytes[]));
+
+        priorityPool.executeQueuedWithdrawals(toWithdraw, data);
+        _finalizeWithdrawals(toWithdraw);
+    }
+
+    /**
+     * @notice Sets the minimum amount of lst tokens that can be queued for withdrawal
+     * @param _minWithdrawalAmount min token amount
+     */
+    function setMinWithdrawalAmount(uint256 _minWithdrawalAmount) external onlyOwner {
+        minWithdrawalAmount = _minWithdrawalAmount;
+        emit SetMinWithdrawalAmount(_minWithdrawalAmount);
+    }
+
+    /**
+     * @notice Finalizes withdrawal accounting after withdrawals have been executed
+     * @param _amount amount to finalize
+     */
+    function _finalizeWithdrawals(uint256 _amount) internal {
         uint256 sharesToWithdraw = _getSharesByStake(_amount);
         uint256 numWithdrawals = queuedWithdrawals.length;
 
@@ -306,16 +352,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
         assert(sharesToWithdraw == 0);
 
-        emit Deposit(_amount);
-    }
-
-    /**
-     * @notice Sets the minimum amount of lst tokens that can be queued for withdrawal
-     * @param _minWithdrawalAmount min token amount
-     */
-    function setMinWithdrawalAmount(uint256 _minWithdrawalAmount) external onlyOwner {
-        minWithdrawalAmount = _minWithdrawalAmount;
-        emit SetMinWithdrawalAmount(_minWithdrawalAmount);
+        emit WithdrawalsFinalized(_amount);
     }
 
     /**
