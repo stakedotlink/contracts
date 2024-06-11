@@ -7,7 +7,7 @@ import {
   getAccounts,
   setupToken,
 } from '../../utils/helpers'
-import { ERC677, StakingPool, StrategyMock } from '../../../typechain-types'
+import { ERC677, PriorityPool, StakingPool, StrategyMock } from '../../../typechain-types'
 import { ethers } from 'hardhat'
 import { Signer } from 'ethers'
 import { WithdrawalPool } from '../../../typechain-types/WithdrawalPool'
@@ -15,6 +15,7 @@ import { WithdrawalPool } from '../../../typechain-types/WithdrawalPool'
 describe('WithdrawalPool', () => {
   let withdrawalPool: WithdrawalPool
   let stakingPool: StakingPool
+  let strategy: StrategyMock
   let token: ERC677
   let accounts: string[]
   let signers: Signer[]
@@ -38,11 +39,11 @@ describe('WithdrawalPool', () => {
       [],
     ])) as StakingPool
 
-    let strategy = (await deployUpgradeable('StrategyMock', [
+    strategy = (await deployUpgradeable('StrategyMock', [
       token.address,
       stakingPool.address,
       toEther(1000000000),
-      toEther(0),
+      toEther(5000),
     ])) as StrategyMock
 
     withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
@@ -59,7 +60,7 @@ describe('WithdrawalPool', () => {
     await token.approve(withdrawalPool.address, ethers.constants.MaxUint256)
     await stakingPool.approve(withdrawalPool.address, ethers.constants.MaxUint256)
 
-    await stakingPool.deposit(accounts[0], toEther(100000))
+    await stakingPool.deposit(accounts[0], toEther(100000), ['0x'])
     await token.transfer(strategy.address, toEther(100000))
     await stakingPool.updateStrategyRewards([0], '0x')
   })
@@ -350,5 +351,46 @@ describe('WithdrawalPool', () => {
       [2]
     )
     assert.equal(fromEther(data[1]), 250)
+  })
+
+  it('checkUpkeep and performUpkeep should work correctly', async () => {
+    let priorityPool = (await deployUpgradeable('PriorityPool', [
+      token.address,
+      stakingPool.address,
+      accounts[0],
+      0,
+      0,
+      0,
+    ])) as PriorityPool
+    withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
+      stakingPool.address,
+      stakingPool.address,
+      priorityPool.address,
+      toEther(10),
+    ])) as WithdrawalPool
+    await stakingPool.approve(priorityPool.address, ethers.constants.MaxUint256)
+    await stakingPool.setPriorityPool(priorityPool.address)
+    await priorityPool.setWithdrawalPool(withdrawalPool.address)
+
+    await priorityPool.withdraw(toEther(199000), 0, 0, [], false, true, ['0x'])
+    assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [false, '0x'])
+    await expect(withdrawalPool.performUpkeep('0x')).to.be.revertedWith('NoUpkeepNeeded()')
+
+    await strategy.setMinDeposits(toEther(4000))
+    assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [true, '0x'])
+    await withdrawalPool.performUpkeep(ethers.utils.defaultAbiCoder.encode(['bytes[]'], [['0x']]))
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.address)), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.address)), 3000)
+    assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 3000)
+
+    await strategy.setMinDeposits(toEther(0))
+    assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [true, '0x'])
+    await withdrawalPool.performUpkeep(ethers.utils.defaultAbiCoder.encode(['bytes[]'], [['0x']]))
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.address)), 4000)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.address)), 0)
+    assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 0)
+
+    assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [false, '0x'])
+    await expect(withdrawalPool.performUpkeep('0x')).to.be.revertedWith('NoUpkeepNeeded()')
   })
 })

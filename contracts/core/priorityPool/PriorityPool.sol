@@ -133,6 +133,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
+     * @notice reverts if sender is not withdrawal pool
+     **/
+    modifier onlyWithdrawalPool() {
+        if (msg.sender != address(withdrawalPool)) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
      * @notice returns a list of all accounts in the order that they appear in the merkle tree
      * @return list of accounts
      */
@@ -489,6 +497,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         _pause();
     }
 
+    function executeQueuedWithdrawals(uint256 _amount, bytes[] calldata _data) external onlyWithdrawalPool {
+        IERC20Upgradeable(address(stakingPool)).safeTransferFrom(msg.sender, address(this), _amount);
+        stakingPool.withdraw(address(this), address(this), _amount, _data);
+        token.safeTransfer(msg.sender, _amount);
+    }
+
     /**
      * @notice sets the pool's status
      * @param _status pool status
@@ -545,6 +559,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _withdrawalPool address of withdrawal pool
      */
     function setWithdrawalPool(address _withdrawalPool) external onlyOwner {
+        if (address(withdrawalPool) != address(0)) {
+            IERC20Upgradeable(address(stakingPool)).safeApprove(address(withdrawalPool), 0);
+            token.safeApprove(address(withdrawalPool), 0);
+        }
+
+        IERC20Upgradeable(address(stakingPool)).safeApprove(_withdrawalPool, type(uint256).max);
+        token.safeApprove(_withdrawalPool, type(uint256).max);
+
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
     }
 
