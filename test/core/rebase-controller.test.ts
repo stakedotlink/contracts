@@ -114,7 +114,7 @@ describe('RebaseController', () => {
     await insurancePool.setRebaseController(rebaseController.address)
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x', '0x', '0x'])
   })
 
   it('checkUpkeep should work correctly', async () => {

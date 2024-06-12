@@ -22,7 +22,7 @@ describe('WrappedSDToken', () => {
 
   async function stake(account: number, amount: number) {
     await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-    await stakingPool.deposit(accounts[account], toEther(amount))
+    await stakingPool.deposit(accounts[account], toEther(amount), ['0x'])
   }
 
   before(async () => {
@@ -63,7 +63,7 @@ describe('WrappedSDToken', () => {
     await stakingPool.setRebaseController(accounts[0])
 
     await token.approve(stakingPool.address, ethers.constants.MaxUint256)
-    await stakingPool.deposit(accounts[0], 1000)
+    await stakingPool.deposit(accounts[0], 1000, ['0x'])
   })
 
   it('token metadata should be correct', async () => {
