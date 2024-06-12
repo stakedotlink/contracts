@@ -360,7 +360,6 @@ describe('WithdrawalPool', () => {
       accounts[0],
       0,
       0,
-      0,
     ])) as PriorityPool
     withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
       stakingPool.address,

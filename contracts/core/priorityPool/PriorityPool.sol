@@ -601,7 +601,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 accountQueuedTokens[_account] += toDeposit;
                 totalQueued += toDeposit;
             } else {
-                token.safeTransfer(msg.sender, toDeposit);
+                token.safeTransfer(_account, toDeposit);
             }
         }
 
