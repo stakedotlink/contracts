@@ -16,7 +16,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
     mapping(address => bool) private vaultMapping;
 
-    bool private preRelease;
+    bool private preRelease; // deprecated
 
     event VaultAdded(address indexed operator);
     event WithdrawExtraRewards(address indexed receiver, uint256 amount);
@@ -137,17 +137,6 @@ contract OperatorVCS is VaultControllerStrategy {
             }
         }
         return totalFees;
-    }
-
-    /**
-     * @notice returns the maximum that can be deposited into this strategy
-     * @return maximum deposits
-     */
-    function getMaxDeposits() public view override returns (uint256) {
-        if (preRelease) {
-            return stakeController.isActive() ? 855000 ether : 0;
-        }
-        return super.getMaxDeposits();
     }
 
     /**
@@ -285,13 +274,5 @@ contract OperatorVCS is VaultControllerStrategy {
 
         operatorRewardPercentage = _operatorRewardPercentage;
         emit SetOperatorRewardPercentage(_operatorRewardPercentage);
-    }
-
-    /**
-     * @notice sets pre-release mode
-     * @dev limits staking allocation when true
-     */
-    function togglePreRelease() external onlyOwner {
-        preRelease = !preRelease;
     }
 }
