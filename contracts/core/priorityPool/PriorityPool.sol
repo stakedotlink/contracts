@@ -53,7 +53,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     address public rebaseController;
 
     IWithdrawalPool public withdrawalPool;
-    uint256 public withdrawalPoolDepositMin;
 
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
@@ -67,8 +66,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     );
     event SetPoolStatus(PoolStatus status);
     event SetQueueDepositParams(uint128 queueDepositMin, uint128 queueDepositMax);
-    event DepositTokens(uint256 withdrawalPoolAmount, uint256 unusedTokensAmount, uint256 queuedTokensAmount);
-    event SetWithdrawalPoolDepositMin(uint256 withdrawalPoolDepositMin);
+    event DepositTokens(uint256 unusedTokensAmount, uint256 queuedTokensAmount);
 
     error InvalidValue();
     error UnauthorizedToken();
@@ -95,7 +93,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _token address of asset token
      * @param _stakingPool address of staking pool
      * @param _sdlPool address of SDL pool
-     * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
      * @param _queueDepositMin min amount of tokens required for strategy deposit
      * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
      **/
@@ -103,7 +100,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         address _token,
         address _stakingPool,
         address _sdlPool,
-        uint256 _withdrawalPoolDepositMin,
         uint128 _queueDepositMin,
         uint128 _queueDepositMax
     ) public initializer {
@@ -113,7 +109,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         token = IERC20Upgradeable(_token);
         stakingPool = IStakingPool(_stakingPool);
         sdlPool = ISDLPool(_sdlPool);
-        withdrawalPoolDepositMin = _withdrawalPoolDepositMin;
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         accounts.push(address(0));
@@ -355,49 +350,40 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice deposits queued and/or unused tokens
      * @dev allows bypassing of the stored deposit limits
-     * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
      * @param _queueDepositMin min amount of tokens required for strategy deposit
      * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
      * @param _data optional deposit data passed to staking pool
      */
     function depositQueuedTokens(
-        uint256 _withdrawalPoolDepositMin,
         uint256 _queueDepositMin,
         uint256 _queueDepositMax,
         bytes[] calldata _data
     ) external {
-        _depositQueuedTokens(_withdrawalPoolDepositMin, _queueDepositMin, _queueDepositMax, _data);
+        _depositQueuedTokens(_queueDepositMin, _queueDepositMax, _data);
     }
 
     /**
      * @notice returns whether a call should be made to performUpkeep to deposit queued/unused tokens
-     * into the staking pool and/or withdrawal pool
+     * into the staking pool
      * @dev used by chainlink keepers
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();
 
         if (poolStatus != PoolStatus.OPEN) return (false, bytes(""));
 
-        return (
-            (queuedWithdrawals >= withdrawalPoolDepositMin && totalQueued >= withdrawalPoolDepositMin) ||
-                (strategyDepositRoom >= queueDepositMin && (totalQueued + unusedDeposits) >= queueDepositMin),
-            bytes("")
-        );
+        return (strategyDepositRoom >= queueDepositMin && (totalQueued + unusedDeposits) >= queueDepositMin, bytes(""));
     }
 
     /**
      * @notice deposits queued and/or unused tokens
-     * @dev will revert if the amount of tokens that can be deposited is less than the queued and withdrawal
-     * pool deposit minimums
+     * @dev will revert if the amount of tokens that can be deposited is less than the deposit minimums
      * @dev used by chainlink keepers
      */
     function performUpkeep(bytes calldata _performData) external {
         bytes[] memory depositData = abi.decode(_performData, (bytes[]));
-
-        _depositQueuedTokens(withdrawalPoolDepositMin, queueDepositMin, queueDepositMax, depositData);
+        _depositQueuedTokens(queueDepositMin, queueDepositMax, depositData);
     }
 
     /**
@@ -496,15 +482,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
-    }
-
-    /**
-     * @notice sets the minimum amount that can be deposited into the withdrawal pool
-     * @param _withdrawalPoolDepositMin min amount of tokens required for deposit
-     */
-    function setWithdrawalPoolDepositMin(uint128 _withdrawalPoolDepositMin) external onlyOwner {
-        withdrawalPoolDepositMin = _withdrawalPoolDepositMin;
-        emit SetWithdrawalPoolDepositMin(_withdrawalPoolDepositMin);
     }
 
     /**
@@ -642,14 +619,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice deposits queued and/or unused tokens
-     * @dev will prioritize withdrawal pool deposits, then unused staking pool deposits, then new staking pool deposits
-     * @param _withdrawalPoolDepositMin min amount of tokens required for withdrawal pool deposit
+     * @dev will prioritize unused staking pool deposits, then new staking pool deposits
      * @param _depositMin min amount of tokens required to deposit
      * @param _depositMax max amount of tokens that can be deposited into strategies at once
      * @param _data optional deposit data passed to staking pool
      **/
     function _depositQueuedTokens(
-        uint256 _withdrawalPoolDepositMin,
         uint256 _depositMin,
         uint256 _depositMax,
         bytes[] memory _data
@@ -658,42 +633,28 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         uint256 _totalQueued = totalQueued;
 
-        uint256 toDepositIntoWithdrawalPool;
-        uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
-        if (queuedWithdrawals >= _withdrawalPoolDepositMin && _totalQueued >= _withdrawalPoolDepositMin) {
-            toDepositIntoWithdrawalPool = MathUpgradeable.min(queuedWithdrawals, _totalQueued);
-            withdrawalPool.deposit(toDepositIntoWithdrawalPool);
-            _totalQueued -= toDepositIntoWithdrawalPool;
-        }
-
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
-        if ((strategyDepositRoom == 0 || strategyDepositRoom < _depositMin) && toDepositIntoWithdrawalPool == 0) {
+        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin) {
             revert InsufficientDepositRoom();
         }
 
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();
         uint256 canDeposit = _totalQueued + unusedDeposits;
-        if ((canDeposit == 0 || canDeposit < _depositMin) && toDepositIntoWithdrawalPool == 0) {
+        if (canDeposit == 0 || canDeposit < _depositMin) {
             revert InsufficientQueuedTokens();
         }
 
-        if (strategyDepositRoom >= _depositMin && canDeposit >= _depositMin) {
-            uint256 toDepositFromStakingPool = MathUpgradeable.min(
-                MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
-                _depositMax
-            );
-            uint256 toDepositFromQueue = MathUpgradeable.min(
-                MathUpgradeable.min(_totalQueued, strategyDepositRoom - toDepositFromStakingPool),
-                _depositMax - toDepositFromStakingPool
-            );
+        uint256 toDepositFromStakingPool = MathUpgradeable.min(
+            MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
+            _depositMax
+        );
+        uint256 toDepositFromQueue = MathUpgradeable.min(
+            MathUpgradeable.min(_totalQueued, strategyDepositRoom - toDepositFromStakingPool),
+            _depositMax - toDepositFromStakingPool
+        );
 
-            stakingPool.deposit(address(this), toDepositFromQueue, _data);
-            _totalQueued -= toDepositFromQueue;
-
-            emit DepositTokens(toDepositIntoWithdrawalPool, toDepositFromStakingPool, toDepositFromQueue);
-        } else {
-            emit DepositTokens(toDepositIntoWithdrawalPool, 0, 0);
-        }
+        stakingPool.deposit(address(this), toDepositFromQueue, _data);
+        _totalQueued -= toDepositFromQueue;
 
         if (_totalQueued != totalQueued) {
             uint256 diff = totalQueued - _totalQueued;
@@ -701,6 +662,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             sharesSinceLastUpdate += stakingPool.getSharesByStake(diff);
             totalQueued = _totalQueued;
         }
+
+        emit DepositTokens(toDepositFromStakingPool, toDepositFromQueue);
     }
 
     /**
