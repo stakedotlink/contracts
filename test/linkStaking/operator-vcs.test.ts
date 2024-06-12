@@ -163,16 +163,6 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther(await strategy.canDeposit()), 375000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 1125000)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
-
-    await strategy.togglePreRelease()
-    assert.equal(fromEther(await strategy.canDeposit()), 105000)
-    assert.equal(fromEther(await strategy.getMaxDeposits()), 855000)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
-
-    await strategy.togglePreRelease()
-    assert.equal(fromEther(await strategy.canDeposit()), 375000)
-    assert.equal(fromEther(await strategy.getMaxDeposits()), 1125000)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 750000)
   })
 
   it('updateDeposits should work correctly', async () => {

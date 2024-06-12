@@ -593,10 +593,7 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('setVaultImplementation should work correctly', async () => {
-    const { accounts, strategy } = await loadFixture(deployFixture)
-    await expect(strategy.setVaultImplementation(accounts[0])).to.be.revertedWith(
-      'Address must belong to a contract'
-    )
+    const { strategy } = await loadFixture(deployFixture)
 
     let newVaultImplementation = (await deployImplementation('OperatorVault')) as string
     await strategy.setVaultImplementation(newVaultImplementation)

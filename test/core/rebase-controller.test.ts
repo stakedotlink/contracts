@@ -115,7 +115,7 @@ describe('RebaseController', () => {
     await insurancePool.setRebaseController(adrs.rebaseController)
 
     await token.approve(adrs.stakingPool, ethers.MaxUint256)
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x', '0x', '0x'])
 
     return {
       signers,
