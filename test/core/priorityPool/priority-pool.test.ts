@@ -83,7 +83,7 @@ describe('PriorityPool', () => {
     return { signers, accounts, adrs, token, stakingPool, strategy, sdlPool, pp, withdrawalPool }
   }
 
-  it.only('deposit should work correctly', async () => {
+  it('deposit should work correctly', async () => {
     const { signers, accounts, adrs, pp, token, strategy, stakingPool } = await loadFixture(
       deployFixture
     )
