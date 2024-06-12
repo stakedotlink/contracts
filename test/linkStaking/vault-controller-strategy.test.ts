@@ -555,4 +555,11 @@ describe('VaultControllerStrategy', () => {
     await strategy.setVaultImplementation(newVaultImplementation)
     assert.equal(await strategy.vaultImplementation(), newVaultImplementation)
   })
+
+  it('setWithdrawalIndexes should work correctly', async () => {
+    await strategy.setWithdrawalIndexes([5, 6, 7, 8, 9])
+    await expect(strategy.setWithdrawalIndexes([0, 1, 2, 3, 5])).to.be.revertedWith(
+      'InvalidWithdrawalIndexes()'
+    )
+  })
 })

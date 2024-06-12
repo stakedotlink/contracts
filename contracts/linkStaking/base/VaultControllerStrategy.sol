@@ -65,6 +65,7 @@ abstract contract VaultControllerStrategy is Strategy {
     error SenderNotAuthorized();
     error InsufficientTokensUnbonded();
     error InvalidVaultIds();
+    error InvalidWithdrawalIndexes();
 
     /**
      * @notice initializes contract
@@ -90,7 +91,6 @@ abstract contract VaultControllerStrategy is Strategy {
 
         stakeController = IStaking(_stakeController);
 
-        require(_isContract(_vaultImplementation), "Vault implementation address must belong to a contract");
         vaultImplementation = _vaultImplementation;
 
         for (uint256 i = 0; i < _fees.length; ++i) {
@@ -339,6 +339,18 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
+     * @notice manually sets the withdrawal index for each vault group
+     * @param _withdrawalIndexes list of withdrawal indexes for each vault group
+     */
+    function setWithdrawalIndexes(uint64[] calldata _withdrawalIndexes) external onlyOwner {
+        uint256 numVaultGroups = globalVaultState.numVaultGroups;
+        for (uint256 i = 0; i < numVaultGroups; ++i) {
+            if (_withdrawalIndexes[i] % numVaultGroups != i) revert InvalidWithdrawalIndexes();
+            vaultGroups[i].withdrawalIndex = _withdrawalIndexes[i];
+        }
+    }
+
+    /**
      * @notice Upgrades vaults to a new implementation contract
      * @param _vaults list of vault indexes to upgrade
      * @param _data list of encoded function calls to be executed for each vault after upgrade
@@ -416,11 +428,9 @@ abstract contract VaultControllerStrategy is Strategy {
      * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
      * @dev
      * - reverts if sender is not owner
-     * - reverts if `_vaultImplementation` is not a contract
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
-        require(_isContract(_vaultImplementation), "Address must belong to a contract");
         vaultImplementation = _vaultImplementation;
         emit SetVaultImplementation(_vaultImplementation);
     }
@@ -580,18 +590,5 @@ abstract contract VaultControllerStrategy is Strategy {
             totalFees += fees[i].basisPoints;
         }
         return totalFees;
-    }
-
-    /**
-     * @notice returns whether an address belongs to a contract
-     * @param _address address to check
-     * @return true if address is contract, false otherwise
-     */
-    function _isContract(address _address) private view returns (bool) {
-        uint256 length;
-        assembly {
-            length := extcodesize(_address)
-        }
-        return length > 0;
     }
 }

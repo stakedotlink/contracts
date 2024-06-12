@@ -85,7 +85,7 @@ describe('PriorityPool', () => {
     await pp.deposit(1000, false, ['0x'])
   })
 
-  it.only('deposit should work correctly', async () => {
+  it('deposit should work correctly', async () => {
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 500)
