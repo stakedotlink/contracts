@@ -205,7 +205,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev can receive both asset tokens (deposit) and LSD tokens (withdrawal)
      * @param _sender of the token transfer
      * @param _value of the token transfer
-     * @param _calldata encoded shouldQueue (bool) and calldata to pass to staking pool (bytes[])
+     * @param _calldata encoded shouldQueue (bool) and calldata to pass to staking pool strategies (bytes[])
      **/
     function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
         if (_value == 0) revert InvalidValue();
@@ -226,7 +226,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @notice deposits asset tokens into the staking pool and/or queue
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued if there's no room in the staking pool
-     * @param _data optional deposit data passed to staking pool
+     * @param _data deposit data passed to staking pool strategies
      */
     function deposit(uint256 _amount, bool _shouldQueue, bytes[] calldata _data) external {
         if (_amount == 0) revert InvalidAmount();
@@ -244,7 +244,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _merkleProof merkle proof for sender's merkle tree entry
      * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the full withdrawal amount cannot be satisfied
-     * @param _data optional withdrawal data passed to staking pool
+     * @param _data withdrawal data passed to staking pool strategies
      */
     function withdraw(
         uint256 _amountToWithdraw,
@@ -367,7 +367,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev allows bypassing of the stored deposit limits
      * @param _queueDepositMin min amount of tokens required for strategy deposit
      * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
-     * @param _data optional deposit data passed to staking pool
+     * @param _data deposit data passed to staking pool strategies
      */
     function depositQueuedTokens(
         uint256 _queueDepositMin,
@@ -380,7 +380,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice returns whether a call should be made to performUpkeep to deposit queued/unused tokens
      * into the staking pool
-     * @dev used by chainlink keepers
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
@@ -397,8 +396,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice deposits queued and/or unused tokens
-     * @dev will revert if the amount of tokens that can be deposited is less than the deposit minimums
-     * @dev used by chainlink keepers
+     * @dev will revert if less than queueDepositMin tokens can be deposited
+     * @param _performData encoded deposit data to be passed to staking pool strategies (bytes[])
      */
     function performUpkeep(bytes calldata _performData) external {
         bytes[] memory depositData = abi.decode(_performData, (bytes[]));
@@ -476,6 +475,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         _pause();
     }
 
+    /**
+     * @notice Executes a batch of withdrawals that have been queued in the withdrawal pool
+     * @param _amount total amount to withdraw
+     * @param _data withdrawal data to be passed to staking pool strategies
+     */
     function executeQueuedWithdrawals(
         uint256 _amount,
         bytes[] calldata _data
@@ -554,7 +558,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _account account to deposit for
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued
-     * @param _data optional deposit data passed to staking pool
+     * @param _data deposit data passed to staking pool strategies
      **/
     function _deposit(
         address _account,
@@ -574,6 +578,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                     : queuedWithdrawals;
                 withdrawalPool.deposit(toDepositIntoQueue);
                 toDeposit -= toDepositIntoQueue;
+                IERC20Upgradeable(address(stakingPool)).safeTransfer(_account, toDepositIntoQueue);
             }
 
             if (toDeposit != 0) {
@@ -586,16 +591,18 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             }
         }
 
-        if (toDeposit != 0 && _shouldQueue) {
-            _requireNotPaused();
-            if (accountIndexes[_account] == 0) {
-                accounts.push(_account);
-                accountIndexes[_account] = accounts.length - 1;
+        if (toDeposit != 0) {
+            if (_shouldQueue) {
+                _requireNotPaused();
+                if (accountIndexes[_account] == 0) {
+                    accounts.push(_account);
+                    accountIndexes[_account] = accounts.length - 1;
+                }
+                accountQueuedTokens[_account] += toDeposit;
+                totalQueued += toDeposit;
+            } else {
+                token.safeTransfer(msg.sender, toDeposit);
             }
-            accountQueuedTokens[_account] += toDeposit;
-            totalQueued += toDeposit;
-        } else if (toDeposit != 0) {
-            token.safeTransfer(_account, toDeposit);
         }
 
         emit Deposit(_account, _amount - toDeposit, _shouldQueue ? toDeposit : 0);
@@ -608,7 +615,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
-     * @param _data optional withdrawal data passed to staking pool
+     * @param _data withdrawal data passed to staking pool strategies
      * @return the amount of tokens that were queued for withdrawal
      **/
     function _withdraw(
@@ -657,7 +664,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev will prioritize unused staking pool deposits, then new staking pool deposits
      * @param _depositMin min amount of tokens required to deposit
      * @param _depositMax max amount of tokens that can be deposited into strategies at once
-     * @param _data optional deposit data passed to staking pool
+     * @param _data deposit data passed to staking pool strategies
      **/
     function _depositQueuedTokens(
         uint256 _depositMin,
@@ -666,18 +673,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     ) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
-        uint256 _totalQueued = totalQueued;
-
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
-        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin) {
+        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin)
             revert InsufficientDepositRoom();
-        }
 
+        uint256 _totalQueued = totalQueued;
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();
         uint256 canDeposit = _totalQueued + unusedDeposits;
-        if (canDeposit == 0 || canDeposit < _depositMin) {
-            revert InsufficientQueuedTokens();
-        }
+        if (canDeposit == 0 || canDeposit < _depositMin) revert InsufficientQueuedTokens();
 
         uint256 toDepositFromStakingPool = MathUpgradeable.min(
             MathUpgradeable.min(unusedDeposits, strategyDepositRoom),
