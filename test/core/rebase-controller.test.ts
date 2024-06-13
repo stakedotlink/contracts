@@ -43,6 +43,7 @@ describe('RebaseController', () => {
       'LinkPool LINK',
       'lpLINK',
       [[accounts[4], 1000]],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 

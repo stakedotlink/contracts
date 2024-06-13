@@ -37,6 +37,7 @@ describe('PriorityPool', () => {
       'Staked LINK',
       'stLINK',
       [],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 
