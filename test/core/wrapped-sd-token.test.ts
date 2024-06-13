@@ -29,6 +29,7 @@ describe('WrappedSDToken', () => {
       'LinkPool LINK',
       'lplLINK',
       [[accounts[4], 0]],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 

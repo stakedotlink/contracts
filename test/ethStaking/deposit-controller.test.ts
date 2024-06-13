@@ -49,6 +49,7 @@ describe('DepositController', () => {
       'LinkPool ETH',
       'lplETH',
       [],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 

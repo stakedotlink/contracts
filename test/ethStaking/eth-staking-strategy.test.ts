@@ -57,6 +57,7 @@ describe('EthStakingStrategy', () => {
         [accounts[4], 1000],
         [adrs.erc677Receiver, 2000],
       ],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 

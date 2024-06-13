@@ -21,7 +21,7 @@ contract StakingPool is StakingRewardsPool {
 
     address[] private strategies;
     uint256 public totalStaked;
-    uint256 private liquidityBuffer; // deprecated
+    uint256 public unusedDepositLimit;
 
     Fee[] private fees;
 
@@ -39,6 +39,7 @@ contract StakingPool is StakingRewardsPool {
     event DonateTokens(address indexed sender, uint256 amount);
 
     error SenderNotAuthorized();
+    error InvalidDeposit();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -49,13 +50,15 @@ contract StakingPool is StakingRewardsPool {
         address _token,
         string memory _liquidTokenName,
         string memory _liquidTokenSymbol,
-        Fee[] memory _fees
+        Fee[] memory _fees,
+        uint256 _unusedDepositLimit
     ) public initializer {
         __StakingRewardsPool_init(_token, _liquidTokenName, _liquidTokenSymbol);
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
         }
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
+        unusedDepositLimit = _unusedDepositLimit;
     }
 
     modifier onlyPriorityPool() {
@@ -91,6 +94,9 @@ contract StakingPool is StakingRewardsPool {
         bytes[] calldata _data
     ) external onlyPriorityPool {
         require(strategies.length > 0, "Must be > 0 strategies to stake");
+
+        uint256 startingBalance = token.balanceOf(address(this));
+
         if (_amount > 0) {
             token.safeTransferFrom(msg.sender, address(this), _amount);
             depositLiquidity(_data);
@@ -99,6 +105,9 @@ contract StakingPool is StakingRewardsPool {
         } else {
             depositLiquidity(_data);
         }
+
+        uint256 endingBalance = token.balanceOf(address(this));
+        if (endingBalance > startingBalance && endingBalance > unusedDepositLimit) revert InvalidDeposit();
     }
 
     /**
@@ -424,6 +433,14 @@ contract StakingPool is StakingRewardsPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalStaked += _amount;
         emit DonateTokens(msg.sender, _amount);
+    }
+
+    /**
+     * @notice Sets the maximum amount of unused deposits that can sit in the pool
+     * @param _unusedDepositLimit maximum amount of unused deposits
+     **/
+    function setUnusedDepositLimit(uint256 _unusedDepositLimit) external onlyOwner {
+        unusedDepositLimit = _unusedDepositLimit;
     }
 
     /**
