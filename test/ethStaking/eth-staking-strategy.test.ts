@@ -78,6 +78,7 @@ describe('EthStakingStrategy', () => {
         [ownersRewards, 1000],
         [erc677Receiver.address, 2000],
       ],
+      toEther(10000),
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [

@@ -47,6 +47,7 @@ describe('WrappedTokenBridge', () => {
       'Staked LINK',
       'stLINK',
       [],
+      toEther(10000),
     ])) as StakingPool
 
     wrappedToken = (await deploy('WrappedSDToken', [

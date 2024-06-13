@@ -62,6 +62,7 @@ describe('DepositController', () => {
       'LinkPool ETH',
       'lplETH',
       [],
+      toEther(10000),
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [

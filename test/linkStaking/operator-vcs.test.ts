@@ -66,6 +66,7 @@ describe('OperatorVCS', () => {
       'Staked LINK',
       'stLINK',
       [],
+      toEther(10000),
     ])) as StakingPool
     let pfAlertsController = (await deploy('PFAlertsControllerMock', [
       token.address,

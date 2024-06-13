@@ -52,6 +52,7 @@ describe('RebaseController', () => {
       'LinkPool LINK',
       'lpLINK',
       [[ownersRewards, 1000]],
+      toEther(10000),
     ])) as StakingPool
 
     priorityPool = (await deployUpgradeable('PriorityPool', [

@@ -37,6 +37,7 @@ describe('WithdrawalPool', () => {
       'Staked LINK',
       'stLINK',
       [],
+      toEther(10000),
     ])) as StakingPool
 
     strategy = (await deployUpgradeable('StrategyMock', [

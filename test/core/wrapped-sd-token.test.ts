@@ -43,6 +43,7 @@ describe('WrappedSDToken', () => {
       'LinkPool LINK',
       'lplLINK',
       [[ownersRewards, 0]],
+      toEther(10000),
     ])) as StakingPool
 
     wsdToken = (await deploy('WrappedSDToken', [
