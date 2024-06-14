@@ -3,4 +3,6 @@ pragma solidity 0.8.15;
 
 interface IFundFlowController {
     function claimPeriodActive() external view returns (bool);
+
+    function getDepositData(uint256 _amount) external view returns (bytes[] memory);
 }
