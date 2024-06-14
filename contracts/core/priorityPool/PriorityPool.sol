@@ -370,9 +370,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();
 
-        if (poolStatus != PoolStatus.OPEN) return (false, bytes(""));
+        if (poolStatus != PoolStatus.OPEN) return (false, "");
+        if (strategyDepositRoom < queueDepositMin || (totalQueued + unusedDeposits) < queueDepositMin) return (false, "");
 
-        return (strategyDepositRoom >= queueDepositMin && (totalQueued + unusedDeposits) >= queueDepositMin, bytes(""));
+        return (
+            true,
+            abi.encode(
+                MathUpgradeable.min(MathUpgradeable.min(strategyDepositRoom, totalQueued + unusedDeposits), queueDepositMax)
+            )
+        );
     }
 
     /**

@@ -259,7 +259,10 @@ describe('PriorityPool', () => {
     assert.deepEqual(await pp.checkUpkeep('0x'), [false, '0x'])
 
     await pp.setPoolStatus(0)
-    assert.deepEqual(await pp.checkUpkeep('0x'), [true, '0x'])
+    assert.deepEqual(await pp.checkUpkeep('0x'), [
+      true,
+      ethers.utils.defaultAbiCoder.encode(['uint256'], [toEther(1001)]),
+    ])
   })
 
   it('performUpkeep should work corectly', async () => {
