@@ -15,8 +15,8 @@ import "../interfaces/IWithdrawalPool.sol";
 
 /**
  * @title Priority Pool
- * @notice Allows users to queue asset tokens which are eventually deposited into a staking pool when space becomes available -
- * liquid staking derivative tokens minted by the staking pool are then distributed using a merkle tree
+ * @notice Allows users to queue asset tokens which are eventually deposited into the staking pool when space becomes available -
+ * liquid staking tokens minted by the staking pool are then distributed using a merkle tree
  */
 contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -89,12 +89,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of asset token
      * @param _stakingPool address of staking pool
      * @param _sdlPool address of SDL pool
-     * @param _queueDepositMin min amount of tokens required for strategy deposit
-     * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
+     * @param _queueDepositMin min amount of tokens required for deposit into staking pool strategies
+     * @param _queueDepositMax max amount of tokens that can be deposited into staking pool strategies at once
      **/
     function initialize(
         address _token,
@@ -116,7 +116,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice reverts if sender is not distribution oracle
+     * @notice Reverts if sender is not distribution oracle
      **/
     modifier onlyDistributionOracle() {
         if (msg.sender != distributionOracle) revert SenderNotAuthorized();
@@ -124,7 +124,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice reverts if sender is not withdrawal pool
+     * @notice Reverts if sender is not withdrawal pool
      **/
     modifier onlyWithdrawalPool() {
         if (msg.sender != address(withdrawalPool)) revert SenderNotAuthorized();
@@ -132,7 +132,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns a list of all accounts in the order that they appear in the merkle tree
+     * @notice Returns a list of all accounts
+     * @dev accounts are returned in the same order as they are in the merkle tree
      * @return list of accounts
      */
     function getAccounts() external view returns (address[] memory) {
@@ -140,7 +141,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns the index of an account
+     * @notice Returns the index of an account
      * @dev this index represents an account's position in the merkle tree
      * @param _account account address
      * @return account index
@@ -150,7 +151,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns an account's current amount of queued tokens
+     * @notice Returns an account's current amount of queued tokens
      * @dev _distributionAmount is stored on IPFS
      * @param _account account address
      * @param _distributionAmount account's distribution amount from the latest distribution
@@ -161,7 +162,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns an account's current amount of withdrawable LSD tokens
+     * @notice Returns an account's current amount of withdrawable liquid staking tokens
      * @dev _distributionShareAmount is stored on IPFS
      * @param _account account address
      * @param _distributionShareAmount account's distribution share amounts from the latest distribution
@@ -173,12 +174,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns the total amount of asset tokens that an account can withdraw
-     * @dev includes account's queued tokens and stLINK balance and checks both priority pool
+     * @notice Returns the total amount of asset tokens that an account can withdraw
+     * @dev includes account's queued tokens and LST balance and checks both priority pool
      * and staking pool liquidity
+     * @dev _distributionAmount is stored on IPFS
      * @param _account account address
      * @param _distributionAmount account's distribution amount from the latest distribution
-     * @return amount of withrawable tokens
+     * @return amount of withdrawable tokens
      */
     function canWithdraw(address _account, uint256 _distributionAmount) external view returns (uint256) {
         uint256 canUnqueue = paused() ? 0 : MathUpgradeable.min(getQueuedTokens(_account, _distributionAmount), totalQueued);
@@ -191,10 +193,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice ERC677 implementation to receive a token deposit or withdrawal
-     * @dev can receive both asset tokens (deposit) and LSD tokens (withdrawal)
+     * @dev can receive both asset tokens (deposit) and liquid staking tokens (withdrawal)
      * @param _sender of the token transfer
      * @param _value of the token transfer
-     * @param _calldata encoded shouldQueue (bool) and calldata to pass to staking pool strategies (bytes[])
+     * @param _calldata encoded shouldQueue (bool) and deposit/withdrawal data to pass to
+     * staking pool strategies (bytes[])
      **/
     function onTokenTransfer(
         address _sender,
@@ -216,7 +219,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits asset tokens into the staking pool and/or queue
+     * @notice Deposits asset tokens into the staking pool and/or queues them
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued if there's no room in the staking pool
      * @param _data deposit data passed to staking pool strategies
@@ -232,13 +235,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice withdraws asset tokens
-     * @dev will unqueue sender's tokens before taking LSD tokens if possible and
-     * if _shouldUnqueue is set to true
+     * @notice Withdraws asset tokens
+     * @dev will unqueue sender's asset tokens before swapping liquid staking tokens if there is
+     * sufficient liquidity and _shouldUnqueue is set to true
      * @param _amountToWithdraw amount of tokens to withdraw
-     * @param _amount amount as recorded in sender's merkle tree entry
-     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
-     * @param _merkleProof merkle proof for sender's merkle tree entry
+     * @param _amount amount as recorded in sender's merkle tree entry (stored on IPFS)
+     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry (stored on IPFS)
+     * @param _merkleProof merkle proof for sender's merkle tree entry (generated using IPFS data)
      * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the full withdrawal amount cannot be satisfied
      * @param _data withdrawal data passed to staking pool strategies
@@ -290,9 +293,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice Unqueues queued tokens
      * @param _amountToUnqueue amount of tokens to unqueue
-     * @param _amount amount as recorded in sender's merkle tree entry
-     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
-     * @param _merkleProof merkle proof for sender's merkle tree entry
+     * @param _amount amount as recorded in sender's merkle tree entry (stored on IPFS)
+     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry (stored on IPFS)
+     * @param _merkleProof merkle proof for sender's merkle tree entry (generated from IPFS data)
      */
     function unqueueTokens(
         uint256 _amountToUnqueue,
@@ -319,10 +322,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice claims withdrawable LSD tokens
-     * @param _amount amount as recorded in sender's merkle tree entry
-     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry
-     * @param _merkleProof merkle proof for sender's merkle tree entry
+     * @notice Claims withdrawable liquid staking tokens
+     * @param _amount amount as recorded in sender's merkle tree entry (stored on IPFS)
+     * @param _sharesAmount shares amount as recorded in sender's merkle tree entry (stored on IPFS)
+     * @param _merkleProof merkle proof for sender's merkle tree entry (generated from IPFS data)
      */
     function claimLSDTokens(
         uint256 _amount,
@@ -348,11 +351,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued and/or unused tokens
+     * @notice Deposits queued tokens and/or unused tokens sitting in staking pool
      * @dev allows bypassing of the stored deposit limits
-     * @param _queueDepositMin min amount of tokens required for strategy deposit
-     * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
-     * @param _data deposit data passed to staking pool strategies
+     * @param _queueDepositMin min amount of tokens required for deposit into staking pool strategies
+     * @param _queueDepositMax max amount of tokens that can be deposited into staking pool strategies at once
+     * @param _data list of deposit data passed to staking pool strategies
      */
     function depositQueuedTokens(
         uint256 _queueDepositMin,
@@ -363,8 +366,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns whether a call should be made to performUpkeep to deposit queued/unused tokens
-     * into the staking pool
+     * @notice Returns whether a call should be made to performUpkeep to deposit queued/unused tokens
+     * into staking pool strategies
+     * @return true if performUpkeep should be called, false otherwise
+     * @return encoded amount of tokens to be deposited
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
@@ -382,9 +387,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued and/or unused tokens
+     * @notice Deposits queued and/or unused tokens into staking pool strategies
      * @dev will revert if less than queueDepositMin tokens can be deposited
-     * @param _performData encoded deposit data to be passed to staking pool strategies (bytes[])
+     * @param _performData encoded list of deposit data to be passed to staking pool strategies (bytes[])
      */
     function performUpkeep(bytes calldata _performData) external {
         bytes[] memory depositData = abi.decode(_performData, (bytes[]));
@@ -392,8 +397,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns the amount of deposits since the last call to updateDistribution and the amount of shares
-     * received for those deposits
+     * @notice Returns the amount of new deposits into the staking pool since the last call to
+     * updateDistribution and the amount of shares received for those deposits
      * @return amount of deposits
      * @return amount of shares
      */
@@ -402,12 +407,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice returns account data used for calculating a new merkle tree
-     * @dev merkle tree is calculated based on users' reSDL balance and the number of tokens they have queued,
-     * the index of an account in this contract is equal to their index in the tree
+     * @notice Returns account data used for calculating a new merkle tree
+     * @dev merkle tree is calculated based on users' reSDL balance and the number of tokens they have queued
+     * @dev accounts are returned in the same order as they are in the merkle tree
      * @return accounts list of all accounts that have ever queued tokens
      * @return sdlBalances list of SDL balances for each account
-     * @return queuedBalances list of queued token amounts for each account (ignores distributed LSD tokens)
+     * @return queuedBalances list of queued token amounts for each account (ignores previously distributed
+     * liquid staking tokens)
      */
     function getAccountData()
         external
@@ -431,11 +437,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice distributes a new batch of LSD tokens to users that have queued tokens
+     * @notice Distributes a new batch of liquid staing tokens to users that have queued tokens
      * @param _merkleRoot new merkle root for the distribution tree
      * @param _ipfsHash new ipfs hash for the distribution tree (CIDv0, no prefix - only hash)
-     * @param _amountDistributed amount of LSD tokens distributed in this distribution
-     * @param _sharesAmountDistributed amount of LSD shares distributed in this distribution
+     * @param _amountDistributed amount of tokens distributed in this distribution
+     * @param _sharesAmountDistributed amount of shares distributed in this distribution
      */
     function updateDistribution(
         bytes32 _merkleRoot,
@@ -455,7 +461,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice pauses queueing and unqueueing so a new merkle tree can be generated
+     * @notice Pauses queueing and unqueueing so a new merkle tree can be generated
      */
     function pauseForUpdate() external onlyDistributionOracle {
         _pause();
@@ -464,7 +470,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     /**
      * @notice Executes a batch of withdrawals that have been queued in the withdrawal pool
      * @param _amount total amount to withdraw
-     * @param _data withdrawal data to be passed to staking pool strategies
+     * @param _data list of withdrawal data passed to staking pool strategies
      */
     function executeQueuedWithdrawals(uint256 _amount, bytes[] calldata _data) external onlyWithdrawalPool {
         IERC20Upgradeable(address(stakingPool)).safeTransferFrom(msg.sender, address(this), _amount);
@@ -473,7 +479,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the pool's status
+     * @notice Sets the pool's status
      * @param _status pool status
      */
     function setPoolStatus(PoolStatus _status) external {
@@ -484,9 +490,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the minimum and maximum amount that can be deposited into strategies at once
-     * @param _queueDepositMin min amount of tokens required for strategy deposit
-     * @param _queueDepositMax max amount of tokens that can be deposited into strategies at once
+     * @notice Sets the minimum and maximum amount that can be deposited into strategies at once
+     * @param _queueDepositMin minimum amount of tokens required for deposit into staking pool strategies
+     * @param _queueDepositMax maximum amount of tokens that can be deposited into staking pool strategies at once
      */
     function setQueueDepositParams(uint128 _queueDepositMin, uint128 _queueDepositMax) external onlyOwner {
         queueDepositMin = _queueDepositMin;
@@ -495,7 +501,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the distribution oracle
+     * @notice Sets the distribution oracle
      * @param _distributionOracle address of oracle
      */
     function setDistributionOracle(address _distributionOracle) external onlyOwner {
@@ -503,8 +509,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the address of the rebase controller
-     * @dev this address has authorization to close the pool
+     * @notice Sets the address of the rebase controller
+     * @dev this address has authorization to close the pool in case of emergency
      * @param _rebaseController address of rebase controller
      */
     function setRebaseController(address _rebaseController) external onlyOwner {
@@ -512,7 +518,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice sets the withdrawal pool
+     * @notice Sets the withdrawal pool
      * @param _withdrawalPool address of withdrawal pool
      */
     function setWithdrawalPool(address _withdrawalPool) external onlyOwner {
@@ -528,9 +534,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits asset tokens into the withdrawal pool, staking pool, and/or queue
-     * @dev tokens will be deposited into the withdrawal pool and/or staking pool if there is room and the queue
-     * is empty, otherwise they will be queued if `_shouldQueue` is true; remaining tokens will be returned to sender
+     * @notice Deposits asset tokens into the withdrawal pool, staking pool, and/or queues them
+     * @dev tokens will be deposited into the withdrawal pool if there are queued withdrawals, then the
+     * staking pool if there is deposit room. Remaining tokens will then be queued if `_shouldQueue`
+     * is true, or otherwise returned to sender
      * @param _account account to deposit for
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued
@@ -583,9 +590,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice withdraws asset tokens
-     * @dev will swap LSD tokens for queued tokens if possible followed by withdrawing
-     * from the staking pool, and then queuing any remaining tokens for withdrawal
+     * @notice Withdraws asset tokens
+     * @dev will swap liquid staking tokens for queued tokens if there are any queued, then withdraw
+     * from the staking pool if there is withdrawal room; remaining tokens will be queued for withdrawal in the
+     * withdrawal pool if `_shouldQueueWithdrawal` is true, otherwise function will revert
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
@@ -631,10 +639,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice deposits queued and/or unused tokens
-     * @dev will prioritize unused staking pool deposits, then new staking pool deposits
+     * @notice Deposits queued and/or unused tokens
+     * @dev will prioritize unused staking pool deposits, then queued deposits
      * @param _depositMin min amount of tokens required to deposit
-     * @param _depositMax max amount of tokens that can be deposited into strategies at once
+     * @param _depositMax max amount of tokens that can be deposited into at once
      * @param _data deposit data passed to staking pool strategies
      **/
     function _depositQueuedTokens(

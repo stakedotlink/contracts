@@ -19,19 +19,25 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     mapping(address => uint256) private shares;
     uint256 public totalShares;
 
+    /**
+     * @notice Initializes the contract
+     * @param _token address of asset token
+     * @param _liquidTokenName name of liquid staking token
+     * @param _liquidTokenSymbol symbol of liquid staking token
+     */
     function __StakingRewardsPool_init(
         address _token,
-        string memory _derivativeTokenName,
-        string memory _derivativeTokenSymbol
+        string memory _liquidTokenName,
+        string memory _liquidTokenSymbol
     ) public onlyInitializing {
-        __ERC677_init(_derivativeTokenName, _derivativeTokenSymbol, 0);
+        __ERC677_init(_liquidTokenName, _liquidTokenSymbol, 0);
         __UUPSUpgradeable_init();
         __Ownable_init();
         token = IERC20Upgradeable(_token);
     }
 
     /**
-     * @notice returns the total supply of staking derivative tokens
+     * @notice Returns the total supply of liquid staking tokens
      * @return total supply
      */
     function totalSupply() public view override returns (uint256) {
@@ -39,9 +45,9 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice returns an account's stake balance
+     * @notice Returns an account's LST balance
      * @param _account account address
-     * @return account's stake balance
+     * @return account's balance
      */
     function balanceOf(address _account) public view override returns (uint256) {
         uint256 balance = getStakeByShares(shares[_account]);
@@ -53,7 +59,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice returns an account's share balance
+     * @notice Returns an account's share balance
      * @param _account account address
      * @return account's share balance
      */
@@ -62,7 +68,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice returns the amount of shares that corresponds to a staked amount
+     * @notice Returns the amount of shares that corresponds to an LST amount
      * @param _amount staked amount
      * @return amount of shares
      */
@@ -76,9 +82,9 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice returns the amount of stake that corresponds to an amount of shares
+     * @notice Returns the amount of LST that corresponds to an amount of shares
      * @param _amount shares amount
-     * @return amount of stake
+     * @return amount of LST
      */
     function getStakeByShares(uint256 _amount) public view returns (uint256) {
         if (totalShares == 0) {
@@ -89,7 +95,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice transfers shares from one account to another
+     * @notice Transfers shares from sender to another account
      * @param _recipient account to transfer to
      * @param _sharesAmount amount of shares to transfer
      */
@@ -99,7 +105,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice transfers shares from one account to another
+     * @notice Transfers shares from one account to another
      * @param _sender account to transfer from
      * @param _recipient account to transfer to
      * @param _sharesAmount amount of shares to transfer
@@ -116,13 +122,13 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice returns the total amount of assets staked in the pool
+     * @notice Returns the total amount of asset tokens staked in the pool
      * @return total staked amount
      */
     function _totalStaked() internal view virtual returns (uint256);
 
     /**
-     * @notice transfers a stake balance from one account to another
+     * @notice Transfers an LST balance from one account to another
      * @param _sender account to transfer from
      * @param _recipient account to transfer to
      * @param _amount amount to transfer
@@ -145,7 +151,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice transfers shares from one account to another
+     * @notice Transfers shares from one account to another
      * @param _sender account to transfer from
      * @param _recipient account to transfer to
      * @param _sharesAmount amount of shares to transfer
@@ -166,8 +172,8 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice mints new shares to an account
-     * @dev takes a stake amount and calculates the amount of shares it corresponds to
+     * @notice Mints new shares to an account
+     * @dev takes an LST amount and calculates the amount of shares it corresponds to
      * @param _recipient account to mint shares for
      * @param _amount stake amount
      */
@@ -179,7 +185,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice mints new shares to an account
+     * @notice Mints new shares to an account
      * @param _recipient account to mint shares for
      * @param _amount shares amount
      */
@@ -197,10 +203,10 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
     }
 
     /**
-     * @notice burns shares belonging to an account
-     * @dev takes a stake amount and calculates the amount of shares it corresponds to
+     * @notice Burns shares belonging to an account
+     * @dev takes an LST amount and calculates the amount of shares it corresponds to
      * @param _account account to burn shares for
-     * @param _amount stake amount
+     * @param _amount LST amount
      */
     function _burn(address _account, uint256 _amount) internal override {
         uint256 sharesToBurn = getSharesByStake(_amount);
@@ -214,5 +220,8 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         emit Transfer(_account, address(0), _amount);
     }
 
+    /**
+     * @dev Checks authorization for contract upgrades
+     */
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }

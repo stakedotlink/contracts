@@ -38,7 +38,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of LINK token
      * @param _vaultController address of the strategy that controls this vault
      * @param _stakeController address of Chainlink operator staking contract
@@ -72,7 +72,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice reverts if sender is not operator
+     * @notice Reverts if sender is not operator
      **/
     modifier onlyOperator() {
         if (msg.sender != operator) revert OnlyOperator();
@@ -80,7 +80,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice reverts if sender is not rewardsReceiver
+     * @notice Reverts if sender is not rewards receiver
      **/
     modifier onlyRewardsReceiver() {
         if (msg.sender != rewardsReceiver) revert OnlyRewardsReceiver();
@@ -88,8 +88,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice deposits tokens from the vaultController into the Chainlink staking contract
-     * @dev reverts if sender is not vaultController
+     * @notice Deposits tokens from the vault controller into the Chainlink staking contract
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external override onlyVaultController {
@@ -99,7 +98,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice withdraws tokens from the Chainlink staking contract
+     * @notice Withdraws tokens from the Chainlink staking contract and sends them to the vault controller
      * @param _amount amount to withdraw
      */
     function withdraw(uint256 _amount) external override onlyVaultController {
@@ -109,7 +108,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice returns the principal balance of this contract in the Chainlink staking contract
+     * @notice Returns the principal balance of this contract in the Chainlink staking contract
      * @return principal balance
      */
     function getPrincipalDeposits() public view override returns (uint256) {
@@ -117,9 +116,8 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice raises an alert in the Chainlink staking contract
+     * @notice Raises an alert in the Chainlink staking contract
      * @param _feed address of Chainlink feed to raise alert for
-     * @dev reverts if sender is not operator
      */
     function raiseAlert(address _feed) external onlyOperator {
         uint256 prevBalance = token.balanceOf(address(this));
@@ -134,8 +132,8 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice returns the total unclaimed operator rewards for this vault
-     * @dev includes LSD tokens and asset tokens
+     * @notice Returns the total unclaimed operator rewards for this vault
+     * @dev includes liquid staking tokens and asset tokens
      * @return total rewards
      */
     function getUnclaimedRewards() public view returns (uint256) {
@@ -143,8 +141,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice withdraws the unclaimed operator rewards for this vault
-     * @dev reverts if sender is not rewardsReceiver
+     * @notice Withdraws the unclaimed operator rewards for this vault
      */
     function withdrawRewards() external onlyRewardsReceiver {
         uint256 rewards = getUnclaimedRewards();
@@ -161,7 +158,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice returns the amount of rewards that will be earned by this vault on the next update
+     * @notice Returns the amount of rewards that will be earned by this vault on the next update
      * @return newly earned rewards
      */
     function getPendingRewards() public view returns (uint256) {
@@ -175,7 +172,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice updates the deposit and reward accounting for this vault
+     * @notice Updates the deposit and reward accounting for this vault
      * @dev will only pay out rewards if the vault is net positive when accounting for lost deposits
      * @param _minRewards min amount of rewards to claim (set 0 to skip reward claiming)
      * @param _rewardsReceiver address to receive claimed rewards (set if _minRewards > 0)
@@ -210,12 +207,8 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice sets the operator address if not already set
-     * @dev
-     * - only used for original vaults that are already deployed and don't have an operator set
-     * - reverts is operator is already set
-     * - reverts if `_operator` is zero adddress
-     * - reverts if sender is not owner
+     * @notice Sets the operator address if not already set
+     * @dev only used for original vaults that are already deployed and don't have an operator set
      * @param _operator operator address
      */
     function setOperator(address _operator) public onlyOwner {
@@ -225,13 +218,9 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice sets the rewards receiver
-     * @dev
-     * - this address is authorized to withdraw rewards for this vault and/or change the rewardsReceiver
+     * @notice Sets the rewards receiver
+     * @dev this address is authorized to withdraw rewards for this vault and/or change the rewardsReceiver
      * to a new a address
-     * - reverts if rewardsReceiver is set and sender is not rewardsReceiver
-     * - reverts if rewardsReceiver is not set and sender is not owner
-     * - reverts if `_rewardsReceiver` is zero address
      * @param _rewardsReceiver rewards receiver address
      */
     function setRewardsReceiver(address _rewardsReceiver) public {

@@ -32,6 +32,11 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Initializes contract
+     * @param _operatorVCS address of OperatorVCS
+     * @param _communityVCS address of CommunityVCS
+     * @param _unbondingPeriod unbonding period as set in Chainlink staking contract
+     * @param _claimPeriod claim period as set in Chainlink staking contract
+     * @param _numVaultGroups total number of vault groups
      */
     function initialize(
         address _operatorVCS,
@@ -52,6 +57,11 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         }
     }
 
+    /**
+     * @notice Returns encoded vault deposit order for each strategy
+     * @param _toDeposit amount to deposit
+     * @return list of encoded vault deposit data
+     */
     function getDepositData(uint256 _toDeposit) external view returns (bytes[] memory) {
         uint256 toDeposit = 2 * _toDeposit;
         bytes[] memory depositData = new bytes[](2);
@@ -75,6 +85,11 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return depositData;
     }
 
+    /**
+     * @notice Returns encoded vault withdrawal order for each strategy
+     * @param _toWithdraw amount to withdraw
+     * @return list of encoded vault withdrawal data
+     */
     function getWithdrawalData(uint256 _toWithdraw) external view returns (bytes[] memory) {
         uint256 toWithdraw = 2 * _toWithdraw;
         bytes[] memory withdrawalData = new bytes[](2);
@@ -98,6 +113,11 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return withdrawalData;
     }
 
+    /**
+     * @notice Returns whether claim period is active
+     * @dev funds can only be withdrawn while the claim period is active
+     * @return true of claim period is active, false otherwise
+     */
     function claimPeriodActive() external view returns (bool) {
         uint256 claimPeriodStart = timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod;
         uint256 claimPeriodEnd = claimPeriodStart + claimPeriod;
@@ -105,7 +125,15 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return block.timestamp >= claimPeriodStart && block.timestamp <= claimPeriodEnd;
     }
 
-    function checkUpdate() external view returns (bool, bytes memory) {
+    /**
+     * @notice Returns whether a vault group update is needed
+     * @dev an update is needed once per claim period right after the claim period expires for the
+     * current vault group
+     * @return true if update is needed, false otherwise
+     * @return encoded list of vaults to unbond for current vault group and total unbonded for next vault group
+     * for both strategies
+     */
+    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         uint256 nextUnbondedVaultGroup = _getNextGroup(curUnbondedVaultGroup, numVaultGroups);
 
         if (
@@ -142,7 +170,12 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function executeUpdate(bytes calldata _data) external {
+    /**
+     * @notice Executes a vault group update
+     * @dev re-unbonds all vaults in the current vault group and increments the current vault group
+     * to the next one which will have just entered the claim period
+     */
+    function performUpkeep(bytes calldata _data) external {
         uint256 nextUnbondedVaultGroup = _getNextGroup(curUnbondedVaultGroup, numVaultGroups);
 
         if (
@@ -172,6 +205,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         curUnbondedVaultGroup = uint64(nextUnbondedVaultGroup);
     }
 
+    /**
+     * @notice Returns the vault deposit order for a strategy
+     * @param _vcs strategy
+     * @param _toDeposit amount to deposit
+     * @return vault deposit order
+     * @return total deposit space across returned vaults
+     */
     function _getVaultDepositOrder(IVaultControllerStrategy _vcs, uint256 _toDeposit)
         internal
         view
@@ -231,6 +271,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return (vaultDepositOrderFormatted, totalDepositsAdded);
     }
 
+    /**
+     * @notice Returns the vaut withdrawal order for a strategy
+     * @param _vcs strategy
+     * @param _toWithdraw amount to withdraw
+     * @return vault withdrawal order
+     * @return total withdrawal space across returned vaults
+     */
     function _getVaultWithdrawalOrder(IVaultControllerStrategy _vcs, uint256 _toWithdraw)
         internal
         view
@@ -273,6 +320,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return (vaultWithdrawalOrderFormatted, totalWithdrawsAdded);
     }
 
+    /**
+     * @notice Returns data needed to execute a vault group update for a strategy
+     * @param _vcs strategy
+     * @param _nextUnbondedVaultGroup index of next unbonded vault group
+     * @return list of vaults to unbond in current vault group
+     * @return total unbonded across all vaults in next vault group
+     */
     function _getVaultUpdateData(IVaultControllerStrategy _vcs, uint256 _nextUnbondedVaultGroup)
         internal
         view
@@ -286,6 +340,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return (curGroupVaultsToUnbond, nextGroupTotalUnbonded);
     }
 
+    /**
+     * @notice Returns a list of non-empty vaults for a vault group
+     * @param _vaults list of all vaults
+     * @param _numVaultGroups total number of vault groups
+     * @param _vaultGroup index of vault group
+     * @return list of non-empty vaults
+     */
     function _getNonEmptyVaults(
         address[] memory _vaults,
         uint256 _numVaultGroups,
@@ -309,6 +370,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return nonEmptyVaultsFormatted;
     }
 
+    /**
+     * @notice Returns a the total amount unbonded for a vault group
+     * @param _vaults list of all vaults
+     * @param _numVaultGroups total number of vault groups
+     * @param _vaultGroup index of vault group
+     * @return total unbonded
+     */
     function _getTotalUnbonded(
         address[] memory _vaults,
         uint256 _numVaultGroups,
@@ -325,10 +393,20 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return totalUnbonded;
     }
 
+    /**
+     * @notice Returns the index of the next vault group
+     * @param _curGroup index of current vault group
+     * @param _numGroups total number of vault groups
+     */
     function _getNextGroup(uint256 _curGroup, uint256 _numGroups) internal pure returns (uint256) {
         return _curGroup == _numGroups - 1 ? 0 : _curGroup + 1;
     }
 
+    /**
+     * @notice Returns a sorted list of indexes for a list of values in descending order
+     * @param _values list of values
+     * @return sorted list of indexes
+     */
     function _sortIndexesDescending(uint256[] memory _values) internal pure returns (uint256[] memory) {
         uint256 n = _values.length;
 

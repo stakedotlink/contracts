@@ -16,7 +16,7 @@ contract CommunityVault is Vault {
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of LINK token
      * @param _vaultController address of the strategy that controls this vault
      * @param _stakeController address of Chainlink community staking contract
@@ -32,7 +32,7 @@ contract CommunityVault is Vault {
     }
 
     /**
-     * @notice claims rewards from the Chainlink staking contract
+     * @notice Claims rewards from the Chainlink staking contract
      * @param _minRewards min amount of rewards required to claim
      * @param _rewardsReceiver address to receive rewards
      **/

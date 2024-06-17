@@ -68,7 +68,7 @@ abstract contract VaultControllerStrategy is Strategy {
     error InvalidWithdrawalIndexes();
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of LINK token
      * @param _stakingPool address of the staking pool that controls this strategy
      * @param _stakeController address of Chainlink staking contract
@@ -104,29 +104,33 @@ abstract contract VaultControllerStrategy is Strategy {
         vaultMaxDeposits = _vaultMaxDeposits;
     }
 
+    /**
+     * @notice Reverts if sender is not fund flow controller
+     */
     modifier onlyFundFlowController() {
         if (msg.sender != address(fundFlowController)) revert SenderNotAuthorized();
         _;
     }
 
     /**
-     * @notice returns a list of all vaults controlled by this contract
-     * @return  list of vault addresses
+     * @notice Returns a list of all vaults controlled by this contract
+     * @return list of vault addresses
      */
     function getVaults() external view returns (IVault[] memory) {
         return vaults;
     }
 
     /**
-     * @notice deposits tokens into this strategy from the staking pool
-     * @dev reverts if sender is not stakingPool
+     * @notice Deposits tokens from the staking pool into vaults
      * @param _amount amount to deposit
+     * @param _data encoded vault deposit order
      */
     function deposit(uint256 _amount, bytes calldata _data) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
 
         (uint256 minDeposits, uint256 maxDeposits) = getVaultDepositLimits();
 
+        // if vault deposit limit has changed in Chainlink staking contract, make adjustments
         if (maxDeposits > vaultMaxDeposits) {
             uint256 diff = maxDeposits - vaultMaxDeposits;
             uint256 totalVaults = globalVaultState.depositIndex;
@@ -157,7 +161,9 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice withdrawals are not yet implemented
+     * @notice Withdraws tokens from vaults and sends them to staking pool
+     * @param _amount amount to withdraw
+     * @param _data encoded vault withdrawal order
      */
     function withdraw(uint256 _amount, bytes calldata _data) external onlyStakingPool {
         if (!fundFlowController.claimPeriodActive() || _amount > totalUnbonded) revert InsufficientTokensUnbonded();
@@ -208,6 +214,14 @@ abstract contract VaultControllerStrategy is Strategy {
         vaultGroups[globalVaultState.curUnbondedVaultGroup] = group;
     }
 
+    /**
+     * @notice Executes a vault group update
+     * @dev re-unbonds all vaults in the current vault group and increments the current vault group
+     * to the next one which will have just entered the claim period
+     * @param _curGroupVaultsToUnbond list of vaults to unbond in current vault group
+     * @param _nextGroup index of next vault group
+     * @param _nextGroupTotalUnbonded total unbonded across all vaults in next vault group
+     */
     function updateVaultGroups(
         uint256[] calldata _curGroupVaultsToUnbond,
         uint256 _nextGroup,
@@ -222,7 +236,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the deposit change since deposits were last updated
+     * @notice Returns the deposit change since deposits were last updated
      * @dev deposit change could be positive or negative depending on reward rate and whether
      * any slashing occurred
      * @return deposit change
@@ -236,7 +250,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the total amount of fees that will be paid on the next call to updateDeposits()
+     * @notice Returns the total amount of fees that will be paid on the next call to updateDeposits()
      * @dev fees are only paid when the depositChange since the last update is positive
      * @return total fees
      */
@@ -253,8 +267,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice updates deposit accounting and calculates fees on newly earned rewards
-     * @dev reverts if sender is not stakingPool
+     * @notice Updates deposit accounting and calculates fees on newly earned rewards
      * @return depositChange change in deposits since last update
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
@@ -296,7 +309,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the total amount of deposits as tracked in this strategy
+     * @notice Returns the total amount of deposits as tracked in this strategy
      * @return total deposits
      */
     function getTotalDeposits() public view override returns (uint256) {
@@ -304,7 +317,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the maximum that can be deposited into this strategy
+     * @notice Returns the maximum amount of tokens this strategy can hold
      * @return maximum deposits
      */
     function getMaxDeposits() public view virtual override returns (uint256) {
@@ -322,7 +335,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the minimum that must remain this strategy
+     * @notice Returns the minimum amount of tokens that must remain in this strategy
      * @return minimum deposits
      */
     function getMinDeposits() public view virtual override returns (uint256) {
@@ -330,7 +343,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the vault deposit limits for vaults controlled by this strategy
+     * @notice Returns the vault deposit limits for vaults controlled by this strategy
      * @return minimum amount of deposits that a vault can hold
      * @return maximum amount of deposits that a vault can hold
      */
@@ -339,7 +352,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice manually sets the withdrawal index for each vault group
+     * @notice Manually sets the withdrawal index for each vault group
      * @param _withdrawalIndexes list of withdrawal indexes for each vault group
      */
     function setWithdrawalIndexes(uint64[] calldata _withdrawalIndexes) external onlyOwner {
@@ -367,7 +380,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns a list of all fees and fee receivers
+     * @notice Returns a list of all fees and fee receivers
      * @return list of fees
      */
     function getFees() external view returns (Fee[] memory) {
@@ -375,7 +388,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice adds a new fee
+     * @notice Adds a new fee
      * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
      * the old rate before the percentage changes
      * @param _receiver receiver of fee
@@ -388,7 +401,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice updates an existing fee
+     * @notice Updates an existing fee
      * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
      * the old rate before the percentage changes
      * @param _index index of fee
@@ -414,7 +427,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice sets the basis point amount of the remaing deposit room in the Chainlink staking contract
+     * @notice Sets the basis point amount of the remaing deposit room in the Chainlink staking contract
      * that can be deposited at once
      * @param _maxDepositSizeBP basis point amount
      */
@@ -425,9 +438,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice sets a new vault implementation contract to be used when deploying/upgrading vaults
-     * @dev
-     * - reverts if sender is not owner
+     * @notice Sets a new vault implementation contract to be used when deploying/upgrading vaults
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
@@ -436,7 +447,8 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice sets the address authorized to unbond tokens in the Chainlink staking contract
+     * @notice Sets the fund flow controller
+     * @dev this address is authorized to unbond tokens in the Chainlink staking contract
      * @param _fundFlowController address of fund flow controller
      */
     function setFundFlowController(address _fundFlowController) external onlyOwner {
@@ -444,8 +456,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deposits tokens into vaults
-     * @dev assumes the number of vault groups is reasonably low
+     * @notice Deposits tokens into vaults
      * @param _toDeposit amount to deposit
      * @param _minDeposits minimum amount of deposits that a vault can hold
      * @param _maxDeposits minimum amount of deposits that a vault can hold
@@ -463,6 +474,8 @@ abstract contract VaultControllerStrategy is Strategy {
         VaultGroup[] memory groups = vaultGroups;
 
         if (_vaultIds.length != 0 && _vaultIds[0] != globalState.groupDepositIndex) revert InvalidVaultIds();
+
+        // deposit into vaults in the order specified in _vaultIds
 
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
             uint256 vaultIndex = _vaultIds[i];
@@ -517,13 +530,14 @@ abstract contract VaultControllerStrategy is Strategy {
         if (totalRebonded != 0) totalUnbonded -= totalRebonded;
         if (toDeposit == 0 || toDeposit < _minDeposits) return _toDeposit - toDeposit;
 
+        // cannot be more than a single vault worth of deposit room in each group (current group excepted)
         for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
             if (i != globalState.curUnbondedVaultGroup && groups[i].totalDepositRoom >= _maxDeposits) {
                 return _toDeposit - toDeposit;
             }
         }
 
-        // Deposit into additional vaults that don't yet belong to a group
+        //deposit into additional vaults that don't yet belong to a group
 
         uint256 numVaults = vaults.length;
         uint256 i = globalState.depositIndex;
@@ -558,7 +572,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice deploys a new vault and adds it to this strategy
+     * @notice Deploys a new vault and adds it to this strategy
      * @param _data optional encoded function call to be executed after deployment
      */
     function _deployVault(bytes memory _data) internal {
@@ -581,7 +595,7 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice returns the sum of all fees
+     * @notice Returns the sum of all fees
      * @return sum of fees in basis points
      **/
     function _totalFeesBasisPoints() private view returns (uint256) {
