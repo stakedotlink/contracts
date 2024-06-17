@@ -1,4 +1,4 @@
-import { updateDeployments, deploy } from '../../../utils/deployment'
+import { updateDeployments, deploy } from '../../../../utils/deployment'
 
 // SDL
 const sdl = {

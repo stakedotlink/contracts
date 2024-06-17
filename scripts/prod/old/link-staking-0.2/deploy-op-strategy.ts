@@ -1,5 +1,5 @@
 import { ethers, upgrades } from 'hardhat'
-import { getContract } from '../../utils/deployment'
+import { getContract } from '../../../utils/deployment'
 
 async function main() {
   const operatorVCS = await getContract('LINK_OperatorVCS')

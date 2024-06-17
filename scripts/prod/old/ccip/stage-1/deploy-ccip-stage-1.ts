@@ -1,5 +1,5 @@
-import { WrappedTokenBridge } from '../../../../typechain-types'
-import { updateDeployments, deploy, getContract } from '../../../utils/deployment'
+import { WrappedTokenBridge } from '../../../../../typechain-types'
+import { updateDeployments, deploy, getContract } from '../../../../utils/deployment'
 
 // should be deployed on primary chain (Ethereum Mainnet)
 
