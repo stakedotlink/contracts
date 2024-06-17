@@ -76,7 +76,7 @@ describe('SequencerVCS', () => {
     await metisLockingInfo.setManager(metisLockingPool.address)
     await stakingPool.addStrategy(strategy.address)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRewardsInitiator(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
 
     for (let i = 0; i < 5; i++) {
       await strategy.addVault('0x5555', accounts[1], accounts[2])
