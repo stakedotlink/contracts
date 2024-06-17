@@ -78,6 +78,14 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Returns the total available rewards
+     * @return available rewards
+     **/
+    function getRewards() external view returns (uint256) {
+        return metisToken.balanceOf(address(this));
+    }
+
+    /**
      * @notice Transfers reward tokens to the destination chain
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
      **/
