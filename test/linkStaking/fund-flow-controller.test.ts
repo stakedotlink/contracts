@@ -37,7 +37,7 @@ describe('FundFlowController', () => {
     curGroupVaultsToUnbond: number[],
     nextGroupVaultsTotalUnbonded: number
   ) {
-    return await fundFlowController.executeUpdate(
+    return await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[], 0, curGroupVaultsToUnbond, toEther(nextGroupVaultsTotalUnbonded)]
@@ -245,10 +245,10 @@ describe('FundFlowController', () => {
     ])
   })
 
-  it('checkUpdate should work correctly', async () => {
+  it('checkUpkeep should work correctly', async () => {
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -262,7 +262,7 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -274,13 +274,13 @@ describe('FundFlowController', () => {
 
     await updateVaultGroups([0, 5, 10], 0)
 
-    assert.deepEqual(await fundFlowController.checkUpdate(), [false, '0x'])
+    assert.deepEqual(await fundFlowController.checkUpkeep('0x'), [false, '0x'])
 
     await time.increase(claimPeriod + 10)
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -299,7 +299,7 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -327,7 +327,7 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -341,7 +341,7 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -362,7 +362,7 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -376,7 +376,7 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -387,7 +387,7 @@ describe('FundFlowController', () => {
     )
   })
 
-  it('executeUpdate should work correctly', async () => {
+  it('performUpkeep should work correctly', async () => {
     await comStrategy.deposit(toEther(1200), encodeVaults([]))
 
     await updateVaultGroups([0, 5, 10], 0)
@@ -400,7 +400,7 @@ describe('FundFlowController', () => {
     assert.equal((await comStrategy.globalVaultState())[1].toNumber(), 1)
 
     await expect(
-      fundFlowController.executeUpdate(
+      fundFlowController.performUpkeep(
         ethers.utils.defaultAbiCoder.encode(
           ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
           [[], 0, [1, 6, 11], toEther(0)]
@@ -480,35 +480,35 @@ describe('FundFlowController', () => {
 
     assert.deepEqual(decodeData(await fundFlowController.getDepositData(toEther(150))), [[], []])
 
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[0, 5], toEther(0), [0, 5, 10], toEther(0)]
       )
     )
     await time.increase(claimPeriod)
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[1], toEther(0), [1, 6, 11], toEther(0)]
       )
     )
     await time.increase(claimPeriod)
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[2], toEther(0), [2, 7], toEther(0)]
       )
     )
     await time.increase(claimPeriod)
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[3], toEther(0), [3, 8], toEther(0)]
       )
     )
     await time.increase(claimPeriod)
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[4], toEther(200), [4, 9], toEther(300)]
@@ -517,7 +517,7 @@ describe('FundFlowController', () => {
     await comStrategy.withdraw(toEther(50), encodeVaults([0, 5]))
     await opStrategy.withdraw(toEther(100), encodeVaults([0, 5]))
     await time.increase(claimPeriod)
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[0, 5], toEther(100), [0, 5, 10], toEther(300)]
@@ -525,7 +525,7 @@ describe('FundFlowController', () => {
     )
     await comStrategy.withdraw(toEther(270), encodeVaults([1, 6, 11]))
     await time.increase(claimPeriod)
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[1], toEther(100), [1, 6, 11], toEther(200)]
@@ -541,7 +541,7 @@ describe('FundFlowController', () => {
     await time.increase(claimPeriod + 10)
     assert.deepEqual(
       await fundFlowController
-        .checkUpdate()
+        .checkUpkeep('0x')
         .then((res) => [
           res[0],
           ethers.utils.defaultAbiCoder
@@ -551,7 +551,7 @@ describe('FundFlowController', () => {
       [true, [[2], 100, [2, 7], 200]]
     )
 
-    await fundFlowController.executeUpdate(
+    await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[2], toEther(100), [2, 7], toEther(200)]
