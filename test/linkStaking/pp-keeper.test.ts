@@ -40,7 +40,7 @@ describe('PPKeeper', () => {
     curGroupVaultsToUnbond: number[],
     nextGroupVaultsTotalUnbonded: number
   ) {
-    return await fundFlowController.executeUpdate(
+    return await fundFlowController.performUpkeep(
       ethers.utils.defaultAbiCoder.encode(
         ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
         [[], 0, curGroupVaultsToUnbond, toEther(nextGroupVaultsTotalUnbonded)]
