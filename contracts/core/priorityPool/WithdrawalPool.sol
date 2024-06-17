@@ -61,7 +61,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @param _token address of asset token
      * @param _lst address of liquid staking token
      * @param _priorityPool address of priority pool
-     * @param _minWithdrawalAmount min amount that can be queued for withdrawal
+     * @param _minWithdrawalAmount minimum amount that can be queued for withdrawal
      */
     function initialize(
         address _token,
@@ -80,13 +80,16 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         queuedWithdrawals.push(Withdrawal(0, 0));
     }
 
+    /**
+     * @notice Reverts if sender is not priority pool
+     */
     modifier onlyPriorityPool() {
         if (msg.sender != address(priorityPool)) revert SenderNotAuthorized();
         _;
     }
 
     /**
-     * @notice Returns the total liquid staking tokens queued for withdrawal
+     * @notice Returns the total amount of liquid staking tokens queued for withdrawal
      * @return total amount queued for withdrawal
      */
     function getTotalQueuedWithdrawals() external view returns (uint256) {
@@ -169,7 +172,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Returns a list of finalized and partially finalized withdrawal ids owned by an account
      * @param _account address of account
      * @return list of withdrawal ids
-     * @return total withdrawable across all withdrawals
+     * @return total withdrawable across all account's withdrawals
      */
     function getFinalizedWithdrawalIdsByOwner(address _account) external view returns (uint256[] memory, uint256) {
         uint256[] memory withdrawalIds = getWithdrawalIdsByOwner(_account);
@@ -251,7 +254,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Queues a withdrawal of liquid staking tokens for an account
      * @param _account address of account
-     * @param _amount amount of lst
+     * @param _amount amount of LST
      */
     function queueWithdrawal(address _account, uint256 _amount) external onlyPriorityPool {
         if (_amount < minWithdrawalAmount) revert AmountTooSmall();
@@ -293,7 +296,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Executes withdrawals if there is sufficient available withdrawal space
-     * @param _performData encoded withdrawal data to be passed to strategies
+     * @param _performData encoded list of withdrawal data passed to staking pool strategies
      */
     function performUpkeep(bytes calldata _performData) external {
         uint256 canWithdraw = priorityPool.canWithdraw(address(this), 0);
@@ -308,8 +311,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Sets the minimum amount of lst tokens that can be queued for withdrawal
-     * @param _minWithdrawalAmount min token amount
+     * @notice Sets the minimum amount of liquid staking tokens that can be queued for withdrawal
+     * @param _minWithdrawalAmount minimum token amount
      */
     function setMinWithdrawalAmount(uint256 _minWithdrawalAmount) external onlyOwner {
         minWithdrawalAmount = _minWithdrawalAmount;
@@ -356,7 +359,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns the amount of stake that corresponds to an amount of shares
+     * @notice Returns the amount of LST that corresponds to an amount of shares
      * @param _sharesAmount amount of shares
      * @return amount of stake
      */
@@ -365,7 +368,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns the amount of shares that corresponds to an amount of stake
+     * @notice Returns the amount of shares that corresponds to an amount of LST
      * @param _amount amount of stake
      * @return amount of shares
      */

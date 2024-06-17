@@ -12,11 +12,21 @@ contract PPKeeper {
     IPriorityPool public priorityPool;
     IFundFlowController public fundFlowController;
 
+    /**
+     * @notice Initializes contract
+     * @param _priorityPool address of priority pool
+     * @param _fundFlowController address of fund flow controller
+     */
     constructor(address _priorityPool, address _fundFlowController) {
         priorityPool = IPriorityPool(_priorityPool);
         fundFlowController = IFundFlowController(_fundFlowController);
     }
 
+    /**
+     * @notice Returns whether a deposit should be executed through the priority pool
+     * @return true if deposit needed, false otherwise
+     * @return encoded vault deposit data
+     */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         (bool upkeepNeeded, bytes memory data) = priorityPool.checkUpkeep("");
 
@@ -28,6 +38,10 @@ contract PPKeeper {
         return (true, abi.encode(depositData));
     }
 
+    /**
+     * @notice Executes a deposit through the priority pool
+     * @param _performData encoded vault deposit data
+     */
     function performUpkeep(bytes calldata _performData) external {
         priorityPool.performUpkeep(_performData);
     }
