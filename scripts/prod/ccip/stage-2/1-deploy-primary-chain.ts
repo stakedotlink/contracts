@@ -91,7 +91,7 @@ async function main() {
   ).wait()
   await (await ccipController.approveRewardTokens([wstLINKToken.address])).wait()
   await (await ccipController.setRESDLTokenBridge(reSDLTokenBridge.address)).wait()
-  await (await ccipController.setRewardsInitiator(rewardsInitiator.address)).wait()
+  await (await ccipController.setRebaseController(rewardsInitiator.address)).wait()
   await (await ccipController.transferOwnership(multisigAddress)).wait()
 }
 

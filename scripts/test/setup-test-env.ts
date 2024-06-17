@@ -72,6 +72,7 @@ async function main() {
   const poolOwnersV1 = (await getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
   const sdlPool = (await getContract('SDLPoolPrimary')) as SDLPoolPrimary
+  const METISToken = (await getContract('METISToken')) as StakingAllowance
 
   // LPL migration
 
@@ -130,6 +131,8 @@ async function main() {
     tx = await lplToken.transfer(accounts[i], toEther(10000))
     await tx.wait()
     tx = await linkToken.transfer(accounts[i], toEther(10000))
+    await tx.wait()
+    tx = await METISToken.transfer(accounts[i], toEther(10000))
     await tx.wait()
   }
 
@@ -262,7 +265,7 @@ async function main() {
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
 
-  await LINK_StakingPool.setRewardsInitiator(accounts[0])
+  await LINK_StakingPool.setRebaseController(accounts[0])
   tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
