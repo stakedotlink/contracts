@@ -8,8 +8,8 @@ import "./interfaces/IStrategy.sol";
 
 /**
  * @title Staking Pool
- * @notice Allows users to stake an asset and receive liquid staking tokens 1:1, then deposits staked
- * assets into strategy contracts
+ * @notice Allows users to stake asset tokens and receive liquid staking tokens 1:1, then deposits staked
+ * asset tokens into strategy contracts
  */
 contract StakingPool is StakingRewardsPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -46,6 +46,14 @@ contract StakingPool is StakingRewardsPool {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the contract
+     * @param _token address of asset token
+     * @param _liquidTokenName name of liquid staking token
+     * @param _liquidTokenSymbol symbol of liquid staking token
+     * @param _fees list of fees
+     * @param _unusedDepositLimit maximum amount of unused deposits that can sit in the pool
+     */
     function initialize(
         address _token,
         string memory _liquidTokenName,
@@ -61,13 +69,16 @@ contract StakingPool is StakingRewardsPool {
         unusedDepositLimit = _unusedDepositLimit;
     }
 
+    /**
+     * @notice Reverts if sender is not priority pool
+     */
     modifier onlyPriorityPool() {
         if (msg.sender != priorityPool) revert SenderNotAuthorized();
         _;
     }
 
     /**
-     * @notice returns a list of all active strategies
+     * @notice Returns a list of all strategies
      * @return list of strategies
      */
     function getStrategies() external view returns (address[] memory) {
@@ -75,7 +86,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns a list of all fees
+     * @notice Returns a list of all fees
      * @return list of fees
      */
     function getFees() external view returns (Fee[] memory) {
@@ -83,10 +94,11 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice stakes asset tokens and mints liquid staking tokens
+     * @notice Stakes asset tokens and mints liquid staking tokens
+     * @dev will deposit unused deposits and new deposits into strategies
      * @param _account account to stake for
      * @param _amount amount to stake
-     * @param _data optional deposit data passed to strategies
+     * @param _data list of deposit data passed to strategies
      **/
     function deposit(
         address _account,
@@ -111,12 +123,12 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice withdraws asset tokens and burns liquid staking tokens
+     * @notice Withdraws asset tokens and burns liquid staking tokens
      * @dev will withdraw from strategies if not enough liquidity
      * @param _account account to withdraw for
      * @param _receiver address to receive withdrawal
      * @param _amount amount to withdraw
-     * @param _data optional withdrawal data passed to strategies
+     * @param _data list of withdrawal data passed to strategies
      **/
     function withdraw(
         address _account,
@@ -144,10 +156,10 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice deposits assets into a strategy
+     * @notice Manually deposits asset tokens into a specific strategy
      * @param _index index of strategy
      * @param _amount amount to deposit
-     * @param _data optional deposit data passed to strategy
+     * @param _data deposit data passed to strategy
      **/
     function strategyDeposit(
         uint256 _index,
@@ -159,10 +171,10 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice withdraws assets from a strategy
+     * @notice Manually withdraws asset tokens from a strategy
      * @param _index index of strategy
      * @param _amount amount to withdraw
-     * @param _data optional withdrawal data passed to strategy
+     * @param _data withdrawal data passed to strategy
      **/
     function strategyWithdraw(
         uint256 _index,
@@ -174,7 +186,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the maximum amount that can be deposited into the pool
+     * @notice Returns the maximum amount of tokens that the pool can hold
      * @return maximum deposit limit
      **/
     function getMaxDeposits() public view returns (uint256) {
@@ -190,7 +202,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the minimum amount that must remain the pool
+     * @notice Returns the minimum amount of tokens that must remain in the pool
      * @return minimum deposit limit
      */
     function getMinDeposits() public view returns (uint256) {
@@ -205,16 +217,17 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the amont of tokens sitting in this pool outside a strategy
-     * @dev these tokens earn no yield and will be deposited ASAP
-     * @return amount of tokens outside a strategy
+     * @notice Returns the amount of unused asset tokens sitting in this pool outside a strategy
+     * @dev these tokens earn no yield and will be deposited ASAP on the next call to _depositLiquidity
+     * @return amount of unused tokens
      */
     function getUnusedDeposits() external view returns (uint256) {
         return token.balanceOf(address(this));
     }
 
     /**
-     * @notice returns the available deposit room for this pool's strategies
+     * @notice Returns the sum of available deposit room across all strategies
+     * @dev does not account for unused deposits sitting in pool
      * @return strategy deposit room
      */
     function getStrategyDepositRoom() external view returns (uint256) {
@@ -230,7 +243,8 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the available deposit room for this pool
+     * @notice Returns the total available deposit room for this pool
+     * @dev accounts for unused deposits sitting in pool
      * @return available deposit room
      */
     function canDeposit() external view returns (uint256) {
@@ -244,7 +258,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the available withdrawal room for this pool
+     * @notice Returns the total available withdrawal room for this pool
      * @return available withdrawal room
      */
     function canWithdraw() external view returns (uint256) {
@@ -258,7 +272,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice adds a new strategy
+     * @notice Adds a new strategy
      * @param _strategy address of strategy
      **/
     function addStrategy(address _strategy) external onlyOwner {
@@ -268,10 +282,10 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice removes a strategy
+     * @notice Removes an existing strategy
      * @param _index index of strategy
-     * @param _strategyUpdateData optional update data passed to strategy
-     * @param _strategyWithdrawalData optional withdrawal data passed to strategy
+     * @param _strategyUpdateData update data passed to strategy
+     * @param _strategyWithdrawalData withdrawal data passed to strategy
      **/
     function removeStrategy(
         uint256 _index,
@@ -298,7 +312,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice reorders strategies
+     * @notice Reorders strategies
      * @param _newOrder list containing strategy indexes in a new order
      **/
     function reorderStrategies(uint256[] calldata _newOrder) external onlyOwner {
@@ -316,8 +330,8 @@ contract StakingPool is StakingRewardsPool {
         }
     }
 
-    /**
-     * @notice adds a new fee
+    /*
+     * @notice Adds a new fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
@@ -327,7 +341,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice updates an existing fee
+     * @notice Updates an existing fee
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -351,8 +365,8 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the amount of rewards earned since the last update and the amount of fees that
-     * will be paid on the rewards
+     * @notice Returns the amount of rewards earned since the last call to updateStrategyRewards and the
+     *  amount of fees that will be paid on the rewards
      * @param _strategyIdxs indexes of strategies to sum rewards/fees for
      * @return total rewards
      * @return total fees
@@ -383,9 +397,9 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice updates and distributes rewards based on balance changes in strategies
+     * @notice Distributes rewards/fees based on balance changes in strategies since the last update
      * @param _strategyIdxs indexes of strategies to update rewards for
-     * @param _data encoded data to be passed to each strategy
+     * @param _data update data passed to each strategy
      **/
     function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external {
         if (msg.sender != rebaseController && !_strategyExists(msg.sender))
@@ -394,9 +408,9 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice deposits available liquidity into strategies by order of priority
-     * @param _data optional call data passed to strategies
-     * @dev deposits into strategies[0] until its limit is reached, then strategies[1], and so on
+     * @notice Deposits available liquidity into strategies
+     * @dev deposits into strategies in ascending order, only moving to the next once the current is full
+     * @param _data list of deposit data passed to strategies
      **/
     function depositLiquidity(bytes[] calldata _data) public {
         uint256 toDeposit = token.balanceOf(address(this));
@@ -461,7 +475,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the total amount of assets staked in the pool
+     * @notice Returns the total amount of asset tokens staked in the pool
      * @return the total staked amount
      */
     function _totalStaked() internal view override returns (uint256) {
@@ -469,11 +483,10 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice withdraws liquidity from strategies in opposite order of priority
-     * @dev withdraws from strategies[strategies.length - 1], then strategies[strategies.length - 2], and so on
-     * until withdraw amount is reached
+     * @notice Withdraws liquidity from strategies
+     * @dev withdraws from strategies in descending order only moving to the next once once the current is empty
      * @param _amount amount to withdraw
-     * @param _data optional call data passed to strategies
+     * @param _data list of withdrawal data passed to strategies
      **/
     function _withdrawLiquidity(uint256 _amount, bytes[] calldata _data) private {
         uint256 toWithdraw = _amount;
@@ -493,9 +506,9 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice updates and distributes rewards based on balance changes in strategies
+     * @notice Distributes rewards/fees based on balance changes in strategies since the last update
      * @param _strategyIdxs indexes of strategies to update rewards for
-     * @param _data encoded data to be passed to each strategy
+     * @param _data update data passed to each strategy
      **/
     function _updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) private {
         int256 totalRewards;
@@ -573,7 +586,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice returns the sum of all fees
+     * @notice Returns the sum of all fees
      * @return sum of fees in basis points
      **/
     function _totalFeesBasisPoints() private view returns (uint256) {
@@ -585,7 +598,7 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice checks whether or not a strategy exists
+     * @notice Returns whether or not a strategy exists
      * @param _strategy address of strategy
      * @return true if strategy exists, false otherwise
      **/

@@ -22,7 +22,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of LINK token
      * @param _stakingPool address of the staking pool that controls this strategy
      * @param _stakeController address of Chainlink staking contract
@@ -73,9 +73,9 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice claims Chanlink staking rewards from vaults
+     * @notice Claims Chanlink staking rewards from vaults
      * @param _vaults list if vault indexes to claim from
-     * @param _minRewards min amount of rewards required to claim
+     * @param _minRewards min amount of rewards per vault required to claim
      */
     function claimRewards(
         uint256[] calldata _vaults,
@@ -91,7 +91,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns the deposit change since deposits were last updated
+     * @notice Returns the deposit change since deposits were last updated
      * @dev deposit change could be positive or negative depending on reward rate and whether
      * any slashing occurred
      * @return deposit change
@@ -107,7 +107,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns the maximum that can be deposited into this strategy
+     * @notice Returns the maximum amount of tokens this strategy can hold
      * @return maximum deposits
      */
     function getMaxDeposits() public view virtual override returns (uint256) {
@@ -115,8 +115,8 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns whether a new batch of vaults should be deployed
-     * @dev used by chainlink keepers
+     * @notice Returns whether a new batch of vaults should be deployed
+     * @return true if new batch should be deployed, false otherwise
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         return (
@@ -126,9 +126,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice deploys a new batch of vaults
-     * @dev will revert if the number of non-full vaults is not less than vaultDeploymentThreshold
-     * @dev used by chainlink keepers
+     * @notice Deploys a new batch of vaults
      */
     function performUpkeep(bytes calldata) external {
         if ((vaults.length - globalVaultState.depositIndex) >= vaultDeploymentThreshold)
@@ -137,7 +135,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice deploys a new batch of vaults
+     * @notice Deploys a new batch of vaults
      * @param _numVaults number of vaults to deploy
      */
     function addVaults(uint256 _numVaults) external onlyOwner {
@@ -145,7 +143,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice sets the vault deployment parameters
+     * @notice Sets the vault deployment parameters
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
      */
@@ -159,7 +157,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice deploys new vaults
+     * @notice Deploys new vaults
      * @param _numVaults number of vaults to deploy
      */
     function _deployVaults(uint256 _numVaults) internal {
