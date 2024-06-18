@@ -20,8 +20,8 @@ async function deploySequencerVCS() {
   const sequencerVCS = await deployUpgradeable('StrategyMock', [
     metisToken.address,
     stakingPool.address,
-    toEther(100),
-    toEther(100000),
+    toEther(1000),
+    toEther(10),
   ])
   console.log('SequencerVCS deployed: ', sequencerVCS.address)
 
