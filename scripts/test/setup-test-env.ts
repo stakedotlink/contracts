@@ -16,6 +16,7 @@ import {
   DelegatorPool,
   CurveMock,
   SDLPoolPrimary,
+  ERC20,
 } from '../../typechain-types'
 import { ethers } from 'hardhat'
 
@@ -23,13 +24,13 @@ import { ethers } from 'hardhat'
 Accounts:
 0 - main account that holds most of the tokens. Do not test ui with this account.
 1 - holds no tokens
-2 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + has staked LPL + has PoolOwners LINK rewards
-3 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + stSDL/stLINK/ixETH + has DelegatorPool stLINK rewards 
-4 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + stLINK + has queued LINK + has withdrawable stLINK in the queue
-5 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + reSDL + has queued LINK + has SDLPool stLINK rewards
-6 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + reSDL (locked) + has queued LINK + has withdrawable stLINK in the queue 
-7 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + has queued LINK 
-8 - holds SDL/LPL/LINK/stETH/rETH/cbETH/sfrxETH + stLINK + has queued LINK + cannot withdraw full queued LINK amount 
+2 - holds SDL/LPL/LINK/METIS + has staked LPL + has PoolOwners LINK rewards
+3 - holds SDL/LPL/LINK/METIS + stSDL/stLINK + has DelegatorPool stLINK rewards 
+4 - holds SDL/LPL/LINK/METIS + stLINK + has queued LINK + has withdrawable stLINK in the queue
+5 - holds SDL/LPL/LINK/METIS + reSDL + has queued LINK + has SDLPool stLINK rewards
+6 - holds SDL/LPL/LINK/METIS + reSDL (locked) + has queued LINK + has withdrawable stLINK in the queue 
+7 - holds SDL/LPL/LINK/METIS + has queued LINK 
+8 - holds SDL/LPL/LINK/METIS + stLINK + has queued LINK + cannot withdraw full queued LINK amount 
 */
 
 /*
@@ -72,7 +73,16 @@ async function main() {
   const poolOwnersV1 = (await getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
   const sdlPool = (await getContract('SDLPoolPrimary')) as SDLPoolPrimary
-  const METISToken = (await getContract('METISToken')) as StakingAllowance
+
+  const METISToken = (await getContract('METISToken')) as ERC20
+  const METIS_StakingPool = (await getContract('METIS_StakingPool')) as StakingPool
+  const METIS_PriorityPool = (await getContract('METIS_PriorityPool')) as PriorityPool
+  const strategyMockMETIS = (await ethers.getContractAt(
+    'StrategyMock',
+    (
+      await METIS_StakingPool.getStrategies()
+    )[0]
+  )) as StrategyMock
 
   // LPL migration
 
@@ -141,7 +151,8 @@ async function main() {
     toEther(500),
     ethers.utils.defaultAbiCoder.encode(['bool'], [false])
   )
-  await tx.wait()
+  await (await METISToken.approve(METIS_PriorityPool.address, ethers.constants.MaxUint256)).wait()
+  await (await METIS_PriorityPool.deposit(toEther(500), false)).wait()
 
   // Account 2
 
@@ -198,6 +209,13 @@ async function main() {
       ethers.utils.defaultAbiCoder.encode(['bool'], [false])
     )
   await tx.wait()
+  await (
+    await METISToken.connect(signers[3]).approve(
+      METIS_PriorityPool.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
+  await (await METIS_PriorityPool.connect(signers[3]).deposit(toEther(100), false)).wait()
 
   await tx.wait()
   tx = await LINK_StakingPool.transferAndCall(delegatorPool.address, toEther(100), '0x')
@@ -215,6 +233,13 @@ async function main() {
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
   await tx.wait()
+  await (
+    await METISToken.connect(signers[4]).approve(
+      METIS_PriorityPool.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
+  await (await METIS_PriorityPool.connect(signers[4]).deposit(toEther(500), true)).wait()
 
   // Account 5
 
@@ -234,6 +259,13 @@ async function main() {
       toEther(200),
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
+  await (
+    await METISToken.connect(signers[5]).approve(
+      METIS_PriorityPool.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
+  await (await METIS_PriorityPool.connect(signers[5]).deposit(toEther(200), true)).wait()
 
   // Account 6
 
@@ -253,6 +285,13 @@ async function main() {
       ethers.utils.defaultAbiCoder.encode(['bool'], [true])
     )
   await tx.wait()
+  await (
+    await METISToken.connect(signers[6]).approve(
+      METIS_PriorityPool.address,
+      ethers.constants.MaxUint256
+    )
+  ).wait()
+  await (await METIS_PriorityPool.connect(signers[6]).deposit(toEther(300), true)).wait()
 
   // Reward Distributions
 
@@ -261,6 +300,8 @@ async function main() {
   await tx.wait()
   tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')
   await tx.wait()
+  await (await METIS_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')).wait()
+  await (await METIS_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')).wait()
 
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
@@ -271,6 +312,17 @@ async function main() {
   tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
   await tx.wait()
   tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
+  await tx.wait()
+
+  tx = await METISToken.transfer(strategyMockMETIS.address, toEther(500))
+  await tx.wait()
+
+  await METIS_StakingPool.setRebaseController(accounts[0])
+  tx = await METIS_StakingPool.updateStrategyRewards([0], '0x')
+  await tx.wait()
+  tx = await METISToken.transfer(strategyMockMETIS.address, toEther(500))
+  await tx.wait()
+  tx = await METIS_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
 
   // Staking Queue
@@ -284,6 +336,22 @@ async function main() {
   tx = await LINK_PriorityPool.pauseForUpdate()
   await tx.wait()
   tx = await LINK_PriorityPool.updateDistribution(
+    '0x52171b32a0a6c33f6756c5c33673790b66945c4f1c4ec4a81932e60b06b5a321',
+    '0x6310F1189600F807FAC771D10706B6665628B99797054447F58F4C8A05971B83',
+    toEther(200),
+    toEther(100)
+  )
+  await tx.wait()
+
+  tx = await strategyMockMETIS.setMaxDeposits(toEther(2200))
+  await tx.wait()
+
+  tx = await METIS_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000))
+  await tx.wait()
+
+  tx = await METIS_PriorityPool.pauseForUpdate()
+  await tx.wait()
+  tx = await METIS_PriorityPool.updateDistribution(
     '0x52171b32a0a6c33f6756c5c33673790b66945c4f1c4ec4a81932e60b06b5a321',
     '0x6310F1189600F807FAC771D10706B6665628B99797054447F58F4C8A05971B83',
     toEther(200),
