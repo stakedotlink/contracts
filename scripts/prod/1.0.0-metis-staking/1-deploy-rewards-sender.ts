@@ -1,5 +1,12 @@
 import { ethers } from 'hardhat'
-import { updateDeployments, getContract, deployUpgradeable } from '../../utils/deployment'
+import { updateDeployments, getContract, deployUpgradeable, deploy } from '../../utils/deployment'
+
+// wstMETIS
+const wstMETIS = {
+  name: 'Wrapped stMETIS',
+  symbol: 'wstMETIS',
+  decimals: 18,
+}
 
 // Deploy on Metis
 
@@ -24,12 +31,22 @@ async function main() {
   ])
   console.log('METIS_SequencerRewardsCCIPSender deployed: ', rewardsSender.address)
 
+  const wrappedSDToken = await deploy('BurnMintERC677', [
+    wstMETIS.name,
+    wstMETIS.symbol,
+    wstMETIS.decimals,
+    0,
+  ])
+  console.log('METIS_WrappedSDToken deployed: ', wrappedSDToken.address)
+
   updateDeployments(
     {
       METIS_SequencerRewardsCCIPSender: rewardsSender.address,
+      METIS_WrappedSDToken: wrappedSDToken.address,
     },
     {
       METIS_SequencerRewardsCCIPSender: 'SequencerRewardsCCIPSender',
+      METIS_wrappedSDToken: 'BurnMintERC677',
     }
   )
 }
