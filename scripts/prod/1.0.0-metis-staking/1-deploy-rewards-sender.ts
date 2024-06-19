@@ -21,22 +21,25 @@ const RewardsSenderArgs = {
 async function main() {
   const metisToken = await getContract('METISToken')
 
-  const rewardsSender = await deployUpgradeable('SequencerRewardsCCIPSender', [
-    RewardsSenderArgs.router,
-    ethers.constants.AddressZero,
-    metisToken.address,
-    RewardsSenderArgs.transferInitiator,
-    RewardsSenderArgs.destinationChainSelector,
-    RewardsSenderArgs.extraArgs,
-  ])
+  const rewardsSender = await deployUpgradeable(
+    'SequencerRewardsCCIPSender',
+    [
+      RewardsSenderArgs.router,
+      ethers.constants.AddressZero,
+      metisToken.address,
+      RewardsSenderArgs.transferInitiator,
+      RewardsSenderArgs.destinationChainSelector,
+      RewardsSenderArgs.extraArgs,
+    ],
+    true
+  )
   console.log('METIS_SequencerRewardsCCIPSender deployed: ', rewardsSender.address)
 
-  const wrappedSDToken = await deploy('BurnMintERC677', [
-    wstMETIS.name,
-    wstMETIS.symbol,
-    wstMETIS.decimals,
-    0,
-  ])
+  const wrappedSDToken = await deploy(
+    'BurnMintERC677',
+    [wstMETIS.name, wstMETIS.symbol, wstMETIS.decimals, 0],
+    true
+  )
   console.log('METIS_WrappedSDToken deployed: ', wrappedSDToken.address)
 
   updateDeployments(

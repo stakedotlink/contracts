@@ -9,7 +9,7 @@ const SequencerVaultArgs = {
 }
 
 async function main() {
-  const sequencerVCS = (await getContract('SequencerVCS')) as SequencerVCS
+  const sequencerVCS = (await getContract('SequencerVCS', true)) as SequencerVCS
 
   await (
     await sequencerVCS.addVault(
