@@ -1,14 +1,14 @@
 import { ethers } from 'hardhat'
 import { updateDeployments, getContract, deployUpgradeable, deploy } from '../../utils/deployment'
 
+// Deploy on Metis
+
 // wstMETIS
 const wstMETIS = {
   name: 'Wrapped stMETIS',
   symbol: 'wstMETIS',
   decimals: 18,
 }
-
-// Deploy on Metis
 
 // Sequencer Rewards CCIP Sender
 const RewardsSenderArgs = {
