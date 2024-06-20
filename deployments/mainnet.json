@@ -13,7 +13,7 @@
   },
   "METISToken": {
     "address": "0x9E32b13ce7f2E80A01932B42553652E053D6ed8e",
-    "artifact": "ERC20"
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   },
   "LPLMigration": {
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
