@@ -1,7 +1,40 @@
 import { ethers } from 'hardhat'
+import axios from 'axios'
 import { updateDeployments, getContract, deployUpgradeable, deploy } from '../../utils/deployment'
 
 // Deploy on Metis
+
+ async function switchNetwork(
+  chainId: number,
+  host: string
+): Promise<void> {
+  const chainIdHex = `0x${chainId.toString(16)}`;
+  const params = [
+    {
+      chainId: chainIdHex,
+    },
+  ];
+
+  try {
+    const response = await axios.post(`http://${host}:1248`, {
+      jsonrpc: "2.0",
+      method: "wallet_switchEthereumChain",
+      params: params,
+      id: 1,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to switch network: ${response.statusText}`);
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorText = error.response?.data || error.message;
+      throw new Error(`Failed to switch network: ${errorText}`);
+    } else {
+      throw error;
+    }
+  }
+}
 
 // wstMETIS
 const wstMETIS = {
@@ -19,6 +52,8 @@ const RewardsSenderArgs = {
 }
 
 async function main() {
+  await switchNetwork(1088,'')
+  
   const metisToken = await getContract('METISToken')
 
   const rewardsSender = await deployUpgradeable(

@@ -1,12 +1,11 @@
+//@ts-nocheck
+
 import { Contract } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
-import { ledgerAccount } from '../../hardhat.config'
 
 export const deploy = async (contractName: string, args: any[] = [], useLedgerSigner = false) => {
-  const Contract = useLedgerSigner
-    ? await ethers.getContractFactory(contractName, await ethers.getSigner(ledgerAccount))
-    : await ethers.getContractFactory(contractName)
+  const Contract = await ethers.getContractFactory(contractName)
   const contract = await Contract.deploy(...args)
   await contract.deployed()
   return contract
@@ -17,18 +16,14 @@ export const deployUpgradeable = async (
   args: any[] = [],
   useLedgerSigner = false
 ) => {
-  const Contract = useLedgerSigner
-    ? await ethers.getContractFactory(contractName, await ethers.getSigner(ledgerAccount))
-    : await ethers.getContractFactory(contractName)
+  const Contract = await ethers.getContractFactory(contractName)
   const contract = await upgrades.deployProxy(Contract, args, { kind: 'uups' })
   await contract.deployed()
   return contract
 }
 
 export const deployImplementation = async (contractName: string, useLedgerSigner = false) => {
-  const Contract = useLedgerSigner
-    ? await ethers.getContractFactory(contractName, await ethers.getSigner(ledgerAccount))
-    : await ethers.getContractFactory(contractName)
+  const Contract = await ethers.getContractFactory(contractName)
   return upgrades.deployImplementation(Contract, { kind: 'uups' })
 }
 
@@ -36,15 +31,9 @@ export const upgradeProxy = async (
   proxyAddress: string,
   implementationContractName: string,
   useDeployedImplementation = false,
-  useLedgerSigner = false,
   call?: { fn: string; args?: unknown[] } | undefined
 ) => {
-  const Contract = useLedgerSigner
-    ? await ethers.getContractFactory(
-        implementationContractName,
-        await ethers.getSigner(ledgerAccount)
-      )
-    : await ethers.getContractFactory(implementationContractName)
+  const Contract = await ethers.getContractFactory(implementationContractName)
   const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
     useDeployedImplementation,
     call,
@@ -86,10 +75,7 @@ export const updateDeployments = (
   )
 }
 
-export const getContract = async (
-  contractName: string,
-  useLedgerSigner = false
-): Promise<Contract> => {
+export const getContract = async (contractName: string): Promise<Contract> => {
   const deployments = getDeployments()
   const contract = deployments[contractName]
 
@@ -97,13 +83,7 @@ export const getContract = async (
     throw Error('Deployed contract does not exist')
   }
 
-  return useLedgerSigner
-    ? ethers.getContractAt(
-        contract.artifact,
-        contract.address,
-        await ethers.getSigner(ledgerAccount)
-      )
-    : ethers.getContractAt(contract.artifact, contract.address)
+  return ethers.getContractAt(contract.artifact, contract.address)
 }
 
 export const printDeployments = () => {
