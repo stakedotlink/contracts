@@ -336,7 +336,7 @@ abstract contract VaultControllerStrategy is Strategy {
         uint256 _maxDeposits
     ) internal virtual returns (uint256) {
         uint256 toDeposit = _toDeposit;
-        uint256 lastFullVault;
+        uint256 lastFullVault = indexOfLastFullVault;
         for (uint256 i = _startIndex; i < vaults.length; ++i) {
             IVault vault = vaults[i];
             uint256 deposits = vault.getPrincipalDeposits();
