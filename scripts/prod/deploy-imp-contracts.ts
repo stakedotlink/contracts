@@ -1,39 +1,18 @@
 import { ethers, upgrades } from 'hardhat'
-import { DelegatorPool, OperatorVCS, StakingPool } from '../../typechain-types'
 import { getContract } from '../utils/deployment'
+import { CommunityVCS } from '../../typechain-types/CommunityVCS'
 
 async function main() {
-  const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
-  const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
-  const operatorVCS = (await getContract('LINK_OperatorVCS')) as OperatorVCS
+  const communityVCS = (await getContract('LINK_CommunityVCS')) as CommunityVCS
 
-  const stakingPoolImp = (await upgrades.prepareUpgrade(
-    stakingPool.address,
-    await ethers.getContractFactory('StakingPool'),
-    {
-      kind: 'uups',
-      unsafeAllowRenames: true,
-    }
-  )) as string
-  console.log('StakingPool implementation deployed at: ', stakingPoolImp)
-
-  const operatorVCSImp = (await upgrades.prepareUpgrade(
-    operatorVCS.address,
-    await ethers.getContractFactory('OperatorVCSUpgrade'),
+  const communityVCSImp = (await upgrades.prepareUpgrade(
+    communityVCS.address,
+    await ethers.getContractFactory('CommunityVCS'),
     {
       kind: 'uups',
     }
   )) as string
-  console.log('OperatorVCS implementation deployed at: ', operatorVCSImp)
-
-  const delegatorPoolImp = (await upgrades.prepareUpgrade(
-    delegatorPool.address,
-    await ethers.getContractFactory('DelegatorPool'),
-    {
-      kind: 'uups',
-    }
-  )) as string
-  console.log('DelegatorPool implementation deployed at: ', delegatorPoolImp)
+  console.log('CommunityVCS implementation deployed at: ', communityVCSImp)
 }
 
 main()
