@@ -75,7 +75,7 @@ export const updateDeployments = (
   )
 }
 
-export const getContract = async (contractName: string): Promise<Contract> => {
+export const getContract = async (contractName: string, useLedgerSigner = false): Promise<Contract> => {
   const deployments = getDeployments()
   const contract = deployments[contractName]
 

@@ -46,7 +46,7 @@ const DistributionOracleArgs = {
 }
 
 async function main() {
-  const sdlPoolPrimary = (await getContract('SDLPoolPrimary', true)) as SDLPoolPrimary
+  const sdlPoolPrimary = (await getContract('SDLPool', true)) as SDLPoolPrimary
   const metisToken = (await getContract('METISToken', true)) as ERC20
   const linkToken = (await getContract('LINKToken', true)) as ERC20
 
