@@ -58,7 +58,7 @@ export async function deployCore() {
     sdlToken.address,
     lbc.address,
   ])
-  console.log('SDLPoolPrimary deployed: ', sdlPoolPrimary.address)
+  console.log('SDLPool deployed: ', sdlPoolPrimary.address)
 
   await (await sdlPoolPrimary.setDelegatorPool(delegatorPool.address)).wait()
 
@@ -67,9 +67,9 @@ export async function deployCore() {
       SDLToken: sdlToken.address,
       LPLMigration: lplMigration.address,
       LinearBoostController: lbc.address,
-      SDLPoolPrimary: sdlPoolPrimary.address,
+      SDLPool: sdlPoolPrimary.address,
       DelegatorPool: delegatorPool.address,
     },
-    { SDLToken: 'StakingAllowance' }
+    { SDLToken: 'StakingAllowance', SDLPool: 'SDLPoolPrimary' }
   )
 }

@@ -9,7 +9,7 @@ import {
 } from '../../utils/deployment'
 import { toEther } from '../../utils/helpers'
 
-const sequencerRewardsCCIPSenderAddress = '' // address of contract deployed on Metis
+const sequencerRewardsCCIPSenderAddress = '0x1152c76A0B3acC9856B1d8ee9EbDf2A2d0a01cC3' // address of contract deployed on Metis
 const ccipRouterAddress = '0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D' // ETH mainnet CCIP router
 
 // Wrapped stMETIS
@@ -21,14 +21,14 @@ const WrappedSDTokenArgs = {
 const StakingPoolArgs = {
   derivativeTokenName: 'Staked METIS', // METIS liquid staking token name
   derivativeTokenSymbol: 'stMETIS', // METIS liquid staking token symbol
-  fees: [], // fee receivers & percentage amounts in basis points
+  fees: [['0x23c4602e63ACfe29b930c530B19d44a84AF0d767', 300]], // fee receivers & percentage amounts in basis points
 }
 // Sequencer VCS
 const SequencerVCSArgs = {
   lockingInfo: '0x0fe382b74C3894B65c10E5C12ae60Bbd8FAf5b48', // address of Metis locking info contract
   depositController: ethers.constants.AddressZero, // address authorized to deposit queued tokens into vaults
-  fees: [], // list of fees to be paid on rewards
-  operatorRewardPercentage: 0, // basis point amount of an operator's earned rewards that they receive
+  sdlPoolFee: 600, // basis point fee to be paid to SDL pool
+  operatorRewardPercentage: 600, // basis point amount of an operator's earned rewards that they receive
 }
 // METIS Priority Pool
 const PriorityPoolArgs = {
@@ -74,7 +74,7 @@ async function main() {
       SequencerVCSArgs.depositController,
       vaultImpAddress,
       sequencerRewardsCCIPSenderAddress,
-      SequencerVCSArgs.fees,
+      [],
       SequencerVCSArgs.operatorRewardPercentage,
     ],
     true
@@ -140,6 +140,9 @@ async function main() {
   await (await sdlPoolPrimary.addToken(stakingPool.address, stMetisSDLRewardsPool.address)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.address)).wait()
   await (await stakingPool.addStrategy(sequencerVCS.address)).wait()
+  await (
+    await stakingPool.addFee(stMetisSDLRewardsPool.address, SequencerVCSArgs.sdlPoolFee)
+  ).wait()
   await (await priorityPool.setDistributionOracle(distributionOracle.address)).wait()
   await (await sequencerVCS.setCCIPController(rewardsReceiver.address)).wait()
 

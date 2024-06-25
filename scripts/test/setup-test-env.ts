@@ -72,7 +72,7 @@ async function main() {
 
   const poolOwnersV1 = (await getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
-  const sdlPool = (await getContract('SDLPoolPrimary')) as SDLPoolPrimary
+  const sdlPool = (await getContract('SDLPool')) as SDLPoolPrimary
 
   const METISToken = (await getContract('METISToken')) as ERC20
   const METIS_StakingPool = (await getContract('METIS_StakingPool')) as StakingPool

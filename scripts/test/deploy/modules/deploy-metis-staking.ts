@@ -52,7 +52,7 @@ const PriorityPoolArgs = {
 
 export async function deployMETISStaking() {
   const { accounts } = await getAccounts()
-  const sdlPoolPrimary = (await getContract('SDLPoolPrimary')) as SDLPoolPrimary
+  const sdlPoolPrimary = (await getContract('SDLPool')) as SDLPoolPrimary
 
   const metisToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
     'Metis',
