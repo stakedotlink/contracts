@@ -135,7 +135,7 @@ async function main() {
     ],
     true
   )
-  console.log('METIS_PP_DistributionOracle deployed: ', stMetisSDLRewardsPool.address)
+  console.log('METIS_PP_DistributionOracle deployed: ', distributionOracle.address)
 
   updateDeployments(
     {

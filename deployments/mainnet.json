@@ -195,12 +195,12 @@
     "address": "0xB127D349eedB755C8ebAbf116d126B58F7B29Cbc",
     "artifact": "WrappedSDToken"
   },
-  "stMetis_SDLRewardsPool": {
+  "stMETIS_SDLRewardsPool": {
     "address": "0xc3dbba165C92e6d6efA3394ff67D219Ebe1DF6bB",
     "artifact": "RewardsPoolWSD"
   },
   "METIS_PP_DistributionOracle": {
-    "address": "0xc3dbba165C92e6d6efA3394ff67D219Ebe1DF6bB",
+    "address": "0xc8d54e58981009c04037a6ee7d4fc32d0f4da9be",
     "artifact": "DistributionOracle"
   }
 
