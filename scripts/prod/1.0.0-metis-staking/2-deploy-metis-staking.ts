@@ -9,7 +9,7 @@ import {
 } from '../../utils/deployment'
 import { toEther } from '../../utils/helpers'
 
-const sequencerRewardsCCIPSenderAddress = '0x1152c76A0B3acC9856B1d8ee9EbDf2A2d0a01cC3' // address of contract deployed on Metis
+const sequencerRewardsCCIPSenderAddress = '' // address of contract deployed on Metis
 const ccipRouterAddress = '0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D' // ETH mainnet CCIP router
 
 // Wrapped stMETIS
@@ -136,15 +136,6 @@ async function main() {
     true
   )
   console.log('METIS_PP_DistributionOracle deployed: ', stMetisSDLRewardsPool.address)
-
-  await (await sdlPoolPrimary.addToken(stakingPool.address, stMetisSDLRewardsPool.address)).wait()
-  await (await stakingPool.setPriorityPool(priorityPool.address)).wait()
-  await (await stakingPool.addStrategy(sequencerVCS.address)).wait()
-  await (
-    await stakingPool.addFee(stMetisSDLRewardsPool.address, SequencerVCSArgs.sdlPoolFee)
-  ).wait()
-  await (await priorityPool.setDistributionOracle(distributionOracle.address)).wait()
-  await (await sequencerVCS.setCCIPController(rewardsReceiver.address)).wait()
 
   updateDeployments(
     {
