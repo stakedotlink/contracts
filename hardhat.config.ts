@@ -3,7 +3,7 @@ import '@nomiclabs/hardhat-ethers'
 import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
-import '@nomiclabs/hardhat-etherscan'
+import '@nomicfoundation/hardhat-verify'
 import '@nomicfoundation/hardhat-ledger'
 
 export const ledgerAccount = '0x23c4602e63ACfe29b930c530B19d44a84AF0d767'
@@ -43,11 +43,11 @@ const config: HardhatUserConfig = {
       accounts,
     },
     mainnet: {
-      url: '',
+      url: 'https://mainnet.infura.io/v3/677ab82f0e2948c596522759d3429a43',
       ledgerAccounts: [ledgerAccount],
     },
     metis: {
-      url: '',
+      url: 'https://metis-pokt.nodies.app',
       ledgerAccounts: [ledgerAccount],
     },
     testnet: {
@@ -65,7 +65,22 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: '',
+    apiKey: {
+      metis: 'metis', // apiKey is not required, just set a placeholder
+    },
+    customChains: [
+      {
+        network: 'metis',
+        chainId: 1088,
+        urls: {
+          apiURL: 'https://api.routescan.io/v2/network/mainnet/evm/1088/etherscan',
+          browserURL: 'https://andromeda-explorer.metis.io',
+        },
+      },
+    ],
+  },
+  sourcify: {
+    enabled: false,
   },
   solidity: {
     compilers: [
