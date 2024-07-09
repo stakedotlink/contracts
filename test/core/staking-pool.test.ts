@@ -1,9 +1,7 @@
 import { ethers } from 'hardhat'
-import { BigNumber, Signer } from 'ethers'
 import { assert, expect } from 'chai'
 import {
   toEther,
-  assertThrowsAsync,
   deploy,
   deployUpgradeable,
   getAccounts,
@@ -11,108 +9,125 @@ import {
   fromEther,
 } from '../utils/helpers'
 import { ERC677, StrategyMock, StakingPool, ERC677ReceiverMock } from '../../typechain-types'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('StakingPool', () => {
-  let token: ERC677
-  let stakingPool: StakingPool
-  let strategy1: StrategyMock
-  let strategy2: StrategyMock
-  let strategy3: StrategyMock
-  let ownersRewards: string
-  let erc677Receiver: ERC677ReceiverMock
-  let signers: Signer[]
-  let accounts: string[]
+  async function deployFixture() {
+    const { signers, accounts } = await getAccounts()
+    const adrs: any = {}
 
-  async function stake(account: number, amount: number) {
-    await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-    await stakingPool.deposit(accounts[account], toEther(amount))
-  }
-
-  async function withdraw(account: number, amount: number) {
-    await stakingPool.withdraw(accounts[account], accounts[account], toEther(amount))
-  }
-
-  before(async () => {
-    ;({ signers, accounts } = await getAccounts())
-    ownersRewards = accounts[4]
-  })
-
-  beforeEach(async () => {
-    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
+    adrs.token = await token.getAddress()
     await setupToken(token, accounts)
 
-    erc677Receiver = (await deploy('ERC677ReceiverMock')) as ERC677ReceiverMock
+    const erc677Receiver = (await deploy('ERC677ReceiverMock')) as ERC677ReceiverMock
+    adrs.erc677Receiver = await erc677Receiver.getAddress()
 
-    stakingPool = (await deployUpgradeable('StakingPool', [
-      token.address,
+    const stakingPool = (await deployUpgradeable('StakingPool', [
+      adrs.token,
       'LinkPool LINK',
       'lpLINK',
       [
-        [ownersRewards, 1000],
-        [erc677Receiver.address, 2000],
+        [accounts[4], 1000],
+        [adrs.erc677Receiver, 2000],
       ],
     ])) as StakingPool
+    adrs.stakingPool = await stakingPool.getAddress()
 
-    strategy1 = (await deployUpgradeable('StrategyMock', [
-      token.address,
-      stakingPool.address,
+    const strategy1 = (await deployUpgradeable('StrategyMock', [
+      adrs.token,
+      adrs.stakingPool,
       toEther(1000),
       toEther(10),
     ])) as StrategyMock
-    strategy2 = (await deployUpgradeable('StrategyMock', [
-      token.address,
-      stakingPool.address,
+    adrs.strategy1 = await strategy1.getAddress()
+
+    const strategy2 = (await deployUpgradeable('StrategyMock', [
+      adrs.token,
+      adrs.stakingPool,
       toEther(2000),
       toEther(20),
     ])) as StrategyMock
-    strategy3 = (await deployUpgradeable('StrategyMock', [
-      token.address,
-      stakingPool.address,
+    adrs.strategy2 = await strategy2.getAddress()
+
+    const strategy3 = (await deployUpgradeable('StrategyMock', [
+      adrs.token,
+      adrs.stakingPool,
       toEther(10000),
       toEther(10),
     ])) as StrategyMock
+    adrs.strategy3 = await strategy3.getAddress()
 
-    await stakingPool.addStrategy(strategy1.address)
-    await stakingPool.addStrategy(strategy2.address)
-    await stakingPool.addStrategy(strategy3.address)
+    async function stake(account: number, amount: number) {
+      await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
+      await stakingPool.deposit(accounts[account], toEther(amount))
+    }
+
+    async function withdraw(account: number, amount: number) {
+      await stakingPool.withdraw(accounts[account], accounts[account], toEther(amount))
+    }
+
+    await stakingPool.addStrategy(adrs.strategy1)
+    await stakingPool.addStrategy(adrs.strategy2)
+    await stakingPool.addStrategy(adrs.strategy3)
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(accounts[0])
 
-    await token.approve(stakingPool.address, ethers.constants.MaxUint256)
+    await token.approve(adrs.stakingPool, ethers.MaxUint256)
     await stakingPool.deposit(accounts[0], 1000)
-  })
+
+    return {
+      signers,
+      accounts,
+      adrs,
+      token,
+      erc677Receiver,
+      stakingPool,
+      strategy1,
+      strategy2,
+      strategy3,
+      stake,
+      withdraw,
+    }
+  }
 
   it('derivative token metadata should be correct', async () => {
+    const { stakingPool } = await loadFixture(deployFixture)
+
     assert.equal(await stakingPool.name(), 'LinkPool LINK', 'Name incorrect')
     assert.equal(await stakingPool.symbol(), 'lpLINK', 'Symbol incorrect')
-    assert.equal(await stakingPool.decimals(), 18, 'Decimals incorrect')
+    assert.equal(Number(await stakingPool.decimals()), 18, 'Decimals incorrect')
   })
 
   it('should be able to add new fee', async () => {
+    const { accounts, adrs, stakingPool, erc677Receiver } = await loadFixture(deployFixture)
+
     await stakingPool.addFee(accounts[1], 500)
-    assert.equal(
-      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
-      JSON.stringify([
-        [ownersRewards, BigNumber.from(1000)],
-        [erc677Receiver.address, BigNumber.from(2000)],
-        [accounts[1], BigNumber.from(500)],
-      ]),
+    assert.deepEqual(
+      (await stakingPool.getFees()).map((fee) => [fee[0], fee[1]]),
+      [
+        [accounts[4], 1000n],
+        [adrs.erc677Receiver, 2000n],
+        [accounts[1], 500n],
+      ],
       'fees incorrect'
     )
   })
 
   it('should be able to update existing fees', async () => {
+    const { accounts, adrs, stakingPool } = await loadFixture(deployFixture)
+
     await stakingPool.updateFee(0, accounts[1], 100)
-    assert.equal(
-      JSON.stringify((await stakingPool.getFees()).map((fee) => [fee[0], fee[1]])),
-      JSON.stringify([
-        [accounts[1], BigNumber.from(100)],
-        [erc677Receiver.address, BigNumber.from(2000)],
-      ]),
+    assert.deepEqual(
+      (await stakingPool.getFees()).map((fee) => [fee[0], fee[1]]),
+      [
+        [accounts[1], 100n],
+        [adrs.erc677Receiver, 2000n],
+      ],
       'fees incorrect'
     )
 
@@ -121,29 +136,39 @@ describe('StakingPool', () => {
   })
 
   it('should be able to add new strategies', async () => {
+    const { adrs, stakingPool } = await loadFixture(deployFixture)
+
     const strategy = (await deployUpgradeable('StrategyMock', [
-      token.address,
-      stakingPool.address,
+      adrs.token,
+      adrs.stakingPool,
       toEther(10000),
       toEther(10),
     ])) as StrategyMock
 
-    await stakingPool.addStrategy(strategy.address)
-    assert.equal((await stakingPool.getStrategies())[3], strategy.address, 'Strategy not added')
+    await stakingPool.addStrategy(await strategy.getAddress())
+    assert.equal(
+      (await stakingPool.getStrategies())[3],
+      await strategy.getAddress(),
+      'Strategy not added'
+    )
   })
 
   it('should not be able to add strategy that has already been added', async () => {
-    await assertThrowsAsync(async () => {
-      await stakingPool.addStrategy(strategy3.address)
-    }, 'revert')
+    const { stakingPool, adrs } = await loadFixture(deployFixture)
+
+    await expect(stakingPool.addStrategy(adrs.strategy3)).to.be.revertedWith(
+      'Strategy already exists'
+    )
   })
 
   it('should be able to remove strategies', async () => {
+    const { stakingPool, adrs } = await loadFixture(deployFixture)
+
     await stakingPool.removeStrategy(1, '0x')
     let strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
-      JSON.stringify([strategy1.address, strategy3.address]),
+      JSON.stringify([adrs.strategy1, adrs.strategy3]),
       'Remaining strategies incorrect'
     )
 
@@ -151,68 +176,82 @@ describe('StakingPool', () => {
     strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
-      JSON.stringify([strategy1.address]),
+      JSON.stringify([adrs.strategy1]),
       'Remaining strategies incorrect'
     )
   })
 
   it('should not be able remove nonexistent strategy', async () => {
-    await assertThrowsAsync(async () => {
-      await stakingPool.removeStrategy(3, '0x')
-    }, 'revert')
+    const { stakingPool } = await loadFixture(deployFixture)
+
+    await expect(stakingPool.removeStrategy(3, '0x')).to.be.revertedWith('Strategy does not exist')
   })
 
   it('should be able to reorder strategies', async () => {
+    const { stakingPool, adrs } = await loadFixture(deployFixture)
+
     await stakingPool.reorderStrategies([1, 2, 0])
     let strategies = await stakingPool.getStrategies()
     assert.equal(
       JSON.stringify(strategies),
-      JSON.stringify([strategy2.address, strategy3.address, strategy1.address]),
+      JSON.stringify([adrs.strategy2, adrs.strategy3, adrs.strategy1]),
       'Strategies incorrectly ordered'
     )
   })
 
   it('should not be able to reorder strategies with invalid order', async () => {
-    await assertThrowsAsync(async () => {
-      await stakingPool.reorderStrategies([2, 2, 1])
-    }, 'revert')
+    const { stakingPool } = await loadFixture(deployFixture)
 
-    await assertThrowsAsync(async () => {
-      await stakingPool.reorderStrategies([1, 0])
-    }, 'revert')
+    await expect(stakingPool.reorderStrategies([2, 2, 1])).to.be.revertedWith(
+      'all indices must be valid'
+    )
 
-    await assertThrowsAsync(async () => {
-      await stakingPool.reorderStrategies([3, 2, 1, 0])
-    }, 'revert')
+    await expect(stakingPool.reorderStrategies([1, 0])).to.be.revertedWith(
+      'newOrder.length must = strategies.length'
+    )
+
+    await expect(stakingPool.reorderStrategies([3, 2, 1, 0])).to.be.revertedWith(
+      'newOrder.length must = strategies.length'
+    )
   })
 
   it('should be able to deposit into strategy', async () => {
-    await token.transfer(stakingPool.address, toEther(1000))
+    const { adrs, stakingPool, token } = await loadFixture(deployFixture)
+
+    await token.transfer(adrs.stakingPool, toEther(1000))
     await stakingPool.strategyDeposit(0, toEther(300))
-    assert.equal(fromEther(await token.balanceOf(strategy1.address)), 300, 'Tokens not deposited')
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy1)), 300, 'Tokens not deposited')
   })
 
   it('should not be able to deposit into nonexistent strategy', async () => {
-    await token.transfer(stakingPool.address, toEther(1000))
-    await assertThrowsAsync(async () => {
-      await stakingPool.strategyDeposit(3, toEther(1))
-    }, 'revert')
+    const { adrs, stakingPool, token } = await loadFixture(deployFixture)
+
+    await token.transfer(adrs.stakingPool, toEther(1000))
+    await expect(stakingPool.strategyDeposit(3, toEther(1))).to.be.revertedWith(
+      'Strategy does not exist'
+    )
   })
 
   it('should be able to withdraw from strategy', async () => {
-    await token.transfer(stakingPool.address, toEther(1000))
+    const { adrs, stakingPool, token } = await loadFixture(deployFixture)
+
+    await token.transfer(adrs.stakingPool, toEther(1000))
     await stakingPool.strategyDeposit(0, toEther(300))
     await stakingPool.strategyWithdraw(0, toEther(100))
-    assert.equal(fromEther(await token.balanceOf(strategy1.address)), 200, 'Tokens not withdrawn')
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy1)), 200, 'Tokens not withdrawn')
   })
 
   it('should not be able to withdraw from nonexistent strategy', async () => {
-    await assertThrowsAsync(async () => {
-      await stakingPool.strategyWithdraw(3, toEther(1))
-    }, 'revert')
+    const { stakingPool } = await loadFixture(deployFixture)
+
+    await expect(stakingPool.strategyWithdraw(3, toEther(1))).to.be.revertedWith(
+      'Strategy does not exist'
+    )
   })
 
   it('should be able to stake tokens', async () => {
+    const { accounts, stakingPool, token, stake } = await loadFixture(deployFixture)
+
     await stake(2, 2000)
     await stake(1, 1000)
     assert.equal(fromEther(await token.balanceOf(accounts[1])), 9000, 'Tokens not transferred')
@@ -240,12 +279,13 @@ describe('StakingPool', () => {
   })
 
   it('should not be able to stake more tokens than balance', async () => {
-    await assertThrowsAsync(async () => {
-      await stake(1, 10001)
-    }, 'revert')
+    const { stake } = await loadFixture(deployFixture)
+    await expect(await stake(1, 10001)).to.be.revertedWith('ERC20: transfer amount exceeds balance')
   })
 
   it('should be able to withdraw tokens', async () => {
+    const { accounts, stakingPool, token, stake, withdraw } = await loadFixture(deployFixture)
+
     await stake(2, 2000)
     await stake(1, 1000)
     await withdraw(1, 500)
@@ -275,80 +315,87 @@ describe('StakingPool', () => {
   })
 
   it('should not be able to withdraw more tokens than balance', async () => {
+    const { strategy1, stake, withdraw } = await loadFixture(deployFixture)
+
     await stake(1, 1000)
     await strategy1.setMinDeposits(0)
-    await assertThrowsAsync(async () => {
-      await withdraw(1, 1001)
-    }, 'revert')
+    await expect(withdraw(1, 1001)).to.be.revertedWith('Not enough liquidity available to withdraw')
   })
 
   it('staking should correctly deposit into strategies', async () => {
+    const { adrs, token, stake } = await loadFixture(deployFixture)
+
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
     assert.equal(
-      fromEther(await token.balanceOf(strategy1.address)),
+      fromEther(await token.balanceOf(adrs.strategy1)),
       1000,
       'Strategy-1 balance incorrect'
     )
     assert.equal(
-      fromEther(await token.balanceOf(strategy2.address)),
+      fromEther(await token.balanceOf(adrs.strategy2)),
       2000,
       'Strategy-2 balance incorrect'
     )
     assert.equal(
-      fromEther(await token.balanceOf(strategy3.address)),
+      fromEther(await token.balanceOf(adrs.strategy3)),
       2000,
       'Strategy-3 balance incorrect'
     )
   })
 
   it('withdrawing should correctly withdraw from strategies', async () => {
+    const { adrs, stakingPool, token, stake, withdraw } = await loadFixture(deployFixture)
+
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
     await stakingPool.strategyWithdraw(0, toEther(100))
     await withdraw(3, 2000)
     assert.equal(
-      fromEther(await token.balanceOf(strategy1.address)),
+      fromEther(await token.balanceOf(adrs.strategy1)),
       900,
       'Strategy-1 balance incorrect'
     )
     assert.equal(
-      fromEther(await token.balanceOf(strategy2.address)),
+      fromEther(await token.balanceOf(adrs.strategy2)),
       2000,
       'Strategy-2 balance incorrect'
     )
     assert.equal(
-      fromEther(await token.balanceOf(strategy3.address)),
+      fromEther(await token.balanceOf(adrs.strategy3)),
       100,
       'Strategy-3 balance incorrect'
     )
     await withdraw(1, 2000)
     await withdraw(2, 900)
     assert.equal(
-      fromEther(await token.balanceOf(strategy1.address)),
+      fromEther(await token.balanceOf(adrs.strategy1)),
       70,
       'Strategy-1 balance incorrect'
     )
     assert.equal(
-      fromEther(await token.balanceOf(strategy2.address)),
+      fromEther(await token.balanceOf(adrs.strategy2)),
       20,
       'Strategy-2 balance incorrect'
     )
     assert.equal(
-      fromEther(await token.balanceOf(strategy3.address)),
+      fromEther(await token.balanceOf(adrs.strategy3)),
       10,
       'Strategy-3 balance incorrect'
     )
   })
 
   it('should be able to update strategy rewards', async () => {
+    const { accounts, adrs, stakingPool, token, strategy2, erc677Receiver, stake } =
+      await loadFixture(deployFixture)
+
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
-    await token.transfer(strategy1.address, toEther(1100))
-    await token.transfer(strategy3.address, toEther(500))
+    await token.transfer(adrs.strategy1, toEther(1100))
+    await token.transfer(adrs.strategy3, toEther(500))
     await strategy2.simulateSlash(toEther(400))
     await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
@@ -368,12 +415,12 @@ describe('StakingPool', () => {
       'Account-3 balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await stakingPool.balanceOf(ownersRewards))),
+      Number(fromEther(await stakingPool.balanceOf(accounts[4]))),
       120,
       'Owners rewards balance incorrect'
     )
     assert.equal(
-      Number(fromEther(await stakingPool.balanceOf(erc677Receiver.address))),
+      Number(fromEther(await stakingPool.balanceOf(adrs.erc677Receiver))),
       240,
       'Delegator pool balance incorrect'
     )
@@ -386,6 +433,9 @@ describe('StakingPool', () => {
   })
 
   it('fee splitting should work correctly', async () => {
+    const { accounts, adrs, stakingPool, strategy1, strategy3, token, strategy2, stake } =
+      await loadFixture(deployFixture)
+
     await stakingPool.addFee(accounts[0], 1000)
     await strategy1.setFeeBasisPoints(1000)
     await strategy3.setFeeBasisPoints(1000)
@@ -393,8 +443,8 @@ describe('StakingPool', () => {
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
-    await token.transfer(strategy1.address, toEther(1000))
-    await token.transfer(strategy3.address, toEther(600))
+    await token.transfer(adrs.strategy1, toEther(1000))
+    await token.transfer(adrs.strategy3, toEther(600))
     await strategy2.simulateSlash(toEther(300))
     await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
@@ -415,7 +465,7 @@ describe('StakingPool', () => {
     )
 
     assert.equal(
-      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      fromEther(await stakingPool.balanceOf(accounts[4])),
       130,
       'Owners rewards balance incorrect'
     )
@@ -425,7 +475,7 @@ describe('StakingPool', () => {
       'Strategy fee balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(erc677Receiver.address)),
+      fromEther(await stakingPool.balanceOf(adrs.erc677Receiver)),
       260,
       'Delegation fee balance incorrect'
     )
@@ -433,6 +483,8 @@ describe('StakingPool', () => {
   })
 
   it('should be able to update strategy rewards when negative', async () => {
+    const { accounts, stakingPool, strategy3, stake } = await loadFixture(deployFixture)
+
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
@@ -455,7 +507,7 @@ describe('StakingPool', () => {
       'Account-3 balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      fromEther(await stakingPool.balanceOf(accounts[4])),
       0,
       'Owners rewards balance incorrect'
     )
@@ -463,12 +515,15 @@ describe('StakingPool', () => {
   })
 
   it('fees should be distributed regardless of deposit change', async () => {
+    const { accounts, adrs, stakingPool, strategy1, strategy2, strategy3, token, stake } =
+      await loadFixture(deployFixture)
+
     await stake(1, 2000)
     await stake(2, 1000)
     await stake(3, 2000)
     await strategy3.simulateSlash(toEther(200))
     await strategy2.setFeeBasisPoints(1000)
-    await token.transfer(strategy2.address, toEther(200))
+    await token.transfer(adrs.strategy2, toEther(200))
     await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
@@ -492,14 +547,14 @@ describe('StakingPool', () => {
       'Account-3 balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      fromEther(await stakingPool.balanceOf(accounts[4])),
       0,
       'Owners rewards balance incorrect'
     )
     assert.equal(fromEther(await stakingPool.totalSupply()), 5000, 'totalSupply incorrect')
 
     await strategy1.simulateSlash(toEther(290))
-    await token.transfer(strategy2.address, toEther(100))
+    await token.transfer(adrs.strategy2, toEther(100))
     await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
 
     assert.equal(
@@ -523,7 +578,7 @@ describe('StakingPool', () => {
       'Account-3 balance incorrect'
     )
     assert.equal(
-      fromEther(await stakingPool.balanceOf(ownersRewards)),
+      fromEther(await stakingPool.balanceOf(accounts[4])),
       0,
       'Owners rewards balance incorrect'
     )
@@ -531,6 +586,8 @@ describe('StakingPool', () => {
   })
 
   it('getStakeByShares and getSharesByStake should work correctly', async () => {
+    const { adrs, stakingPool, token, strategy1, stake } = await loadFixture(deployFixture)
+
     await stake(1, 1000)
     await stake(2, 1000)
 
@@ -545,7 +602,7 @@ describe('StakingPool', () => {
       'getSharesByStake incorrect'
     )
 
-    await token.transfer(strategy1.address, toEther(1000))
+    await token.transfer(adrs.strategy1, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await stake(3, 1000)
 
@@ -576,10 +633,12 @@ describe('StakingPool', () => {
   })
 
   it('should be able to transfer derivative tokens', async () => {
+    const { signers, accounts, adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
     await stake(1, 1000)
     await stake(2, 1000)
 
-    await token.transfer(strategy1.address, toEther(1000))
+    await token.transfer(adrs.strategy1, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     await stakingPool.connect(signers[1]).transfer(accounts[3], toEther(100))
@@ -608,12 +667,14 @@ describe('StakingPool', () => {
   })
 
   it('should be able to transfer shares', async () => {
+    const { signers, accounts, adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
     await stakingPool.updateFee(0, accounts[0], 0)
     await stakingPool.updateFee(0, accounts[0], 0)
     await stake(1, 1000)
     await stake(2, 1000)
 
-    await token.transfer(strategy1.address, toEther(1000))
+    await token.transfer(adrs.strategy1, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     await stakingPool.connect(signers[1]).transferShares(accounts[3], toEther(100))
@@ -640,9 +701,9 @@ describe('StakingPool', () => {
       'account-0 balance incorrect'
     )
 
-    await expect(
-      stakingPool.transferShares(ethers.constants.AddressZero, toEther(10))
-    ).to.be.revertedWith('Transfer to the zero address')
+    await expect(stakingPool.transferShares(ethers.ZeroAddress, toEther(10))).to.be.revertedWith(
+      'Transfer to the zero address'
+    )
     await expect(stakingPool.transferShares(accounts[1], toEther(51))).to.be.revertedWith(
       'Transfer amount exceeds balance'
     )
@@ -667,6 +728,8 @@ describe('StakingPool', () => {
   })
 
   it('should be able to correctly calculate staking limits', async () => {
+    const { stakingPool, strategy1, stake } = await loadFixture(deployFixture)
+
     let stakingLimit = await stakingPool.getMaxDeposits()
     assert.equal(fromEther(stakingLimit), 13000, 'staking limit is not correct')
 
@@ -680,6 +743,10 @@ describe('StakingPool', () => {
   })
 
   it('getStrategyDepositRoom should work correctly', async () => {
+    const { adrs, stakingPool, token, strategy1, strategy2, stake } = await loadFixture(
+      deployFixture
+    )
+
     assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 13000)
 
     await stake(1, 2000)
@@ -691,11 +758,13 @@ describe('StakingPool', () => {
     await strategy2.setMaxDeposits(toEther(0))
     assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 11000)
 
-    await token.transfer(stakingPool.address, toEther(1000))
+    await token.transfer(adrs.stakingPool, toEther(1000))
     assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 11000)
   })
 
   it('burn should work correctly', async () => {
+    const { signers, accounts, stakingPool, stake } = await loadFixture(deployFixture)
+
     await stake(1, 1000)
     await stake(2, 3000)
 
@@ -711,6 +780,8 @@ describe('StakingPool', () => {
   })
 
   it('donateTokens should work correctly', async () => {
+    const { accounts, stakingPool, stake } = await loadFixture(deployFixture)
+
     await stake(1, 1000)
     await stake(2, 3000)
 

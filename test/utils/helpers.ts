@@ -1,13 +1,13 @@
 import { ethers, upgrades } from 'hardhat'
 import { assert } from 'chai'
-import { BigNumber, Contract } from 'ethers'
+import { Contract } from 'ethers'
 
 export const toEther = (amount: string | number) => {
-  return ethers.utils.parseEther(amount.toString()).toHexString()
+  return ethers.parseEther(amount.toString())
 }
 
-export const fromEther = (amount: BigNumber) => {
-  return Number(ethers.utils.formatEther(amount))
+export const fromEther = (amount: bigint) => {
+  return Number(ethers.formatEther(amount))
 }
 
 export const assertThrowsAsync = async (fn: Function, regExp: string) => {
@@ -24,8 +24,7 @@ export const assertThrowsAsync = async (fn: Function, regExp: string) => {
 }
 
 export const deploy = async (contractName: string, args: any[] = []) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return Contract.deploy(...args)
+  return ethers.deployContract(contractName, args) as any
 }
 
 export const attach = async (contractName: string, contractAddress: string) => {
@@ -35,7 +34,7 @@ export const attach = async (contractName: string, contractAddress: string) => {
 
 export const deployUpgradeable = async (contractName: string, args: any[] = []) => {
   const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups' })
+  return upgrades.deployProxy(Contract, args, { kind: 'uups' }) as any
 }
 
 export const deployImplementation = async (contractName: string) => {
@@ -49,7 +48,7 @@ export const getAccounts = async () => {
   return { signers, accounts }
 }
 
-export const setupToken = async (token: Contract, accounts: string[], allAccounts = false) => {
+export const setupToken = async (token: any, accounts: string[], allAccounts = false) => {
   return Promise.all(
     accounts.map((account, index) =>
       token.transfer(account, toEther(index < 4 || allAccounts ? 10000 : 0))
