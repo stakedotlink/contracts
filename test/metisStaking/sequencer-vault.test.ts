@@ -8,76 +8,79 @@ import {
   SequencerVCSMock,
   MetisLockingInfoMock,
 } from '../../typechain-types'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('SequencerVault', () => {
-  let token: ERC20
-  let metisLockingInfo: MetisLockingInfoMock
-  let metisLockingPool: MetisLockingPoolMock
-  let strategy: SequencerVCSMock
-  let vault: SequencerVault
-  let signers: Signer[]
-  let accounts: string[]
+  async function deployFixture() {
+    const { signers, accounts } = await getAccounts()
+    const adrs: any = {}
 
-  before(async () => {
-    ;({ signers, accounts } = await getAccounts())
-  })
-
-  beforeEach(async () => {
-    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Metis',
       'METIS',
       1000000000,
     ])) as ERC20
+    adrs.token = await token.getAddress()
 
-    metisLockingInfo = (await deploy('MetisLockingInfoMock', [
-      token.address,
+    const metisLockingInfo = (await deploy('MetisLockingInfoMock', [
+      adrs.token,
       toEther(100),
       toEther(10000),
     ])) as MetisLockingInfoMock
+    adrs.metisLockingInfo = await metisLockingInfo.getAddress()
 
-    metisLockingPool = (await deploy('MetisLockingPoolMock', [
-      token.address,
-      metisLockingInfo.address,
+    const metisLockingPool = (await deploy('MetisLockingPoolMock', [
+      adrs.token,
+      adrs.metisLockingInfo,
     ])) as MetisLockingPoolMock
+    adrs.metisLockingPool = await metisLockingPool.getAddress()
 
-    strategy = (await deploy('SequencerVCSMock', [
-      token.address,
-      metisLockingInfo.address,
+    const strategy = (await deploy('SequencerVCSMock', [
+      adrs.token,
+      adrs.metisLockingInfo,
       1000,
       5000,
     ])) as SequencerVCSMock
+    adrs.strategy = await strategy.getAddress()
 
-    vault = (await deployUpgradeable('SequencerVault', [
-      token.address,
-      strategy.address,
-      metisLockingPool.address,
-      metisLockingInfo.address,
+    const vault = (await deployUpgradeable('SequencerVault', [
+      adrs.token,
+      adrs.strategy,
+      adrs.metisLockingPool,
+      adrs.metisLockingInfo,
       '0x5555',
       accounts[1],
       accounts[2],
     ])) as SequencerVault
+    adrs.vault = await vault.getAddress()
 
-    await strategy.addVault(vault.address)
-    await token.approve(strategy.address, toEther(100000000))
-  })
+    await strategy.addVault(adrs.vault)
+    await token.approve(adrs.strategy, toEther(100000000))
+
+    return { signers, accounts, adrs, token, metisLockingInfo, metisLockingPool, strategy, vault }
+  }
 
   it('deposit should work correctly', async () => {
+    const { adrs, strategy, token, vault } = await loadFixture(deployFixture)
+
     await strategy.deposit(toEther(100))
-    assert.equal(fromEther(await token.balanceOf(metisLockingInfo.address)), 100)
+    assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 100)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
     assert.equal(fromEther(await vault.unclaimedRewards()), 0)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 100)
-    assert.equal((await vault.seqId()).toNumber(), 1)
+    assert.equal(Number(await vault.seqId()), 1)
 
     await strategy.deposit(toEther(100))
-    assert.equal(fromEther(await token.balanceOf(metisLockingInfo.address)), 200)
+    assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 200)
     assert.equal(fromEther(await vault.getTotalDeposits()), 200)
     assert.equal(fromEther(await vault.unclaimedRewards()), 0)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 200)
-    assert.equal((await vault.seqId()).toNumber(), 1)
+    assert.equal(Number(await vault.seqId()), 1)
   })
 
   it('getPrincipalDeposits should work correctly', async () => {
+    const { strategy, vault } = await loadFixture(deployFixture)
+
     await strategy.deposit(toEther(100))
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     await strategy.deposit(toEther(30))
@@ -85,6 +88,8 @@ describe('SequencerVault', () => {
   })
 
   it('getRewards should work correctly', async () => {
+    const { strategy, vault, metisLockingPool } = await loadFixture(deployFixture)
+
     await strategy.deposit(toEther(100))
     assert.equal(fromEther(await vault.getRewards()), 0)
     await metisLockingPool.addReward(1, toEther(10))
@@ -92,6 +97,8 @@ describe('SequencerVault', () => {
   })
 
   it('getTotalDeposits should work correctly', async () => {
+    const { strategy, vault, metisLockingPool } = await loadFixture(deployFixture)
+
     await strategy.deposit(toEther(100))
     await metisLockingPool.addReward(1, toEther(10))
     assert.equal(fromEther(await vault.getTotalDeposits()), 110)
@@ -102,6 +109,8 @@ describe('SequencerVault', () => {
   })
 
   it('getPendingRewards should work correctly', async () => {
+    const { strategy, vault, metisLockingPool } = await loadFixture(deployFixture)
+
     await strategy.deposit(toEther(100))
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
     await metisLockingPool.addReward(1, toEther(10))
@@ -118,11 +127,13 @@ describe('SequencerVault', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
+    const { strategy, vault, metisLockingPool, metisLockingInfo } = await loadFixture(deployFixture)
+
     await metisLockingInfo.setMaxLock(toEther(100))
     await strategy.deposit(toEther(100))
     await metisLockingPool.addReward(1, toEther(10))
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(0)).map((v: any) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0)).map((v: any) => fromEther(v)),
       [110, 1, 0]
     )
     await strategy.updateDeposits(0)
@@ -132,7 +143,7 @@ describe('SequencerVault', () => {
 
     await metisLockingPool.slashPrincipal(1, toEther(5))
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(0)).map((v: any) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0)).map((v: any) => fromEther(v)),
       [105, 0, 0]
     )
     await strategy.updateDeposits(0)
@@ -142,7 +153,7 @@ describe('SequencerVault', () => {
 
     await metisLockingPool.addReward(1, toEther(8))
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(0)).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0)).map((v) => fromEther(v)),
       [113, 0.3, 0]
     )
     await strategy.updateDeposits(0)
@@ -152,7 +163,7 @@ describe('SequencerVault', () => {
 
     await metisLockingPool.addReward(1, toEther(1))
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(0)).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0)).map((v) => fromEther(v)),
       [114, 0.1, 0]
     )
     await strategy.updateDeposits(0)
@@ -161,7 +172,7 @@ describe('SequencerVault', () => {
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 114)
 
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(toEther(20))).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(toEther(20))).map((v) => fromEther(v)),
       [114, 0, 0]
     )
     await strategy.updateDeposits(toEther(20))
@@ -170,7 +181,7 @@ describe('SequencerVault', () => {
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 114)
 
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(toEther(19), { value: toEther(1) })).map((v) =>
+      (await strategy.updateDeposits.staticCall(toEther(19), { value: toEther(1) })).map((v) =>
         fromEther(v)
       ),
       [95, 0, 19]
@@ -183,7 +194,7 @@ describe('SequencerVault', () => {
     await metisLockingInfo.setMaxLock(toEther(120))
     await metisLockingPool.addReward(1, toEther(7))
     assert.deepEqual(
-      (await strategy.callStatic.updateDeposits(toEther(7))).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(toEther(7))).map((v) => fromEther(v)),
       [102, 0.7, 0]
     )
     await strategy.updateDeposits(toEther(7))
@@ -191,16 +202,24 @@ describe('SequencerVault', () => {
     assert.equal(fromEther(await vault.unclaimedRewards()), 2.1)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 102)
 
-    await expect(vault.updateDeposits(0, 0)).to.be.revertedWith('SenderNotAuthorized()')
+    await expect(vault.updateDeposits(0, 0)).to.be.revertedWithCustomError(
+      vault,
+      'SenderNotAuthorized()'
+    )
   })
 
   it('withdrawRewards should work correctly', async () => {
+    const { signers, strategy, vault, metisLockingPool } = await loadFixture(deployFixture)
+
     await strategy.deposit(toEther(100))
 
     await metisLockingPool.addReward(1, toEther(10))
     await strategy.updateDeposits(0)
 
-    await expect(vault.withdrawRewards()).to.be.revertedWith('SenderNotAuthorized()')
+    await expect(vault.withdrawRewards()).to.be.revertedWithCustomError(
+      vault,
+      'SenderNotAuthorized()'
+    )
 
     await vault.connect(signers[2]).withdrawRewards()
     assert.equal(fromEther(await vault.unclaimedRewards()), 0.5)
