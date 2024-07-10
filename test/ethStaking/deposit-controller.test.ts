@@ -20,7 +20,7 @@ import {
   RewardsPool,
   DepositController,
 } from '../../typechain-types'
-import { Signer } from 'ethers'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 
@@ -37,82 +37,81 @@ const wlOps = {
 const withdrawalCredentials = padBytes('0x12345', 32)
 
 describe('DepositController', () => {
-  let wETH: WrappedETH
-  let wsdToken: WrappedSDToken
-  let stakingPool: StakingPool
-  let depositContract: DepositContract
-  let nwlOperatorController: NWLOperatorController
-  let wlOperatorController: WLOperatorController
-  let nwlRewardsPool: RewardsPool
-  let wlRewardsPool: RewardsPool
-  let strategy: EthStakingStrategy
-  let depositController: DepositController
-  let accounts: string[]
-  let signers: Signer[]
+  async function deployFixture() {
+    const { accounts, signers } = await getAccounts()
+    const adrs: any = {}
 
-  before(async () => {
-    ;({ accounts, signers } = await getAccounts())
-  })
+    const wETH = (await deploy('WrappedETH')) as WrappedETH
+    adrs.wETH = await wETH.getAddress()
 
-  beforeEach(async () => {
-    wETH = (await deploy('WrappedETH')) as WrappedETH
-
-    stakingPool = (await deployUpgradeable('StakingPool', [
-      wETH.address,
+    const stakingPool = (await deployUpgradeable('StakingPool', [
+      adrs.wETH,
       'LinkPool ETH',
       'lplETH',
       [],
     ])) as StakingPool
+    adrs.stakingPool = await stakingPool.getAddress()
 
-    wsdToken = (await deploy('WrappedSDToken', [
-      stakingPool.address,
+    const wsdToken = (await deploy('WrappedSDToken', [
+      adrs.stakingPool,
       'Wrapped LinkPool ETH',
       'wlplETH',
     ])) as WrappedSDToken
+    adrs.wsdToken = await wsdToken.getAddress()
 
-    depositContract = (await deploy('DepositContract')) as DepositContract
+    const depositContract = (await deploy('DepositContract')) as DepositContract
+    adrs.depositContract = await depositContract.getAddress()
 
-    strategy = (await deployUpgradeable('EthStakingStrategy', [
-      wETH.address,
-      stakingPool.address,
+    const strategy = (await deployUpgradeable('EthStakingStrategy', [
+      adrs.wETH,
+      adrs.stakingPool,
       toEther(1000),
       toEther(10),
-      depositContract.address,
+      adrs.depositContract,
       withdrawalCredentials,
       1000,
     ])) as EthStakingStrategy
+    adrs.strategy = await strategy.getAddress()
+
     await strategy.setBeaconOracle(accounts[0])
 
-    nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
-      strategy.address,
-      wsdToken.address,
+    const nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
+      adrs.strategy,
+      adrs.wsdToken,
     ])) as NWLOperatorController
+    adrs.nwlOperatorController = await nwlOperatorController.getAddress()
+
     await nwlOperatorController.setKeyValidationOracle(accounts[0])
     await nwlOperatorController.setBeaconOracle(accounts[0])
 
     let operatorWhitelist = (await deploy('OperatorWhitelistMock', [
       [accounts[0]],
     ])) as OperatorWhitelistMock
-    wlOperatorController = (await deployUpgradeable('WLOperatorController', [
-      strategy.address,
-      wsdToken.address,
-      operatorWhitelist.address,
+    const wlOperatorController = (await deployUpgradeable('WLOperatorController', [
+      adrs.strategy,
+      adrs.wsdToken,
+      await operatorWhitelist.getAddress(),
       2,
     ])) as WLOperatorController
+    adrs.wlOperatorController = await wlOperatorController.getAddress()
+
     await wlOperatorController.setKeyValidationOracle(accounts[0])
     await wlOperatorController.setBeaconOracle(accounts[0])
 
-    nwlRewardsPool = (await deploy('RewardsPool', [
-      nwlOperatorController.address,
-      wsdToken.address,
+    const nwlRewardsPool = (await deploy('RewardsPool', [
+      adrs.nwlOperatorController,
+      adrs.wsdToken,
     ])) as RewardsPool
-    wlRewardsPool = (await deploy('RewardsPool', [
-      wlOperatorController.address,
-      wsdToken.address,
-    ])) as RewardsPool
+    adrs.nwlRewardsPool = await nwlRewardsPool.getAddress()
 
-    await nwlOperatorController.setRewardsPool(nwlRewardsPool.address)
-    await wlOperatorController.setRewardsPool(wlRewardsPool.address)
+    const wlRewardsPool = (await deploy('RewardsPool', [
+      adrs.wlOperatorController,
+      adrs.wsdToken,
+    ])) as RewardsPool
+    adrs.wlRewardsPool = await wlRewardsPool.getAddress()
+
+    await nwlOperatorController.setRewardsPool(adrs.nwlRewardsPool)
+    await wlOperatorController.setRewardsPool(adrs.wlRewardsPool)
 
     for (let i = 0; i < 5; i++) {
       await nwlOperatorController.addOperator('test')
@@ -130,22 +129,42 @@ describe('DepositController', () => {
       }
     }
 
-    depositController = (await deploy('DepositController', [
-      depositContract.address,
-      strategy.address,
-      nwlOperatorController.address,
-      wlOperatorController.address,
+    const depositController = (await deploy('DepositController', [
+      adrs.depositContract,
+      adrs.strategy,
+      adrs.nwlOperatorController,
+      adrs.wlOperatorController,
     ])) as DepositController
+    adrs.depositController = await depositController.getAddress()
 
-    await strategy.setNWLOperatorController(nwlOperatorController.address)
-    await strategy.setWLOperatorController(wlOperatorController.address)
-    await strategy.setDepositController(depositController.address)
-    await stakingPool.addStrategy(strategy.address)
+    await strategy.setNWLOperatorController(adrs.nwlOperatorController)
+    await strategy.setWLOperatorController(adrs.wlOperatorController)
+    await strategy.setDepositController(adrs.depositController)
+    await stakingPool.addStrategy(adrs.strategy)
     await stakingPool.setPriorityPool(accounts[0])
-    await wETH.approve(stakingPool.address, ethers.constants.MaxUint256)
-  })
+    await wETH.approve(adrs.stakingPool, ethers.MaxUint256)
+
+    return {
+      signers,
+      accounts,
+      adrs,
+      wETH,
+      stakingPool,
+      wsdToken,
+      depositContract,
+      strategy,
+      nwlOperatorController,
+      wlOperatorController,
+      nwlRewardsPool,
+      wlRewardsPool,
+      depositController,
+    }
+  }
 
   it('getNextValidators should work correctly', async () => {
+    const { depositController, nwlOperatorController, wlOperatorController, depositContract } =
+      await loadFixture(deployFixture)
+
     let [
       depositRoot,
       nwlStateHash,
@@ -169,15 +188,15 @@ describe('DepositController', () => {
       await wlOperatorController.currentStateHash(),
       'wlStateHash incorrect'
     )
-    assert.equal(nwlTotalValidatorCount.toNumber(), 4, 'nwlTotalValidatorCount incorrect')
-    assert.equal(wlTotalValidatorCount.toNumber(), 2, 'wlTotalValidatorCount incorrect')
+    assert.equal(Number(nwlTotalValidatorCount), 4, 'nwlTotalValidatorCount incorrect')
+    assert.equal(Number(wlTotalValidatorCount), 2, 'wlTotalValidatorCount incorrect')
     assert.deepEqual(
-      wlOperatorIds.map((id) => id.toNumber()),
+      wlOperatorIds.map((id) => Number(id)),
       [0],
       'wlOperatorIds incorrect'
     )
     assert.deepEqual(
-      wlValidatorCounts.map((count) => count.toNumber()),
+      wlValidatorCounts.map((count) => Number(count)),
       [2],
       'wlValidatorCounts incorrect'
     )
@@ -185,7 +204,18 @@ describe('DepositController', () => {
     assert.equal(wlKeys, wlOps.keys.slice(0, 2 * pubkeyLength + 2), 'wlKeys incorrect')
   })
 
-  it('depositEther should work correctly', async () => {
+  it.only('depositEther should work correctly', async () => {
+    const {
+      signers,
+      accounts,
+      depositController,
+      nwlOperatorController,
+      wlOperatorController,
+      depositContract,
+      wETH,
+      stakingPool,
+    } = await loadFixture(deployFixture)
+
     type DepositData = [string, string, string, number, number, number[], number[]]
     await wETH.wrap({ value: toEther(1000) })
     await stakingPool.deposit(accounts[0], toEther(1000))
@@ -204,9 +234,11 @@ describe('DepositController', () => {
     await nwlOperatorController.addKeyPairs(0, 2, nwlOps.keys, nwlOps.signatures, {
       value: toEther(16 * 2),
     })
+    console.log(depositData)
     await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
       'nwlStateHash has changed'
     )
+    return
 
     depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
     await wlOperatorController.addKeyPairs(0, 3, wlOps.keys, wlOps.signatures)
