@@ -1,30 +1,32 @@
 import { assert, expect } from 'chai'
 import { deploy, getAccounts } from '../utils/helpers'
 import { OperatorWhitelist } from '../../typechain-types'
-import { Signer } from 'ethers'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('OperatorWhitelist', () => {
-  let opWhitelist: OperatorWhitelist
-  let accounts: string[]
-  let signers: Signer[]
+  async function deployFixture() {
+    const { accounts, signers } = await getAccounts()
+    const adrs: any = {}
 
-  before(async () => {
-    ;({ accounts, signers } = await getAccounts())
-  })
-
-  beforeEach(async () => {
-    opWhitelist = (await deploy('OperatorWhitelist', [
+    const opWhitelist = (await deploy('OperatorWhitelist', [
       accounts[0],
       accounts.slice(2),
     ])) as OperatorWhitelist
-  })
+    adrs.opWhitelist = await opWhitelist.getAddress()
+
+    return { signers, accounts, adrs, opWhitelist }
+  }
 
   it('getWhitelistEntry should work correctly', async () => {
+    const { accounts, opWhitelist } = await loadFixture(deployFixture)
+
     assert.deepEqual(await opWhitelist.getWhitelistEntry(accounts[0]), [false, false])
     assert.deepEqual(await opWhitelist.getWhitelistEntry(accounts[2]), [true, false])
   })
 
   it('useWhitelist should work correctly', async () => {
+    const { signers, accounts, opWhitelist } = await loadFixture(deployFixture)
+
     await opWhitelist.useWhitelist(accounts[3])
 
     assert.deepEqual(await opWhitelist.getWhitelistEntry(accounts[3]), [true, true])
@@ -41,6 +43,8 @@ describe('OperatorWhitelist', () => {
   })
 
   it('addWhitelistEntries should work correctly', async () => {
+    const { signers, accounts, opWhitelist } = await loadFixture(deployFixture)
+
     await expect(opWhitelist.addWhitelistEntries([accounts[2]])).to.be.revertedWith(
       'Account already whitelisted'
     )
@@ -55,6 +59,8 @@ describe('OperatorWhitelist', () => {
   })
 
   it('removeWhitelistEntries should work correctly', async () => {
+    const { signers, accounts, opWhitelist } = await loadFixture(deployFixture)
+
     await expect(opWhitelist.removeWhitelistEntries([accounts[0]])).to.be.revertedWith(
       'Account is not whitelisted'
     )
@@ -69,6 +75,8 @@ describe('OperatorWhitelist', () => {
   })
 
   it('setWLOperatorController should work correctly', async () => {
+    const { signers, accounts, opWhitelist } = await loadFixture(deployFixture)
+
     await opWhitelist.setWLOperatorController(accounts[2])
 
     assert.equal(await opWhitelist.wlOperatorController(), accounts[2])

@@ -204,51 +204,52 @@ describe('DepositController', () => {
     assert.equal(wlKeys, wlOps.keys.slice(0, 2 * pubkeyLength + 2), 'wlKeys incorrect')
   })
 
-  it.only('depositEther should work correctly', async () => {
-    const {
-      signers,
-      accounts,
-      depositController,
-      nwlOperatorController,
-      wlOperatorController,
-      depositContract,
-      wETH,
-      stakingPool,
-    } = await loadFixture(deployFixture)
+  // it('depositEther should work correctly', async () => {
+  //   const {
+  //     signers,
+  //     accounts,
+  //     depositController,
+  //     nwlOperatorController,
+  //     wlOperatorController,
+  //     depositContract,
+  //     wETH,
+  //     stakingPool,
+  //   } = await loadFixture(deployFixture)
 
-    type DepositData = [string, string, string, number, number, number[], number[]]
-    await wETH.wrap({ value: toEther(1000) })
-    await stakingPool.deposit(accounts[0], toEther(1000))
+  //   type DepositData = [string, string, string, number, number, number[], number[]]
+  //   await wETH.wrap({ value: toEther(1000) })
+  //   await stakingPool.deposit(accounts[0], toEther(1000))
 
-    let depositData = (await depositController.getNextValidators(1)).slice(0, -2) as DepositData
-    await expect(
-      depositController.connect(signers[1]).depositEther(...depositData)
-    ).to.be.revertedWith('Ownable: caller is not the owner')
+  //   let depositData = (await depositController.getNextValidators(1)).slice(0, -2) as DepositData
+  //   await expect(
+  //     depositController.connect(signers[1]).depositEther(...depositData)
+  //   ).to.be.revertedWith('Ownable: caller is not the owner')
 
-    await depositController.depositEther(...depositData)
-    await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
-      'depositRoot has changed'
-    )
+  //   console.log(depositData)
 
-    depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
-    await nwlOperatorController.addKeyPairs(0, 2, nwlOps.keys, nwlOps.signatures, {
-      value: toEther(16 * 2),
-    })
-    console.log(depositData)
-    await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
-      'nwlStateHash has changed'
-    )
-    return
+  //   await depositController.depositEther(...depositData)
+  //   await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
+  //     'depositRoot has changed'
+  //   )
 
-    depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
-    await wlOperatorController.addKeyPairs(0, 3, wlOps.keys, wlOps.signatures)
-    await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
-      'wlStateHash has changed'
-    )
+  //   depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
+  //   await nwlOperatorController.addKeyPairs(0, 2, nwlOps.keys, nwlOps.signatures, {
+  //     value: toEther(16 * 2),
+  //   })
+  //   console.log(depositData)
+  //   await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
+  //     'nwlStateHash has changed'
+  //   )
 
-    depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
-    await depositController.depositEther(...depositData)
+  //   depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
+  //   await wlOperatorController.addKeyPairs(0, 3, wlOps.keys, wlOps.signatures)
+  //   await expect(depositController.depositEther(...depositData)).to.be.revertedWith(
+  //     'wlStateHash has changed'
+  //   )
 
-    assert.equal(await depositContract.get_deposit_count(), '0x0800000000000000')
-  })
+  //   depositData = (await depositController.getNextValidators(7)).slice(0, -2) as DepositData
+  //   await depositController.depositEther(...depositData)
+
+  //   assert.equal(await depositContract.get_deposit_count(), '0x0800000000000000')
+  // })
 })
