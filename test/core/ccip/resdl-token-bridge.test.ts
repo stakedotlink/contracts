@@ -105,6 +105,7 @@ describe('RESDLTokenBridge', () => {
       toEther(200),
       ethers.AbiCoder.defaultAbiCoder().encode(['uint256', 'uint64'], [0, 0])
     )
+
     await sdlToken.transferAndCall(
       adrs.sdlPool,
       toEther(1000),
@@ -288,25 +289,11 @@ describe('RESDLTokenBridge', () => {
     await expect(sdlPool.ownerOf(3)).to.be.revertedWithCustomError(sdlPool, 'InvalidLockId()')
   })
 
-  it('transferRESDL validation should work correctly', async () => {
-    const { signers, accounts, bridge, sdlPoolCCIPController } = await loadFixture(deployFixture)
-    await expect(
-      bridge.connect(signers[1]).transferRESDL(77, accounts[4], 1, false, toEther(10), 1)
-    ).to.be.revertedWithCustomError(bridge, 'SenderNotAuthorized()')
-    await expect(
-      bridge.transferRESDL(77, ethers.ZeroAddress, 1, false, toEther(10), 1)
-    ).to.be.revertedWithCustomError(bridge, 'InvalidReceiver()')
-    await expect(
-      bridge.transferRESDL(78, accounts[4], 1, false, toEther(10), 1)
-    ).to.be.revertedWithCustomError(sdlPoolCCIPController, 'InvalidDestination()')
-
-    bridge.transferRESDL(77, accounts[4], 1, false, toEther(10), 1)
-  })
-
   it('ccipReceive should work correctly', async () => {
     const { signers, accounts, adrs, bridge, sdlPool, sdlToken, offRamp } = await loadFixture(
       deployFixture
     )
+
     await bridge.transferRESDL(77, accounts[4], 2, true, toEther(10), 1, { value: toEther(10) })
 
     let success: any = await offRamp
@@ -356,5 +343,21 @@ describe('RESDLTokenBridge', () => {
         },
       ]
     )
+  })
+
+  it('transferRESDL validation should work correctly', async () => {
+    const { signers, accounts, bridge, sdlPoolCCIPController } = await loadFixture(deployFixture)
+
+    await expect(
+      bridge.connect(signers[1]).transferRESDL(77, accounts[4], 1, false, toEther(10), 1)
+    ).to.be.revertedWithCustomError(bridge, 'SenderNotAuthorized()')
+    await expect(
+      bridge.transferRESDL(77, ethers.ZeroAddress, 1, false, toEther(10), 1)
+    ).to.be.revertedWithCustomError(bridge, 'InvalidReceiver()')
+    await expect(
+      bridge.transferRESDL(78, accounts[4], 1, false, toEther(10), 1)
+    ).to.be.revertedWithCustomError(sdlPoolCCIPController, 'InvalidDestination()')
+
+    bridge.transferRESDL(77, accounts[4], 1, false, toEther(10), 1)
   })
 })

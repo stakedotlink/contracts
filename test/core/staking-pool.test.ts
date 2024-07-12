@@ -280,7 +280,7 @@ describe('StakingPool', () => {
 
   it('should not be able to stake more tokens than balance', async () => {
     const { stake } = await loadFixture(deployFixture)
-    await expect(await stake(1, 10001)).to.be.revertedWith('ERC20: transfer amount exceeds balance')
+    await expect(stake(1, 10001)).to.be.revertedWith('ERC20: transfer amount exceeds balance')
   })
 
   it('should be able to withdraw tokens', async () => {
