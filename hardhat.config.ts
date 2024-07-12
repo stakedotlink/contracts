@@ -1,10 +1,7 @@
 import { HardhatUserConfig } from 'hardhat/config'
-import '@nomiclabs/hardhat-ethers'
-import '@typechain/hardhat'
-import '@nomiclabs/hardhat-waffle'
-import '@openzeppelin/hardhat-upgrades'
-import '@nomicfoundation/hardhat-verify'
+import '@nomicfoundation/hardhat-toolbox'
 import '@nomicfoundation/hardhat-ledger'
+import '@openzeppelin/hardhat-upgrades'
 
 export const ledgerAccount = '0x23c4602e63ACfe29b930c530B19d44a84AF0d767'
 
