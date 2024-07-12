@@ -8,7 +8,6 @@ import {
   fromEther,
   padBytes,
   concatBytes,
-  assertThrowsAsync,
 } from '../utils/helpers'
 import {
   StakingPool,
@@ -204,9 +203,9 @@ describe('EthStakingStrategy', () => {
     const { accounts, stakingPool, stake } = await loadFixture(deployFixture)
 
     await stake(2)
-    await assertThrowsAsync(async () => {
-      await stakingPool.withdraw(accounts[0], accounts[0], toEther(1))
-    }, 'revert')
+    await expect(stakingPool.withdraw(accounts[0], accounts[0], toEther(1))).to.be.revertedWith(
+      'Not enough liquidity available to withdraw'
+    )
   })
 
   it('depositEther should work correctly', async () => {

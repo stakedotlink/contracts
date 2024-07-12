@@ -1,6 +1,5 @@
 import { ethers, upgrades } from 'hardhat'
 import { assert } from 'chai'
-import { Contract } from 'ethers'
 
 export const toEther = (amount: string | number) => {
   return ethers.parseEther(amount.toString())
@@ -8,19 +7,6 @@ export const toEther = (amount: string | number) => {
 
 export const fromEther = (amount: bigint) => {
   return Number(ethers.formatEther(amount))
-}
-
-export const assertThrowsAsync = async (fn: Function, regExp: string) => {
-  let f = () => {}
-  try {
-    await fn()
-  } catch (e) {
-    f = () => {
-      throw e
-    }
-  } finally {
-    assert.throws(f, regExp)
-  }
 }
 
 export const deploy = async (contractName: string, args: any[] = []) => {
