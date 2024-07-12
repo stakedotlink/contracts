@@ -1,14 +1,9 @@
-//@ts-nocheck
-
 import { Contract } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
 
 export const deploy = async (contractName: string, args: any[] = [], useLedgerSigner = false) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  const contract = await Contract.deploy(...args)
-  await contract.deployed()
-  return contract
+  return ethers.deployContract(contractName, args) as any
 }
 
 export const deployUpgradeable = async (
@@ -17,9 +12,7 @@ export const deployUpgradeable = async (
   useLedgerSigner = false
 ) => {
   const Contract = await ethers.getContractFactory(contractName)
-  const contract = await upgrades.deployProxy(Contract, args, { kind: 'uups' })
-  await contract.deployed()
-  return contract
+  return upgrades.deployProxy(Contract, args, { kind: 'uups' }) as any
 }
 
 export const deployImplementation = async (contractName: string, useLedgerSigner = false) => {
@@ -75,7 +68,7 @@ export const updateDeployments = (
   )
 }
 
-export const getContract = async (contractName: string, useLedgerSigner = false): Promise<Contract> => {
+export const getContract = async (contractName: string, useLedgerSigner = false): Promise<any> => {
   const deployments = getDeployments()
   const contract = deployments[contractName]
 
@@ -83,7 +76,7 @@ export const getContract = async (contractName: string, useLedgerSigner = false)
     throw Error('Deployed contract does not exist')
   }
 
-  return ethers.getContractAt(contract.artifact, contract.address)
+  return ethers.getContractAt(contract.artifact, contract.address) as any
 }
 
 export const printDeployments = () => {

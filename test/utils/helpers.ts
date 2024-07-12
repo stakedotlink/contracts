@@ -1,5 +1,4 @@
 import { ethers, upgrades } from 'hardhat'
-import { assert } from 'chai'
 
 export const toEther = (amount: string | number) => {
   return ethers.parseEther(amount.toString())

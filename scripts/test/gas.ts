@@ -38,28 +38,28 @@ async function main() {
   ])) as ERC677
 
   const stakingPool = (await deployUpgradeable('StakingPool', [
-    linkToken.address,
+    linkToken.target,
     LINK_StakingPool.derivativeTokenName,
     LINK_StakingPool.derivativeTokenSymbol,
     LINK_StakingPool.fees,
   ])) as StakingPool
 
   const priorityPool = (await deployUpgradeable('PriorityPool', [
-    linkToken.address,
-    stakingPool.address,
+    linkToken.target,
+    stakingPool.target,
     accounts[0],
     LINK_PriorityPool.queueDepositMin,
     LINK_PriorityPool.queueDepositMax,
   ])) as PriorityPool
 
-  await stakingPool.setPriorityPool(priorityPool.address)
+  await stakingPool.setPriorityPool(priorityPool.target)
 
   const rewardsController = (await deploy('StakingRewardsMock', [
-    linkToken.address,
+    linkToken.target,
   ])) as StakingRewardsMock
   const stakingController = (await deploy('StakingMock', [
-    linkToken.address,
-    rewardsController.address,
+    linkToken.target,
+    rewardsController.target,
     toEther(10),
     toEther(10000),
     toEther(1000000),
@@ -68,9 +68,9 @@ async function main() {
   const vaultImpAddress = await deployImplementation('CommunityVault')
 
   const communityVCS = await deployUpgradeable('CommunityVCS', [
-    linkToken.address,
-    stakingPool.address,
-    stakingController.address,
+    linkToken.target,
+    stakingPool.target,
+    stakingController.target,
     vaultImpAddress,
     LINK_CommunityVCS.fees,
     LINK_CommunityVCS.maxDepositSizeBP,
@@ -79,25 +79,25 @@ async function main() {
   ])
 
   await linkToken.transferAndCall(
-    priorityPool.address,
+    priorityPool.target,
     toEther(1000000),
-    ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+    ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
   )
-  await stakingPool.addStrategy(communityVCS.address)
+  await stakingPool.addStrategy(communityVCS.target)
 
   console.log('Testing PriorityPool.depositQueuedTokens:')
 
   console.log(
     '10 vaults: ',
-    (await priorityPool.estimateGas.depositQueuedTokens(0, toEther(100000))).toNumber()
+    Number(await priorityPool.depositQueuedTokens.estimateGas(0, toEther(100000)))
   )
   console.log(
     '15 vaults: ',
-    (await priorityPool.estimateGas.depositQueuedTokens(0, toEther(150000))).toNumber()
+    Number(await priorityPool.depositQueuedTokens.estimateGas(0, toEther(150000)))
   )
   console.log(
     '20 vaults: ',
-    (await priorityPool.estimateGas.depositQueuedTokens(0, toEther(200000))).toNumber()
+    Number(await priorityPool.depositQueuedTokens.estimateGas(0, toEther(200000)))
   )
 }
 

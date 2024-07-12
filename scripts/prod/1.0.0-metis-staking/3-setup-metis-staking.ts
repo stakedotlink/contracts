@@ -1,4 +1,3 @@
-//@ts-nocheck
 import {
   DistributionOracle,
   PriorityPool,
@@ -24,20 +23,20 @@ async function main() {
     'METIS_PP_DistributionOracle'
   )) as DistributionOracle
 
-  // console.log('Setting up contracts')
+  console.log('Setting up contracts')
 
-  // await (await stakingPool.setPriorityPool(priorityPool.address)).wait()
-  // await (await stakingPool.addStrategy(sequencerVCS.address)).wait()
-  // await (await stakingPool.addFee(stMetisSDLRewardsPool.address, stMetisSDLPoolFee)).wait()
-  // await (await priorityPool.setDistributionOracle(distributionOracle.address)).wait()
-  // await (await sequencerVCS.setCCIPController(rewardsReceiver.address)).wait()
+  await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
+  await (await stakingPool.addStrategy(sequencerVCS.target)).wait()
+  await (await stakingPool.addFee(stMetisSDLRewardsPool.target, stMetisSDLPoolFee)).wait()
+  await (await priorityPool.setDistributionOracle(distributionOracle.target)).wait()
+  await (await sequencerVCS.setCCIPController(rewardsReceiver.target)).wait()
 
   console.log('Transferring ownership')
 
-  // await (await stakingPool.transferOwnership(multisigAddress)).wait()
-  // await (await priorityPool.transferOwnership(multisigAddress)).wait()
-  // await (await sequencerVCS.transferOwnership(multisigAddress)).wait()
-  // await (await rewardsReceiver.transferOwnership(multisigAddress)).wait()
+  await (await stakingPool.transferOwnership(multisigAddress)).wait()
+  await (await priorityPool.transferOwnership(multisigAddress)).wait()
+  await (await sequencerVCS.transferOwnership(multisigAddress)).wait()
+  await (await rewardsReceiver.transferOwnership(multisigAddress)).wait()
   await (await distributionOracle.transferOwnership(multisigAddress)).wait()
 }
 
