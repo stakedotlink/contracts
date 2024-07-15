@@ -40,11 +40,11 @@ const config: HardhatUserConfig = {
       accounts,
     },
     mainnet: {
-      url: 'https://mainnet.infura.io/v3/677ab82f0e2948c596522759d3429a43',
+      url: '',
       ledgerAccounts: [ledgerAccount],
     },
     metis: {
-      url: 'https://metis-pokt.nodies.app',
+      url: '',
       ledgerAccounts: [ledgerAccount],
     },
     testnet: {
@@ -63,7 +63,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      metis: 'metis', // apiKey is not required, just set a placeholder
+      metis: 'metis',
     },
     customChains: [
       {

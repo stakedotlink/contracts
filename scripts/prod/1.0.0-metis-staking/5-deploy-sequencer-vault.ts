@@ -16,7 +16,7 @@ const SequencerVaultArgs = {
 }
 
 async function main() {
-  const { signers, accounts } = await getAccounts()
+  const { accounts } = await getAccounts()
 
   const safeApiKit = new SafeApiKit({
     chainId: 1n,
@@ -24,7 +24,7 @@ async function main() {
   })
   const safeSdk = await Safe.init({
     provider: hre.network.provider,
-    signer: signers[0],
+    signer: accounts[0],
     safeAddress: multisigAddress,
   })
 

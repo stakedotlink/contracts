@@ -9,7 +9,7 @@ import { getAccounts } from '../../utils/helpers'
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
 async function main() {
-  const { signers, accounts } = await getAccounts()
+  const { accounts } = await getAccounts()
 
   const safeApiKit = new SafeApiKit({
     chainId: 1n,
@@ -17,7 +17,7 @@ async function main() {
   })
   const safeSdk = await Safe.init({
     provider: hre.network.provider,
-    signer: signers[0],
+    signer: accounts[0],
     safeAddress: multisigAddress,
   })
 

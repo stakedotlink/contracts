@@ -81,7 +81,7 @@ async function main() {
     },
     {
       METIS_SequencerRewardsCCIPSender: 'SequencerRewardsCCIPSender',
-      METIS_wrappedSDToken: 'BurnMintERC677',
+      METIS_WrappedSDToken: 'BurnMintERC677',
     }
   )
 }
