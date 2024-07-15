@@ -60,7 +60,12 @@ contract DepositController is Ownable {
         require(_nwlStateHash == nwlStateHash, "nwlStateHash has changed");
         require(_wlStateHash == wlStateHash, "wlStateHash has changed");
 
-        ethStakingStrategy.depositEther(_nwlTotalValidatorCount, _wlTotalValidatorCount, _wlOperatorIds, _wlValidatorCounts);
+        ethStakingStrategy.depositEther(
+            _nwlTotalValidatorCount,
+            _wlTotalValidatorCount,
+            _wlOperatorIds,
+            _wlValidatorCounts
+        );
     }
 
     /**
@@ -77,7 +82,9 @@ contract DepositController is Ownable {
      * @return nwlKeys nwl validator keys to be assigned
      * @return wlKeys wl validator keys to be assigned
      */
-    function getNextValidators(uint256 _totalValidatorCount)
+    function getNextValidators(
+        uint256 _totalValidatorCount
+    )
         external
         view
         returns (
@@ -95,21 +102,25 @@ contract DepositController is Ownable {
         uint256 nwlQueueLength = nwlOperatorController.queueLength();
         uint256 wlQueueLength = wlOperatorController.queueLength();
 
-        require(_totalValidatorCount <= nwlQueueLength + wlQueueLength, "not enough validators in queue");
+        require(
+            _totalValidatorCount <= nwlQueueLength + wlQueueLength,
+            "not enough validators in queue"
+        );
 
         depositRoot = depositContract.get_deposit_root();
         nwlStateHash = nwlOperatorController.currentStateHash();
         wlStateHash = wlOperatorController.currentStateHash();
 
-        nwlTotalValidatorCount = nwlQueueLength >= _totalValidatorCount ? _totalValidatorCount : nwlQueueLength;
+        nwlTotalValidatorCount = nwlQueueLength >= _totalValidatorCount
+            ? _totalValidatorCount
+            : nwlQueueLength;
         if (nwlTotalValidatorCount > 0) {
             nwlKeys = nwlOperatorController.getNextValidators(nwlTotalValidatorCount);
         }
 
         if (nwlTotalValidatorCount < _totalValidatorCount) {
-            (wlOperatorIds, wlValidatorCounts, wlTotalValidatorCount, wlKeys) = wlOperatorController.getNextValidators(
-                _totalValidatorCount - nwlTotalValidatorCount
-            );
+            (wlOperatorIds, wlValidatorCounts, wlTotalValidatorCount, wlKeys) = wlOperatorController
+                .getNextValidators(_totalValidatorCount - nwlTotalValidatorCount);
         }
     }
 }

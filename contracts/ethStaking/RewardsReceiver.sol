@@ -61,8 +61,14 @@ contract RewardsReceiver is Ownable {
      * @param _minWithdrawalAmount minimum amount
      * @param _maxWithdrawalAmount maximum amount
      */
-    function setWithdrawalLimits(uint256 _minWithdrawalAmount, uint256 _maxWithdrawalAmount) external onlyOwner {
-        require(_minWithdrawalAmount <= _maxWithdrawalAmount, "min must be less than or equal to max");
+    function setWithdrawalLimits(
+        uint256 _minWithdrawalAmount,
+        uint256 _maxWithdrawalAmount
+    ) external onlyOwner {
+        require(
+            _minWithdrawalAmount <= _maxWithdrawalAmount,
+            "min must be less than or equal to max"
+        );
         minWithdrawalAmount = _minWithdrawalAmount;
         maxWithdrawalAmount = _maxWithdrawalAmount;
         emit SetWithdrawalLimits(_minWithdrawalAmount, _maxWithdrawalAmount);

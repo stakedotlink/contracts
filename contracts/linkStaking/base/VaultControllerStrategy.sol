@@ -66,7 +66,10 @@ abstract contract VaultControllerStrategy is Strategy {
 
         stakeController = IStaking(_stakeController);
 
-        require(_isContract(_vaultImplementation), "Vault implementation address must belong to a contract");
+        require(
+            _isContract(_vaultImplementation),
+            "Vault implementation address must belong to a contract"
+        );
         vaultImplementation = _vaultImplementation;
 
         for (uint256 i = 0; i < _fees.length; ++i) {
@@ -101,7 +104,12 @@ abstract contract VaultControllerStrategy is Strategy {
             startIndex = 0;
         }
 
-        uint256 deposited = _depositToVaults(startIndex, token.balanceOf(address(this)), vaultMinDeposits, vaultMaxDeposits);
+        uint256 deposited = _depositToVaults(
+            startIndex,
+            token.balanceOf(address(this)),
+            vaultMinDeposits,
+            vaultMaxDeposits
+        );
         totalDeposits += deposited;
         totalPrincipalDeposits += deposited;
 
@@ -155,15 +163,13 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits(bytes calldata)
+    function updateDeposits(
+        bytes calldata
+    )
         external
         virtual
         onlyStakingPool
-        returns (
-            int256 depositChange,
-            address[] memory receivers,
-            uint256[] memory amounts
-        )
+        returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
     {
         depositChange = getDepositChange();
         uint256 newTotalDeposits = totalDeposits;
@@ -211,7 +217,8 @@ abstract contract VaultControllerStrategy is Strategy {
                 stakeController.isActive()
                     ? MathUpgradeable.min(
                         vaults.length * vaultMaxDeposits - totalPrincipalDeposits,
-                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) * maxDepositSizeBP) / 10000
+                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) *
+                            maxDepositSizeBP) / 10000
                     )
                     : 0
             );

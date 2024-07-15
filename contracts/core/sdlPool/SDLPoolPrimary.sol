@@ -13,7 +13,11 @@ contract SDLPoolPrimary is SDLPool {
 
     address public delegatorPool;
 
-    event IncomingUpdate(uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange, uint256 mintStartIndex);
+    event IncomingUpdate(
+        uint256 numNewRESDLTokens,
+        int256 totalRESDLSupplyChange,
+        uint256 mintStartIndex
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -64,7 +68,8 @@ contract SDLPoolPrimary is SDLPool {
         uint256 _value,
         bytes calldata _calldata
     ) external override {
-        if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender)) revert UnauthorizedToken();
+        if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender))
+            revert UnauthorizedToken();
 
         if (_value == 0) revert InvalidValue();
 
@@ -105,10 +110,13 @@ contract SDLPoolPrimary is SDLPool {
      * - reverts if a minimum of half the locking duration has not elapsed
      * @param _lockId id of lock
      **/
-    function initiateUnlock(uint256 _lockId) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
+    function initiateUnlock(
+        uint256 _lockId
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
         if (locks[_lockId].expiry != 0) revert UnlockAlreadyInitiated();
         uint64 halfDuration = locks[_lockId].duration / 2;
-        if (locks[_lockId].startTime + halfDuration > block.timestamp) revert HalfDurationNotElapsed();
+        if (locks[_lockId].startTime + halfDuration > block.timestamp)
+            revert HalfDurationNotElapsed();
 
         uint64 expiry = uint64(block.timestamp) + halfDuration;
         locks[_lockId].expiry = expiry;
@@ -132,11 +140,10 @@ contract SDLPoolPrimary is SDLPool {
      * @param _lockId id of the lock
      * @param _amount amount to withdraw from the lock
      **/
-    function withdraw(uint256 _lockId, uint256 _amount)
-        external
-        onlyLockOwner(_lockId, msg.sender)
-        updateRewards(msg.sender)
-    {
+    function withdraw(
+        uint256 _lockId,
+        uint256 _amount
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
         if (locks[_lockId].startTime != 0) {
             uint64 expiry = locks[_lockId].expiry;
             if (expiry == 0) revert UnlockNotInitiated();
@@ -213,7 +220,13 @@ contract SDLPoolPrimary is SDLPool {
     ) external onlyCCIPController updateRewards(_receiver) updateRewards(ccipController) {
         if (lockOwners[_lockId] != address(0)) revert InvalidLockId();
 
-        locks[_lockId] = Lock(_lock.amount, _lock.boostAmount, _lock.startTime, _lock.duration, _lock.expiry);
+        locks[_lockId] = Lock(
+            _lock.amount,
+            _lock.boostAmount,
+            _lock.startTime,
+            _lock.duration,
+            _lock.expiry
+        );
         lockOwners[_lockId] = _receiver;
         balances[_receiver] += 1;
 
@@ -230,12 +243,10 @@ contract SDLPoolPrimary is SDLPool {
      * @param _numNewRESDLTokens number of new reSDL locks to be minted on other chain
      * @param _totalRESDLSupplyChange total reSDL supply change on other chain
      */
-    function handleIncomingUpdate(uint256 _numNewRESDLTokens, int256 _totalRESDLSupplyChange)
-        external
-        onlyCCIPController
-        updateRewards(ccipController)
-        returns (uint256)
-    {
+    function handleIncomingUpdate(
+        uint256 _numNewRESDLTokens,
+        int256 _totalRESDLSupplyChange
+    ) external onlyCCIPController updateRewards(ccipController) returns (uint256) {
         uint256 mintStartIndex;
         if (_numNewRESDLTokens != 0) {
             mintStartIndex = lastLockId + 1;
@@ -264,11 +275,7 @@ contract SDLPoolPrimary is SDLPool {
      * @param _amount amount to stake
      * @param _lockingDuration duration of lock
      */
-    function migrate(
-        address _sender,
-        uint256 _amount,
-        uint64 _lockingDuration
-    ) external {
+    function migrate(address _sender, uint256 _amount, uint64 _lockingDuration) external {
         if (msg.sender != delegatorPool) revert SenderNotAuthorized();
         sdlToken.safeTransferFrom(delegatorPool, address(this), _amount);
         _storeNewLock(_sender, _amount, _lockingDuration);

@@ -28,11 +28,7 @@ contract LPLMigration {
      * @param _sender address that is migrating
      * @param _value amount to migrate
      **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes memory
-    ) public {
+    function onTokenTransfer(address _sender, uint256 _value, bytes memory) public {
         require(msg.sender == lplToken, "Sender must be LPL token");
         IERC20(sdlToken).safeTransfer(_sender, _value / MIGRATION_RATIO);
         emit LPLMigrated(_sender, _value);

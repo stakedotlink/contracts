@@ -20,11 +20,7 @@ contract CCIPOffRampMock {
     IRouter public router;
     mapping(address => ITokenPool) public tokenPools;
 
-    constructor(
-        address _router,
-        address[] memory _tokens,
-        address[] memory _tokenPools
-    ) {
+    constructor(address _router, address[] memory _tokens, address[] memory _tokenPools) {
         router = IRouter(_router);
         for (uint256 i = 0; i < _tokens.length; ++i) {
             tokenPools[_tokens[i]] = ITokenPool(_tokenPools[i]);
@@ -43,7 +39,13 @@ contract CCIPOffRampMock {
         }
 
         (bool success, , ) = router.routeMessage(
-            Client.Any2EVMMessage(_messageId, _sourceChainSelector, abi.encode(msg.sender), _data, _tokenAmounts),
+            Client.Any2EVMMessage(
+                _messageId,
+                _sourceChainSelector,
+                abi.encode(msg.sender),
+                _data,
+                _tokenAmounts
+            ),
             GAS_FOR_CALL_EXACT_CHECK,
             1000000,
             _receiver

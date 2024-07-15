@@ -10,7 +10,9 @@ interface IWLOperatorController is IOperatorController {
         uint256 _totalValidatorCount
     ) external returns (bytes memory keys, bytes memory signatures);
 
-    function getNextValidators(uint256 _validatorCount)
+    function getNextValidators(
+        uint256 _validatorCount
+    )
         external
         view
         returns (

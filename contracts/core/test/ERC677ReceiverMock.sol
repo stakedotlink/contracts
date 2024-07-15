@@ -8,11 +8,7 @@ pragma solidity 0.8.15;
 contract ERC677ReceiverMock {
     uint256 public totalRewards;
 
-    function onTokenTransfer(
-        address,
-        uint256 _value,
-        bytes calldata
-    ) external virtual {
+    function onTokenTransfer(address, uint256 _value, bytes calldata) external virtual {
         totalRewards += _value;
     }
 }

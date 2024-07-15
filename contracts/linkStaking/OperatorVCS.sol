@@ -81,16 +81,15 @@ contract OperatorVCS is VaultControllerStrategy {
      * - rewards are paid in the stakingPool LSD token
      * - reverts if transferred token is not stakingPool LSD
      **/
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external {
+    function onTokenTransfer(address, uint256, bytes calldata) external {
         if (msg.sender != address(stakingPool)) revert UnauthorizedToken();
     }
 
     function getOperatorRewards() external view returns (uint256, uint256) {
-        return (unclaimedOperatorRewards, IERC20Upgradeable(address(stakingPool)).balanceOf(address(this)));
+        return (
+            unclaimedOperatorRewards,
+            IERC20Upgradeable(address(stakingPool)).balanceOf(address(this))
+        );
     }
 
     /**
@@ -99,7 +98,10 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _receiver address to receive rewards
      * @param _amount amount to withdraw
      */
-    function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
+    function withdrawOperatorRewards(
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256) {
         if (!vaultMapping[msg.sender]) revert SenderNotAuthorized();
 
         IERC20Upgradeable lsdToken = IERC20Upgradeable(address(stakingPool));
@@ -152,15 +154,13 @@ contract OperatorVCS is VaultControllerStrategy {
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits(bytes calldata _data)
+    function updateDeposits(
+        bytes calldata _data
+    )
         external
         override
         onlyStakingPool
-        returns (
-            int256 depositChange,
-            address[] memory receivers,
-            uint256[] memory amounts
-        )
+        returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
     {
         uint256 minRewards = _data.length == 0 ? 0 : abi.decode(_data, (uint256));
         uint256 newTotalDeposits = totalDeposits;
@@ -170,7 +170,10 @@ contract OperatorVCS is VaultControllerStrategy {
         uint256 vaultCount = vaults.length;
         address receiver = address(this);
         for (uint256 i = 0; i < vaultCount; ++i) {
-            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits(minRewards, receiver);
+            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits(
+                minRewards,
+                receiver
+            );
             vaultDeposits += deposits;
             operatorRewards += rewards;
         }

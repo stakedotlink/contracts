@@ -5,7 +5,10 @@ import "./base/SDLPoolCCIPController.sol";
 import "../interfaces/IERC677.sol";
 
 interface ISDLPoolPrimary is ISDLPool {
-    function handleIncomingUpdate(uint256 _numNewRESDLTokens, int256 _totalRESDLSupplyChange) external returns (uint256);
+    function handleIncomingUpdate(
+        uint256 _numNewRESDLTokens,
+        int256 _totalRESDLSupplyChange
+    ) external returns (uint256);
 }
 
 /**
@@ -32,7 +35,11 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
 
     QueuedUpdate[] internal queuedUpdates;
 
-    event DistributeRewards(bytes32 indexed messageId, uint64 indexed destinationChainSelector, uint256 fees);
+    event DistributeRewards(
+        bytes32 indexed messageId,
+        uint64 indexed destinationChainSelector,
+        uint256 fees
+    );
     event ChainAdded(uint64 indexed chainSelector, address destination);
     event ChainRemoved(uint64 indexed chainSelector, address destination);
     event SetWrappedRewardToken(address indexed token, address rewardToken);
@@ -117,7 +124,8 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
      * @param _gasLimits list of gas limits to use for CCIP messages on secondary chains
      **/
     function executeQueuedUpdates(uint256[] calldata _gasLimits) external onlyUpdateInitiator {
-        if (_gasLimits.length == 0 || _gasLimits.length != queuedUpdates.length) revert InvalidLength();
+        if (_gasLimits.length == 0 || _gasLimits.length != queuedUpdates.length)
+            revert InvalidLength();
 
         for (uint256 i = 0; i < _gasLimits.length; ++i) {
             QueuedUpdate memory update = queuedUpdates[i];
@@ -140,7 +148,8 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
         address _sender,
         uint256 _tokenId
     ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
-        if (whitelistedDestinations[_destinationChainSelector] == address(0)) revert InvalidDestination();
+        if (whitelistedDestinations[_destinationChainSelector] == address(0))
+            revert InvalidDestination();
         ISDLPool.RESDLToken memory reSDLToken = ISDLPoolPrimary(sdlPool).handleOutgoingRESDL(
             _sender,
             _tokenId,
@@ -315,7 +324,10 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
     function _ccipReceive(Client.Any2EVMMessage memory _message) internal override {
         uint64 sourceChainSelector = _message.sourceChainSelector;
 
-        (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = abi.decode(_message.data, (uint256, int256));
+        (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = abi.decode(
+            _message.data,
+            (uint256, int256)
+        );
 
         if (totalRESDLSupplyChange > 0) {
             reSDLSupplyByChain[sourceChainSelector] += uint256(totalRESDLSupplyChange);
@@ -323,7 +335,10 @@ contract SDLPoolCCIPControllerPrimary is SDLPoolCCIPController {
             reSDLSupplyByChain[sourceChainSelector] -= uint256(-1 * totalRESDLSupplyChange);
         }
 
-        uint256 mintStartIndex = ISDLPoolPrimary(sdlPool).handleIncomingUpdate(numNewRESDLTokens, totalRESDLSupplyChange);
+        uint256 mintStartIndex = ISDLPoolPrimary(sdlPool).handleIncomingUpdate(
+            numNewRESDLTokens,
+            totalRESDLSupplyChange
+        );
 
         queuedUpdates.push(QueuedUpdate(sourceChainSelector, uint192(mintStartIndex)));
 

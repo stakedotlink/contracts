@@ -43,7 +43,11 @@ contract DistributionOracle is ChainlinkClient, Ownable {
     uint128 public awaitingManualVerification;
     UpdateData public updateData;
 
-    event SetUpdateParams(uint64 minTimeBetweenUpdates, uint128 minDepositsSinceLastUpdate, uint64 minBlockConfirmations);
+    event SetUpdateParams(
+        uint64 minTimeBetweenUpdates,
+        uint128 minDepositsSinceLastUpdate,
+        uint64 minBlockConfirmations
+    );
     event SetChainlinkParams(bytes32 jobId, uint256 fee);
     event ToggleManualVerification(uint128 manualVerificationRequired);
 
@@ -126,7 +130,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         UpkeepType upkeepType = abi.decode(_performData, (UpkeepType));
 
         if (upkeepType == UpkeepType.PAUSE) {
-            if (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate) revert UpdateConditionsNotMet();
+            if (priorityPool.depositsSinceLastUpdate() < minDepositsSinceLastUpdate)
+                revert UpdateConditionsNotMet();
             _pauseForUpdate();
         } else if (upkeepType == UpkeepType.REQUEST) {
             _requestUpdate();
@@ -168,10 +173,20 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         uint256 _sharesAmountDistributed
     ) public recordChainlinkFulfillment(_requestId) {
         if (manualVerificationRequired == 1) {
-            updateData = UpdateData(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
+            updateData = UpdateData(
+                _merkleRoot,
+                _ipfsHash,
+                _amountDistributed,
+                _sharesAmountDistributed
+            );
             awaitingManualVerification = 1;
         } else {
-            priorityPool.updateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
+            priorityPool.updateDistribution(
+                _merkleRoot,
+                _ipfsHash,
+                _amountDistributed,
+                _sharesAmountDistributed
+            );
         }
         updateStatus.requestInProgress = 0;
     }
@@ -234,7 +249,11 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
         minDepositsSinceLastUpdate = _minDepositsSinceLastUpdate;
         minBlockConfirmations = _minBlockConfirmations;
-        emit SetUpdateParams(_minTimeBetweenUpdates, _minDepositsSinceLastUpdate, _minBlockConfirmations);
+        emit SetUpdateParams(
+            _minTimeBetweenUpdates,
+            _minDepositsSinceLastUpdate,
+            _minBlockConfirmations
+        );
     }
 
     /**
@@ -261,7 +280,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @dev must always be called before requestUpdate()
      */
     function _pauseForUpdate() private {
-        if (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates) revert UpdateConditionsNotMet();
+        if (block.timestamp < updateStatus.timeOfLastUpdate + minTimeBetweenUpdates)
+            revert UpdateConditionsNotMet();
         if (awaitingManualVerification == 1) revert AwaitingManualVerification();
         priorityPool.pauseForUpdate();
         updateStatus = UpdateStatus(uint64(block.timestamp), uint64(block.number), 0);
@@ -276,13 +296,18 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         UpdateStatus memory status = updateStatus;
 
         if (!priorityPool.paused()) revert NotPaused();
-        if (block.number < status.pausedAtBlockNumber + minBlockConfirmations) revert InsufficientBlockConfirmations();
+        if (block.number < status.pausedAtBlockNumber + minBlockConfirmations)
+            revert InsufficientBlockConfirmations();
         if (status.requestInProgress == 1) revert RequestInProgress();
         if (awaitingManualVerification == 1) revert AwaitingManualVerification();
 
         updateStatus.requestInProgress = 1;
 
-        Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfillRequest.selector);
+        Chainlink.Request memory req = buildChainlinkRequest(
+            jobId,
+            address(this),
+            this.fulfillRequest.selector
+        );
         req.addUint("blockNumber", status.pausedAtBlockNumber);
         sendChainlinkRequest(req, fee);
     }

@@ -6,7 +6,10 @@ interface ISequencerVCS {
 
     function operatorRewardPercentage() external view returns (uint256);
 
-    function withdrawOperatorRewards(address _rewardsReceiver, uint256 _amount) external returns (uint256);
+    function withdrawOperatorRewards(
+        address _rewardsReceiver,
+        uint256 _amount
+    ) external returns (uint256);
 
     function handleIncomingL2Rewards(uint256 _amount) external;
 

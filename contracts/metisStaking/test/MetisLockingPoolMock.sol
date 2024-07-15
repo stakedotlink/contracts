@@ -7,11 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 interface ILockingInfoMock {
     function newSequencer(address _owner, uint256 _amount) external;
 
-    function increaseLocked(
-        address _owner,
-        uint256 _amount,
-        uint256 _rewardsAmount
-    ) external;
+    function increaseLocked(address _owner, uint256 _amount, uint256 _rewardsAmount) external;
 }
 
 /**
@@ -66,17 +62,27 @@ contract MetisLockingPoolMock {
         bytes calldata _pubkey
     ) external {
         sequencers.push(
-            Sequencer(_amount, 0, 0, 0, 0, 0, 0, 0, msg.sender, _signer, _pubkey, _rewardRecipient, Status.Active)
+            Sequencer(
+                _amount,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                msg.sender,
+                _signer,
+                _pubkey,
+                _rewardRecipient,
+                Status.Active
+            )
         );
         seqOwners[msg.sender] = sequencers.length - 1;
         lockingInfo.newSequencer(msg.sender, _amount);
     }
 
-    function relock(
-        uint256 _seqId,
-        uint256 _amount,
-        bool _lockReward
-    ) external {
+    function relock(uint256 _seqId, uint256 _amount, bool _lockReward) external {
         uint256 rewards;
         if (_lockReward) {
             rewards = sequencers[_seqId].reward;

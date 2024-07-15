@@ -34,7 +34,12 @@ contract SDLPoolSecondary is SDLPool {
 
     event QueueInitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event QueueWithdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
-    event QueueCreateLock(address indexed owner, uint256 amount, uint256 boostAmount, uint64 lockingDuration);
+    event QueueCreateLock(
+        address indexed owner,
+        uint256 amount,
+        uint256 boostAmount,
+        uint64 lockingDuration
+    );
     event QueueUpdateLock(
         address indexed owner,
         uint256 indexed lockId,
@@ -42,7 +47,11 @@ contract SDLPoolSecondary is SDLPool {
         uint256 boostAmount,
         uint64 lockingDuration
     );
-    event OutgoingUpdate(uint128 indexed batchIndex, uint256 numNewQueuedLocks, int256 reSDLSupplyChange);
+    event OutgoingUpdate(
+        uint128 indexed batchIndex,
+        uint256 numNewQueuedLocks,
+        int256 reSDLSupplyChange
+    );
     event IncomingUpdate(uint128 indexed batchIndex, uint256 mintStartIndex);
 
     error CannotTransferWithQueuedUpdates();
@@ -84,7 +93,9 @@ contract SDLPoolSecondary is SDLPool {
      * @param _owner owner of locks
      * @return list of queued locks and corresponding batch indexes
      **/
-    function getQueuedNewLocksByOwner(address _owner) external view returns (Lock[] memory, uint256[] memory) {
+    function getQueuedNewLocksByOwner(
+        address _owner
+    ) external view returns (Lock[] memory, uint256[] memory) {
         uint256 numNewLocks = newLocksByOwner[_owner].length;
         Lock[] memory newLocks = new Lock[](numNewLocks);
         uint256[] memory batchIndexes = new uint256[](numNewLocks);
@@ -103,7 +114,9 @@ contract SDLPoolSecondary is SDLPool {
      * @param _lockIds list of lock ids
      * @return list of queued lock updates corresponding to each lock id
      **/
-    function getQueuedLockUpdates(uint256[] calldata _lockIds) external view returns (LockUpdate[][] memory) {
+    function getQueuedLockUpdates(
+        uint256[] calldata _lockIds
+    ) external view returns (LockUpdate[][] memory) {
         LockUpdate[][] memory updates = new LockUpdate[][](_lockIds.length);
 
         for (uint256 i = 0; i < _lockIds.length; ++i) {
@@ -135,7 +148,8 @@ contract SDLPoolSecondary is SDLPool {
         uint256 _value,
         bytes calldata _calldata
     ) external override {
-        if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender)) revert UnauthorizedToken();
+        if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender))
+            revert UnauthorizedToken();
 
         if (_value == 0) revert InvalidValue();
 
@@ -178,7 +192,9 @@ contract SDLPoolSecondary is SDLPool {
      * - reverts if a minimum of half the locking duration has not elapsed
      * @param _lockId id of lock
      **/
-    function initiateUnlock(uint256 _lockId) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
+    function initiateUnlock(
+        uint256 _lockId
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
         Lock memory lock = _getQueuedLockState(_lockId);
 
         if (lock.expiry != 0) revert UnlockAlreadyInitiated();
@@ -212,11 +228,10 @@ contract SDLPoolSecondary is SDLPool {
      * @param _lockId id of the lock
      * @param _amount amount to withdraw from the lock
      **/
-    function withdraw(uint256 _lockId, uint256 _amount)
-        external
-        onlyLockOwner(_lockId, msg.sender)
-        updateRewards(msg.sender)
-    {
+    function withdraw(
+        uint256 _lockId,
+        uint256 _amount
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
         Lock memory lock = _getQueuedLockState(_lockId);
 
         if (lock.startTime != 0) {
@@ -261,7 +276,13 @@ contract SDLPoolSecondary is SDLPool {
         address _sender,
         uint256 _lockId,
         address _sdlReceiver
-    ) external onlyCCIPController onlyLockOwner(_lockId, _sender) updateRewards(_sender) returns (Lock memory) {
+    )
+        external
+        onlyCCIPController
+        onlyLockOwner(_lockId, _sender)
+        updateRewards(_sender)
+        returns (Lock memory)
+    {
         if (queuedLockUpdates[_lockId].length != 0) revert CannotTransferWithQueuedUpdates();
 
         Lock memory lock = locks[_lockId];
@@ -295,7 +316,13 @@ contract SDLPoolSecondary is SDLPool {
     ) external onlyCCIPController updateRewards(_receiver) {
         if (lockOwners[_lockId] != address(0)) revert InvalidLockId();
 
-        locks[_lockId] = Lock(_lock.amount, _lock.boostAmount, _lock.startTime, _lock.duration, _lock.expiry);
+        locks[_lockId] = Lock(
+            _lock.amount,
+            _lock.boostAmount,
+            _lock.startTime,
+            _lock.duration,
+            _lock.expiry
+        );
         lockOwners[_lockId] = _receiver;
         balances[_receiver] += 1;
 
@@ -339,7 +366,9 @@ contract SDLPoolSecondary is SDLPool {
         if (updateInProgress == 0) revert NoUpdateInProgress();
 
         if (_mintStartIndex != 0) {
-            uint256 newLastLockId = _mintStartIndex + queuedNewLocks[updateBatchIndex - 1].length - 1;
+            uint256 newLastLockId = _mintStartIndex +
+                queuedNewLocks[updateBatchIndex - 1].length -
+                1;
             if (newLastLockId > lastLockId) lastLockId = newLastLockId;
         }
 
@@ -370,16 +399,14 @@ contract SDLPoolSecondary is SDLPool {
      * @param _amount amount of underlying SDL
      * @param _lockingDuration locking duration
      **/
-    function _queueNewLock(
-        address _owner,
-        uint256 _amount,
-        uint64 _lockingDuration
-    ) internal {
+    function _queueNewLock(address _owner, uint256 _amount, uint64 _lockingDuration) internal {
         if (newLocksByOwner[_owner].length >= queuedNewLockLimit) revert TooManyQueuedLocks();
 
         Lock memory lock = _createLock(_amount, _lockingDuration);
         queuedNewLocks[updateBatchIndex].push(lock);
-        newLocksByOwner[_owner].push(NewLockPointer(updateBatchIndex, uint128(queuedNewLocks[updateBatchIndex].length - 1)));
+        newLocksByOwner[_owner].push(
+            NewLockPointer(updateBatchIndex, uint128(queuedNewLocks[updateBatchIndex].length - 1))
+        );
         queuedRESDLSupplyChange += int256(lock.amount + lock.boostAmount);
         if (updateNeeded == 0) updateNeeded = 1;
 
@@ -400,7 +427,9 @@ contract SDLPoolSecondary is SDLPool {
             if (newLockPointer.updateBatchIndex > finalizedBatchIndex) break;
 
             uint256 lockId = currentMintLockIdByBatch[newLockPointer.updateBatchIndex];
-            Lock memory lock = queuedNewLocks[newLockPointer.updateBatchIndex][newLockPointer.index];
+            Lock memory lock = queuedNewLocks[newLockPointer.updateBatchIndex][
+                newLockPointer.index
+            ];
 
             currentMintLockIdByBatch[newLockPointer.updateBatchIndex] += 1;
 
@@ -444,14 +473,23 @@ contract SDLPoolSecondary is SDLPool {
         Lock memory lock = _getQueuedLockState(_lockId);
         if (lock.amount == 0) revert LockWithdrawn();
 
-        LockUpdate memory lockUpdate = LockUpdate(updateBatchIndex, _updateLock(lock, _amount, _lockingDuration));
+        LockUpdate memory lockUpdate = LockUpdate(
+            updateBatchIndex,
+            _updateLock(lock, _amount, _lockingDuration)
+        );
         queuedLockUpdates[_lockId].push(lockUpdate);
         queuedRESDLSupplyChange +=
             int256(lockUpdate.lock.amount + lockUpdate.lock.boostAmount) -
             int256(lock.amount + lock.boostAmount);
         if (updateNeeded == 0) updateNeeded = 1;
 
-        emit QueueUpdateLock(_owner, _lockId, lockUpdate.lock.amount, lockUpdate.lock.boostAmount, lockUpdate.lock.duration);
+        emit QueueUpdateLock(
+            _owner,
+            _lockId,
+            lockUpdate.lock.amount,
+            lockUpdate.lock.boostAmount,
+            lockUpdate.lock.duration
+        );
     }
 
     /**
@@ -460,7 +498,10 @@ contract SDLPoolSecondary is SDLPool {
      * @param _owner owner of locks
      * @param _lockIds list of ids for locks to update
      **/
-    function _executeQueuedLockUpdates(address _owner, uint256[] memory _lockIds) internal updateRewards(_owner) {
+    function _executeQueuedLockUpdates(
+        address _owner,
+        uint256[] memory _lockIds
+    ) internal updateRewards(_owner) {
         uint256 finalizedBatchIndex = _getFinalizedUpdateBatchIndex();
 
         for (uint256 i = 0; i < _lockIds.length; ++i) {
@@ -474,8 +515,10 @@ contract SDLPoolSecondary is SDLPool {
                 if (queuedLockUpdates[lockId][j].updateBatchIndex > finalizedBatchIndex) break;
 
                 Lock memory updateLockState = queuedLockUpdates[lockId][j].lock;
-                int256 baseAmountDiff = int256(updateLockState.amount) - int256(curLockState.amount);
-                int256 boostAmountDiff = int256(updateLockState.boostAmount) - int256(curLockState.boostAmount);
+                int256 baseAmountDiff = int256(updateLockState.amount) -
+                    int256(curLockState.amount);
+                int256 boostAmountDiff = int256(updateLockState.boostAmount) -
+                    int256(curLockState.boostAmount);
 
                 if (baseAmountDiff < 0) {
                     emit Withdraw(_owner, lockId, uint256(-1 * baseAmountDiff));
@@ -496,7 +539,9 @@ contract SDLPoolSecondary is SDLPool {
                 } else {
                     locks[lockId] = updateLockState;
                     int256 totalDiff = baseAmountDiff + boostAmountDiff;
-                    effectiveBalances[_owner] = uint256(int256(effectiveBalances[_owner]) + totalDiff);
+                    effectiveBalances[_owner] = uint256(
+                        int256(effectiveBalances[_owner]) + totalDiff
+                    );
                     totalEffectiveBalance = uint256(int256(totalEffectiveBalance) + totalDiff);
                     emit UpdateLock(
                         _owner,
@@ -551,11 +596,7 @@ contract SDLPoolSecondary is SDLPool {
      * @param _to account to transfer to
      * @param _lockId id of lock to tansfer
      **/
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _lockId
-    ) internal override {
+    function _transfer(address _from, address _to, uint256 _lockId) internal override {
         if (queuedLockUpdates[_lockId].length != 0) revert CannotTransferWithQueuedUpdates();
         super._transfer(_from, _to, _lockId);
     }

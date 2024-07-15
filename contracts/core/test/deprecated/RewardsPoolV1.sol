@@ -40,7 +40,8 @@ contract RewardsPoolV1 is ERC677, ReentrancyGuard {
      **/
     function balanceOf(address _account) public view virtual override returns (uint256) {
         return
-            (stakingDerivative.balanceOf(_account) * (rewardPerToken - userRewardPerTokenPaid[_account])) /
+            (stakingDerivative.balanceOf(_account) *
+                (rewardPerToken - userRewardPerTokenPaid[_account])) /
             1e18 +
             super.balanceOf(_account);
     }
@@ -100,11 +101,7 @@ contract RewardsPoolV1 is ERC677, ReentrancyGuard {
      * @param _to user to transfer to
      * @param _amount amount to transfer
      **/
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) internal virtual override {
+    function _transfer(address _from, address _to, uint256 _amount) internal virtual override {
         _updateReward(_from);
         super._transfer(_from, _to, _amount);
     }

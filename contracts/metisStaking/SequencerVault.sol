@@ -99,7 +99,12 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         if (seqId != 0) {
             lockingPool.relock(seqId, _amount, false);
         } else {
-            lockingPool.lockWithRewardRecipient(signer, vaultController.rewardRecipient(), _amount, pubkey);
+            lockingPool.lockWithRewardRecipient(
+                signer,
+                vaultController.rewardRecipient(),
+                _amount,
+                pubkey
+            );
             seqId = lockingPool.seqOwners(address(this));
         }
     }
@@ -135,7 +140,10 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Withdraws the unclaimed operator rewards for this vault
      */
     function withdrawRewards() external onlyRewardsReceiver {
-        uint256 amountWithdrawn = vaultController.withdrawOperatorRewards(rewardsReceiver, unclaimedRewards);
+        uint256 amountWithdrawn = vaultController.withdrawOperatorRewards(
+            rewardsReceiver,
+            unclaimedRewards
+        );
         unclaimedRewards -= SafeCastUpgradeable.toUint128(amountWithdrawn);
 
         emit WithdrawRewards(rewardsReceiver, amountWithdrawn);
@@ -164,16 +172,10 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return the operator rewards earned by this vault since the last update
      * @return the rewards that were claimed in this update
      */
-    function updateDeposits(uint256 _minRewards, uint32 _l2Gas)
-        external
-        payable
-        onlyVaultController
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function updateDeposits(
+        uint256 _minRewards,
+        uint32 _l2Gas
+    ) external payable onlyVaultController returns (uint256, uint256, uint256) {
         uint256 principal = getPrincipalDeposits();
         uint256 rewards = getRewards();
         uint256 totalDeposits = principal + rewards;
@@ -181,7 +183,9 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         uint256 opRewards;
         if (depositChange > 0) {
-            opRewards = (uint256(depositChange) * vaultController.operatorRewardPercentage()) / 10000;
+            opRewards =
+                (uint256(depositChange) * vaultController.operatorRewardPercentage()) /
+                10000;
             unclaimedRewards += SafeCastUpgradeable.toUint128(opRewards);
             trackedTotalDeposits = SafeCastUpgradeable.toUint128(totalDeposits);
         }

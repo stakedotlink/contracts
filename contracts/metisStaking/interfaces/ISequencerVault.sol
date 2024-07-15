@@ -6,14 +6,10 @@ interface ISequencerVault {
 
     function getPendingRewards() external view returns (uint256);
 
-    function updateDeposits(uint256 _minRewards, uint32 _l2Gas)
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
+    function updateDeposits(
+        uint256 _minRewards,
+        uint32 _l2Gas
+    ) external payable returns (uint256, uint256, uint256);
 
     function deposit(uint256 _amount) external;
 

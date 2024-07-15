@@ -80,7 +80,9 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
      * @return whether update should be sent
      **/
     function shouldUpdate() public view returns (bool) {
-        return ISDLPoolSecondary(sdlPool).shouldUpdate() && block.timestamp > timeOfLastUpdate + minTimeBetweenUpdates;
+        return
+            ISDLPoolSecondary(sdlPool).shouldUpdate() &&
+            block.timestamp > timeOfLastUpdate + minTimeBetweenUpdates;
     }
 
     /**
@@ -97,7 +99,10 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
         uint256 _tokenId
     ) external override onlyBridge returns (address, ISDLPool.RESDLToken memory) {
         if (_destinationChainSelector != primaryChainSelector) revert InvalidDestination();
-        return (primaryChainDestination, ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, address(this)));
+        return (
+            primaryChainDestination,
+            ISDLPoolSecondary(sdlPool).handleOutgoingRESDL(_sender, _tokenId, address(this))
+        );
     }
 
     /**
@@ -144,7 +149,8 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
         address _destination,
         uint256 _gasLimit
     ) internal {
-        (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = ISDLPoolSecondary(sdlPool).handleOutgoingUpdate();
+        (uint256 numNewRESDLTokens, int256 totalRESDLSupplyChange) = ISDLPoolSecondary(sdlPool)
+            .handleOutgoingUpdate();
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             _destination,
@@ -174,7 +180,10 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
             if (numRewardTokens != 0) {
                 for (uint256 i = 0; i < numRewardTokens; ++i) {
                     rewardTokens[i] = _message.destTokenAmounts[i].token;
-                    IERC20(rewardTokens[i]).safeTransfer(sdlPool, _message.destTokenAmounts[i].amount);
+                    IERC20(rewardTokens[i]).safeTransfer(
+                        sdlPool,
+                        _message.destTokenAmounts[i].amount
+                    );
                 }
                 ISDLPoolSecondary(sdlPool).distributeTokens(rewardTokens);
             }
@@ -218,6 +227,7 @@ contract SDLPoolCCIPControllerSecondary is SDLPoolCCIPController {
     function _verifyCCIPSender(Client.Any2EVMMessage memory _message) internal view override {
         address sender = abi.decode(_message.sender, (address));
         uint64 sourceChainSelector = _message.sourceChainSelector;
-        if (sourceChainSelector != primaryChainSelector || sender != primaryChainDestination) revert SenderNotAuthorized();
+        if (sourceChainSelector != primaryChainSelector || sender != primaryChainDestination)
+            revert SenderNotAuthorized();
     }
 }

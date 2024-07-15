@@ -79,11 +79,7 @@ contract WrappedTokenBridge is CCIPReceiver {
      * @param _calldata encoded calldata consisting of destinationChainSelector (uint64), receiver (address),
      * maxLINKFee (uint256)
      **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _calldata
-    ) external {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
         if (msg.sender != address(token)) revert InvalidSender();
         if (_value == 0) revert InvalidValue();
 
@@ -112,7 +108,15 @@ contract WrappedTokenBridge is CCIPReceiver {
         if (_payNative == false && msg.value != 0) revert InvalidMsgValue();
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        return _transferTokens(_destinationChainSelector, msg.sender, _receiver, _amount, _payNative, _maxLINKFee);
+        return
+            _transferTokens(
+                _destinationChainSelector,
+                msg.sender,
+                _receiver,
+                _amount,
+                _payNative,
+                _maxLINKFee
+            );
     }
 
     /**
@@ -237,7 +241,10 @@ contract WrappedTokenBridge is CCIPReceiver {
         address _feeTokenAddress
     ) internal view returns (Client.EVM2AnyMessage memory) {
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
-        Client.EVMTokenAmount memory tokenAmount = Client.EVMTokenAmount({token: address(wrappedToken), amount: _amount});
+        Client.EVMTokenAmount memory tokenAmount = Client.EVMTokenAmount({
+            token: address(wrappedToken),
+            amount: _amount
+        });
         tokenAmounts[0] = tokenAmount;
 
         Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
@@ -262,7 +269,8 @@ contract WrappedTokenBridge is CCIPReceiver {
         uint256 tokenAmount = _message.destTokenAmounts[0].amount;
         address receiver = abi.decode(_message.data, (address));
 
-        if (tokenAddress != address(wrappedToken) || receiver == address(0)) revert InvalidMessage();
+        if (tokenAddress != address(wrappedToken) || receiver == address(0))
+            revert InvalidMessage();
 
         uint256 preUnwrapBalance = token.balanceOf(address(this));
         wrappedToken.unwrap(tokenAmount);

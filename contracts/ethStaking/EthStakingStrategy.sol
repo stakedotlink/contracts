@@ -52,7 +52,11 @@ contract EthStakingStrategy is Strategy {
     uint256 private minDeposits;
 
     event DepositEther(uint256 nwlValidatorCount, uint256 wlValidatorCount);
-    event ReportBeaconState(uint256 beaconValidators, uint256 beaconBalance, uint256 nwlLostOperatorStakes);
+    event ReportBeaconState(
+        uint256 beaconValidators,
+        uint256 beaconBalance,
+        uint256 nwlLostOperatorStakes
+    );
     event SetMaxDeposits(uint256 max);
     event SetMinDeposits(uint256 min);
     event SetDepositController(address controller);
@@ -99,11 +103,16 @@ contract EthStakingStrategy is Strategy {
         uint256 _nwlLostOperatorStakes
     ) external {
         require(msg.sender == beaconOracle, "Sender is not beacon oracle");
-        require(_beaconValidators <= depositedValidators, "Reported more validators than deposited");
+        require(
+            _beaconValidators <= depositedValidators,
+            "Reported more validators than deposited"
+        );
         require(_beaconValidators >= beaconValidators, "Reported less validators than tracked");
 
         uint256 newValidators = _beaconValidators - beaconValidators;
-        int rewardBase = int(newValidators * DEPOSIT_AMOUNT + beaconBalance + nwlLostOperatorStakes);
+        int rewardBase = int(
+            newValidators * DEPOSIT_AMOUNT + beaconBalance + nwlLostOperatorStakes
+        );
 
         beaconBalance = _beaconBalance;
         beaconValidators = _beaconValidators;
@@ -151,7 +160,9 @@ contract EthStakingStrategy is Strategy {
         bytes memory nwlSignatures;
 
         if (_nwlTotalValidatorCount > 0) {
-            (nwlPubkeys, nwlSignatures) = nwlOperatorController.assignNextValidators(_nwlTotalValidatorCount);
+            (nwlPubkeys, nwlSignatures) = nwlOperatorController.assignNextValidators(
+                _nwlTotalValidatorCount
+            );
 
             require(
                 nwlPubkeys.length / PUBKEY_LENGTH == _nwlTotalValidatorCount,
@@ -162,14 +173,20 @@ contract EthStakingStrategy is Strategy {
                 "Incorrect non-whitelisted signatures length"
             );
             require(nwlPubkeys.length % PUBKEY_LENGTH == 0, "Invalid non-whitelisted pubkeys");
-            require(nwlSignatures.length % SIGNATURE_LENGTH == 0, "Invalid non-whitelisted signatures");
+            require(
+                nwlSignatures.length % SIGNATURE_LENGTH == 0,
+                "Invalid non-whitelisted signatures"
+            );
         }
 
         bytes memory wlPubkeys;
         bytes memory wlSignatures;
 
         if (_wlTotalValidatorCount > 0) {
-            require(nwlOperatorController.queueLength() == 0, "Non-whitelisted queue must be empty to assign whitelisted");
+            require(
+                nwlOperatorController.queueLength() == 0,
+                "Non-whitelisted queue must be empty to assign whitelisted"
+            );
 
             (wlPubkeys, wlSignatures) = wlOperatorController.assignNextValidators(
                 _wlOperatorIds,
@@ -177,7 +194,10 @@ contract EthStakingStrategy is Strategy {
                 _wlTotalValidatorCount
             );
 
-            require(wlPubkeys.length / PUBKEY_LENGTH == _wlTotalValidatorCount, "Incorrect whitelisted pubkeys length");
+            require(
+                wlPubkeys.length / PUBKEY_LENGTH == _wlTotalValidatorCount,
+                "Incorrect whitelisted pubkeys length"
+            );
             require(
                 wlSignatures.length / SIGNATURE_LENGTH == _wlTotalValidatorCount,
                 "Incorrect whitelisted signatures length"
@@ -190,13 +210,21 @@ contract EthStakingStrategy is Strategy {
 
         for (uint256 i = 0; i < _nwlTotalValidatorCount; i++) {
             bytes memory pubkey = BytesLib.slice(nwlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            bytes memory signature = BytesLib.slice(nwlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            bytes memory signature = BytesLib.slice(
+                nwlSignatures,
+                i * SIGNATURE_LENGTH,
+                SIGNATURE_LENGTH
+            );
             _deposit(pubkey, signature);
         }
 
         for (uint256 i = 0; i < _wlTotalValidatorCount; i++) {
             bytes memory pubkey = BytesLib.slice(wlPubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
-            bytes memory signature = BytesLib.slice(wlSignatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            bytes memory signature = BytesLib.slice(
+                wlSignatures,
+                i * SIGNATURE_LENGTH,
+                SIGNATURE_LENGTH
+            );
             _deposit(pubkey, signature);
         }
 
@@ -232,7 +260,10 @@ contract EthStakingStrategy is Strategy {
      * @param _amount amount of ETH to withdraw
      */
     function nwlWithdraw(address _receiver, uint256 _amount) external {
-        require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
+        require(
+            msg.sender == address(nwlOperatorController),
+            "Sender is not non-whitelisted operator controller"
+        );
         revert("Not implemented yet");
     }
 
@@ -243,14 +274,12 @@ contract EthStakingStrategy is Strategy {
     /**
      * @notice updates deposit accounting and calculates reward distribution
      */
-    function updateDeposits(bytes calldata)
+    function updateDeposits(
+        bytes calldata
+    )
         external
         onlyStakingPool
-        returns (
-            int256 depChange,
-            address[] memory receivers,
-            uint256[] memory amounts
-        )
+        returns (int256 depChange, address[] memory receivers, uint256[] memory amounts)
     {
         depChange = depositChange;
         if (depChange > 0) {
@@ -264,8 +293,12 @@ contract EthStakingStrategy is Strategy {
             uint256 activeNWLValidators = nwlOperatorController.totalActiveValidators();
 
             uint256 operatorFee = (rewards * operatorFeeBasisPoints) / BASIS_POINTS;
-            uint256 wlOperatorFee = (operatorFee * activeWLValidators) / (activeNWLValidators + activeWLValidators);
-            uint256 nwlOperatorFee = operatorFee - wlOperatorFee + (rewards * nwlOperatorRewardsBasisPoints) / BASIS_POINTS;
+            uint256 wlOperatorFee = (operatorFee * activeWLValidators) /
+                (activeNWLValidators + activeWLValidators);
+            uint256 nwlOperatorFee = operatorFee -
+                wlOperatorFee +
+                (rewards * nwlOperatorRewardsBasisPoints) /
+                BASIS_POINTS;
 
             receivers = new address[](2);
             amounts = new uint256[](2);
@@ -381,13 +414,24 @@ contract EthStakingStrategy is Strategy {
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
                 sha256(BytesLib.slice(_signature, 0, 64)),
-                sha256(abi.encodePacked(BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64), bytes32(0)))
+                sha256(
+                    abi.encodePacked(
+                        BytesLib.slice(_signature, 64, SIGNATURE_LENGTH - 64),
+                        bytes32(0)
+                    )
+                )
             )
         );
         bytes32 depositDataRoot = sha256(
             abi.encodePacked(
                 sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-                sha256(abi.encodePacked(_toLittleEndian64(uint64(depositAmount)), bytes24(0), signatureRoot))
+                sha256(
+                    abi.encodePacked(
+                        _toLittleEndian64(uint64(depositAmount)),
+                        bytes24(0),
+                        signatureRoot
+                    )
+                )
             )
         );
 

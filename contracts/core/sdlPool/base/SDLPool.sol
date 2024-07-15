@@ -201,11 +201,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
      **/
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _lockId
-    ) external {
+    function transferFrom(address _from, address _to, uint256 _lockId) external {
         if (!_isApprovedOrOwner(msg.sender, _lockId)) revert SenderNotAuthorized();
         _transfer(_from, _to, _lockId);
     }
@@ -221,11 +217,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
      **/
-    function safeTransferFrom(
-        address _from,
-        address _to,
-        uint256 _lockId
-    ) external {
+    function safeTransferFrom(address _from, address _to, uint256 _lockId) external {
         safeTransferFrom(_from, _to, _lockId, "");
     }
 
@@ -249,7 +241,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     ) public {
         if (!_isApprovedOrOwner(msg.sender, _lockId)) revert SenderNotAuthorized();
         _transfer(_from, _to, _lockId);
-        if (!_checkOnERC721Received(_from, _to, _lockId, _data)) revert TransferToNonERC721Implementer();
+        if (!_checkOnERC721Received(_from, _to, _lockId, _data))
+            revert TransferToNonERC721Implementer();
     }
 
     /**
@@ -266,7 +259,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         address owner = ownerOf(_lockId);
 
         if (_to == owner) revert ApprovalToCurrentOwner();
-        if (msg.sender != owner && !isApprovedForAll(owner, msg.sender)) revert SenderNotAuthorized();
+        if (msg.sender != owner && !isApprovedForAll(owner, msg.sender))
+            revert SenderNotAuthorized();
 
         tokenApprovals[_lockId] = _to;
         emit Approval(owner, _to, _lockId);
@@ -389,7 +383,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _amount amount to stake
      * @param _lockingDuration duration of lock
      */
-    function _createLock(uint256 _amount, uint64 _lockingDuration) internal view returns (Lock memory) {
+    function _createLock(
+        uint256 _amount,
+        uint64 _lockingDuration
+    ) internal view returns (Lock memory) {
         uint256 boostAmount = boostController.getBoostAmount(_amount, _lockingDuration);
         uint64 startTime = _lockingDuration != 0 ? uint64(block.timestamp) : 0;
 
@@ -411,11 +408,20 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         uint256 _amount,
         uint64 _lockingDuration
     ) internal view returns (Lock memory) {
-        if ((_lock.expiry == 0 || _lock.expiry > block.timestamp) && _lockingDuration < _lock.duration) {
+        if (
+            (_lock.expiry == 0 || _lock.expiry > block.timestamp) &&
+            _lockingDuration < _lock.duration
+        ) {
             revert InvalidLockingDuration();
         }
 
-        Lock memory lock = Lock(_lock.amount, _lock.boostAmount, _lock.startTime, _lock.duration, _lock.expiry);
+        Lock memory lock = Lock(
+            _lock.amount,
+            _lock.boostAmount,
+            _lock.startTime,
+            _lock.duration,
+            _lock.expiry
+        );
 
         uint256 baseAmount = _lock.amount + _amount;
         uint256 boostAmount = boostController.getBoostAmount(baseAmount, _lockingDuration);
@@ -453,13 +459,10 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
      **/
-    function _transfer(
-        address _from,
-        address _to,
-        uint256 _lockId
-    ) internal virtual {
+    function _transfer(address _from, address _to, uint256 _lockId) internal virtual {
         if (_from != ownerOf(_lockId)) revert TransferFromIncorrectOwner();
-        if (_to == address(0) || _to == ccipController || _to == _from) revert TransferToInvalidAddress();
+        if (_to == address(0) || _to == ccipController || _to == _from)
+            revert TransferToInvalidAddress();
 
         delete tokenApprovals[_lockId];
 
@@ -496,7 +499,9 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         bytes memory _data
     ) internal returns (bool) {
         if (_to.code.length > 0) {
-            try IERC721Receiver(_to).onERC721Received(msg.sender, _from, _lockId, _data) returns (bytes4 retval) {
+            try IERC721Receiver(_to).onERC721Received(msg.sender, _from, _lockId, _data) returns (
+                bytes4 retval
+            ) {
                 return retval == IERC721Receiver.onERC721Received.selector;
             } catch (bytes memory reason) {
                 if (reason.length == 0) {
@@ -522,6 +527,8 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      **/
     function _isApprovedOrOwner(address _spender, uint256 _lockId) internal view returns (bool) {
         address owner = ownerOf(_lockId);
-        return (_spender == owner || isApprovedForAll(owner, _spender) || getApproved(_lockId) == _spender);
+        return (_spender == owner ||
+            isApprovedForAll(owner, _spender) ||
+            getApproved(_lockId) == _spender);
     }
 }

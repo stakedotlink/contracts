@@ -11,11 +11,7 @@ interface IPoolRouter {
 }
 
 interface ISDLPool {
-    function migrate(
-        address _account,
-        uint256 _amount,
-        uint64 _lockingDuration
-    ) external;
+    function migrate(address _account, uint256 _amount, uint64 _lockingDuration) external;
 }
 
 /**
@@ -106,11 +102,7 @@ contract DelegatorPool is RewardsPoolControllerV1 {
     /**
      * @notice receipt tokens within the delegator pool cannot be transferred
      */
-    function _transfer(
-        address,
-        address,
-        uint256
-    ) internal override {
+    function _transfer(address, address, uint256) internal override {
         revert("Token cannot be transferred");
     }
 
@@ -122,7 +114,10 @@ contract DelegatorPool is RewardsPoolControllerV1 {
      * @return account's staked amount
      */
     function staked(address _account) external view override returns (uint256) {
-        return communityPools[msg.sender] ? balanceOf(_account) - lockedBalances[_account] : balanceOf(_account);
+        return
+            communityPools[msg.sender]
+                ? balanceOf(_account) - lockedBalances[_account]
+                : balanceOf(_account);
     }
 
     /**
@@ -176,7 +171,10 @@ contract DelegatorPool is RewardsPoolControllerV1 {
      * @param _amount amount to withdraw
      **/
     function withdrawAllowance(uint256 _amount) external updateRewards(msg.sender) {
-        require(availableBalanceOf(msg.sender) >= _amount, "Withdrawal amount exceeds available balance");
+        require(
+            availableBalanceOf(msg.sender) >= _amount,
+            "Withdrawal amount exceeds available balance"
+        );
 
         uint256 unlockedBalance = balanceOf(msg.sender) - lockedBalances[msg.sender];
         if (_amount > unlockedBalance) {
@@ -246,7 +244,10 @@ contract DelegatorPool is RewardsPoolControllerV1 {
      * @notice retires the contract
      * @param _lockedAddresses list of all operator addresses with a locked balance
      */
-    function retireDelegatorPool(address[] calldata _lockedAddresses, address _sdlPool) external onlyOwner {
+    function retireDelegatorPool(
+        address[] calldata _lockedAddresses,
+        address _sdlPool
+    ) external onlyOwner {
         require(_sdlPool != address(0), "Invalid address");
         allowanceToken.approve(_sdlPool, type(uint256).max);
 

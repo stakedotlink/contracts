@@ -20,7 +20,14 @@ contract VCSMock is VaultControllerStrategy {
         address _vaultImplementation,
         Fee[] memory _fees
     ) public initializer {
-        __VaultControllerStrategy_init(_token, _stakingPool, _stakeController, _vaultImplementation, _fees, 9000);
+        __VaultControllerStrategy_init(
+            _token,
+            _stakingPool,
+            _stakeController,
+            _vaultImplementation,
+            _fees,
+            9000
+        );
     }
 
     function addVaults(address[] memory _vaults) external {

@@ -12,7 +12,7 @@ contract ERC677 is ERC20 {
         uint256 _totalSupply
     ) ERC20(_tokenName, _tokenSymbol) {
         if (_totalSupply != 0) {
-            _mint(msg.sender, _totalSupply * (10**uint256(decimals())));
+            _mint(msg.sender, _totalSupply * (10 ** uint256(decimals())));
         }
     }
 

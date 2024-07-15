@@ -13,7 +13,10 @@ contract EthStakingStrategyMock {
     }
 
     function nwlWithdraw(address, uint256) external {
-        require(msg.sender == address(nwlOperatorController), "Sender is not non-whitelisted operator controller");
+        require(
+            msg.sender == address(nwlOperatorController),
+            "Sender is not non-whitelisted operator controller"
+        );
     }
 
     function setNWLOperatorController(address _nwlOperatorController) external {

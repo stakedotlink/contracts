@@ -21,11 +21,7 @@ contract MetisLockingInfoMock {
 
     error InvalidAmount();
 
-    constructor(
-        address _token,
-        uint256 _minLock,
-        uint256 _maxLock
-    ) {
+    constructor(address _token, uint256 _minLock, uint256 _maxLock) {
         token = IERC20(_token);
         minLock = _minLock;
         maxLock = _maxLock;
@@ -37,11 +33,7 @@ contract MetisLockingInfoMock {
         token.safeTransferFrom(_owner, address(this), _amount);
     }
 
-    function increaseLocked(
-        address _owner,
-        uint256 _amount,
-        uint256 _rewardsAmount
-    ) external {
+    function increaseLocked(address _owner, uint256 _amount, uint256 _rewardsAmount) external {
         if (_amount + _rewardsAmount + locked[_owner] > maxLock) revert InvalidAmount();
         locked[_owner] += _amount + _rewardsAmount;
         token.safeTransferFrom(_owner, address(this), _amount);

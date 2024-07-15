@@ -119,9 +119,13 @@ contract RebaseController is Ownable {
     function performUpkeep(bytes calldata _performData) external onlyRebaseBot {
         if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
 
-        (uint256[] memory strategiesToUpdate, uint256 totalDepositChange) = abi.decode(_performData, (uint256[], uint256));
+        (uint256[] memory strategiesToUpdate, uint256 totalDepositChange) = abi.decode(
+            _performData,
+            (uint256[], uint256)
+        );
 
-        if (strategiesToUpdate.length == 0 || totalDepositChange == 0) revert NoStrategiesToUpdate();
+        if (strategiesToUpdate.length == 0 || totalDepositChange == 0)
+            revert NoStrategiesToUpdate();
 
         if ((10000 * totalDepositChange) / stakingPool.totalSupply() > maxRebaseLossBP) {
             priorityPool.setPoolStatus(IPriorityPool.PoolStatus.CLOSED);

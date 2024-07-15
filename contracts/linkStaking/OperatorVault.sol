@@ -103,7 +103,9 @@ contract OperatorVault is Vault {
      * @return principal balance
      */
     function getPrincipalDeposits() public view override returns (uint256) {
-        return super.getPrincipalDeposits() + IOperatorStaking(address(stakeController)).getRemovedPrincipal(address(this));
+        return
+            super.getPrincipalDeposits() +
+            IOperatorStaking(address(stakeController)).getRemovedPrincipal(address(this));
     }
 
     /**
@@ -117,7 +119,8 @@ contract OperatorVault is Vault {
         pfAlertsController.raiseAlert(_feed);
 
         uint256 rewards = token.balanceOf(address(this)) - prevBalance;
-        uint256 opRewards = (rewards * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+        uint256 opRewards = (rewards * IOperatorVCS(vaultController).operatorRewardPercentage()) /
+            10000;
         token.safeTransfer(vaultController, rewards - opRewards);
 
         emit AlertRaised();
@@ -140,7 +143,10 @@ contract OperatorVault is Vault {
         uint256 rewards = getUnclaimedRewards();
         uint256 balance = token.balanceOf(address(this));
 
-        uint256 amountWithdrawn = IOperatorVCS(vaultController).withdrawOperatorRewards(rewardsReceiver, rewards - balance);
+        uint256 amountWithdrawn = IOperatorVCS(vaultController).withdrawOperatorRewards(
+            rewardsReceiver,
+            rewards - balance
+        );
         unclaimedRewards -= SafeCast.toUint128(amountWithdrawn);
 
         if (balance != 0) {
@@ -158,7 +164,9 @@ contract OperatorVault is Vault {
         int256 depositChange = int256(getTotalDeposits()) - int256(uint256(trackedTotalDeposits));
 
         if (depositChange > 0) {
-            return (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+            return
+                (uint256(depositChange) *
+                    IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
         }
 
         return 0;
@@ -172,11 +180,10 @@ contract OperatorVault is Vault {
      * @return totalDeposits the current total deposits in this vault
      * @return rewards the rewards earned by this vault since the last update
      */
-    function updateDeposits(uint256 _minRewards, address _rewardsReceiver)
-        external
-        onlyVaultController
-        returns (uint256, uint256)
-    {
+    function updateDeposits(
+        uint256 _minRewards,
+        address _rewardsReceiver
+    ) external onlyVaultController returns (uint256, uint256) {
         uint256 principal = getPrincipalDeposits();
         uint256 rewards = getRewards();
         uint256 totalDeposits = principal + rewards;
@@ -184,7 +191,10 @@ contract OperatorVault is Vault {
 
         uint256 opRewards;
         if (depositChange > 0) {
-            opRewards = (uint256(depositChange) * IOperatorVCS(vaultController).operatorRewardPercentage()) / 10000;
+            opRewards =
+                (uint256(depositChange) *
+                    IOperatorVCS(vaultController).operatorRewardPercentage()) /
+                10000;
             unclaimedRewards += SafeCast.toUint128(opRewards);
             trackedTotalDeposits = SafeCast.toUint128(totalDeposits);
         }
@@ -225,7 +235,8 @@ contract OperatorVault is Vault {
      * @param _rewardsReceiver rewards receiver address
      */
     function setRewardsReceiver(address _rewardsReceiver) public {
-        if (rewardsReceiver != address(0) && msg.sender != rewardsReceiver) revert OnlyRewardsReceiver();
+        if (rewardsReceiver != address(0) && msg.sender != rewardsReceiver)
+            revert OnlyRewardsReceiver();
         if (rewardsReceiver == address(0) && msg.sender != owner()) revert OnlyRewardsReceiver();
         if (_rewardsReceiver == address(0)) revert ZeroAddress();
         rewardsReceiver = _rewardsReceiver;

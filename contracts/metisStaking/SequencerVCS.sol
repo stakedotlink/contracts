@@ -138,11 +138,7 @@ contract SequencerVCS is Strategy {
      * @notice ERC677 implementation to receive operator rewards
      * @dev rewards are paid in the stakingPool LST
      **/
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external {
+    function onTokenTransfer(address, uint256, bytes calldata) external {
         if (msg.sender != address(stakingPool)) revert SenderNotAuthorized();
     }
 
@@ -152,7 +148,10 @@ contract SequencerVCS is Strategy {
      * @return rewards available to withdraw
      */
     function getOperatorRewards() external view returns (uint256, uint256) {
-        return (unclaimedOperatorRewards, IERC20Upgradeable(address(stakingPool)).balanceOf(address(this)));
+        return (
+            unclaimedOperatorRewards,
+            IERC20Upgradeable(address(stakingPool)).balanceOf(address(this))
+        );
     }
 
     /**
@@ -160,7 +159,10 @@ contract SequencerVCS is Strategy {
      * @param _receiver address to receive rewards
      * @param _amount amount to withdraw
      */
-    function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
+    function withdrawOperatorRewards(
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256) {
         if (!vaultMapping[msg.sender]) revert SenderNotAuthorized();
 
         IERC20Upgradeable lst = IERC20Upgradeable(address(stakingPool));
@@ -187,7 +189,10 @@ contract SequencerVCS is Strategy {
      * @param _vaults list of vaults to deposit into
      * @param _amounts amount to deposit into each vault
      */
-    function depositQueuedTokens(uint256[] calldata _vaults, uint256[] calldata _amounts) external onlyDepositController {
+    function depositQueuedTokens(
+        uint256[] calldata _vaults,
+        uint256[] calldata _amounts
+    ) external onlyDepositController {
         for (uint256 i = 0; i < _vaults.length; ++i) {
             vaults[_vaults[i]].deposit(_amounts[i]);
         }
@@ -236,14 +241,12 @@ contract SequencerVCS is Strategy {
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits(bytes calldata _data)
+    function updateDeposits(
+        bytes calldata _data
+    )
         external
         onlyStakingPool
-        returns (
-            int256 depositChange,
-            address[] memory receivers,
-            uint256[] memory amounts
-        )
+        returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
     {
         (uint256 minRewards, uint32 l2Gas, uint256 l2Fee) = _data.length == 0
             ? (0, 0, 0)
@@ -255,10 +258,9 @@ contract SequencerVCS is Strategy {
 
         uint256 vaultCount = vaults.length;
         for (uint256 i = 0; i < vaultCount; ++i) {
-            (uint256 deposits, uint256 opRewards, uint256 claimed) = vaults[i].updateDeposits{value: l2Fee}(
-                minRewards,
-                l2Gas
-            );
+            (uint256 deposits, uint256 opRewards, uint256 claimed) = vaults[i].updateDeposits{
+                value: l2Fee
+            }(minRewards, l2Gas);
             vaultDeposits += deposits;
             operatorRewards += opRewards;
             claimedRewards += claimed;

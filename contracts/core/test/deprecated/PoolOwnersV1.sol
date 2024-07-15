@@ -74,7 +74,10 @@ contract PoolOwnersV1 is ReentrancyGuard, Ownable {
      * @param _account user to return minted amount for
      * @return total allowance tokens a user has minted
      **/
-    function mintedAllowance(address _allowanceToken, address _account) public view returns (uint256) {
+    function mintedAllowance(
+        address _allowanceToken,
+        address _account
+    ) public view returns (uint256) {
         return mintedAllowanceTokens[_allowanceToken][_account];
     }
 

@@ -24,11 +24,7 @@ contract LinearBoostController is Ownable {
      * @param _maxLockingDuration maximum locking duration in seconds
      * @param _maxBoost maximum boost multiplier
      */
-    constructor(
-        uint64 _minLockingDuration,
-        uint64 _maxLockingDuration,
-        uint64 _maxBoost
-    ) {
+    constructor(uint64 _minLockingDuration, uint64 _maxLockingDuration, uint64 _maxBoost) {
         minLockingDuration = _minLockingDuration;
         maxLockingDuration = _maxLockingDuration;
         maxBoost = _maxBoost;
@@ -41,10 +37,16 @@ contract LinearBoostController is Ownable {
      * @param _lockingDuration duration of the locking period
      * @return amount of boost balance received in addition to the unboosted balance
      */
-    function getBoostAmount(uint256 _amount, uint64 _lockingDuration) external view returns (uint256) {
-        if ((_lockingDuration != 0 && _lockingDuration < minLockingDuration) || _lockingDuration > maxLockingDuration)
-            revert InvalidLockingDuration();
-        return (_amount * uint256(maxBoost) * uint256(_lockingDuration)) / uint256(maxLockingDuration);
+    function getBoostAmount(
+        uint256 _amount,
+        uint64 _lockingDuration
+    ) external view returns (uint256) {
+        if (
+            (_lockingDuration != 0 && _lockingDuration < minLockingDuration) ||
+            _lockingDuration > maxLockingDuration
+        ) revert InvalidLockingDuration();
+        return
+            (_amount * uint256(maxBoost) * uint256(_lockingDuration)) / uint256(maxLockingDuration);
     }
 
     /**

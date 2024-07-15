@@ -13,7 +13,11 @@ import "../../tokens/base/ERC677Upgradeable.sol";
  * @title Rewards Pool Controller
  * @notice Acts as a proxy for any number of rewards pools
  */
-abstract contract RewardsPoolControllerV1 is UUPSUpgradeable, OwnableUpgradeable, ERC677Upgradeable {
+abstract contract RewardsPoolControllerV1 is
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    ERC677Upgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     mapping(address => IRewardsPool) public tokenPools;
@@ -27,10 +31,10 @@ abstract contract RewardsPoolControllerV1 is UUPSUpgradeable, OwnableUpgradeable
     event AddToken(address indexed token, address rewardsPool);
     event RemoveToken(address indexed token, address rewardsPool);
 
-    function __RewardsPoolController_init(string memory _derivativeTokenName, string memory _derivativeTokenSymbol)
-        public
-        onlyInitializing
-    {
+    function __RewardsPoolController_init(
+        string memory _derivativeTokenName,
+        string memory _derivativeTokenSymbol
+    ) public onlyInitializing {
         __ERC677_init(_derivativeTokenName, _derivativeTokenSymbol, 0);
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -76,11 +80,7 @@ abstract contract RewardsPoolControllerV1 is UUPSUpgradeable, OwnableUpgradeable
     /**
      * @notice ERC677 implementation to receive a token distribution
      **/
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external virtual {
+    function onTokenTransfer(address, uint256, bytes calldata) external virtual {
         if (isTokenSupported(msg.sender)) {
             distributeToken(msg.sender);
         }

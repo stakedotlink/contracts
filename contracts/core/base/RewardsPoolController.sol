@@ -70,11 +70,7 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice ERC677 implementation to receive a token distribution
      **/
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external virtual {
+    function onTokenTransfer(address, uint256, bytes calldata) external virtual {
         if (isTokenSupported(msg.sender)) {
             distributeToken(msg.sender);
         }

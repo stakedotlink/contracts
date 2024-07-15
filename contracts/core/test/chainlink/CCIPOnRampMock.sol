@@ -19,11 +19,7 @@ contract CCIPOnRampMock {
     Client.EVM2AnyMessage[] public requestMessages;
     RequestData[] public requestData;
 
-    constructor(
-        address[] memory _tokens,
-        address[] memory _tokenPools,
-        address _linkToken
-    ) {
+    constructor(address[] memory _tokens, address[] memory _tokenPools, address _linkToken) {
         for (uint256 i = 0; i < _tokens.length; ++i) {
             tokenPools[_tokens[i]] = _tokenPools[i];
         }
@@ -38,7 +34,10 @@ contract CCIPOnRampMock {
         return requestData[requestData.length - 1];
     }
 
-    function getFee(uint64, Client.EVM2AnyMessage calldata _message) external view returns (uint256) {
+    function getFee(
+        uint64,
+        Client.EVM2AnyMessage calldata _message
+    ) external view returns (uint256) {
         return _message.feeToken == linkToken ? 2 ether : 3 ether;
     }
 

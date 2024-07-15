@@ -20,8 +20,8 @@ interface ISDLPoolCCIPController {
 
     function getRouter() external view returns (address);
 
-    function ccipSend(uint64 _destinationChainSelector, Client.EVM2AnyMessage calldata _evmToAnyMessage)
-        external
-        payable
-        returns (bytes32);
+    function ccipSend(
+        uint64 _destinationChainSelector,
+        Client.EVM2AnyMessage calldata _evmToAnyMessage
+    ) external payable returns (bytes32);
 }

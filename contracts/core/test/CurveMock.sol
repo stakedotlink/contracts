@@ -15,11 +15,7 @@ contract CurveMock {
         tokens[1] = IERC20(_tokenB);
     }
 
-    function get_dy(
-        int128,
-        int128,
-        uint256 _amount
-    ) external pure returns (uint256) {
+    function get_dy(int128, int128, uint256 _amount) external pure returns (uint256) {
         return _amount;
     }
 

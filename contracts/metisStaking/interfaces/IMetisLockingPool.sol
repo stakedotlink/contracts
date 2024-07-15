@@ -9,7 +9,9 @@ interface IMetisLockingPool {
         Unlocked
     }
 
-    function sequencers(uint256 _seqId)
+    function sequencers(
+        uint256 _seqId
+    )
         external
         view
         returns (
@@ -37,11 +39,7 @@ interface IMetisLockingPool {
         bytes calldata _signerPubkey
     ) external;
 
-    function relock(
-        uint256 _seqId,
-        uint256 _amount,
-        bool _lockReward
-    ) external;
+    function relock(uint256 _seqId, uint256 _amount, bool _lockReward) external;
 
     function withdrawRewards(uint256 _seqId, uint32 _l2Gas) external payable;
 }
