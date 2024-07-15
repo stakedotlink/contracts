@@ -1,7 +1,7 @@
 import { SDLPoolPrimary } from '../../../typechain-types'
 import { getContract } from '../../utils/deployment'
-import { ethers } from 'hardhat'
-import Safe, { EthersAdapter } from '@safe-global/protocol-kit'
+import hre from 'hardhat'
+import Safe from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
 import { getAccounts } from '../../utils/helpers'
@@ -9,35 +9,40 @@ import { getAccounts } from '../../utils/helpers'
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
 async function main() {
-  const { signers, accounts } = await getAccounts()
-  const ethAdapter = new EthersAdapter({
-    ethers,
-    signerOrProvider: signers[0],
-  })
-  const safeSdk = await Safe.create({ ethAdapter, safeAddress: multisigAddress })
-  const safeService = new SafeApiKit({
+  const { accounts } = await getAccounts()
+
+  const safeApiKit = new SafeApiKit({
+    chainId: 1n,
     txServiceUrl: 'https://safe-transaction-mainnet.safe.global',
-    ethAdapter,
+  })
+  const safeSdk = await Safe.init({
+    provider: hre.network.provider,
+    signer: accounts[0],
+    safeAddress: multisigAddress,
   })
 
   const sdlPool = (await getContract('SDLPool', true)) as SDLPoolPrimary
   const stakingPool = await getContract('METIS_StakingPool', true)
   const stMetisSDLRewardsPool = await getContract('stMETIS_SDLRewardsPool', true)
 
-  await (await sdlPool.addToken(stakingPool.address, stMetisSDLRewardsPool.address)).wait()
-
-  const safeTransactionData: MetaTransactionData[] = [
+  const transactions: MetaTransactionData[] = [
     {
-      to: sdlPool.address,
-      data: (await sdlPool.addToken(stakingPool.address, stMetisSDLRewardsPool.address)).data || '',
+      to: sdlPool.target.toString(),
+      data:
+        (
+          await sdlPool.addToken.populateTransaction(
+            stakingPool.target,
+            stMetisSDLRewardsPool.target
+          )
+        ).data || '',
       value: '0',
     },
   ]
-  const safeTransaction = await safeSdk.createTransaction({ safeTransactionData })
+  const safeTransaction = await safeSdk.createTransaction({ transactions })
   const safeTxHash = await safeSdk.getTransactionHash(safeTransaction)
-  const senderSignature = await safeSdk.signTransactionHash(safeTxHash)
+  const senderSignature = await safeSdk.signHash(safeTxHash)
 
-  await safeService.proposeTransaction({
+  await safeApiKit.proposeTransaction({
     safeAddress: multisigAddress,
     safeTransactionData: safeTransaction.data,
     safeTxHash,

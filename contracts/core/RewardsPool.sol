@@ -65,11 +65,7 @@ contract RewardsPool {
     /**
      * @notice ERC677 implementation that proxies reward distribution
      **/
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external {
+    function onTokenTransfer(address, uint256, bytes calldata) external {
         if (msg.sender != address(token)) revert SenderNotAuthorized();
         distributeRewards();
     }

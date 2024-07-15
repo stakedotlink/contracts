@@ -32,43 +32,43 @@ export async function deployCore() {
   const lplToken = (await getContract('LPLToken')) as ERC677
 
   const sdlToken = await deploy('StakingAllowance', [SDLTokenArgs.name, SDLTokenArgs.symbol])
-  console.log('SDLToken deployed: ', sdlToken.address)
+  console.log('SDLToken deployed: ', sdlToken.target)
 
-  const lplMigration = await deploy('LPLMigration', [lplToken.address, sdlToken.address])
-  console.log('LPLMigration deployed: ', lplMigration.address)
+  const lplMigration = await deploy('LPLMigration', [lplToken.target, sdlToken.target])
+  console.log('LPLMigration deployed: ', lplMigration.target)
 
   const delegatorPool = await deployUpgradeable('DelegatorPool', [
-    sdlToken.address,
+    sdlToken.target,
     DelegatorPool.derivativeTokenName,
     DelegatorPool.derivativeTokenSymbol,
     [],
   ])
-  console.log('DelegatorPool deployed: ', delegatorPool.address)
+  console.log('DelegatorPool deployed: ', delegatorPool.target)
 
   const lbc = await deploy('LinearBoostController', [
     LinearBoostControllerArgs.minLockingDuration,
     LinearBoostControllerArgs.maxLockingDuration,
     LinearBoostControllerArgs.maxBoost,
   ])
-  console.log('LinearBoostController deployed: ', lbc.address)
+  console.log('LinearBoostController deployed: ', lbc.target)
 
   const sdlPoolPrimary = await deployUpgradeable('SDLPoolPrimary', [
     SDLPoolPrimaryArgs.derivativeTokenName,
     SDLPoolPrimaryArgs.derivativeTokenSymbol,
-    sdlToken.address,
-    lbc.address,
+    sdlToken.target,
+    lbc.target,
   ])
-  console.log('SDLPool deployed: ', sdlPoolPrimary.address)
+  console.log('SDLPool deployed: ', sdlPoolPrimary.target)
 
-  await (await sdlPoolPrimary.setDelegatorPool(delegatorPool.address)).wait()
+  await (await sdlPoolPrimary.setDelegatorPool(delegatorPool.target)).wait()
 
   updateDeployments(
     {
-      SDLToken: sdlToken.address,
-      LPLMigration: lplMigration.address,
-      LinearBoostController: lbc.address,
-      SDLPool: sdlPoolPrimary.address,
-      DelegatorPool: delegatorPool.address,
+      SDLToken: sdlToken.target,
+      LPLMigration: lplMigration.target,
+      LinearBoostController: lbc.target,
+      SDLPool: sdlPoolPrimary.target,
+      DelegatorPool: delegatorPool.target,
     },
     { SDLToken: 'StakingAllowance', SDLPool: 'SDLPoolPrimary' }
   )

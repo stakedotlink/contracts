@@ -71,7 +71,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         _;
     }
 
-    function __OperatorController_init(address _ethStakingStrategy, address _sdToken) public onlyInitializing {
+    function __OperatorController_init(
+        address _ethStakingStrategy,
+        address _sdToken
+    ) public onlyInitializing {
         __UUPSUpgradeable_init();
         __Ownable_init();
         ethStakingStrategy = _ethStakingStrategy;
@@ -104,7 +107,9 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _operatorIds id list of operators to return
      * @return operators list of opertors
      */
-    function getOperators(uint256[] calldata _operatorIds) external view returns (Operator[] memory) {
+    function getOperators(
+        uint256[] calldata _operatorIds
+    ) external view returns (Operator[] memory) {
         Operator[] memory ret = new Operator[](_operatorIds.length);
         for (uint256 i = 0; i < _operatorIds.length; i++) {
             require(_operatorIds[i] < operators.length, "Operator does not exist");
@@ -125,7 +130,12 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint256 _operatorId,
         uint256 _startIndex,
         uint256 _numPairs
-    ) external view operatorExists(_operatorId) returns (bytes memory keys, bytes memory signatures) {
+    )
+        external
+        view
+        operatorExists(_operatorId)
+        returns (bytes memory keys, bytes memory signatures)
+    {
         require(_startIndex < operators[_operatorId].totalKeyPairs, "startIndex out of range");
 
         uint256 endIndex = _startIndex + _numPairs;
@@ -146,7 +156,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _numKeys total number of keys to return
      * @return keys concatenated list of pubkeys
      */
-    function getAssignedKeys(uint256 _startIndex, uint256 _numKeys) external view returns (bytes memory keys) {
+    function getAssignedKeys(
+        uint256 _startIndex,
+        uint256 _numKeys
+    ) external view returns (bytes memory keys) {
         require(_startIndex < totalAssignedValidators, "startIndex out of range");
 
         uint256 endIndex = _startIndex + _numKeys;
@@ -173,11 +186,7 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @notice ERC677 implementation to receive operator rewards
      * @param _value of the token transfer
      **/
-    function onTokenTransfer(
-        address,
-        uint256 _value,
-        bytes calldata
-    ) external {
+    function onTokenTransfer(address, uint256 _value, bytes calldata) external {
         require(msg.sender == address(sdToken), "Sender is not sdToken");
         sdToken.transferAndCall(address(rewardsPool), _value, "0x");
     }
@@ -202,11 +211,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _sender account initiating the validation
      * @param _operatorId id of operator to initiate validation for
      **/
-    function initiateKeyPairValidation(address _sender, uint256 _operatorId)
-        external
-        onlyKeyValidationOracle
-        operatorExists(_operatorId)
-    {
+    function initiateKeyPairValidation(
+        address _sender,
+        uint256 _operatorId
+    ) external onlyKeyValidationOracle operatorExists(_operatorId) {
         require(_sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(operators[_operatorId].active, "Operator is not active");
         operators[_operatorId].keyValidationInProgress = true;
@@ -216,7 +224,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @notice Sets the name of an existing operator
      * @param _name new name of operator
      */
-    function setOperatorName(uint256 _operatorId, string calldata _name) external operatorExists(_operatorId) {
+    function setOperatorName(
+        uint256 _operatorId,
+        string calldata _name
+    ) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         operators[_operatorId].name = _name;
     }
@@ -228,11 +239,15 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _operatorId id of operator
      * @param _owner new owner of operator
      */
-    function setOperatorOwner(uint256 _operatorId, address _owner) external operatorExists(_operatorId) {
+    function setOperatorOwner(
+        uint256 _operatorId,
+        address _owner
+    ) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_owner != address(0), "Owner address cannot be 0");
 
-        uint256 operatorActiveValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
+        uint256 operatorActiveValidators = operators[_operatorId].usedKeyPairs -
+            operators[_operatorId].stoppedValidators;
         activeValidators[_owner] += operatorActiveValidators;
         activeValidators[msg.sender] -= operatorActiveValidators;
         operators[_operatorId].owner = _owner;
@@ -248,14 +263,18 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
     function disableOperator(uint256 _operatorId) external onlyOwner operatorExists(_operatorId) {
         require(operators[_operatorId].active, "Operator is already disabled");
 
-        uint256 unusedKeys = operators[_operatorId].validatorLimit - operators[_operatorId].usedKeyPairs;
+        uint256 unusedKeys = operators[_operatorId].validatorLimit -
+            operators[_operatorId].usedKeyPairs;
         if (unusedKeys > 0) {
             queueLength -= unusedKeys;
             operators[_operatorId].validatorLimit -= uint64(unusedKeys);
-            currentStateHash = keccak256(abi.encodePacked(currentStateHash, "disableOperator", _operatorId));
+            currentStateHash = keccak256(
+                abi.encodePacked(currentStateHash, "disableOperator", _operatorId)
+            );
         }
 
-        uint256 unstoppedValidators = operators[_operatorId].usedKeyPairs - operators[_operatorId].stoppedValidators;
+        uint256 unstoppedValidators = operators[_operatorId].usedKeyPairs -
+            operators[_operatorId].stoppedValidators;
         if (unstoppedValidators > 0) {
             activeValidators[operators[_operatorId].owner] -= unstoppedValidators;
             totalActiveValidators -= unstoppedValidators;
@@ -324,7 +343,11 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         for (uint256 i = 0; i < _quantity; ++i) {
             bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
             require(!_isEmptyKey(key), "Empty key");
-            bytes memory signature = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+            bytes memory signature = BytesLib.slice(
+                _signatures,
+                i * SIGNATURE_LENGTH,
+                SIGNATURE_LENGTH
+            );
 
             _storeKeyPair(_operatorId, operators[_operatorId].totalKeyPairs + i, key, signature);
             stateHash = keccak256(abi.encodePacked(stateHash, "addKey", _operatorId, key));
@@ -357,7 +380,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
         uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
         assembly {
             sstore(storageAddress, mload(add(_key, 0x20)))
-            sstore(add(storageAddress, 1), shl(keyExcessBits, shr(keyExcessBits, mload(add(_key, 0x40)))))
+            sstore(
+                add(storageAddress, 1),
+                shl(keyExcessBits, shr(keyExcessBits, mload(add(_key, 0x40))))
+            )
         }
         storageAddress += 2;
 
@@ -377,11 +403,10 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @return key stored pubkey
      * @return signature stored signature
      */
-    function _loadKeyPair(uint256 _operatorId, uint256 _keyIndex)
-        internal
-        view
-        returns (bytes memory key, bytes memory signature)
-    {
+    function _loadKeyPair(
+        uint256 _operatorId,
+        uint256 _keyIndex
+    ) internal view returns (bytes memory key, bytes memory signature) {
         uint256 storageAddress = _keyPairStorageAddress(_operatorId, _keyIndex);
 
         bytes memory tmpKey = new bytes(64);
@@ -409,8 +434,14 @@ abstract contract OperatorController is Initializable, UUPSUpgradeable, OwnableU
      * @param _keyIndex index of pair
      * @return storageAddress storage address of pair
      */
-    function _keyPairStorageAddress(uint256 _operatorId, uint256 _keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked("operator-controller-keys", _operatorId, _keyIndex)));
+    function _keyPairStorageAddress(
+        uint256 _operatorId,
+        uint256 _keyIndex
+    ) internal pure returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked("operator-controller-keys", _operatorId, _keyIndex))
+            );
     }
 
     /**

@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { ERC20, PriorityPool, SDLPoolPrimary, StakingPool } from '../../../typechain-types'
+import { ERC20, SDLPoolPrimary } from '../../../typechain-types'
 import {
   updateDeployments,
   deploy,
@@ -26,7 +26,7 @@ const StakingPoolArgs = {
 // Sequencer VCS
 const SequencerVCSArgs = {
   lockingInfo: '0x0fe382b74C3894B65c10E5C12ae60Bbd8FAf5b48', // address of Metis locking info contract
-  depositController: ethers.constants.AddressZero, // address authorized to deposit queued tokens into vaults
+  depositController: ethers.ZeroAddress, // address authorized to deposit queued tokens into vaults
   sdlPoolFee: 600, // basis point fee to be paid to SDL pool
   operatorRewardPercentage: 600, // basis point amount of an operator's earned rewards that they receive
 }
@@ -38,7 +38,7 @@ const PriorityPoolArgs = {
 // PP Distribution Oracle
 const DistributionOracleArgs = {
   chainlinkOracle: '0x1152c76A0B3acC9856B1d8ee9EbDf2A2d0a01cC3', // address of Chainlink oracle contract
-  jobId: ethers.constants.HashZero, // adapter job ID
+  jobId: ethers.ZeroHash, // adapter job ID
   fee: 0, // LINK fee for adpapter job
   minTimeBetweenUpdates: 86400, // min time between updates in seconds
   minDepositsSinceLastUpdate: toEther(15000), // min amount of deposits required to execute update
@@ -50,17 +50,17 @@ async function main() {
   const metisToken = (await getContract('METISToken', true)) as ERC20
   const linkToken = (await getContract('LINKToken', true)) as ERC20
 
-  const stakingPool = (await deployUpgradeable(
+  const stakingPool = await deployUpgradeable(
     'StakingPool',
     [
-      metisToken.address,
+      metisToken.target,
       StakingPoolArgs.derivativeTokenName,
       StakingPoolArgs.derivativeTokenSymbol,
       StakingPoolArgs.fees,
     ],
     true
-  )) as StakingPool
-  console.log('METIS_StakingPool deployed: ', stakingPool.address)
+  )
+  console.log('METIS_StakingPool deployed: ', stakingPool.target)
 
   const vaultImpAddress = (await deployImplementation('SequencerVault', true)) as string
   console.log('SequencerVault implementation deployed: ', vaultImpAddress)
@@ -68,8 +68,8 @@ async function main() {
   const sequencerVCS = await deployUpgradeable(
     'SequencerVCS',
     [
-      metisToken.address,
-      stakingPool.address,
+      metisToken.target,
+      stakingPool.target,
       SequencerVCSArgs.lockingInfo,
       SequencerVCSArgs.depositController,
       vaultImpAddress,
@@ -79,73 +79,73 @@ async function main() {
     ],
     true
   )
-  console.log('METIS_SequencerVCS deployed: ', sequencerVCS.address)
+  console.log('METIS_SequencerVCS deployed: ', sequencerVCS.target)
 
   const rewardsReceiver = await deploy(
     'SequencerRewardsCCIPReceiver',
     [
       ccipRouterAddress,
-      metisToken.address,
-      sequencerVCS.address,
-      stakingPool.address,
+      metisToken.target,
+      sequencerVCS.target,
+      stakingPool.target,
       sequencerRewardsCCIPSenderAddress,
     ],
     true
   )
-  console.log('METIS_SequencerRewardsCCIPReceiver deployed: ', rewardsReceiver.address)
+  console.log('METIS_SequencerRewardsCCIPReceiver deployed: ', rewardsReceiver.target)
 
-  const priorityPool = (await deployUpgradeable(
+  const priorityPool = await deployUpgradeable(
     'PriorityPool',
     [
-      metisToken.address,
-      stakingPool.address,
-      sdlPoolPrimary.address,
+      metisToken.target,
+      stakingPool.target,
+      sdlPoolPrimary.target,
       PriorityPoolArgs.queueDepositMin,
       PriorityPoolArgs.queueDepositMax,
     ],
     true
-  )) as PriorityPool
-  console.log('METIS_PriorityPool deployed: ', priorityPool.address)
+  )
+  console.log('METIS_PriorityPool deployed: ', priorityPool.target)
 
   const wsdToken = await deploy(
     'WrappedSDToken',
-    [stakingPool.address, WrappedSDTokenArgs.name, WrappedSDTokenArgs.symbol],
+    [stakingPool.target, WrappedSDTokenArgs.name, WrappedSDTokenArgs.symbol],
     true
   )
-  console.log('METIS_WrappedSDToken token deployed: ', wsdToken.address)
+  console.log('METIS_WrappedSDToken token deployed: ', wsdToken.target)
 
   const stMetisSDLRewardsPool = await deploy(
     'RewardsPoolWSD',
-    [sdlPoolPrimary.address, stakingPool.address, wsdToken.address],
+    [sdlPoolPrimary.target, stakingPool.target, wsdToken.target],
     true
   )
-  console.log('stMetis_SDLRewardsPool deployed: ', stMetisSDLRewardsPool.address)
+  console.log('stMetis_SDLRewardsPool deployed: ', stMetisSDLRewardsPool.target)
 
   const distributionOracle = await deploy(
     'DistributionOracle',
     [
-      linkToken.address,
+      linkToken.target,
       DistributionOracleArgs.chainlinkOracle,
       DistributionOracleArgs.jobId,
       DistributionOracleArgs.fee,
       DistributionOracleArgs.minTimeBetweenUpdates,
       DistributionOracleArgs.minDepositsSinceLastUpdate,
       DistributionOracleArgs.minBlockConfirmations,
-      priorityPool.address,
+      priorityPool.target,
     ],
     true
   )
-  console.log('METIS_PP_DistributionOracle deployed: ', distributionOracle.address)
+  console.log('METIS_PP_DistributionOracle deployed: ', distributionOracle.target)
 
   updateDeployments(
     {
-      METIS_StakingPool: stakingPool.address,
-      METIS_SequencerVCS: sequencerVCS.address,
-      METIS_SequencerRewardsCCIPReceiver: rewardsReceiver.address,
-      METIS_PriorityPool: priorityPool.address,
-      METIS_WrappedSDToken: wsdToken.address,
-      stMETIS_SDLRewardsPool: stMetisSDLRewardsPool.address,
-      METIS_PP_DistributionOracle: distributionOracle.address,
+      METIS_StakingPool: stakingPool.target,
+      METIS_SequencerVCS: sequencerVCS.target,
+      METIS_SequencerRewardsCCIPReceiver: rewardsReceiver.target,
+      METIS_PriorityPool: priorityPool.target,
+      METIS_WrappedSDToken: wsdToken.target,
+      stMETIS_SDLRewardsPool: stMetisSDLRewardsPool.target,
+      METIS_PP_DistributionOracle: distributionOracle.target,
     },
     {
       METIS_StakingPool: 'StakingPool',

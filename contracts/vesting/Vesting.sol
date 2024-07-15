@@ -29,7 +29,8 @@ contract Vesting is VestingWallet, Ownable {
 
         for (uint256 i = 0; i < _tokens.length; ++i) {
             address token = _tokens[i];
-            uint256 toWithdraw = IERC20(token).balanceOf(address(this)) - vestedAmount(token, uint64(block.timestamp));
+            uint256 toWithdraw = IERC20(token).balanceOf(address(this)) -
+                vestedAmount(token, uint64(block.timestamp));
             SafeERC20.safeTransfer(IERC20(token), owner(), toWithdraw);
         }
         vestingTerminated = true;

@@ -36,11 +36,7 @@ contract StakingMock is IERC677Receiver {
         maxPoolSize = _maxPoolSize;
     }
 
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _data
-    ) external {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata _data) external {
         require(msg.sender == address(token), "has to be token");
         if (_data.length != 0) {
             address sender = abi.decode(_data, (address));

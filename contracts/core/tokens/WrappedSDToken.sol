@@ -24,11 +24,7 @@ contract WrappedSDToken is ERC677 {
      * @param _sender of the token transfer
      * @param _value of the token transfer
      **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata
-    ) external {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata) external {
         require(msg.sender == address(sdToken), "Sender must be staking derivative token");
         _wrap(_sender, _value);
     }

@@ -144,7 +144,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _distributionAmount account's distribution amount from the latest distribution
      * @return amount of queued tokens for an account
      */
-    function getQueuedTokens(address _account, uint256 _distributionAmount) public view returns (uint256) {
+    function getQueuedTokens(
+        address _account,
+        uint256 _distributionAmount
+    ) public view returns (uint256) {
         return accountQueuedTokens[_account] - _distributionAmount;
     }
 
@@ -155,7 +158,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _distributionShareAmount account's distribution share amounts from the latest distribution
      * @return withdrawable LSD tokens for account
      */
-    function getLSDTokens(address _account, uint256 _distributionShareAmount) external view returns (uint256) {
+    function getLSDTokens(
+        address _account,
+        uint256 _distributionShareAmount
+    ) external view returns (uint256) {
         uint256 sharesToClaim = _distributionShareAmount - accountSharesClaimed[_account];
         return stakingPool.getStakeByShares(sharesToClaim);
     }
@@ -168,8 +174,13 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _distributionAmount account's distribution amount from the latest distribution
      * @return amount of withrawable tokens
      */
-    function canWithdraw(address _account, uint256 _distributionAmount) external view returns (uint256) {
-        uint256 canUnqueue = paused() ? 0 : MathUpgradeable.min(getQueuedTokens(_account, _distributionAmount), totalQueued);
+    function canWithdraw(
+        address _account,
+        uint256 _distributionAmount
+    ) external view returns (uint256) {
+        uint256 canUnqueue = paused()
+            ? 0
+            : MathUpgradeable.min(getQueuedTokens(_account, _distributionAmount), totalQueued);
         uint256 stLINKCanWithdraw = MathUpgradeable.min(
             stakingPool.balanceOf(_account),
             stakingPool.canWithdraw() + totalQueued - canUnqueue
@@ -184,11 +195,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _value of the token transfer
      * @param _calldata encoded shouldQueue (bool)
      **/
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _calldata
-    ) external {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
         if (_value == 0) revert InvalidValue();
 
         if (msg.sender == address(token)) {
@@ -240,8 +247,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             _requireNotPaused();
 
             if (_merkleProof.length != 0) {
-                bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
-                if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
+                bytes32 node = keccak256(
+                    bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount)))
+                );
+                if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node))
+                    revert InvalidProof();
             } else if (accountIndexes[account] < merkleTreeSize) {
                 revert InvalidProof();
             }
@@ -259,7 +269,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         }
 
         if (toWithdraw != 0) {
-            IERC20Upgradeable(address(stakingPool)).safeTransferFrom(account, address(this), toWithdraw);
+            IERC20Upgradeable(address(stakingPool)).safeTransferFrom(
+                account,
+                address(this),
+                toWithdraw
+            );
             _withdraw(toWithdraw);
             emit Withdraw(account, toWithdraw);
         }
@@ -285,8 +299,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         address account = msg.sender;
         if (accountIndexes[account] < merkleTreeSize) {
-            bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
-            if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
+            bytes32 node = keccak256(
+                bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount)))
+            );
+            if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node))
+                revert InvalidProof();
         }
 
         if (_amountToUnqueue > getQueuedTokens(account, _amount)) revert InsufficientBalance();
@@ -311,7 +328,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     ) external {
         address account = msg.sender;
 
-        bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount))));
+        bytes32 node = keccak256(
+            bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount)))
+        );
         if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node)) revert InvalidProof();
 
         uint256 amountToClaim = _amount - accountClaimed[account];
@@ -383,11 +402,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     function getAccountData()
         external
         view
-        returns (
-            address[] memory,
-            uint256[] memory,
-            uint256[] memory
-        )
+        returns (address[] memory, uint256[] memory, uint256[] memory)
     {
         uint256[] memory reSDLBalances = new uint256[](accounts.length);
         uint256[] memory queuedBalances = new uint256[](accounts.length);
@@ -422,7 +437,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         ipfsHash = _ipfsHash;
         merkleTreeSize = accounts.length;
 
-        emit UpdateDistribution(_merkleRoot, _ipfsHash, _amountDistributed, _sharesAmountDistributed);
+        emit UpdateDistribution(
+            _merkleRoot,
+            _ipfsHash,
+            _amountDistributed,
+            _sharesAmountDistributed
+        );
     }
 
     /**
@@ -448,7 +468,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _queueDepositMin min amount of tokens required for deposit
      * @param _queueDepositMax max amount of tokens that can be deposited at once
      */
-    function setQueueDepositParams(uint128 _queueDepositMin, uint128 _queueDepositMax) external onlyOwner {
+    function setQueueDepositParams(
+        uint128 _queueDepositMin,
+        uint128 _queueDepositMax
+    ) external onlyOwner {
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
@@ -479,11 +502,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _amount amount to deposit
      * @param _shouldQueue whether tokens should be queued
      **/
-    function _deposit(
-        address _account,
-        uint256 _amount,
-        bool _shouldQueue
-    ) internal {
+    function _deposit(address _account, uint256 _amount, bool _shouldQueue) internal {
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
         uint256 toDeposit = _amount;
@@ -544,7 +563,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
 
         uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
-        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin) revert InsufficientDepositRoom();
+        if (strategyDepositRoom == 0 || strategyDepositRoom < _depositMin)
+            revert InsufficientDepositRoom();
 
         uint256 _totalQueued = totalQueued;
         uint256 unusedDeposits = stakingPool.getUnusedDeposits();

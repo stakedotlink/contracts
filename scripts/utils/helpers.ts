@@ -1,13 +1,12 @@
 import { ethers } from 'hardhat'
-import { BigNumber } from 'ethers'
 import { ERC677 } from '../../typechain-types'
 
 export const toEther = (amount: string | number) => {
-  return ethers.utils.parseEther(amount.toString()).toHexString()
+  return ethers.parseEther(amount.toString())
 }
 
-export const fromEther = (amount: BigNumber) => {
-  return Number(ethers.utils.formatEther(amount))
+export const fromEther = (amount: bigint) => {
+  return Number(ethers.formatEther(amount))
 }
 
 export const getAccounts = async (): Promise<any> => {

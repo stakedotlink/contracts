@@ -92,7 +92,9 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Transfers reward tokens to the destination chain
      * @param _maxLINKFee call will revert if LINK fee exceeds this value
      **/
-    function transferRewards(uint256 _maxLINKFee) external onlyTransferInitiator returns (bytes32 messageId) {
+    function transferRewards(
+        uint256 _maxLINKFee
+    ) external onlyTransferInitiator returns (bytes32 messageId) {
         uint256 amount = metisToken.balanceOf(address(this));
         if (amount == 0) revert NoRewards();
 
@@ -170,7 +172,9 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Builds a CCIP message
      * @param _amount amount of tokens to transfer
      **/
-    function _buildCCIPMessage(uint256 _amount) private view returns (Client.EVM2AnyMessage memory) {
+    function _buildCCIPMessage(
+        uint256 _amount
+    ) private view returns (Client.EVM2AnyMessage memory) {
         Client.EVMTokenAmount[] memory tokenAmounts = new Client.EVMTokenAmount[](1);
         tokenAmounts[0] = Client.EVMTokenAmount({token: address(metisToken), amount: _amount});
 

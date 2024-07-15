@@ -27,11 +27,15 @@ abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165, Ownable {
     /// Additionally, if the receiver address does not have code associated with
     /// it at the time of execution (EXTCODESIZE returns 0), only tokens will be transferred.
     function supportsInterface(bytes4 _interfaceId) public pure virtual override returns (bool) {
-        return _interfaceId == type(IAny2EVMMessageReceiver).interfaceId || _interfaceId == type(IERC165).interfaceId;
+        return
+            _interfaceId == type(IAny2EVMMessageReceiver).interfaceId ||
+            _interfaceId == type(IERC165).interfaceId;
     }
 
     /// @inheritdoc IAny2EVMMessageReceiver
-    function ccipReceive(Client.Any2EVMMessage calldata _message) external virtual override onlyRouter {
+    function ccipReceive(
+        Client.Any2EVMMessage calldata _message
+    ) external virtual override onlyRouter {
         _ccipReceive(_message);
     }
 

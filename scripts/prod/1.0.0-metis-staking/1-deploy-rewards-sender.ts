@@ -4,34 +4,31 @@ import { updateDeployments, getContract, deployUpgradeable, deploy } from '../..
 
 // Deploy on Metis
 
- async function switchNetwork(
-  chainId: number,
-  host: string
-): Promise<void> {
-  const chainIdHex = `0x${chainId.toString(16)}`;
+async function switchNetwork(chainId: number, host: string): Promise<void> {
+  const chainIdHex = `0x${chainId.toString(16)}`
   const params = [
     {
       chainId: chainIdHex,
     },
-  ];
+  ]
 
   try {
     const response = await axios.post(`http://${host}:1248`, {
-      jsonrpc: "2.0",
-      method: "wallet_switchEthereumChain",
+      jsonrpc: '2.0',
+      method: 'wallet_switchEthereumChain',
       params: params,
       id: 1,
-    });
+    })
 
     if (response.status !== 200) {
-      throw new Error(`Failed to switch network: ${response.statusText}`);
+      throw new Error(`Failed to switch network: ${response.statusText}`)
     }
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const errorText = error.response?.data || error.message;
-      throw new Error(`Failed to switch network: ${errorText}`);
+      const errorText = error.response?.data || error.message
+      throw new Error(`Failed to switch network: ${errorText}`)
     } else {
-      throw error;
+      throw error
     }
   }
 }
@@ -45,46 +42,46 @@ const wstMETIS = {
 
 // Sequencer Rewards CCIP Sender
 const RewardsSenderArgs = {
-  router: ethers.constants.AddressZero, // address of CCIP router on Metis
-  transferInitiator: ethers.constants.AddressZero, // address authorized to initiate rewards transfers
+  router: ethers.ZeroAddress, // address of CCIP router on Metis
+  transferInitiator: ethers.ZeroAddress, // address authorized to initiate rewards transfers
   destinationChainSelector: '5009297550715157269', // ETH mainnet CCIP ID
   extraArgs: '0x', // extra args for reward token CCIP transfer
 }
 
 async function main() {
-  await switchNetwork(1088,'')
-  
+  await switchNetwork(1088, '')
+
   const metisToken = await getContract('METISToken')
 
   const rewardsSender = await deployUpgradeable(
     'SequencerRewardsCCIPSender',
     [
       RewardsSenderArgs.router,
-      ethers.constants.AddressZero,
-      metisToken.address,
+      ethers.ZeroAddress,
+      await metisToken.getAddress(),
       RewardsSenderArgs.transferInitiator,
       RewardsSenderArgs.destinationChainSelector,
       RewardsSenderArgs.extraArgs,
     ],
     true
   )
-  console.log('METIS_SequencerRewardsCCIPSender deployed: ', rewardsSender.address)
+  console.log('METIS_SequencerRewardsCCIPSender deployed: ', await rewardsSender.getAddress())
 
   const wrappedSDToken = await deploy(
     'BurnMintERC677',
     [wstMETIS.name, wstMETIS.symbol, wstMETIS.decimals, 0],
     true
   )
-  console.log('METIS_WrappedSDToken deployed: ', wrappedSDToken.address)
+  console.log('METIS_WrappedSDToken deployed: ', await wrappedSDToken.getAddress())
 
   updateDeployments(
     {
-      METIS_SequencerRewardsCCIPSender: rewardsSender.address,
-      METIS_WrappedSDToken: wrappedSDToken.address,
+      METIS_SequencerRewardsCCIPSender: await rewardsSender.getAddress(),
+      METIS_WrappedSDToken: await wrappedSDToken.getAddress(),
     },
     {
       METIS_SequencerRewardsCCIPSender: 'SequencerRewardsCCIPSender',
-      METIS_wrappedSDToken: 'BurnMintERC677',
+      METIS_WrappedSDToken: 'BurnMintERC677',
     }
   )
 }

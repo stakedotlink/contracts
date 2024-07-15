@@ -86,7 +86,7 @@ async function main() {
 
   // LPL migration
 
-  let tx = await sdlToken.mint(lplMigration.address, toEther(100000))
+  let tx = await sdlToken.mint(lplMigration.target, toEther(100000))
   await tx.wait()
 
   // LINK Staking
@@ -95,26 +95,26 @@ async function main() {
   await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
 
   const strategyMockLINK = (await deployUpgradeable('StrategyMock', [
-    linkToken.address,
-    LINK_StakingPool.address,
+    linkToken.target,
+    LINK_StakingPool.target,
     toEther(1000),
     toEther(10),
   ])) as StrategyMock
-  tx = await LINK_StakingPool.addStrategy(strategyMockLINK.address)
+  tx = await LINK_StakingPool.addStrategy(strategyMockLINK.target)
   await tx.wait()
   tx = await LINK_PriorityPool.setDistributionOracle(accounts[0])
   await tx.wait()
 
   let stLINK_DelegatorRewardsPool = await deploy('RewardsPool', [
-    delegatorPool.address,
-    LINK_StakingPool.address,
+    delegatorPool.target,
+    LINK_StakingPool.target,
   ])
-  tx = await delegatorPool.addToken(LINK_StakingPool.address, stLINK_DelegatorRewardsPool.address)
+  tx = await delegatorPool.addToken(LINK_StakingPool.target, stLINK_DelegatorRewardsPool.target)
   await tx.wait()
 
   updateDeployments(
     {
-      stLINK_DelegatorRewardsPool: stLINK_DelegatorRewardsPool.address,
+      stLINK_DelegatorRewardsPool: stLINK_DelegatorRewardsPool.target,
     },
     {
       stLINK_DelegatorRewardsPool: 'RewardsPool',
@@ -123,14 +123,14 @@ async function main() {
   // Basic Curve Mock
 
   const curveMock = (await deploy('CurveMock', [
-    LINK_StakingPool.address,
-    linkToken.address,
+    LINK_StakingPool.target,
+    linkToken.target,
   ])) as CurveMock
-  tx = await linkToken.transfer(curveMock.address, toEther(1000))
+  tx = await linkToken.transfer(curveMock.target, toEther(1000))
   await tx.wait()
 
   updateDeployments({
-    CurvePool: curveMock.address,
+    CurvePool: curveMock.target.toString(),
   })
 
   // Accounts
@@ -147,18 +147,18 @@ async function main() {
   }
 
   tx = await linkToken.transferAndCall(
-    LINK_PriorityPool.address,
+    LINK_PriorityPool.target,
     toEther(500),
-    ethers.utils.defaultAbiCoder.encode(['bool'], [false])
+    ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [false])
   )
-  await (await METISToken.approve(METIS_PriorityPool.address, ethers.constants.MaxUint256)).wait()
+  await (await METISToken.approve(METIS_PriorityPool.target, ethers.MaxUint256)).wait()
   await (await METIS_PriorityPool.deposit(toEther(500), false)).wait()
 
   // Account 2
 
-  tx = await lplToken.connect(signers[2]).transferAndCall(poolOwnersV1.address, toEther(10), '0x')
+  tx = await lplToken.connect(signers[2]).transferAndCall(poolOwnersV1.target, toEther(10), '0x')
   await tx.wait()
-  tx = await linkToken.transfer(ownersRewardsPoolV1.address, toEther(10))
+  tx = await linkToken.transfer(ownersRewardsPoolV1.target, toEther(10))
   await tx.wait()
   tx = await ownersRewardsPoolV1.distributeRewards()
   await tx.wait()
@@ -166,61 +166,54 @@ async function main() {
   // stSDL
 
   // Account 3
-  tx = await sdlToken
-    .connect(signers[3])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  tx = await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
 
   // Account 9
-  tx = await sdlToken
-    .connect(signers[9])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+  tx = await sdlToken.connect(signers[9]).transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
 
   // Account 10
   tx = await sdlToken
     .connect(signers[10])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+    .transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
 
   // Account 11
   tx = await sdlToken
     .connect(signers[11])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+    .transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
 
   // Account 12
   tx = await sdlToken
     .connect(signers[12])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+    .transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
 
   // Account 13
   tx = await sdlToken
     .connect(signers[13])
-    .transferAndCall(delegatorPool.address, toEther(1000), '0x')
+    .transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
 
   tx = await linkToken
     .connect(signers[3])
     .transferAndCall(
-      LINK_PriorityPool.address,
+      LINK_PriorityPool.target,
       toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [false])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [false])
     )
   await tx.wait()
   await (
-    await METISToken.connect(signers[3]).approve(
-      METIS_PriorityPool.address,
-      ethers.constants.MaxUint256
-    )
+    await METISToken.connect(signers[3]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
   await (await METIS_PriorityPool.connect(signers[3]).deposit(toEther(100), false)).wait()
 
   await tx.wait()
-  tx = await LINK_StakingPool.transferAndCall(delegatorPool.address, toEther(100), '0x')
+  tx = await LINK_StakingPool.transferAndCall(delegatorPool.target, toEther(100), '0x')
   await tx.wait()
-  tx = await delegatorPool.retireDelegatorPool([], sdlPool.address)
+  tx = await delegatorPool.retireDelegatorPool([], sdlPool.target)
   await tx.wait()
 
   // Account 4
@@ -228,16 +221,13 @@ async function main() {
   tx = await linkToken
     .connect(signers[4])
     .transferAndCall(
-      LINK_PriorityPool.address,
+      LINK_PriorityPool.target,
       toEther(500),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
     )
   await tx.wait()
   await (
-    await METISToken.connect(signers[4]).approve(
-      METIS_PriorityPool.address,
-      ethers.constants.MaxUint256
-    )
+    await METISToken.connect(signers[4]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
   await (await METIS_PriorityPool.connect(signers[4]).deposit(toEther(500), true)).wait()
 
@@ -246,24 +236,21 @@ async function main() {
   tx = await sdlToken
     .connect(signers[5])
     .transferAndCall(
-      sdlPool.address,
+      sdlPool.target,
       toEther(2000),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 0])
+      ethers.AbiCoder.defaultAbiCoder().encode(['uint256', 'uint64'], [0, 0])
     )
   await tx.wait()
 
   tx = await linkToken
     .connect(signers[5])
     .transferAndCall(
-      LINK_PriorityPool.address,
+      LINK_PriorityPool.target,
       toEther(200),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
     )
   await (
-    await METISToken.connect(signers[5]).approve(
-      METIS_PriorityPool.address,
-      ethers.constants.MaxUint256
-    )
+    await METISToken.connect(signers[5]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
   await (await METIS_PriorityPool.connect(signers[5]).deposit(toEther(200), true)).wait()
 
@@ -272,55 +259,52 @@ async function main() {
   tx = await sdlToken
     .connect(signers[6])
     .transferAndCall(
-      sdlPool.address,
+      sdlPool.target,
       toEther(1000),
-      ethers.utils.defaultAbiCoder.encode(['uint256', 'uint64'], [0, 365 * 86400])
+      ethers.AbiCoder.defaultAbiCoder().encode(['uint256', 'uint64'], [0, 365 * 86400])
     )
   await tx.wait()
   tx = await linkToken
     .connect(signers[6])
     .transferAndCall(
-      LINK_PriorityPool.address,
+      LINK_PriorityPool.target,
       toEther(300),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
     )
   await tx.wait()
   await (
-    await METISToken.connect(signers[6]).approve(
-      METIS_PriorityPool.address,
-      ethers.constants.MaxUint256
-    )
+    await METISToken.connect(signers[6]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
   await (await METIS_PriorityPool.connect(signers[6]).deposit(toEther(300), true)).wait()
 
   // Reward Distributions
 
   await tx.wait()
-  tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')
+  tx = await LINK_StakingPool.transferAndCall(sdlPool.target, toEther(50), '0x')
   await tx.wait()
-  tx = await LINK_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')
+  tx = await LINK_StakingPool.transferAndCall(sdlPool.target, toEther(50), '0x')
   await tx.wait()
-  await (await METIS_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')).wait()
-  await (await METIS_StakingPool.transferAndCall(sdlPool.address, toEther(50), '0x')).wait()
+  await (await METIS_StakingPool.transferAndCall(sdlPool.target, toEther(50), '0x')).wait()
+  await (await METIS_StakingPool.transferAndCall(sdlPool.target, toEther(50), '0x')).wait()
 
-  tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
+  tx = await linkToken.transfer(strategyMockLINK.target, toEther(500))
   await tx.wait()
 
   await LINK_StakingPool.setRebaseController(accounts[0])
   tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
-  tx = await linkToken.transfer(strategyMockLINK.address, toEther(500))
+  tx = await linkToken.transfer(strategyMockLINK.target, toEther(500))
   await tx.wait()
   tx = await LINK_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
 
-  tx = await METISToken.transfer(strategyMockMETIS.address, toEther(500))
+  tx = await METISToken.transfer(strategyMockMETIS.target, toEther(500))
   await tx.wait()
 
   await METIS_StakingPool.setRebaseController(accounts[0])
   tx = await METIS_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
-  tx = await METISToken.transfer(strategyMockMETIS.address, toEther(500))
+  tx = await METISToken.transfer(strategyMockMETIS.target, toEther(500))
   await tx.wait()
   tx = await METIS_StakingPool.updateStrategyRewards([0], '0x')
   await tx.wait()
@@ -364,9 +348,9 @@ async function main() {
   tx = await linkToken
     .connect(signers[7])
     .transferAndCall(
-      LINK_PriorityPool.address,
+      LINK_PriorityPool.target,
       toEther(100),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
     )
   await tx.wait()
 
@@ -377,9 +361,9 @@ async function main() {
   tx = await linkToken
     .connect(signers[8])
     .transferAndCall(
-      LINK_PriorityPool.address,
+      LINK_PriorityPool.target,
       toEther(5000),
-      ethers.utils.defaultAbiCoder.encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
     )
   await tx.wait()
 
@@ -394,13 +378,13 @@ async function main() {
   let vesting0 = await deploy('Vesting', [accounts[0], accounts[12], vestingStart, vestingDuration])
   let vesting1 = await deploy('Vesting', [accounts[0], accounts[13], vestingStart, vestingDuration])
 
-  await sdlToken.mint(vesting0.address, toEther(10000))
-  await sdlToken.mint(vesting1.address, toEther(10000))
+  await sdlToken.mint(vesting0.target, toEther(10000))
+  await sdlToken.mint(vesting1.target, toEther(10000))
 
   updateDeployments(
     {
-      SDL_Vesting_NOP_0: vesting0.address,
-      SDL_Vesting_NOP_1: vesting1.address,
+      SDL_Vesting_NOP_0: vesting0.target,
+      SDL_Vesting_NOP_1: vesting1.target,
     },
     {
       SDL_Vesting_NOP0: 'Vesting',

@@ -6,51 +6,51 @@ export async function deployTestContracts() {
     'LPL',
     100000000,
   ])
-  console.log('LPLToken deployed: ', lplToken.address)
+  console.log('LPLToken deployed: ', lplToken.target)
 
   const linkToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
     'Chainlink',
     'LINK',
     1000000000,
   ])
-  console.log('LINKToken deployed: ', linkToken.address)
+  console.log('LINKToken deployed: ', linkToken.target)
 
   const multicall = await deploy('Multicall3', [])
-  console.log('Multicall3 deployed: ', multicall.address)
+  console.log('Multicall3 deployed: ', multicall.target)
 
-  const poolOwners = await deploy('PoolOwnersV1', [lplToken.address])
-  console.log('PoolOwners (v1) deployed: ', poolOwners.address)
+  const poolOwners = await deploy('PoolOwnersV1', [lplToken.target])
+  console.log('PoolOwners (v1) deployed: ', poolOwners.target)
 
   const ownersRewardsPoolV1 = await deploy('OwnersRewardsPoolV1', [
-    poolOwners.address,
-    linkToken.address,
+    poolOwners.target,
+    linkToken.target,
     'LinkPool Owners LINK',
     'lpoLINK',
   ])
-  console.log('LINK OwnersRewardsPool (v1) deployed: ', ownersRewardsPoolV1.address)
+  console.log('LINK OwnersRewardsPool (v1) deployed: ', ownersRewardsPoolV1.target)
 
   const poolAllowance = await deploy('PoolAllowanceV1', [
     'LINK LinkPool Allowance',
     'linkLPLA',
-    poolOwners.address,
+    poolOwners.target,
   ])
-  console.log('PoolAllowance (v1) deployed: ', multicall.address)
+  console.log('PoolAllowance (v1) deployed: ', multicall.target)
 
   let tx = await poolOwners.addRewardToken(
-    linkToken.address,
-    poolAllowance.address,
-    ownersRewardsPoolV1.address
+    linkToken.target,
+    poolAllowance.target,
+    ownersRewardsPoolV1.target
   )
   await tx.wait()
 
   updateDeployments(
     {
-      LPLToken: lplToken.address,
-      LINKToken: linkToken.address,
-      PoolOwnersV1: poolOwners.address,
-      LINK_OwnersRewardsPoolV1: ownersRewardsPoolV1.address,
-      PoolAllowanceV1: poolAllowance.address,
-      Multicall3: multicall.address,
+      LPLToken: lplToken.target,
+      LINKToken: linkToken.target,
+      PoolOwnersV1: poolOwners.target,
+      LINK_OwnersRewardsPoolV1: ownersRewardsPoolV1.target,
+      PoolAllowanceV1: poolAllowance.target,
+      Multicall3: multicall.target,
     },
     {
       LPLToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',

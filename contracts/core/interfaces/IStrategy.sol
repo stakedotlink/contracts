@@ -6,13 +6,9 @@ interface IStrategy {
 
     function withdraw(uint256 _amount) external;
 
-    function updateDeposits(bytes calldata _data)
-        external
-        returns (
-            int256 depositChange,
-            address[] memory receivers,
-            uint256[] memory amounts
-        );
+    function updateDeposits(
+        bytes calldata _data
+    ) external returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts);
 
     function getTotalDeposits() external view returns (uint256);
 

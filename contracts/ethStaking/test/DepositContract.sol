@@ -16,7 +16,13 @@ pragma solidity 0.6.11;
 /// For more information see the Phase 0 specification under https://github.com/ethereum/eth2.0-specs
 interface IDepositContract {
     /// @notice A processed deposit event.
-    event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index);
+    event DepositEvent(
+        bytes pubkey,
+        bytes withdrawal_credentials,
+        bytes amount,
+        bytes signature,
+        bytes index
+    );
 
     /// @notice Submit a Phase 0 DepositData object.
     /// @param pubkey A BLS12-381 public key.
@@ -58,7 +64,7 @@ interface ERC165 {
 contract DepositContract is IDepositContract, ERC165 {
     uint constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
     // NOTE: this also ensures `deposit_count` will fit into 64-bits
-    uint constant MAX_DEPOSIT_COUNT = 2**DEPOSIT_CONTRACT_TREE_DEPTH - 1;
+    uint constant MAX_DEPOSIT_COUNT = 2 ** DEPOSIT_CONTRACT_TREE_DEPTH - 1;
 
     bytes32[DEPOSIT_CONTRACT_TREE_DEPTH] branch;
     uint256 deposit_count;
@@ -68,7 +74,9 @@ contract DepositContract is IDepositContract, ERC165 {
     constructor() public {
         // Compute hashes in empty sparse Merkle tree
         for (uint height = 0; height < DEPOSIT_CONTRACT_TREE_DEPTH - 1; height++)
-            zero_hashes[height + 1] = sha256(abi.encodePacked(zero_hashes[height], zero_hashes[height]));
+            zero_hashes[height + 1] = sha256(
+                abi.encodePacked(zero_hashes[height], zero_hashes[height])
+            );
     }
 
     function get_deposit_root() external view override returns (bytes32) {
@@ -79,7 +87,8 @@ contract DepositContract is IDepositContract, ERC165 {
             else node = sha256(abi.encodePacked(node, zero_hashes[height]));
             size /= 2;
         }
-        return sha256(abi.encodePacked(node, to_little_endian_64(uint64(deposit_count)), bytes24(0)));
+        return
+            sha256(abi.encodePacked(node, to_little_endian_64(uint64(deposit_count)), bytes24(0)));
     }
 
     function get_deposit_count() external view override returns (bytes memory) {
@@ -94,7 +103,10 @@ contract DepositContract is IDepositContract, ERC165 {
     ) external payable override {
         // Extended ABI length checks since dynamic types are used.
         require(pubkey.length == 48, "DepositContract: invalid pubkey length");
-        require(withdrawal_credentials.length == 32, "DepositContract: invalid withdrawal_credentials length");
+        require(
+            withdrawal_credentials.length == 32,
+            "DepositContract: invalid withdrawal_credentials length"
+        );
         require(signature.length == 96, "DepositContract: invalid signature length");
 
         // Check deposit amount
@@ -105,12 +117,21 @@ contract DepositContract is IDepositContract, ERC165 {
 
         // Emit `DepositEvent` log
         bytes memory amount = to_little_endian_64(uint64(deposit_amount));
-        emit DepositEvent(pubkey, withdrawal_credentials, amount, signature, to_little_endian_64(uint64(deposit_count)));
+        emit DepositEvent(
+            pubkey,
+            withdrawal_credentials,
+            amount,
+            signature,
+            to_little_endian_64(uint64(deposit_count))
+        );
 
         // Compute deposit data root (`DepositData` hash tree root)
         bytes32 pubkey_root = sha256(abi.encodePacked(pubkey, bytes16(0)));
         bytes32 signature_root = sha256(
-            abi.encodePacked(sha256(abi.encodePacked(signature[:64])), sha256(abi.encodePacked(signature[64:], bytes32(0))))
+            abi.encodePacked(
+                sha256(abi.encodePacked(signature[:64])),
+                sha256(abi.encodePacked(signature[64:], bytes32(0)))
+            )
         );
         bytes32 node = sha256(
             abi.encodePacked(
@@ -145,7 +166,9 @@ contract DepositContract is IDepositContract, ERC165 {
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
-        return interfaceId == type(ERC165).interfaceId || interfaceId == type(IDepositContract).interfaceId;
+        return
+            interfaceId == type(ERC165).interfaceId ||
+            interfaceId == type(IDepositContract).interfaceId;
     }
 
     function to_little_endian_64(uint64 value) internal pure returns (bytes memory ret) {

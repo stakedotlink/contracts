@@ -17,11 +17,25 @@ contract GovernanceController is Ownable {
     Role[] private roles;
 
     event CallFunction(address indexed sender, address indexed contractAddress);
-    event AddRole(uint256 indexed roleId, string name, address[] members, address[] contracts, bytes4[][] functionSelectors);
+    event AddRole(
+        uint256 indexed roleId,
+        string name,
+        address[] members,
+        address[] contracts,
+        bytes4[][] functionSelectors
+    );
     event GrantRole(uint256 indexed roleId, address indexed account);
     event RevokeRole(uint256 indexed roleId, address indexed account);
-    event AddRoleFunctions(uint256 indexed roleId, address[] contracts, bytes4[][] functionSelectors);
-    event RemoveRoleFunctions(uint256 indexed roleId, address[] contracts, bytes4[][] functionSelectors);
+    event AddRoleFunctions(
+        uint256 indexed roleId,
+        address[] contracts,
+        bytes4[][] functionSelectors
+    );
+    event RemoveRoleFunctions(
+        uint256 indexed roleId,
+        address[] contracts,
+        bytes4[][] functionSelectors
+    );
 
     modifier roleExists(uint256 _roleId) {
         require(_roleId < roles.length, "Role does not exist");
@@ -212,7 +226,10 @@ contract GovernanceController is Ownable {
      * @param _functionSelector function selector
      * @return functionId id of function
      **/
-    function _getFunctionId(address _contract, bytes4 _functionSelector) private pure returns (bytes32) {
+    function _getFunctionId(
+        address _contract,
+        bytes4 _functionSelector
+    ) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(_contract, _functionSelector));
     }
 }

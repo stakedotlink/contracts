@@ -118,7 +118,10 @@ contract InsurancePool is StakingRewardsPool {
      */
     function getWithdrawalWindow(address _account) public view returns (uint64, uint64) {
         uint64 withdrawalStartTime = withdrawalRequests[_account];
-        if (withdrawalDelayDuration == 0 || block.timestamp >= withdrawalStartTime + withdrawalWindowDuration) return (0, 0);
+        if (
+            withdrawalDelayDuration == 0 ||
+            block.timestamp >= withdrawalStartTime + withdrawalWindowDuration
+        ) return (0, 0);
         return (withdrawalStartTime, withdrawalStartTime + withdrawalWindowDuration);
     }
 
@@ -206,7 +209,10 @@ contract InsurancePool is StakingRewardsPool {
      * @param _withdrawalDelayDuration amount of time required to wait before withdrawaing
      * @param _withdrawalWindowDuration amount of time a withdrawal can be executed for after the delay has elapsed
      */
-    function setWithdrawalParams(uint64 _withdrawalDelayDuration, uint64 _withdrawalWindowDuration) external onlyOwner {
+    function setWithdrawalParams(
+        uint64 _withdrawalDelayDuration,
+        uint64 _withdrawalWindowDuration
+    ) external onlyOwner {
         withdrawalDelayDuration = _withdrawalDelayDuration;
         withdrawalWindowDuration = _withdrawalWindowDuration;
         emit SetWithdrawalParams(_withdrawalDelayDuration, _withdrawalWindowDuration);

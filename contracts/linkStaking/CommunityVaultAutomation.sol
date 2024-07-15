@@ -13,11 +13,7 @@ contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
 
     error RewardsMinimumNotMet();
 
-    constructor(
-        address _communityVCS,
-        uint256 _minRewardsTotal,
-        uint256 _minRewardsPerVault
-    ) {
+    constructor(address _communityVCS, uint256 _minRewardsTotal, uint256 _minRewardsPerVault) {
         communityVCS = CommunityVCS(_communityVCS);
         minRewardsTotal = _minRewardsTotal;
         minRewardsPerVault = _minRewardsPerVault;
@@ -29,7 +25,9 @@ contract CommunityVaultAutomation is AutomationCompatibleInterface, Ownable {
      * @return performData abi encoded list of vault indexes to claim from
      *
      */
-    function checkUpkeep(bytes calldata) external returns (bool upkeepNeeded, bytes memory performData) {
+    function checkUpkeep(
+        bytes calldata
+    ) external returns (bool upkeepNeeded, bytes memory performData) {
         (uint256 totalRewards, uint256[] memory vaultList) = checkRewards();
         if (totalRewards >= minRewardsTotal) {
             return (true, abi.encode(vaultList));

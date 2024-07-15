@@ -48,7 +48,11 @@ contract OperatorVCSUpgrade is VaultControllerStrategyUpgrade {
      */
     function getMaxDeposits() public view override returns (uint256) {
         (, uint256 vaultMaxDeposits) = getVaultDepositLimits();
-        return totalDeposits + vaultMaxDeposits * vaults.length - (totalPrincipalDeposits + bufferedDeposits);
+        return
+            totalDeposits +
+            vaultMaxDeposits *
+            vaults.length -
+            (totalPrincipalDeposits + bufferedDeposits);
     }
 
     /**
@@ -106,7 +110,12 @@ contract OperatorVCSUpgrade is VaultControllerStrategyUpgrade {
         uint256 _vaultMinDeposits,
         uint256 _vaultMaxDeposits
     ) internal override {
-        uint256 deposited = _depositToVaults(_startIndex, _toDeposit, _vaultMinDeposits, _vaultMaxDeposits);
+        uint256 deposited = _depositToVaults(
+            _startIndex,
+            _toDeposit,
+            _vaultMinDeposits,
+            _vaultMaxDeposits
+        );
         totalPrincipalDeposits += deposited;
         bufferedDeposits -= deposited;
         emit DepositBufferedTokens(deposited);

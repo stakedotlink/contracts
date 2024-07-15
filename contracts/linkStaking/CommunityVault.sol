@@ -36,7 +36,10 @@ contract CommunityVault is Vault {
      * @param _minRewards min amount of rewards required to claim
      * @param _rewardsReceiver address to receive rewards
      **/
-    function claimRewards(uint256 _minRewards, address _rewardsReceiver) external onlyVaultController {
+    function claimRewards(
+        uint256 _minRewards,
+        address _rewardsReceiver
+    ) external onlyVaultController {
         uint256 rewards = getRewards();
         if (rewards != 0 && rewards >= _minRewards) {
             rewardsController.claimReward();

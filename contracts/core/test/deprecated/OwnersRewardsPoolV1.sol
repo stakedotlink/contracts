@@ -62,11 +62,7 @@ contract OwnersRewardsPoolV1 is RewardsPoolV1 {
     /**
      * @dev ERC677 implementation that automatically calls distributeRewards
      **/
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external nonReentrant {
+    function onTokenTransfer(address, uint256, bytes calldata) external nonReentrant {
         require(msg.sender == address(rewardsToken), "Sender must be rewards token");
         distributeRewards();
     }

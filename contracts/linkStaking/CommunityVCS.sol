@@ -62,7 +62,10 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _vaults list if vault indexes to claim from
      * @param _minRewards min amount of rewards required to claim
      */
-    function claimRewards(uint256[] calldata _vaults, uint256 _minRewards) external returns (uint256) {
+    function claimRewards(
+        uint256[] calldata _vaults,
+        uint256 _minRewards
+    ) external returns (uint256) {
         address receiver = address(this);
         uint256 balanceBefore = token.balanceOf(address(this));
         for (uint256 i = 0; i < _vaults.length; ++i) {
@@ -110,7 +113,8 @@ contract CommunityVCS is VaultControllerStrategy {
      * @dev used by chainlink keepers
      */
     function performUpkeep(bytes calldata) external {
-        if ((vaults.length - 1 - indexOfLastFullVault) >= vaultDeploymentThreshold) revert VaultsAboveThreshold();
+        if ((vaults.length - 1 - indexOfLastFullVault) >= vaultDeploymentThreshold)
+            revert VaultsAboveThreshold();
         _deployVaults(vaultDeploymentAmount);
     }
 
@@ -127,7 +131,10 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
      */
-    function setVaultDeploymentParams(uint128 _vaultDeploymentThreshold, uint128 _vaultDeploymentAmount) external onlyOwner {
+    function setVaultDeploymentParams(
+        uint128 _vaultDeploymentThreshold,
+        uint128 _vaultDeploymentAmount
+    ) external onlyOwner {
         vaultDeploymentThreshold = _vaultDeploymentThreshold;
         vaultDeploymentAmount = _vaultDeploymentAmount;
         emit SetVaultDeploymentParams(_vaultDeploymentThreshold, _vaultDeploymentAmount);

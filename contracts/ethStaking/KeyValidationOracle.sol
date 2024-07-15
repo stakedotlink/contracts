@@ -45,11 +45,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
      * @param _calldata (operatorId - id of operator to validate for,
      * isWhitelisted - whether or not operator is whitelisted) ABI encoded
      */
-    function onTokenTransfer(
-        address _sender,
-        uint256 _value,
-        bytes calldata _calldata
-    ) external {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
         require(msg.sender == chainlinkTokenAddress(), "Sender is not chainlink token");
         require(_value == fee, "Value is not equal to fee");
 
@@ -120,7 +116,11 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
             nwlOperatorController.initiateKeyPairValidation(_sender, _operatorId);
         }
 
-        Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.reportKeyPairValidation.selector);
+        Chainlink.Request memory req = buildChainlinkRequest(
+            jobId,
+            address(this),
+            this.reportKeyPairValidation.selector
+        );
 
         req.add("operatorId", Strings.toString(_operatorId));
         req.add("isWhitelisted", _isWhitelisted ? "true" : "false");

@@ -45,7 +45,8 @@ contract RewardsPoolTimeBased is RewardsPool, Ownable {
      **/
     function withdrawableRewards(address _account) public view override returns (uint256) {
         return
-            (controller.staked(_account) * (getRewardPerToken() - userRewardPerTokenPaid[_account])) /
+            (controller.staked(_account) *
+                (getRewardPerToken() - userRewardPerTokenPaid[_account])) /
             1e18 +
             userRewards[_account];
     }

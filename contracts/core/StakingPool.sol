@@ -29,7 +29,12 @@ contract StakingPool is StakingRewardsPool {
     address public rebaseController;
     uint16 private poolIndex; // deprecated
 
-    event UpdateStrategyRewards(address indexed account, uint256 totalStaked, int rewardsAmount, uint256 totalFees);
+    event UpdateStrategyRewards(
+        address indexed account,
+        uint256 totalStaked,
+        int rewardsAmount,
+        uint256 totalFees
+    );
     event Burn(address indexed account, uint256 amount);
     event DonateTokens(address indexed sender, uint256 amount);
 
@@ -112,7 +117,10 @@ contract StakingPool is StakingRewardsPool {
         if (toWithdraw > balance) {
             _withdrawLiquidity(toWithdraw - balance);
         }
-        require(token.balanceOf(address(this)) >= toWithdraw, "Not enough liquidity available to withdraw");
+        require(
+            token.balanceOf(address(this)) >= toWithdraw,
+            "Not enough liquidity available to withdraw"
+        );
 
         _burn(_account, toWithdraw);
         totalStaked -= toWithdraw;
@@ -318,7 +326,9 @@ contract StakingPool is StakingRewardsPool {
      * @return total rewards
      * @return total fees
      **/
-    function getStrategyRewards(uint256[] calldata _strategyIdxs) external view returns (int256, uint256) {
+    function getStrategyRewards(
+        uint256[] calldata _strategyIdxs
+    ) external view returns (int256, uint256) {
         int256 totalRewards;
         uint256 totalFees;
 
@@ -347,7 +357,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _data encoded data to be passed to each strategy
      **/
     function updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) external {
-        if (msg.sender != rebaseController && !_strategyExists(msg.sender)) revert SenderNotAuthorized();
+        if (msg.sender != rebaseController && !_strategyExists(msg.sender))
+            revert SenderNotAuthorized();
         _updateStrategyRewards(_strategyIdxs, _data);
     }
 
@@ -455,8 +466,11 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = 0; i < _strategyIdxs.length; ++i) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
 
-            (int256 depositChange, address[] memory strategyReceivers, uint256[] memory strategyFeeAmounts) = strategy
-                .updateDeposits(_data);
+            (
+                int256 depositChange,
+                address[] memory strategyReceivers,
+                uint256[] memory strategyFeeAmounts
+            ) = strategy.updateDeposits(_data);
             totalRewards += depositChange;
 
             if (strategyReceivers.length != 0) {
@@ -480,7 +494,9 @@ contract StakingPool is StakingRewardsPool {
 
             for (uint256 i = 0; i < fees.length; i++) {
                 receivers[receivers.length - 1][i] = fees[i].receiver;
-                feeAmounts[feeAmounts.length - 1][i] = (uint256(totalRewards) * fees[i].basisPoints) / 10000;
+                feeAmounts[feeAmounts.length - 1][i] =
+                    (uint256(totalRewards) * fees[i].basisPoints) /
+                    10000;
                 totalFeeAmounts += feeAmounts[feeAmounts.length - 1][i];
             }
         }
@@ -490,14 +506,20 @@ contract StakingPool is StakingRewardsPool {
         }
 
         if (totalFeeAmounts > 0) {
-            uint256 sharesToMint = (totalFeeAmounts * totalShares) / (totalStaked - totalFeeAmounts);
+            uint256 sharesToMint = (totalFeeAmounts * totalShares) /
+                (totalStaked - totalFeeAmounts);
             _mintShares(address(this), sharesToMint);
 
             uint256 feesPaidCount;
             for (uint256 i = 0; i < receivers.length; i++) {
                 for (uint256 j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        transferAndCallFrom(address(this), receivers[i][j], balanceOf(address(this)), "0x");
+                        transferAndCallFrom(
+                            address(this),
+                            receivers[i][j],
+                            balanceOf(address(this)),
+                            "0x"
+                        );
                     } else {
                         transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x");
                         feesPaidCount++;

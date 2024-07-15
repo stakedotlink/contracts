@@ -47,20 +47,17 @@ contract SequencerVCSMock {
         vault.deposit(_amount);
     }
 
-    function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
+    function withdrawOperatorRewards(
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256) {
         uint256 withdrawalAmount = (_amount * withdrawalPercentage) / 10000;
         return withdrawalAmount;
     }
 
-    function updateDeposits(uint256 _minRewards)
-        external
-        payable
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function updateDeposits(
+        uint256 _minRewards
+    ) external payable returns (uint256, uint256, uint256) {
         return vault.updateDeposits{value: msg.value}(_minRewards, 0);
     }
 

@@ -27,45 +27,44 @@ async function deployOperatorVCS() {
   const linkToken = (await getContract('LINKToken')) as ERC677
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
 
-  const stakingRewardsMock = await deploy('StakingRewardsMock', [linkToken.address])
+  const stakingRewardsMock = await deploy('StakingRewardsMock', [linkToken.target])
   const stakingMock = await deploy('StakingMock', [
-    linkToken.address,
-    stakingRewardsMock.address,
+    linkToken.target,
+    stakingRewardsMock.target,
     toEther(1000),
     toEther(75000),
     toEther(10000000),
   ])
-  const pfAlertsControllerMock = await deploy('PFAlertsControllerMock', [linkToken.address])
+  const pfAlertsControllerMock = await deploy('PFAlertsControllerMock', [linkToken.target])
 
   const vaultImpAddress = (await deployImplementation('OperatorVault')) as string
   console.log('OperatorVault implementation deployed: ', vaultImpAddress)
 
   const operatorVCS = (await deployUpgradeable('OperatorVCS', [
-    linkToken.address,
-    stakingPool.address,
-    stakingMock.address,
+    linkToken.target,
+    stakingPool.target,
+    stakingMock.target,
     vaultImpAddress,
     OperatorVCSArgs.fees,
     OperatorVCSArgs.maxDepositSizeBP,
     OperatorVCSArgs.operatorRewardPercentage,
   ])) as OperatorVCS
-  console.log('OperatorVCS deployed: ', operatorVCS.address)
+  console.log('OperatorVCS deployed: ', operatorVCS.target)
 
-  await (await linkToken.transfer(stakingRewardsMock.address, toEther(100000))).wait()
-  await (await linkToken.transfer(pfAlertsControllerMock.address, toEther(10000))).wait()
-  await (await stakingPool.addStrategy(operatorVCS.address)).wait()
+  await (await linkToken.transfer(stakingRewardsMock.target, toEther(100000))).wait()
+  await (await linkToken.transfer(pfAlertsControllerMock.target, toEther(10000))).wait()
+  await (await stakingPool.addStrategy(operatorVCS.target)).wait()
 
   for (let i = 0; i < 3; i++) {
     await (
-      await operatorVCS.addVault(
-        ethers.constants.AddressZero,
-        accounts[0],
-        pfAlertsControllerMock.address
-      )
+      await operatorVCS.addVault(ethers.ZeroAddress, accounts[0], pfAlertsControllerMock.target)
     ).wait()
   }
 
-  updateDeployments({ LINK_OperatorVCS: operatorVCS.address }, { LINK_OperatorVCS: 'OperatorVCS' })
+  updateDeployments(
+    { LINK_OperatorVCS: operatorVCS.target.toString() },
+    { LINK_OperatorVCS: 'OperatorVCS' }
+  )
 }
 
 // Community Vault Controller Strategy
@@ -80,10 +79,10 @@ async function deployCommunityVCS() {
   const linkToken = (await getContract('LINKToken')) as ERC677
   const stakingPool = (await getContract('LINK_StakingPool')) as StakingPool
 
-  const stakingRewardsMock = await deploy('StakingRewardsMock', [linkToken.address])
+  const stakingRewardsMock = await deploy('StakingRewardsMock', [linkToken.target])
   const stakingMock = await deploy('StakingMock', [
-    linkToken.address,
-    stakingRewardsMock.address,
+    linkToken.target,
+    stakingRewardsMock.target,
     toEther(1000),
     toEther(15000),
     toEther(10000000),
@@ -93,22 +92,22 @@ async function deployCommunityVCS() {
   console.log('CommunityVault implementation deployed: ', vaultImpAddress)
 
   const communityVCS = await deployUpgradeable('CommunityVCS', [
-    linkToken.address,
-    stakingPool.address,
-    stakingMock.address,
+    linkToken.target,
+    stakingPool.target,
+    stakingMock.target,
     vaultImpAddress,
     CommunityVCSArgs.fees,
     CommunityVCSArgs.maxDepositSizeBP,
     CommunityVCSArgs.vaultDeploymentThreshold,
     CommunityVCSArgs.vaultDeploymentAmount,
   ])
-  console.log('CommunityVCS deployed: ', communityVCS.address)
+  console.log('CommunityVCS deployed: ', communityVCS.target)
 
-  await (await linkToken.transfer(stakingRewardsMock.address, toEther(100000))).wait()
-  await (await stakingPool.addStrategy(communityVCS.address)).wait()
+  await (await linkToken.transfer(stakingRewardsMock.target, toEther(100000))).wait()
+  await (await stakingPool.addStrategy(communityVCS.target)).wait()
 
   updateDeployments(
-    { LINK_CommunityVCS: communityVCS.address },
+    { LINK_CommunityVCS: communityVCS.target },
     { LINK_CommunityVCS: 'CommunityVCS' }
   )
 }
@@ -136,46 +135,46 @@ export async function deployLINKStaking() {
   const sdlPoolPrimary = (await getContract('SDLPool')) as SDLPoolPrimary
 
   const stakingPool = (await deployUpgradeable('StakingPool', [
-    linkToken.address,
+    linkToken.target,
     StakingPoolArgs.derivativeTokenName,
     StakingPoolArgs.derivativeTokenSymbol,
     StakingPoolArgs.fees,
   ])) as StakingPool
-  console.log('LINK_StakingPool deployed: ', stakingPool.address)
+  console.log('LINK_StakingPool deployed: ', stakingPool.target)
 
   const priorityPool = (await deployUpgradeable('PriorityPool', [
-    linkToken.address,
-    stakingPool.address,
-    sdlPoolPrimary.address,
+    linkToken.target,
+    stakingPool.target,
+    sdlPoolPrimary.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
   ])) as PriorityPool
-  console.log('LINK_PriorityPool deployed: ', priorityPool.address)
+  console.log('LINK_PriorityPool deployed: ', priorityPool.target)
 
   const wsdToken = await deploy('WrappedSDToken', [
-    stakingPool.address,
+    stakingPool.target,
     WrappedSDTokenArgs.name,
     WrappedSDTokenArgs.symbol,
   ])
-  console.log('LINK_WrappedSDToken token deployed: ', wsdToken.address)
+  console.log('LINK_WrappedSDToken token deployed: ', wsdToken.target)
 
   const stLinkSDLRewardsPool = await deploy('RewardsPoolWSD', [
-    sdlPoolPrimary.address,
-    stakingPool.address,
-    wsdToken.address,
+    sdlPoolPrimary.target,
+    stakingPool.target,
+    wsdToken.target,
   ])
-  console.log('stLINK_SDLRewardsPool deployed: ', stLinkSDLRewardsPool.address)
+  console.log('stLINK_SDLRewardsPool deployed: ', stLinkSDLRewardsPool.target)
 
-  await (await sdlPoolPrimary.addToken(stakingPool.address, stLinkSDLRewardsPool.address)).wait()
-  await (await stakingPool.setPriorityPool(priorityPool.address)).wait()
+  await (await sdlPoolPrimary.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
+  await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()
 
   updateDeployments(
     {
-      LINK_StakingPool: stakingPool.address,
-      LINK_PriorityPool: priorityPool.address,
-      LINK_WrappedSDToken: wsdToken.address,
-      stLINK_SDLRewardsPool: stLinkSDLRewardsPool.address,
+      LINK_StakingPool: stakingPool.target.toString(),
+      LINK_PriorityPool: priorityPool.target.toString(),
+      LINK_WrappedSDToken: wsdToken.target,
+      stLINK_SDLRewardsPool: stLinkSDLRewardsPool.target,
     },
     {
       LINK_StakingPool: 'StakingPool',

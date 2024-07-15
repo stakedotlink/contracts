@@ -12,7 +12,7 @@ import "../tokens/base/ERC677Upgradeable.sol";
  * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
 abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
-    uint256 private constant DEAD_SHARES = 10**3;
+    uint256 private constant DEAD_SHARES = 10 ** 3;
 
     IERC20Upgradeable public token;
 
@@ -127,11 +127,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @param _recipient account to transfer to
      * @param _amount amount to transfer
      */
-    function _transfer(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) internal override {
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
         uint256 sharesToTransfer = getSharesByStake(_amount);
 
         require(_sender != address(0), "Transfer from the zero address");
@@ -150,11 +146,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
      * @param _recipient account to transfer to
      * @param _sharesAmount amount of shares to transfer
      */
-    function _transferShares(
-        address _sender,
-        address _recipient,
-        uint256 _sharesAmount
-    ) internal {
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
         require(_sender != address(0), "Transfer from the zero address");
         require(_recipient != address(0), "Transfer to the zero address");
         require(shares[_sender] >= _sharesAmount, "Transfer amount exceeds balance");

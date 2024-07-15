@@ -1,5 +1,4 @@
 import { ethers } from 'hardhat'
-import { Signer } from 'ethers'
 import { assert } from 'chai'
 import {
   toEther,
@@ -10,75 +9,78 @@ import {
   fromEther,
 } from '../utils/helpers'
 import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../typechain-types'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('WrappedSDToken', () => {
-  let token: ERC677
-  let wsdToken: WrappedSDToken
-  let stakingPool: StakingPool
-  let strategy1: StrategyMock
-  let ownersRewards: string
-  let signers: Signer[]
-  let accounts: string[]
+  async function deployFixture() {
+    const { signers, accounts } = await getAccounts()
+    const adrs: any = {}
 
-  async function stake(account: number, amount: number) {
-    await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-    await stakingPool.deposit(accounts[account], toEther(amount))
-  }
-
-  before(async () => {
-    ;({ signers, accounts } = await getAccounts())
-    ownersRewards = accounts[4]
-  })
-
-  beforeEach(async () => {
-    token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
+    adrs.token = await token.getAddress()
     await setupToken(token, accounts)
 
-    stakingPool = (await deployUpgradeable('StakingPool', [
-      token.address,
+    const stakingPool = (await deployUpgradeable('StakingPool', [
+      adrs.token,
       'LinkPool LINK',
       'lplLINK',
-      [[ownersRewards, 0]],
+      [[accounts[4], 0]],
     ])) as StakingPool
+    adrs.stakingPool = await stakingPool.getAddress()
 
-    wsdToken = (await deploy('WrappedSDToken', [
-      stakingPool.address,
+    const wsdToken = (await deploy('WrappedSDToken', [
+      adrs.stakingPool,
       'Wrapped LinkPool LINK',
       'wlplLINK',
     ])) as WrappedSDToken
+    adrs.wsdToken = await wsdToken.getAddress()
 
-    strategy1 = (await deployUpgradeable('StrategyMock', [
-      token.address,
-      stakingPool.address,
+    const strategy1 = (await deployUpgradeable('StrategyMock', [
+      adrs.token,
+      adrs.stakingPool,
       toEther(1000),
       toEther(10),
     ])) as StrategyMock
+    adrs.strategy1 = await strategy1.getAddress()
 
-    await stakingPool.addStrategy(strategy1.address)
+    async function stake(account: number, amount: number) {
+      await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
+      await stakingPool.deposit(accounts[account], toEther(amount))
+    }
+
+    await stakingPool.addStrategy(adrs.strategy1)
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(accounts[0])
 
-    await token.approve(stakingPool.address, ethers.constants.MaxUint256)
+    await token.approve(adrs.stakingPool, ethers.MaxUint256)
     await stakingPool.deposit(accounts[0], 1000)
-  })
+
+    return { signers, accounts, adrs, token, stakingPool, wsdToken, strategy1, stake }
+  }
 
   it('token metadata should be correct', async () => {
+    const { wsdToken } = await loadFixture(deployFixture)
+
     assert.equal(await wsdToken.name(), 'Wrapped LinkPool LINK', 'Name incorrect')
     assert.equal(await wsdToken.symbol(), 'wlplLINK', 'Symbol incorrect')
-    assert.equal(await wsdToken.decimals(), 18, 'Decimals incorrect')
+    assert.equal(Number(await wsdToken.decimals()), 18, 'Decimals incorrect')
   })
 
   it('should be able to wrap/unwrap tokens', async () => {
+    const { signers, accounts, adrs, stakingPool, wsdToken, stake } = await loadFixture(
+      deployFixture
+    )
+
     await stake(1, 1000)
-    await stakingPool.connect(signers[1]).approve(wsdToken.address, toEther(1000))
+    await stakingPool.connect(signers[1]).approve(adrs.wsdToken, toEther(1000))
     await wsdToken.connect(signers[1]).wrap(toEther(1000))
 
     assert.equal(
-      fromEther(await stakingPool.balanceOf(wsdToken.address)),
+      fromEther(await stakingPool.balanceOf(adrs.wsdToken)),
       1000,
       'wsdToken balance incorrect'
     )
@@ -91,7 +93,7 @@ describe('WrappedSDToken', () => {
     await wsdToken.connect(signers[1]).unwrap(toEther(1000))
 
     assert.equal(
-      fromEther(await stakingPool.balanceOf(wsdToken.address)),
+      fromEther(await stakingPool.balanceOf(adrs.wsdToken)),
       0,
       'wsdToken balance incorrect'
     )
@@ -104,11 +106,15 @@ describe('WrappedSDToken', () => {
   })
 
   it('should be able to wrap tokens using onTokenTransfer', async () => {
+    const { signers, accounts, adrs, stakingPool, wsdToken, stake } = await loadFixture(
+      deployFixture
+    )
+
     await stake(1, 1000)
-    await stakingPool.connect(signers[1]).transferAndCall(wsdToken.address, toEther(1000), '0x00')
+    await stakingPool.connect(signers[1]).transferAndCall(adrs.wsdToken, toEther(1000), '0x00')
 
     assert.equal(
-      fromEther(await stakingPool.balanceOf(wsdToken.address)),
+      fromEther(await stakingPool.balanceOf(adrs.wsdToken)),
       1000,
       'wsdToken balance incorrect'
     )
@@ -120,9 +126,11 @@ describe('WrappedSDToken', () => {
   })
 
   it('getWrappedByUnderlying and getUnderlyingByWrapped should work correctly', async () => {
+    const { adrs, token, stakingPool, wsdToken, stake } = await loadFixture(deployFixture)
+
     await stake(1, 1000)
     await stake(2, 3000)
-    await token.transfer(strategy1.address, toEther(1000))
+    await token.transfer(adrs.strategy1, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     assert.equal(
@@ -138,13 +146,17 @@ describe('WrappedSDToken', () => {
   })
 
   it('tokens should be wrapped/unwrapped at current exchange rate', async () => {
+    const { signers, accounts, adrs, token, stakingPool, wsdToken, stake } = await loadFixture(
+      deployFixture
+    )
+
     await stake(1, 1000)
-    await token.transfer(strategy1.address, toEther(1000))
+    await token.transfer(adrs.strategy1, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
-    await stakingPool.connect(signers[1]).transferAndCall(wsdToken.address, toEther(500), '0x00')
+    await stakingPool.connect(signers[1]).transferAndCall(adrs.wsdToken, toEther(500), '0x00')
 
     assert.equal(
-      fromEther(await stakingPool.balanceOf(wsdToken.address)),
+      fromEther(await stakingPool.balanceOf(adrs.wsdToken)),
       500,
       'wsdToken balance incorrect'
     )
@@ -158,7 +170,7 @@ describe('WrappedSDToken', () => {
     await wsdToken.connect(signers[2]).unwrap(toEther(100))
 
     assert.equal(
-      fromEther(await stakingPool.balanceOf(wsdToken.address)),
+      fromEther(await stakingPool.balanceOf(adrs.wsdToken)),
       300,
       'wsdToken balance incorrect'
     )

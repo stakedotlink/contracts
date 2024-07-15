@@ -20,11 +20,7 @@ contract OperatorVCSMock {
 
     IOperatorVault public vault;
 
-    constructor(
-        address _token,
-        uint256 _operatorRewardPercentage,
-        uint256 _withdrawalPercentage
-    ) {
+    constructor(address _token, uint256 _operatorRewardPercentage, uint256 _withdrawalPercentage) {
         token = IERC20(_token);
         operatorRewardPercentage = _operatorRewardPercentage;
         withdrawalPercentage = _withdrawalPercentage;
@@ -35,12 +31,18 @@ contract OperatorVCSMock {
         vault.deposit(_amount);
     }
 
-    function withdrawOperatorRewards(address _receiver, uint256 _amount) external returns (uint256) {
+    function withdrawOperatorRewards(
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256) {
         uint256 withdrawalAmount = (_amount * withdrawalPercentage) / 10000;
         return withdrawalAmount;
     }
 
-    function updateDeposits(uint256 _minRewards, address _rewardsReceiver) external returns (uint256, uint256) {
+    function updateDeposits(
+        uint256 _minRewards,
+        address _rewardsReceiver
+    ) external returns (uint256, uint256) {
         return vault.updateDeposits(_minRewards, _rewardsReceiver);
     }
 

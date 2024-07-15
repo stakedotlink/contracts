@@ -95,7 +95,10 @@ abstract contract VaultControllerStrategyUpgrade is Strategy {
 
         stakeController = IStaking(_stakeController);
 
-        require(_isContract(_vaultImplementation), "Vault implementation address must belong to a contract");
+        require(
+            _isContract(_vaultImplementation),
+            "Vault implementation address must belong to a contract"
+        );
         vaultImplementation = _vaultImplementation;
 
         (uint256 vaultMinDeposits, ) = getVaultDepositLimits();
@@ -167,7 +170,10 @@ abstract contract VaultControllerStrategyUpgrade is Strategy {
      * @param _performData encoded index of first non-full vault
      */
     function performUpkeep(bytes calldata _performData) external {
-        require(bufferedDeposits >= minDepositThreshold, "Minimum deposit threshold has not been met");
+        require(
+            bufferedDeposits >= minDepositThreshold,
+            "Minimum deposit threshold has not been met"
+        );
         uint256 startIndex = abi.decode(_performData, (uint256));
         depositBufferedTokens(startIndex);
     }
@@ -179,7 +185,8 @@ abstract contract VaultControllerStrategyUpgrade is Strategy {
     function depositBufferedTokens(uint256 _startIndex) public {
         (uint256 vaultMinDeposits, uint256 vaultMaxDeposits) = getVaultDepositLimits();
         require(
-            _startIndex == vaults.length - 1 || vaults[_startIndex].getPrincipalDeposits() < vaultMaxDeposits,
+            _startIndex == vaults.length - 1 ||
+                vaults[_startIndex].getPrincipalDeposits() < vaultMaxDeposits,
             "Cannot deposit into vault that is full"
         );
         require(
@@ -224,14 +231,12 @@ abstract contract VaultControllerStrategyUpgrade is Strategy {
      * @return receivers list of fee receivers
      * @return amounts list of fee amounts
      */
-    function updateDeposits(bytes calldata)
+    function updateDeposits(
+        bytes calldata
+    )
         external
         onlyStakingPool
-        returns (
-            int256 depositChange,
-            address[] memory receivers,
-            uint256[] memory amounts
-        )
+        returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
     {
         depositChange = getDepositChange();
 

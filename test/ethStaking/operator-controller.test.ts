@@ -14,8 +14,8 @@ import {
   OperatorControllerMockV2,
   RewardsPool,
 } from '../../typechain-types'
-import { Signer, constants } from 'ethers'
 import { ethers, upgrades } from 'hardhat'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -26,32 +26,30 @@ const keyPairs = {
 }
 
 describe('OperatorController', () => {
-  let controller: OperatorControllerMock
-  let sdToken: ERC677
-  let rewardsPool: RewardsPool
-  let signers: Signer[]
-  let accounts: string[]
+  async function deployFixture() {
+    const { signers, accounts } = await getAccounts()
+    const adrs: any = {}
 
-  before(async () => {
-    ;({ signers, accounts } = await getAccounts())
-  })
-
-  beforeEach(async () => {
-    sdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    const sdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'test',
       'test',
       50,
     ])) as ERC677
-    controller = (await deployUpgradeable('OperatorControllerMock', [
-      accounts[0],
-      sdToken.address,
-    ])) as OperatorControllerMock
-    rewardsPool = (await deploy('RewardsPool', [
-      controller.address,
-      sdToken.address,
-    ])) as RewardsPool
+    adrs.sdToken = await sdToken.getAddress()
 
-    await controller.setRewardsPool(rewardsPool.address)
+    const controller = (await deployUpgradeable('OperatorControllerMock', [
+      accounts[0],
+      adrs.sdToken,
+    ])) as OperatorControllerMock
+    adrs.controller = await controller.getAddress()
+
+    const rewardsPool = (await deploy('RewardsPool', [
+      adrs.controller,
+      adrs.sdToken,
+    ])) as RewardsPool
+    adrs.rewardsPool = await rewardsPool.getAddress()
+
+    await controller.setRewardsPool(adrs.rewardsPool)
     await controller.setKeyValidationOracle(accounts[0])
     await controller.setBeaconOracle(accounts[0])
 
@@ -63,9 +61,13 @@ describe('OperatorController', () => {
         await controller.reportKeyPairValidation(i, true)
       }
     }
-  })
+
+    return { signers, accounts, adrs, sdToken, controller, rewardsPool }
+  }
 
   it('addOperator should work correctly', async () => {
+    const { accounts, controller } = await loadFixture(deployFixture)
+
     await controller.addOperator('Testing123')
     let op = (await controller.getOperators([5]))[0]
 
@@ -73,20 +75,22 @@ describe('OperatorController', () => {
     assert.equal(op[1], accounts[0], 'operator owner incorrect')
     assert.equal(op[2], true, 'operator active incorrect')
     assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-    assert.equal(op[4].toNumber(), 0, 'operator validatorLimit incorrect')
-    assert.equal(op[5].toNumber(), 0, 'operator stoppedValidators incorrect')
-    assert.equal(op[6].toNumber(), 0, 'operator totalKeyPairs incorrect')
-    assert.equal(op[7].toNumber(), 0, 'operator usedKeyPairs incorrect')
+    assert.equal(Number(op[4]), 0, 'operator validatorLimit incorrect')
+    assert.equal(Number(op[5]), 0, 'operator stoppedValidators incorrect')
+    assert.equal(Number(op[6]), 0, 'operator totalKeyPairs incorrect')
+    assert.equal(Number(op[7]), 0, 'operator usedKeyPairs incorrect')
   })
 
   it('addKeyPairs and getKeyPairs should work correctly', async () => {
+    const { accounts, controller } = await loadFixture(deployFixture)
+
     await controller.addOperator('Testing123')
     await controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
     let op = (await controller.getOperators([5]))[0]
 
-    assert.equal(op[4].toNumber(), 0, 'operator validatorLimit incorrect')
-    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
-    assert.equal(op[7].toNumber(), 0, 'operator usedKeyPairs incorrect')
+    assert.equal(Number(op[4]), 0, 'operator validatorLimit incorrect')
+    assert.equal(Number(op[6]), 3, 'operator totalKeyPairs incorrect')
+    assert.equal(Number(op[7]), 0, 'operator usedKeyPairs incorrect')
 
     let pairs = await controller.getKeyPairs(5, 0, 2)
     assert.equal(pairs[0], keyPairs.keys.slice(0, 2 * pubkeyLength + 2))
@@ -111,6 +115,8 @@ describe('OperatorController', () => {
   })
 
   it('initiateKeyPairValidation should work correctly', async () => {
+    const { accounts, controller } = await loadFixture(deployFixture)
+
     await expect(controller.initiateKeyPairValidation(accounts[1], 3)).to.be.revertedWith(
       'Sender is not operator owner'
     )
@@ -126,11 +132,13 @@ describe('OperatorController', () => {
   })
 
   it('rewards distribution should work correctly', async () => {
+    const { signers, accounts, adrs, controller, sdToken } = await loadFixture(deployFixture)
+
     await controller.assignNextValidators([0], [1], 1)
-    await sdToken.transferAndCall(controller.address, toEther(50), '0x00')
+    await sdToken.transferAndCall(adrs.controller, toEther(50), '0x00')
 
     assert.equal(
-      fromEther(await sdToken.balanceOf(rewardsPool.address)),
+      fromEther(await sdToken.balanceOf(adrs.rewardsPool)),
       50,
       'rewards pool balance incorrect'
     )
@@ -160,6 +168,8 @@ describe('OperatorController', () => {
   })
 
   it('getAssignedKeys should work correctly', async () => {
+    const { controller } = await loadFixture(deployFixture)
+
     await controller.assignNextValidators([0, 2, 4], [3, 2, 1], 6)
 
     let keys = await controller.getAssignedKeys(0, 100)
@@ -185,13 +195,15 @@ describe('OperatorController', () => {
   })
 
   it('currentStateHash should be properly updated', async () => {
+    const { accounts, controller } = await loadFixture(deployFixture)
+
     let hash = await controller.currentStateHash()
 
     await controller.addKeyPairs(3, 3, keyPairs.keys, keyPairs.signatures)
     await controller.initiateKeyPairValidation(accounts[0], 3)
     await controller.reportKeyPairValidation(3, true)
     for (let i = 0; i < 3; i++) {
-      hash = ethers.utils.solidityKeccak256(
+      hash = ethers.solidityPackedKeccak256(
         ['bytes32', 'string', 'uint', 'bytes'],
         [
           hash,
@@ -205,7 +217,7 @@ describe('OperatorController', () => {
 
     await controller.disableOperator(3)
 
-    hash = ethers.utils.solidityKeccak256(
+    hash = ethers.solidityPackedKeccak256(
       ['bytes32', 'string', 'uint'],
       [hash, 'disableOperator', 3]
     )
@@ -213,6 +225,8 @@ describe('OperatorController', () => {
   })
 
   it('setOperatorName should work correctly', async () => {
+    const { signers, controller } = await loadFixture(deployFixture)
+
     await controller.setOperatorName(0, '1234')
 
     let op = (await controller.getOperators([0]))[0]
@@ -225,14 +239,16 @@ describe('OperatorController', () => {
   })
 
   it('setOperatorOwner should work correctly', async () => {
+    const { signers, accounts, controller } = await loadFixture(deployFixture)
+
     await controller.assignNextValidators([0, 2, 4], [3, 2, 2], 7)
     await controller.setOperatorOwner(0, accounts[2])
 
     let op = (await controller.getOperators([0]))[0]
     assert.equal(op[1], accounts[2], 'operator owner incorrect')
 
-    assert.equal((await controller.staked(accounts[0])).toNumber(), 4, 'operator staked incorrect')
-    assert.equal((await controller.staked(accounts[2])).toNumber(), 3, 'operator staked incorrect')
+    assert.equal(Number(await controller.staked(accounts[0])), 4, 'operator staked incorrect')
+    assert.equal(Number(await controller.staked(accounts[2])), 3, 'operator staked incorrect')
 
     await expect(controller.setOperatorOwner(5, accounts[1])).to.be.revertedWith(
       'Operator does not exist'
@@ -240,12 +256,14 @@ describe('OperatorController', () => {
     await expect(
       controller.connect(signers[1]).setOperatorOwner(0, accounts[1])
     ).to.be.revertedWith('Sender is not operator owner')
-    await expect(controller.setOperatorOwner(1, constants.AddressZero)).to.be.revertedWith(
+    await expect(controller.setOperatorOwner(1, ethers.ZeroAddress)).to.be.revertedWith(
       'Owner address cannot be 0'
     )
   })
 
   it('disableOperator should work correctly', async () => {
+    const { signers, controller } = await loadFixture(deployFixture)
+
     await controller.disableOperator(0)
 
     let op = (await controller.getOperators([0]))[0]
@@ -257,6 +275,8 @@ describe('OperatorController', () => {
   })
 
   it('setKeyValidationOracle should work correctly', async () => {
+    const { signers, accounts, controller } = await loadFixture(deployFixture)
+
     await controller.setKeyValidationOracle(accounts[1])
 
     assert.equal(
@@ -271,6 +291,8 @@ describe('OperatorController', () => {
   })
 
   it('setBeaconOracle should work correctly', async () => {
+    const { signers, accounts, controller } = await loadFixture(deployFixture)
+
     await controller.setBeaconOracle(accounts[1])
 
     assert.equal(await controller.beaconOracle(), accounts[1], 'beaconOracle incorrect')
@@ -281,10 +303,12 @@ describe('OperatorController', () => {
   })
 
   it('contract upgradeability should work correctly', async () => {
+    const { signers, accounts, adrs, controller } = await loadFixture(deployFixture)
+
     await controller.assignNextValidators([0], [2], 2)
 
     let Controller = await ethers.getContractFactory('OperatorControllerMockV2')
-    let upgradedImpAddress = (await upgrades.prepareUpgrade(controller.address, Controller, {
+    let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.controller, Controller, {
       kind: 'uups',
     })) as string
 
@@ -296,25 +320,25 @@ describe('OperatorController', () => {
 
     let upgraded = (await ethers.getContractAt(
       'OperatorControllerMockV2',
-      controller.address
+      adrs.controller
     )) as OperatorControllerMockV2
-    assert.equal((await upgraded.contractVersion()).toNumber(), 2, 'contract not upgraded')
+    assert.equal(Number(await upgraded.contractVersion()), 2, 'contract not upgraded')
 
     let op = (await controller.getOperators([0]))[0]
     assert.equal(op[0], 'test', 'operator name incorrect')
     assert.equal(op[1], accounts[0], 'operator owner incorrect')
     assert.equal(op[2], true, 'operator active incorrect')
     assert.equal(op[3], false, 'operator keyValidationInProgress incorrect')
-    assert.equal(op[4].toNumber(), 3, 'operator validatorLimit incorrect')
-    assert.equal(op[5].toNumber(), 0, 'operator stoppedValidators incorrect')
-    assert.equal(op[6].toNumber(), 3, 'operator totalKeyPairs incorrect')
-    assert.equal(op[7].toNumber(), 2, 'operator usedKeyPairs incorrect')
+    assert.equal(Number(op[4]), 3, 'operator validatorLimit incorrect')
+    assert.equal(Number(op[5]), 0, 'operator stoppedValidators incorrect')
+    assert.equal(Number(op[6]), 3, 'operator totalKeyPairs incorrect')
+    assert.equal(Number(op[7]), 2, 'operator usedKeyPairs incorrect')
 
     assert.equal(
-      (await upgraded.totalActiveValidators()).toNumber(),
+      Number(await upgraded.totalActiveValidators()),
       2,
       'totalActiveValidator incorrect'
     )
-    assert.equal((await upgraded.staked(accounts[0])).toNumber(), 2, 'operator staked incorrect')
+    assert.equal(Number(await upgraded.staked(accounts[0])), 2, 'operator staked incorrect')
   })
 })

@@ -72,10 +72,16 @@ contract WLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @param _quantity number of pairs to remove
      */
-    function removeKeyPairs(uint256 _operatorId, uint256 _quantity) external operatorExists(_operatorId) {
+    function removeKeyPairs(
+        uint256 _operatorId,
+        uint256 _quantity
+    ) external operatorExists(_operatorId) {
         require(msg.sender == operators[_operatorId].owner, "Sender is not operator owner");
         require(_quantity > 0, "Quantity must be greater than 0");
-        require(_quantity <= operators[_operatorId].totalKeyPairs, "Cannot remove more keys than are added");
+        require(
+            _quantity <= operators[_operatorId].totalKeyPairs,
+            "Cannot remove more keys than are added"
+        );
         require(
             _quantity <= operators[_operatorId].totalKeyPairs - operators[_operatorId].usedKeyPairs,
             "Cannot remove used key pairs"
@@ -83,11 +89,15 @@ contract WLOperatorController is OperatorController {
 
         operators[_operatorId].totalKeyPairs -= uint64(_quantity);
         if (operators[_operatorId].validatorLimit > operators[_operatorId].totalKeyPairs) {
-            queueLength -= operators[_operatorId].validatorLimit - operators[_operatorId].totalKeyPairs;
+            queueLength -=
+                operators[_operatorId].validatorLimit -
+                operators[_operatorId].totalKeyPairs;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
         }
 
-        currentStateHash = keccak256(abi.encodePacked(currentStateHash, "removeKeyPairs", _operatorId, _quantity));
+        currentStateHash = keccak256(
+            abi.encodePacked(currentStateHash, "removeKeyPairs", _operatorId, _quantity)
+        );
 
         emit RemoveKeyPairs(_operatorId, _quantity);
     }
@@ -97,17 +107,20 @@ contract WLOperatorController is OperatorController {
      * @param _operatorId id of operator
      * @param _success whether the pairs are valid
      */
-    function reportKeyPairValidation(uint256 _operatorId, bool _success)
-        external
-        onlyKeyValidationOracle
-        operatorExists(_operatorId)
-    {
+    function reportKeyPairValidation(
+        uint256 _operatorId,
+        bool _success
+    ) external onlyKeyValidationOracle operatorExists(_operatorId) {
         require(operators[_operatorId].keyValidationInProgress, "No key validation in progress");
 
         if (_success && operators[_operatorId].active) {
-            queueLength += operators[_operatorId].totalKeyPairs - operators[_operatorId].validatorLimit;
+            queueLength +=
+                operators[_operatorId].totalKeyPairs -
+                operators[_operatorId].validatorLimit;
             operators[_operatorId].validatorLimit = operators[_operatorId].totalKeyPairs;
-            currentStateHash = keccak256(abi.encodePacked(currentStateHash, "reportKeyPairValidation", _operatorId));
+            currentStateHash = keccak256(
+                abi.encodePacked(currentStateHash, "reportKeyPairValidation", _operatorId)
+            );
         }
         operators[_operatorId].keyValidationInProgress = false;
 
@@ -128,7 +141,10 @@ contract WLOperatorController is OperatorController {
         uint256 _totalValidatorCount
     ) external onlyEthStakingStrategy returns (bytes memory keys, bytes memory signatures) {
         require(_operatorIds.length > 0, "Empty operatorIds");
-        require(_operatorIds.length == _validatorCounts.length, "Inconsistent operatorIds and validatorCounts length");
+        require(
+            _operatorIds.length == _validatorCounts.length,
+            "Inconsistent operatorIds and validatorCounts length"
+        );
 
         OperatorCache memory lastOperator = OperatorCache(
             assignmentIndex == 0 ? operators.length - 1 : assignmentIndex - 1,
@@ -167,7 +183,11 @@ contract WLOperatorController is OperatorController {
                 "Inconsistent total validator count"
             );
 
-            for (uint256 j = operator.usedKeyPairs - operator.validatorCount; j < operator.usedKeyPairs; j++) {
+            for (
+                uint256 j = operator.usedKeyPairs - operator.validatorCount;
+                j < operator.usedKeyPairs;
+                j++
+            ) {
                 (bytes memory key, bytes memory signature) = _loadKeyPair(operatorId, j);
                 keys = bytes.concat(keys, key);
                 signatures = bytes.concat(signatures, signature);
@@ -175,9 +195,13 @@ contract WLOperatorController is OperatorController {
                 totalValidatorCount++;
             }
 
-            require(operator.usedKeyPairs <= operator.validatorLimit, "Assigned more keys than validator limit");
             require(
-                (operator.validatorCount % batchSize == 0) || (operator.usedKeyPairs == operator.validatorLimit),
+                operator.usedKeyPairs <= operator.validatorLimit,
+                "Assigned more keys than validator limit"
+            );
+            require(
+                (operator.validatorCount % batchSize == 0) ||
+                    (operator.usedKeyPairs == operator.validatorLimit),
                 "Invalid batching"
             );
 
@@ -220,7 +244,9 @@ contract WLOperatorController is OperatorController {
                 );
             }
 
-            uint256 batches = operator.validatorCount / batchSize + (operator.validatorCount % batchSize > 0 ? 1 : 0);
+            uint256 batches = operator.validatorCount /
+                batchSize +
+                (operator.validatorCount % batchSize > 0 ? 1 : 0);
             if (batches >= maxBatches) {
                 maxBatches = batches;
                 maxBatchOperatorId = operatorId;
@@ -279,7 +305,9 @@ contract WLOperatorController is OperatorController {
      * @return totalValidatorCount actual number of validators to be assigned
      * @return keys validator keys to be assigned
      */
-    function getNextValidators(uint256 _validatorCount)
+    function getNextValidators(
+        uint256 _validatorCount
+    )
         external
         view
         returns (
@@ -366,10 +394,10 @@ contract WLOperatorController is OperatorController {
      * @param _operatorIds list of operator ids to report for
      * @param _stoppedValidators list of lifetime stopped validators for each operator
      */
-    function reportStoppedValidators(uint256[] calldata _operatorIds, uint256[] calldata _stoppedValidators)
-        external
-        onlyBeaconOracle
-    {
+    function reportStoppedValidators(
+        uint256[] calldata _operatorIds,
+        uint256[] calldata _stoppedValidators
+    ) external onlyBeaconOracle {
         require(_operatorIds.length == _stoppedValidators.length, "Inconsistent list lengths");
 
         uint256 totalNewlyStoppedValidators;
@@ -388,7 +416,8 @@ contract WLOperatorController is OperatorController {
 
             rewardsPool.updateReward(operators[operatorId].owner);
 
-            uint256 newlyStoppedValidators = _stoppedValidators[i] - operators[operatorId].stoppedValidators;
+            uint256 newlyStoppedValidators = _stoppedValidators[i] -
+                operators[operatorId].stoppedValidators;
 
             operators[operatorId].stoppedValidators += uint64(newlyStoppedValidators);
 

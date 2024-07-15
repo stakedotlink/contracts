@@ -12,96 +12,117 @@ import {
   CCIPTokenPoolMock,
   WrappedNative,
 } from '../../../typechain-types'
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('WrappedTokenBridge', () => {
-  let linkToken: ERC677
-  let token2: ERC677
-  let wrappedToken: WrappedSDToken
-  let stakingPool: StakingPool
-  let bridge: WrappedTokenBridge
-  let onRamp: CCIPOnRampMock
-  let offRamp: CCIPOffRampMock
-  let tokenPool: CCIPTokenPoolMock
-  let tokenPool2: CCIPTokenPoolMock
-  let wrappedNative: WrappedNative
-  let accounts: string[]
+  async function deployFixture() {
+    const { accounts } = await getAccounts()
+    const adrs: any = {}
 
-  before(async () => {
-    ;({ accounts } = await getAccounts())
-  })
-
-  beforeEach(async () => {
-    linkToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    const linkToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    adrs.linkToken = await linkToken.getAddress()
+
+    const token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       '2',
       '2',
       1000000000,
     ])) as ERC677
+    adrs.token2 = await token2.getAddress()
 
-    stakingPool = (await deployUpgradeable('StakingPool', [
-      linkToken.address,
+    const stakingPool = (await deployUpgradeable('StakingPool', [
+      adrs.linkToken,
       'Staked LINK',
       'stLINK',
       [],
     ])) as StakingPool
+    adrs.stakingPool = await stakingPool.getAddress()
 
-    wrappedToken = (await deploy('WrappedSDToken', [
-      stakingPool.address,
+    const wrappedToken = (await deploy('WrappedSDToken', [
+      adrs.stakingPool,
       'Wrapped  stLINK',
       'wstLINK',
     ])) as WrappedSDToken
+    adrs.wrappedToken = await wrappedToken.getAddress()
 
     const strategy = (await deployUpgradeable('StrategyMock', [
-      linkToken.address,
-      stakingPool.address,
+      adrs.linkToken,
+      adrs.stakingPool,
       toEther(100000),
       toEther(0),
     ])) as StrategyMock
 
-    await stakingPool.addStrategy(strategy.address)
+    await stakingPool.addStrategy(await strategy.getAddress())
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(accounts[0])
 
-    await linkToken.approve(stakingPool.address, ethers.constants.MaxUint256)
+    await linkToken.approve(adrs.stakingPool, ethers.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(10000))
     await stakingPool.deposit(accounts[1], toEther(2000))
-    await linkToken.transfer(strategy.address, toEther(12000))
+    await linkToken.transfer(await strategy.getAddress(), toEther(12000))
     await stakingPool.updateStrategyRewards([0], '0x')
 
-    wrappedNative = (await deploy('WrappedNative')) as WrappedNative
+    const wrappedNative = (await deploy('WrappedNative')) as WrappedNative
+    adrs.wrappedNative = await wrappedNative.getAddress()
+
     const armProxy = await deploy('CCIPArmProxyMock')
-    const router = await deploy('Router', [wrappedNative.address, armProxy.address])
-    tokenPool = (await deploy('CCIPTokenPoolMock', [wrappedToken.address])) as CCIPTokenPoolMock
-    tokenPool2 = (await deploy('CCIPTokenPoolMock', [token2.address])) as CCIPTokenPoolMock
-    onRamp = (await deploy('CCIPOnRampMock', [
-      [wrappedToken.address, token2.address],
-      [tokenPool.address, tokenPool2.address],
-      linkToken.address,
+    const router = await deploy('Router', [adrs.wrappedNative, await armProxy.getAddress()])
+
+    const tokenPool = (await deploy('CCIPTokenPoolMock', [adrs.wrappedToken])) as CCIPTokenPoolMock
+    adrs.tokenPool = await tokenPool.getAddress()
+
+    const tokenPool2 = (await deploy('CCIPTokenPoolMock', [adrs.token2])) as CCIPTokenPoolMock
+    adrs.tokenPool2 = await tokenPool2.getAddress()
+
+    const onRamp = (await deploy('CCIPOnRampMock', [
+      [adrs.wrappedToken, adrs.token2],
+      [adrs.tokenPool, adrs.tokenPool2],
+      adrs.linkToken,
     ])) as CCIPOnRampMock
-    offRamp = (await deploy('CCIPOffRampMock', [
-      router.address,
-      [wrappedToken.address, token2.address],
-      [tokenPool.address, tokenPool2.address],
+    adrs.onRamp = await onRamp.getAddress()
+
+    const offRamp = (await deploy('CCIPOffRampMock', [
+      await router.getAddress(),
+      [adrs.wrappedToken, adrs.token2],
+      [adrs.tokenPool, adrs.tokenPool2],
     ])) as CCIPOffRampMock
+    adrs.offRamp = await offRamp.getAddress()
 
-    await router.applyRampUpdates([[77, onRamp.address]], [], [[77, offRamp.address]])
+    await router.applyRampUpdates([[77, adrs.onRamp]], [], [[77, adrs.offRamp]])
 
-    bridge = (await deploy('WrappedTokenBridge', [
-      router.address,
-      linkToken.address,
-      stakingPool.address,
-      wrappedToken.address,
+    const bridge = (await deploy('WrappedTokenBridge', [
+      await router.getAddress(),
+      adrs.linkToken,
+      adrs.stakingPool,
+      adrs.wrappedToken,
     ])) as WrappedTokenBridge
+    adrs.bridge = await bridge.getAddress()
 
-    await linkToken.approve(bridge.address, ethers.constants.MaxUint256)
-    await stakingPool.approve(bridge.address, ethers.constants.MaxUint256)
-  })
+    await linkToken.approve(adrs.bridge, ethers.MaxUint256)
+    await stakingPool.approve(adrs.bridge, ethers.MaxUint256)
+
+    return {
+      accounts,
+      adrs,
+      linkToken,
+      token2,
+      stakingPool,
+      wrappedToken,
+      wrappedNative,
+      tokenPool,
+      tokenPool2,
+      onRamp,
+      offRamp,
+      bridge,
+    }
+  }
 
   it('getFee should work correctly', async () => {
+    const { bridge } = await loadFixture(deployFixture)
+
     assert.equal(fromEther(await bridge.getFee(77, 1000, false)), 2)
     assert.equal(fromEther(await bridge.getFee(77, 1000, true)), 3)
     await expect(bridge.getFee(78, 1000, false)).to.be.reverted
@@ -109,35 +130,41 @@ describe('WrappedTokenBridge', () => {
   })
 
   it('transferTokens should work correctly with LINK fee', async () => {
+    const { accounts, adrs, bridge, linkToken, onRamp, wrappedToken } = await loadFixture(
+      deployFixture
+    )
+
     let preFeeBalance = await linkToken.balanceOf(accounts[0])
 
     await bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(10))
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
-    assert.equal(fromEther(await wrappedToken.balanceOf(tokenPool.address)), 50)
-    assert.equal(fromEther(preFeeBalance.sub(await linkToken.balanceOf(accounts[0]))), 2)
+    assert.equal(fromEther(await wrappedToken.balanceOf(adrs.tokenPool)), 50)
+    assert.equal(fromEther(preFeeBalance - (await linkToken.balanceOf(accounts[0]))), 2)
 
     assert.equal(fromEther(lastRequestData[0]), 2)
-    assert.equal(lastRequestData[1], bridge.address)
+    assert.equal(lastRequestData[1], adrs.bridge)
 
     assert.equal(
-      ethers.utils.defaultAbiCoder.decode(['address'], lastRequestMsg[0])[0],
+      ethers.AbiCoder.defaultAbiCoder().decode(['address'], lastRequestMsg[0])[0],
       accounts[4]
     )
     assert.equal(lastRequestMsg[1], '0x')
     assert.deepEqual(
       lastRequestMsg[2].map((d) => [d.token, fromEther(d.amount)]),
-      [[wrappedToken.address, 50]]
+      [[adrs.wrappedToken, 50]]
     )
-    assert.equal(lastRequestMsg[3], linkToken.address)
+    assert.equal(lastRequestMsg[3], adrs.linkToken)
 
     await expect(
       bridge.transferTokens(77, accounts[4], toEther(100), false, toEther(1))
-    ).to.be.revertedWith('FeeExceedsLimit()')
+    ).to.be.revertedWithCustomError(bridge, 'FeeExceedsLimit()')
   })
 
   it('transferTokens should work correctly with native fee', async () => {
+    const { accounts, adrs, bridge, onRamp, wrappedToken } = await loadFixture(deployFixture)
+
     let preFeeBalance = await ethers.provider.getBalance(accounts[0])
 
     await bridge.transferTokens(77, accounts[4], toEther(100), true, 0, {
@@ -146,34 +173,37 @@ describe('WrappedTokenBridge', () => {
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
-    assert.equal(fromEther(await wrappedToken.balanceOf(tokenPool.address)), 50)
+    assert.equal(fromEther(await wrappedToken.balanceOf(adrs.tokenPool)), 50)
     assert.equal(
-      Math.trunc(fromEther(preFeeBalance.sub(await ethers.provider.getBalance(accounts[0])))),
+      Math.trunc(fromEther(preFeeBalance - (await ethers.provider.getBalance(accounts[0])))),
       3
     )
 
     assert.equal(fromEther(lastRequestData[0]), 3)
-    assert.equal(lastRequestData[1], bridge.address)
+    assert.equal(lastRequestData[1], adrs.bridge)
 
     assert.equal(
-      ethers.utils.defaultAbiCoder.decode(['address'], lastRequestMsg[0])[0],
+      ethers.AbiCoder.defaultAbiCoder().decode(['address'], lastRequestMsg[0])[0],
       accounts[4]
     )
     assert.equal(lastRequestMsg[1], '0x')
     assert.deepEqual(
       lastRequestMsg[2].map((d) => [d.token, fromEther(d.amount)]),
-      [[wrappedToken.address, 50]]
+      [[adrs.wrappedToken, 50]]
     )
-    assert.equal(lastRequestMsg[3], wrappedNative.address)
+    assert.equal(lastRequestMsg[3], adrs.wrappedNative)
   })
 
   it('onTokenTransfer should work correctly', async () => {
+    const { accounts, adrs, bridge, linkToken, onRamp, wrappedToken, stakingPool } =
+      await loadFixture(deployFixture)
+
     let preFeeBalance = await linkToken.balanceOf(accounts[0])
 
     await stakingPool.transferAndCall(
-      bridge.address,
+      adrs.bridge,
       toEther(100),
-      ethers.utils.defaultAbiCoder.encode(
+      ethers.AbiCoder.defaultAbiCoder().encode(
         ['uint64', 'address', 'uint256', 'bytes'],
         [77, accounts[4], toEther(10), '0x']
       )
@@ -182,98 +212,103 @@ describe('WrappedTokenBridge', () => {
     let lastRequestData = await onRamp.getLastRequestData()
     let lastRequestMsg = await onRamp.getLastRequestMessage()
 
-    assert.equal(fromEther(await wrappedToken.balanceOf(tokenPool.address)), 50)
-    assert.equal(fromEther(preFeeBalance.sub(await linkToken.balanceOf(accounts[0]))), 2)
+    assert.equal(fromEther(await wrappedToken.balanceOf(adrs.tokenPool)), 50)
+    assert.equal(fromEther(preFeeBalance - (await linkToken.balanceOf(accounts[0]))), 2)
 
     assert.equal(fromEther(lastRequestData[0]), 2)
-    assert.equal(lastRequestData[1], bridge.address)
+    assert.equal(lastRequestData[1], adrs.bridge)
 
     assert.equal(
-      ethers.utils.defaultAbiCoder.decode(['address'], lastRequestMsg[0])[0],
+      ethers.AbiCoder.defaultAbiCoder().decode(['address'], lastRequestMsg[0])[0],
       accounts[4]
     )
     assert.equal(lastRequestMsg[1], '0x')
     assert.deepEqual(
       lastRequestMsg[2].map((d) => [d.token, fromEther(d.amount)]),
-      [[wrappedToken.address, 50]]
+      [[adrs.wrappedToken, 50]]
     )
-    assert.equal(lastRequestMsg[3], linkToken.address)
+    assert.equal(lastRequestMsg[3], adrs.linkToken)
 
-    await expect(bridge.onTokenTransfer(accounts[0], toEther(1000), '0x')).to.be.revertedWith(
-      'InvalidSender()'
-    )
-    await expect(stakingPool.transferAndCall(bridge.address, 0, '0x')).to.be.revertedWith(
+    await expect(
+      bridge.onTokenTransfer(accounts[0], toEther(1000), '0x')
+    ).to.be.revertedWithCustomError(bridge, 'InvalidSender()')
+    await expect(stakingPool.transferAndCall(adrs.bridge, 0, '0x')).to.be.revertedWithCustomError(
+      bridge,
       'InvalidValue()'
     )
     await expect(
       stakingPool.transferAndCall(
-        bridge.address,
+        adrs.bridge,
         toEther(100),
-        ethers.utils.defaultAbiCoder.encode(
+        ethers.AbiCoder.defaultAbiCoder().encode(
           ['uint64', 'address', 'uint256', 'bytes'],
           [77, accounts[4], toEther(1), '0x']
         )
       )
-    ).to.be.revertedWith('FeeExceedsLimit()')
+    ).to.be.revertedWithCustomError(bridge, 'FeeExceedsLimit()')
   })
 
   it('ccipReceive should work correctly', async () => {
+    const { accounts, adrs, stakingPool, offRamp, token2 } = await loadFixture(deployFixture)
+
     await stakingPool.transferAndCall(
-      bridge.address,
+      adrs.bridge,
       toEther(100),
-      ethers.utils.defaultAbiCoder.encode(
+      ethers.AbiCoder.defaultAbiCoder().encode(
         ['uint64', 'address', 'uint256', 'bytes'],
         [77, accounts[4], toEther(10), '0x']
       )
     )
     await offRamp.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId'),
+      ethers.encodeBytes32String('messageId'),
       77,
-      ethers.utils.defaultAbiCoder.encode(['address'], [accounts[5]]),
-      bridge.address,
-      [{ token: wrappedToken.address, amount: toEther(25) }]
+      ethers.AbiCoder.defaultAbiCoder().encode(['address'], [accounts[5]]),
+      adrs.bridge,
+      [{ token: adrs.wrappedToken, amount: toEther(25) }]
     )
 
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[5])), 50)
 
-    await token2.transfer(tokenPool2.address, toEther(100))
+    await token2.transfer(adrs.tokenPool2, toEther(100))
 
-    let success: any = await offRamp.callStatic.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId'),
+    let success: any = await offRamp.executeSingleMessage.staticCall(
+      ethers.encodeBytes32String('messageId'),
       77,
-      ethers.utils.defaultAbiCoder.encode(['address'], [accounts[5]]),
-      bridge.address,
+      ethers.AbiCoder.defaultAbiCoder().encode(['address'], [accounts[5]]),
+      adrs.bridge,
       [
-        { token: wrappedToken.address, amount: toEther(25) },
-        { token: token2.address, amount: toEther(25) },
+        { token: adrs.wrappedToken, amount: toEther(25) },
+        { token: adrs.token2, amount: toEther(25) },
       ]
     )
     assert.equal(success, false)
 
-    success = await offRamp.callStatic.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId'),
+    success = await offRamp.executeSingleMessage.staticCall(
+      ethers.encodeBytes32String('messageId'),
       77,
-      ethers.utils.defaultAbiCoder.encode(['address'], [accounts[5]]),
-      bridge.address,
-      [{ token: token2.address, amount: toEther(25) }]
+      ethers.AbiCoder.defaultAbiCoder().encode(['address'], [accounts[5]]),
+      adrs.bridge,
+      [{ token: adrs.token2, amount: toEther(25) }]
     )
     assert.equal(success, false)
 
-    success = await offRamp.callStatic.executeSingleMessage(
-      ethers.utils.formatBytes32String('messageId'),
+    success = await offRamp.executeSingleMessage.staticCall(
+      ethers.encodeBytes32String('messageId'),
       77,
       '0x',
-      bridge.address,
-      [{ token: wrappedToken.address, amount: toEther(25) }]
+      adrs.bridge,
+      [{ token: adrs.wrappedToken, amount: toEther(25) }]
     )
     assert.equal(success, false)
   })
 
   it('recoverTokens should work correctly', async () => {
-    await linkToken.transfer(bridge.address, toEther(1000))
-    await stakingPool.transfer(bridge.address, toEther(2000))
+    const { accounts, adrs, bridge, linkToken, stakingPool } = await loadFixture(deployFixture)
+
+    await linkToken.transfer(adrs.bridge, toEther(1000))
+    await stakingPool.transfer(adrs.bridge, toEther(2000))
     await bridge.recoverTokens(
-      [linkToken.address, stakingPool.address],
+      [adrs.linkToken, adrs.stakingPool],
       [toEther(1000), toEther(2000)],
       accounts[3]
     )

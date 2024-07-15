@@ -6,7 +6,10 @@ import "./IVault.sol";
 interface IOperatorVault is IVault {
     function getPendingRewards() external view returns (uint256);
 
-    function updateDeposits(uint256 _minRewards, address _rewardsReceiver) external returns (uint256, uint256);
+    function updateDeposits(
+        uint256 _minRewards,
+        address _rewardsReceiver
+    ) external returns (uint256, uint256);
 
     function setOperator(address _operator) external;
 

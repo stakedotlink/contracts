@@ -90,11 +90,8 @@ contract RESDLTokenBridge {
         if (_receiver == address(0)) revert InvalidReceiver();
         if (_payNative == false && msg.value != 0) revert InvalidMsgValue();
 
-        (address destination, ISDLPool.RESDLToken memory reSDLToken) = sdlPoolCCIPController.handleOutgoingRESDL(
-            _destinationChainSelector,
-            msg.sender,
-            _tokenId
-        );
+        (address destination, ISDLPool.RESDLToken memory reSDLToken) = sdlPoolCCIPController
+            .handleOutgoingRESDL(_destinationChainSelector, msg.sender, _tokenId);
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             _receiver,
@@ -105,11 +102,17 @@ contract RESDLTokenBridge {
             _gasLimit
         );
 
-        uint256 fees = IRouterClient(sdlPoolCCIPController.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
+        uint256 fees = IRouterClient(sdlPoolCCIPController.getRouter()).getFee(
+            _destinationChainSelector,
+            evm2AnyMessage
+        );
 
         if (_payNative) {
             if (fees > msg.value) revert InsufficientFee();
-            messageId = sdlPoolCCIPController.ccipSend{value: fees}(_destinationChainSelector, evm2AnyMessage);
+            messageId = sdlPoolCCIPController.ccipSend{value: fees}(
+                _destinationChainSelector,
+                evm2AnyMessage
+            );
             if (fees < msg.value) {
                 (bool success, ) = msg.sender.call{value: msg.value - fees}("");
                 if (!success) revert TransferFailed();
@@ -152,7 +155,11 @@ contract RESDLTokenBridge {
             _gasLimit
         );
 
-        return IRouterClient(sdlPoolCCIPController.getRouter()).getFee(_destinationChainSelector, evm2AnyMessage);
+        return
+            IRouterClient(sdlPoolCCIPController.getRouter()).getFee(
+                _destinationChainSelector,
+                evm2AnyMessage
+            );
     }
 
     /**
@@ -180,7 +187,13 @@ contract RESDLTokenBridge {
             ISDLPool.RESDLToken(amount, boostAmount, startTime, duration, expiry)
         );
 
-        emit TokenReceived(_message.messageId, _message.sourceChainSelector, sender, receiver, tokenId);
+        emit TokenReceived(
+            _message.messageId,
+            _message.sourceChainSelector,
+            sender,
+            receiver,
+            tokenId
+        );
     }
 
     /**
