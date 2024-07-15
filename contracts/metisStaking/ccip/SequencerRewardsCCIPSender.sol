@@ -32,6 +32,7 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     error ZeroAddress();
     error NoRewards();
     error SenderNotAuthorized();
+    error AlreadySet();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -58,15 +59,17 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
         __UUPSUpgradeable_init();
         __Ownable_init();
 
-        router = IRouterClient(_router);
-        linkToken = IERC20Upgradeable(_linkToken);
         metisToken = IERC20Upgradeable(_metisToken);
         transferInitiator = _transferInitiator;
         destinationChainSelector = _destinationChainSelector;
         extraArgs = _extraArgs;
 
-        linkToken.approve(_router, type(uint256).max);
-        metisToken.approve(_router, type(uint256).max);
+        if (_router != address(0)) {
+            router = IRouterClient(_router);
+            linkToken = IERC20Upgradeable(_linkToken);
+            linkToken.approve(_router, type(uint256).max);
+            metisToken.approve(_router, type(uint256).max);
+        }
     }
 
     /**
@@ -144,12 +147,23 @@ contract SequencerRewardsCCIPSender is UUPSUpgradeable, OwnableUpgradeable {
     function setRouter(address _router) external onlyOwner {
         if (_router == address(0)) revert ZeroAddress();
 
-        linkToken.approve(address(router), 0);
-        metisToken.approve(address(router), 0);
+        if (address(router) != address(0)) {
+            linkToken.approve(address(router), 0);
+            metisToken.approve(address(router), 0);
+        }
 
         linkToken.approve(_router, type(uint256).max);
         metisToken.approve(_router, type(uint256).max);
         router = IRouterClient(_router);
+    }
+
+    /**
+     * @notice Sets the LINK token
+     * @param _linkToken token address
+     **/
+    function setLINKToken(address _linkToken) external onlyOwner {
+        if (address(linkToken) != address(0)) revert AlreadySet();
+        linkToken = IERC20Upgradeable(_linkToken);
     }
 
     /**

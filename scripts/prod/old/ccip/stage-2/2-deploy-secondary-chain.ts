@@ -1,15 +1,15 @@
-import { toEther } from '../../../utils/helpers'
+import { toEther } from '../../../../utils/helpers'
 import {
   updateDeployments,
   deploy,
   deployUpgradeable,
   getContract,
-} from '../../../utils/deployment'
+} from '../../../../utils/deployment'
 import {
   RESDLTokenBridge,
   SDLPoolCCIPControllerSecondary,
   SDLPoolSecondary,
-} from '../../../../typechain-types'
+} from '../../../../../typechain-types'
 
 // Execute on Arbitrum Mainnet
 

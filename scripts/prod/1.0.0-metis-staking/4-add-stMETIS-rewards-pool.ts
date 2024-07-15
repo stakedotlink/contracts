@@ -1,14 +1,12 @@
+import { SDLPoolPrimary } from '../../../typechain-types'
+import { getContract } from '../../utils/deployment'
 import { ethers } from 'hardhat'
 import Safe, { EthersAdapter } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
-import { CommunityVCS } from '../../../typechain-types'
-import { getContract } from '../../utils/deployment'
 import { getAccounts } from '../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
-
-const numVaultsToAdd = 57 // the number of new community vaults to deploy
 
 async function main() {
   const { signers, accounts } = await getAccounts()
@@ -22,12 +20,16 @@ async function main() {
     ethAdapter,
   })
 
-  const communityVCS = (await getContract('LINK_CommunityVCS')) as CommunityVCS
+  const sdlPool = (await getContract('SDLPool', true)) as SDLPoolPrimary
+  const stakingPool = await getContract('METIS_StakingPool', true)
+  const stMetisSDLRewardsPool = await getContract('stMETIS_SDLRewardsPool', true)
+
+  await (await sdlPool.addToken(stakingPool.address, stMetisSDLRewardsPool.address)).wait()
 
   const safeTransactionData: MetaTransactionData[] = [
     {
-      to: communityVCS.address,
-      data: (await communityVCS.populateTransaction.addVaults(numVaultsToAdd)).data || '',
+      to: sdlPool.address,
+      data: (await sdlPool.addToken(stakingPool.address, stMetisSDLRewardsPool.address)).data || '',
       value: '0',
     },
   ]

@@ -1,22 +1,28 @@
+//@ts-nocheck
+
 import { Contract } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
 
-export const deploy = async (contractName: string, args: any[] = []) => {
+export const deploy = async (contractName: string, args: any[] = [], useLedgerSigner = false) => {
   const Contract = await ethers.getContractFactory(contractName)
   const contract = await Contract.deploy(...args)
   await contract.deployed()
   return contract
 }
 
-export const deployUpgradeable = async (contractName: string, args: any[] = []) => {
+export const deployUpgradeable = async (
+  contractName: string,
+  args: any[] = [],
+  useLedgerSigner = false
+) => {
   const Contract = await ethers.getContractFactory(contractName)
   const contract = await upgrades.deployProxy(Contract, args, { kind: 'uups' })
   await contract.deployed()
   return contract
 }
 
-export const deployImplementation = async (contractName: string) => {
+export const deployImplementation = async (contractName: string, useLedgerSigner = false) => {
   const Contract = await ethers.getContractFactory(contractName)
   return upgrades.deployImplementation(Contract, { kind: 'uups' })
 }
@@ -69,7 +75,7 @@ export const updateDeployments = (
   )
 }
 
-export const getContract = async (contractName: string): Promise<Contract> => {
+export const getContract = async (contractName: string, useLedgerSigner = false): Promise<Contract> => {
   const deployments = getDeployments()
   const contract = deployments[contractName]
 

@@ -11,6 +11,10 @@
     "address": "0xA95C5ebB86E0dE73B4fB8c47A45B792CFeA28C23",
     "artifact": "StakingAllowance"
   },
+  "METISToken": {
+    "address": "0x9E32b13ce7f2E80A01932B42553652E053D6ed8e",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
   "LPLMigration": {
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
     "artifact": "LPLMigration"
@@ -170,5 +174,34 @@
   "stLINK_WrappedTokenBridge": {
     "address": "0x6C1E2D2c55C83De945e3f37dF694cdE8452C1E82",
     "artifact": "WrappedTokenBridge"
+  },
+  "METIS_StakingPool": {
+    "address": "0x6301330F485b2732048Ce701286731e399acd799",
+    "artifact": "StakingPool"
+  },
+  "METIS_SequencerVCS": {
+    "address": "0x2FD2b375bE982d7464b39E8668AB6AD31fF6Db67",
+    "artifact": "SequencerVCS"
+  },
+  "METIS_SequencerRewardsCCIPReceiver": {
+    "address": "0x49cCA9f37373041B1B29e15e3Eb8C6c205C200de",
+    "artifact": "SequencerRewardsCCIPReceiver"
+  },
+  "METIS_PriorityPool": {
+    "address": "0x7498a1f8d3B537804144719b4076DcE110a34902",
+    "artifact": "PriorityPool"
+  },
+  "METIS_WrappedSDToken": {
+    "address": "0xB127D349eedB755C8ebAbf116d126B58F7B29Cbc",
+    "artifact": "WrappedSDToken"
+  },
+  "stMETIS_SDLRewardsPool": {
+    "address": "0xc3dbba165C92e6d6efA3394ff67D219Ebe1DF6bB",
+    "artifact": "RewardsPoolWSD"
+  },
+  "METIS_PP_DistributionOracle": {
+    "address": "0xc8d54e58981009c04037a6ee7d4fc32d0f4da9be",
+    "artifact": "DistributionOracle"
   }
+
 }

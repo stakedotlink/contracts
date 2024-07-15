@@ -4,6 +4,9 @@ import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@openzeppelin/hardhat-upgrades'
 import '@nomiclabs/hardhat-etherscan'
+import '@nomicfoundation/hardhat-ledger'
+
+export const ledgerAccount = '0x23c4602e63ACfe29b930c530B19d44a84AF0d767'
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -28,7 +31,7 @@ const config: HardhatUserConfig = {
   networks: {
     localhost: {
       url: 'http://127.0.0.1:8545',
-      accounts,
+      ledgerAccounts: [ledgerAccount],
     },
     sepolia: {
       url: '',
@@ -40,9 +43,12 @@ const config: HardhatUserConfig = {
       accounts,
     },
     mainnet: {
-      url: 'http://localhost:1248',
-      accounts: 'remote',
-      timeout: 600000,
+      url: '',
+      ledgerAccounts: [ledgerAccount],
+    },
+    metis: {
+      url: '',
+      ledgerAccounts: [ledgerAccount],
     },
     testnet: {
       url: '',
@@ -51,6 +57,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 1337,
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
+      ledgerAccounts: [ledgerAccount],
       mining: {
         auto: true,
         interval: 5000,

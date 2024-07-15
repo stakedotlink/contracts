@@ -133,7 +133,7 @@ const PriorityPoolArgs = {
 export async function deployLINKStaking() {
   const { accounts } = await getAccounts()
   const linkToken = (await getContract('LINKToken')) as ERC677
-  const sdlPoolPrimary = (await getContract('SDLPoolPrimary')) as SDLPoolPrimary
+  const sdlPoolPrimary = (await getContract('SDLPool')) as SDLPoolPrimary
 
   const stakingPool = (await deployUpgradeable('StakingPool', [
     linkToken.address,
