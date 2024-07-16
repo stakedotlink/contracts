@@ -101,7 +101,9 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @param _withdrawalIds list of withdrawal ids
      * @return list of withdrawals corresponding to withdrawal ids
      */
-    function getWithdrawals(uint256[] calldata _withdrawalIds) external view returns (Withdrawal[] memory) {
+    function getWithdrawals(
+        uint256[] calldata _withdrawalIds
+    ) external view returns (Withdrawal[] memory) {
         Withdrawal[] memory withdrawals = new Withdrawal[](_withdrawalIds.length);
 
         for (uint256 i = 0; i < _withdrawalIds.length; ++i) {
@@ -144,7 +146,9 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @return list of withdrawal ids
      */
     function getWithdrawalIdsByOwner(address _account) public view returns (uint256[] memory) {
-        uint256[] memory activeWithdrawals = new uint256[](queuedWithdrawalsByAccount[_account].length);
+        uint256[] memory activeWithdrawals = new uint256[](
+            queuedWithdrawalsByAccount[_account].length
+        );
         uint256 totalActiveWithdrawals;
 
         for (uint256 i = 0; i < activeWithdrawals.length; ++i) {
@@ -174,7 +178,9 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @return list of withdrawal ids
      * @return total withdrawable across all account's withdrawals
      */
-    function getFinalizedWithdrawalIdsByOwner(address _account) external view returns (uint256[] memory, uint256) {
+    function getFinalizedWithdrawalIdsByOwner(
+        address _account
+    ) external view returns (uint256[] memory, uint256) {
         uint256[] memory withdrawalIds = getWithdrawalIdsByOwner(_account);
         uint256[] memory batchIds = getBatchIds(withdrawalIds);
 
@@ -191,7 +197,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
                 if (batchIds[i] != 0) {
                     totalWithdrawable +=
-                        (uint256(withdrawalBatches[batchIds[i]].stakePerShares) * uint256(withdrawal.sharesRemaining)) /
+                        (uint256(withdrawalBatches[batchIds[i]].stakePerShares) *
+                            uint256(withdrawal.sharesRemaining)) /
                         1e18;
                 }
             } else {
@@ -229,10 +236,14 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             WithdrawalBatch memory batch = withdrawalBatches[batchId];
 
             if (withdrawalOwners[withdrawalId] != owner) revert SenderNotAuthorized();
-            if (batchId != 0 && withdrawalId <= withdrawalBatches[batchId - 1].indexOfLastWithdrawal)
-                revert InvalidWithdrawalId();
-            if (batchId != 0 && withdrawalId > batch.indexOfLastWithdrawal && withdrawal.partiallyWithdrawableAmount == 0)
-                revert InvalidWithdrawalId();
+            if (
+                batchId != 0 && withdrawalId <= withdrawalBatches[batchId - 1].indexOfLastWithdrawal
+            ) revert InvalidWithdrawalId();
+            if (
+                batchId != 0 &&
+                withdrawalId > batch.indexOfLastWithdrawal &&
+                withdrawal.partiallyWithdrawableAmount == 0
+            ) revert InvalidWithdrawalId();
 
             if (withdrawalId <= batch.indexOfLastWithdrawal) {
                 amountToWithdraw +=
@@ -288,7 +299,10 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @return true if withdrawal should be executed, false otherwise
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        if (_getStakeByShares(totalQueuedShareWithdrawals) != 0 && priorityPool.canWithdraw(address(this), 0) != 0) {
+        if (
+            _getStakeByShares(totalQueuedShareWithdrawals) != 0 &&
+            priorityPool.canWithdraw(address(this), 0) != 0
+        ) {
             return (true, "");
         }
         return (false, "");
@@ -340,13 +354,20 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             if (sharesRemaining > sharesToWithdraw) {
                 queuedWithdrawals[i] = Withdrawal(
                     uint128(sharesRemaining - sharesToWithdraw),
-                    uint128(queuedWithdrawals[i].partiallyWithdrawableAmount + _getStakeByShares(sharesToWithdraw))
+                    uint128(
+                        queuedWithdrawals[i].partiallyWithdrawableAmount +
+                            _getStakeByShares(sharesToWithdraw)
+                    )
                 );
                 indexOfNextWithdrawal = i;
-                withdrawalBatches.push(WithdrawalBatch(uint128(i - 1), uint128(_getStakeByShares(1 ether))));
+                withdrawalBatches.push(
+                    WithdrawalBatch(uint128(i - 1), uint128(_getStakeByShares(1 ether)))
+                );
             } else {
                 indexOfNextWithdrawal = i + 1;
-                withdrawalBatches.push(WithdrawalBatch(uint128(i), uint128(_getStakeByShares(1 ether))));
+                withdrawalBatches.push(
+                    WithdrawalBatch(uint128(i), uint128(_getStakeByShares(1 ether)))
+                );
             }
 
             sharesToWithdraw = 0;

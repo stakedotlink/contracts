@@ -8,15 +8,7 @@ interface IVaultControllerStrategy {
 
     function vaultGroups(uint256 _vaultGroupIndex) external view returns (uint64, uint128);
 
-    function globalVaultState()
-        external
-        view
-        returns (
-            uint64,
-            uint64,
-            uint64,
-            uint64
-        );
+    function globalVaultState() external view returns (uint64, uint64, uint64, uint64);
 
     function updateVaultGroups(
         uint256[] calldata _curGroupVaultsToUnbond,

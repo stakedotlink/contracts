@@ -66,10 +66,10 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 toDeposit = 2 * _toDeposit;
         bytes[] memory depositData = new bytes[](2);
 
-        (uint64[] memory opVaultDepositOrder, uint256 opVaultsTotalToDeposit) = _getVaultDepositOrder(
-            operatorVCS,
-            toDeposit
-        );
+        (
+            uint64[] memory opVaultDepositOrder,
+            uint256 opVaultsTotalToDeposit
+        ) = _getVaultDepositOrder(operatorVCS, toDeposit);
         depositData[0] = abi.encode(opVaultDepositOrder);
 
         if (opVaultsTotalToDeposit < toDeposit) {
@@ -94,10 +94,10 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 toWithdraw = 2 * _toWithdraw;
         bytes[] memory withdrawalData = new bytes[](2);
 
-        (uint64[] memory comVaultWithdrawalOrder, uint256 comVaultsTotalToWithdraw) = _getVaultWithdrawalOrder(
-            communityVCS,
-            toWithdraw
-        );
+        (
+            uint64[] memory comVaultWithdrawalOrder,
+            uint256 comVaultsTotalToWithdraw
+        ) = _getVaultWithdrawalOrder(communityVCS, toWithdraw);
         withdrawalData[1] = abi.encode(comVaultWithdrawalOrder);
 
         if (comVaultsTotalToWithdraw < toWithdraw) {
@@ -138,7 +138,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
         if (
             timeOfLastUpdateByGroup[nextUnbondedVaultGroup] != 0 &&
-            block.timestamp <= timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod + claimPeriod
+            block.timestamp <=
+            timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod + claimPeriod
         ) return (false, "");
 
         if (
@@ -147,17 +148,18 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             block.timestamp <= timeOfLastUpdateByGroup[curUnbondedVaultGroup - 1] + claimPeriod
         ) return (false, "");
 
-        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedVaultGroup] + unbondingPeriod) return (false, "");
+        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedVaultGroup] + unbondingPeriod)
+            return (false, "");
 
-        (uint256[] memory curGroupOpVaultsToUnbond, uint256 nextGroupOpVaultsTotalUnbonded) = _getVaultUpdateData(
-            operatorVCS,
-            nextUnbondedVaultGroup
-        );
+        (
+            uint256[] memory curGroupOpVaultsToUnbond,
+            uint256 nextGroupOpVaultsTotalUnbonded
+        ) = _getVaultUpdateData(operatorVCS, nextUnbondedVaultGroup);
 
-        (uint256[] memory curGroupComVaultsToUnbond, uint256 nextGroupComVaultsTotalUnbonded) = _getVaultUpdateData(
-            communityVCS,
-            nextUnbondedVaultGroup
-        );
+        (
+            uint256[] memory curGroupComVaultsToUnbond,
+            uint256 nextGroupComVaultsTotalUnbonded
+        ) = _getVaultUpdateData(communityVCS, nextUnbondedVaultGroup);
 
         return (
             true,
@@ -180,7 +182,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
         if (
             timeOfLastUpdateByGroup[nextUnbondedVaultGroup] != 0 &&
-            block.timestamp <= timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod + claimPeriod
+            block.timestamp <=
+            timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod + claimPeriod
         ) revert NoUpdateNeeded();
 
         if (
@@ -189,7 +192,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             block.timestamp <= timeOfLastUpdateByGroup[curUnbondedVaultGroup - 1] + claimPeriod
         ) revert NoUpdateNeeded();
 
-        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedVaultGroup] + unbondingPeriod) revert NoUpdateNeeded();
+        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedVaultGroup] + unbondingPeriod)
+            revert NoUpdateNeeded();
 
         (
             uint256[] memory curGroupOpVaultsToUnbond,
@@ -198,8 +202,16 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             uint256 nextGroupComVaultsTotalUnbonded
         ) = abi.decode(_data, (uint256[], uint256, uint256[], uint256));
 
-        operatorVCS.updateVaultGroups(curGroupOpVaultsToUnbond, nextUnbondedVaultGroup, nextGroupOpVaultsTotalUnbonded);
-        communityVCS.updateVaultGroups(curGroupComVaultsToUnbond, nextUnbondedVaultGroup, nextGroupComVaultsTotalUnbonded);
+        operatorVCS.updateVaultGroups(
+            curGroupOpVaultsToUnbond,
+            nextUnbondedVaultGroup,
+            nextGroupOpVaultsTotalUnbonded
+        );
+        communityVCS.updateVaultGroups(
+            curGroupComVaultsToUnbond,
+            nextUnbondedVaultGroup,
+            nextGroupComVaultsTotalUnbonded
+        );
 
         timeOfLastUpdateByGroup[curUnbondedVaultGroup] = uint64(block.timestamp);
         curUnbondedVaultGroup = uint64(nextUnbondedVaultGroup);
@@ -212,11 +224,10 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @return vault deposit order
      * @return total deposit space across returned vaults
      */
-    function _getVaultDepositOrder(IVaultControllerStrategy _vcs, uint256 _toDeposit)
-        internal
-        view
-        returns (uint64[] memory, uint256)
-    {
+    function _getVaultDepositOrder(
+        IVaultControllerStrategy _vcs,
+        uint256 _toDeposit
+    ) internal view returns (uint64[] memory, uint256) {
         address[] memory vaults = _vcs.getVaults();
         if (vaults.length == 0) return (new uint64[](0), 0);
 
@@ -240,7 +251,9 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             ++totalVaultsAdded;
             (uint256 withdrawalIndex, ) = _vcs.vaultGroups(groupDepositIndex % numVaultGroups);
             uint256 deposits = IVault(vaults[groupDepositIndex]).getPrincipalDeposits();
-            if (deposits != maxDeposits && (groupDepositIndex != withdrawalIndex || deposits == 0)) {
+            if (
+                deposits != maxDeposits && (groupDepositIndex != withdrawalIndex || deposits == 0)
+            ) {
                 totalDepositsAdded += maxDeposits - deposits;
             }
         }
@@ -253,7 +266,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
                 if (j != groupDepositIndex && deposits != maxDeposits) {
                     vaultDepositOrder[totalVaultsAdded] = j;
                     ++totalVaultsAdded;
-                    if (j != withdrawalIndex || deposits == 0) totalDepositsAdded += maxDeposits - deposits;
+                    if (j != withdrawalIndex || deposits == 0)
+                        totalDepositsAdded += maxDeposits - deposits;
                     if (totalDepositsAdded >= _toDeposit) break;
                 }
             }
@@ -278,11 +292,10 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @return vault withdrawal order
      * @return total withdrawal space across returned vaults
      */
-    function _getVaultWithdrawalOrder(IVaultControllerStrategy _vcs, uint256 _toWithdraw)
-        internal
-        view
-        returns (uint64[] memory, uint256)
-    {
+    function _getVaultWithdrawalOrder(
+        IVaultControllerStrategy _vcs,
+        uint256 _toWithdraw
+    ) internal view returns (uint64[] memory, uint256) {
         address[] memory vaults = _vcs.getVaults();
         (, , , uint64 maxVaultIndex) = _vcs.globalVaultState();
         (uint64 withdrawalIndex, ) = _vcs.vaultGroups(curUnbondedVaultGroup);
@@ -327,15 +340,22 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @return list of vaults to unbond in current vault group
      * @return total unbonded across all vaults in next vault group
      */
-    function _getVaultUpdateData(IVaultControllerStrategy _vcs, uint256 _nextUnbondedVaultGroup)
-        internal
-        view
-        returns (uint256[] memory, uint256)
-    {
+    function _getVaultUpdateData(
+        IVaultControllerStrategy _vcs,
+        uint256 _nextUnbondedVaultGroup
+    ) internal view returns (uint256[] memory, uint256) {
         address[] memory vaults = _vcs.getVaults();
-        uint256[] memory curGroupVaultsToUnbond = _getNonEmptyVaults(vaults, numVaultGroups, curUnbondedVaultGroup);
+        uint256[] memory curGroupVaultsToUnbond = _getNonEmptyVaults(
+            vaults,
+            numVaultGroups,
+            curUnbondedVaultGroup
+        );
 
-        uint256 nextGroupTotalUnbonded = _getTotalUnbonded(vaults, numVaultGroups, _nextUnbondedVaultGroup);
+        uint256 nextGroupTotalUnbonded = _getTotalUnbonded(
+            vaults,
+            numVaultGroups,
+            _nextUnbondedVaultGroup
+        );
 
         return (curGroupVaultsToUnbond, nextGroupTotalUnbonded);
     }
@@ -407,7 +427,9 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _values list of values
      * @return sorted list of indexes
      */
-    function _sortIndexesDescending(uint256[] memory _values) internal pure returns (uint256[] memory) {
+    function _sortIndexesDescending(
+        uint256[] memory _values
+    ) internal pure returns (uint256[] memory) {
         uint256 n = _values.length;
 
         uint256[] memory indexes = new uint256[](n);
