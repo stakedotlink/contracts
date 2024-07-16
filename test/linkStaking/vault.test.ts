@@ -83,18 +83,21 @@ describe('Vault', () => {
     await vault.unbond()
     let ts: any = (await ethers.provider.getBlock('latest'))?.timestamp
     assert.equal(
-      (await stakingController.getClaimPeriodEndsAt(adrs.vault)).toNumber(),
+      Number(await stakingController.getClaimPeriodEndsAt(adrs.vault)),
       ts + unbondingPeriod + claimPeriod
     )
   })
 
   it('should be able to withdraw', async () => {
-    const { adrs, vault, token } = await loadFixture(deployFixture)
+    const { adrs, vault, token, stakingController } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
     await vault.unbond()
 
-    await expect(vault.withdraw(toEther(30))).to.be.revertedWith('NotInClaimPeriod()')
+    await expect(vault.withdraw(toEther(30))).to.be.revertedWithCustomError(
+      stakingController,
+      'NotInClaimPeriod()'
+    )
 
     await time.increase(unbondingPeriod + 1)
 

@@ -96,7 +96,10 @@ describe('OperatorVault', () => {
 
     await strategy.unbond()
 
-    await expect(strategy.withdraw(toEther(30))).to.be.revertedWith('NotInClaimPeriod()')
+    await expect(strategy.withdraw(toEther(30))).to.be.revertedWithCustomError(
+      stakingController,
+      'NotInClaimPeriod()'
+    )
 
     await time.increase(unbondingPeriod + 1)
 
