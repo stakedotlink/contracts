@@ -109,8 +109,8 @@ describe('VaultControllerStrategy', () => {
     ])) as FundFlowController
     adrs.fundFlowController = await fundFlowController.getAddress()
 
-    await strategy.setFundFlowController(fundFlowController.address)
-    await strategy2.setFundFlowController(fundFlowController.address)
+    await strategy.setFundFlowController(adrs.fundFlowController)
+    await strategy2.setFundFlowController(adrs.fundFlowController)
 
     async function updateVaultGroups(
       curGroupVaultsToUnbond: number[],
@@ -163,18 +163,18 @@ describe('VaultControllerStrategy', () => {
     await strategy.deposit(toEther(50), encodeVaults([]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 50)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[0])), 50)
-    assert.equal((await strategy.globalVaultState())[3].toNumber(), 0)
+    assert.equal(Number((await strategy.globalVaultState())[3]), 0)
 
     await strategy.deposit(toEther(155), encodeVaults([]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 200)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[0])), 100)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[1])), 100)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[2])), 0)
-    assert.equal((await strategy.globalVaultState())[3].toNumber(), 2)
+    assert.equal(Number((await strategy.globalVaultState())[3]), 2)
 
     await strategy.deposit(toEther(1000), encodeVaults([]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1200)
-    assert.equal((await strategy.globalVaultState())[3].toNumber(), 12)
+    assert.equal(Number((await strategy.globalVaultState())[3]), 12)
 
     // Deposit into vault groups
 
@@ -208,7 +208,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[1])), 50)
     assert.equal(fromEther(await strategy.canWithdraw()), 0)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
       [11, 220]
     )
 
@@ -217,12 +217,12 @@ describe('VaultControllerStrategy', () => {
     await time.increase(claimPeriod)
     await updateVaultGroups([0, 5, 10], 30)
 
-    await expect(strategy.deposit(toEther(200), encodeVaults([6, 11, 4]))).to.be.revertedWith(
-      'InvalidVaultIds()'
-    )
-    await expect(strategy.deposit(toEther(200), encodeVaults([1, 12]))).to.be.revertedWith(
-      'InvalidVaultIds()'
-    )
+    await expect(
+      strategy.deposit(toEther(200), encodeVaults([6, 11, 4]))
+    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+    await expect(
+      strategy.deposit(toEther(200), encodeVaults([1, 12]))
+    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
 
     await strategy.deposit(toEther(200), encodeVaults([1, 6, 11, 4]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 710)
@@ -231,11 +231,11 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[4])), 50)
     assert.equal(fromEther(await strategy.canWithdraw()), 30)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
       [11, 70]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(4).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(4).then((d) => [Number(d[0]), fromEther(d[1])]),
       [9, 150]
     )
 
@@ -245,7 +245,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[9])), 50)
     assert.equal(fromEther(await strategy.canWithdraw()), 30)
     assert.deepEqual(
-      await strategy.vaultGroups(4).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(4).then((d) => [Number(d[0]), fromEther(d[1])]),
       [4, 50]
     )
 
@@ -254,23 +254,23 @@ describe('VaultControllerStrategy', () => {
     await strategy.deposit(toEther(600), encodeVaults([9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1360)
     assert.deepEqual(
-      await strategy.vaultGroups(0).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(0).then((d) => [Number(d[0]), fromEther(d[1])]),
       [0, 50]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
       [11, 70]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(2).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(2).then((d) => [Number(d[0]), fromEther(d[1])]),
       [7, 0]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(3).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(3).then((d) => [Number(d[0]), fromEther(d[1])]),
       [8, 20]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(4).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(4).then((d) => [Number(d[0]), fromEther(d[1])]),
       [4, 0]
     )
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[12])), 100)
@@ -330,12 +330,12 @@ describe('VaultControllerStrategy', () => {
     await time.increase(claimPeriod)
     await updateVaultGroups([4, 9], 300)
 
-    await expect(strategy.withdraw(toEther(150), encodeVaults([5, 10]))).to.be.revertedWith(
-      'InvalidVaultIds()'
-    )
-    await expect(strategy.withdraw(toEther(150), encodeVaults([0, 1]))).to.be.revertedWith(
-      'InvalidVaultIds()'
-    )
+    await expect(
+      strategy.withdraw(toEther(150), encodeVaults([5, 10]))
+    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+    await expect(
+      strategy.withdraw(toEther(150), encodeVaults([0, 1]))
+    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
 
     await strategy.withdraw(toEther(150), encodeVaults([0, 5]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1050)
@@ -345,7 +345,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1050)
     assert.equal(fromEther(await strategy.canWithdraw()), 150)
     assert.deepEqual(
-      await strategy.vaultGroups(0).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(0).then((d) => [Number(d[0]), fromEther(d[1])]),
       [5, 150]
     )
 
@@ -359,7 +359,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 975)
     assert.equal(fromEther(await strategy.canWithdraw()), 225)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
       [1, 75]
     )
 
@@ -372,17 +372,18 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 850)
     assert.equal(fromEther(await strategy.canWithdraw()), 100)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
       [6, 200]
     )
 
-    await expect(strategy.withdraw(toEther(101), encodeVaults([6, 11]))).to.be.revertedWith(
-      'InsufficientTokensUnbonded()'
-    )
+    await expect(
+      strategy.withdraw(toEther(101), encodeVaults([6, 11]))
+    ).to.be.revertedWithCustomError(strategy, 'InsufficientTokensUnbonded()')
 
     await time.increase(claimPeriod)
 
-    await expect(strategy.withdraw(toEther(20), encodeVaults([6]))).to.be.revertedWith(
+    await expect(strategy.withdraw(toEther(20), encodeVaults([6]))).to.be.revertedWithCustomError(
+      strategy,
       'InsufficientTokensUnbonded()'
     )
 
@@ -396,7 +397,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 650)
     assert.equal(fromEther(await strategy.canWithdraw()), 0)
     assert.deepEqual(
-      await strategy.vaultGroups(2).then((d) => [d[0].toNumber(), fromEther(d[1])]),
+      await strategy.vaultGroups(2).then((d) => [Number(d[0]), fromEther(d[1])]),
       [7, 200]
     )
   })
@@ -601,8 +602,11 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('setWithdrawalIndexes should work correctly', async () => {
+    const { strategy } = await loadFixture(deployFixture)
+
     await strategy.setWithdrawalIndexes([5, 6, 7, 8, 9])
-    await expect(strategy.setWithdrawalIndexes([0, 1, 2, 3, 5])).to.be.revertedWith(
+    await expect(strategy.setWithdrawalIndexes([0, 1, 2, 3, 5])).to.be.revertedWithCustomError(
+      strategy,
       'InvalidWithdrawalIndexes()'
     )
   })

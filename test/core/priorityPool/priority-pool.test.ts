@@ -228,29 +228,29 @@ describe('PriorityPool', () => {
       [2000, 1000]
     )
 
-    await expect(pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])).to.be.revertedWith(
-      'InsufficientDepositRoom()'
-    )
+    await expect(
+      pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'InsufficientDepositRoom()')
     await strategy.setMaxDeposits(toEther(4900))
-    await expect(pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])).to.be.revertedWith(
-      'InsufficientQueuedTokens()'
-    )
+    await expect(
+      pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'InsufficientQueuedTokens()')
     await pp.deposit(toEther(199), true, ['0x'])
     await strategy.setMaxDeposits(toEther(5000))
-    await expect(pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])).to.be.revertedWith(
-      'InsufficientQueuedTokens()'
-    )
+    await expect(
+      pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'InsufficientQueuedTokens()')
     await token.transfer(adrs.stakingPool, toEther(1))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
 
     await pp.setPoolStatus(2)
-    await expect(pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])).to.be.revertedWith(
-      'DepositsDisabled()'
-    )
+    await expect(
+      pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'DepositsDisabled()')
     await pp.setPoolStatus(1)
-    await expect(pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])).to.be.revertedWith(
-      'DepositsDisabled()'
-    )
+    await expect(
+      pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'DepositsDisabled()')
   })
 
   it('checkUpkeep should work correctly', async () => {
@@ -275,7 +275,7 @@ describe('PriorityPool', () => {
     await pp.setPoolStatus(0)
     assert.deepEqual(await pp.checkUpkeep('0x'), [
       true,
-      ethers.utils.defaultAbiCoder.encode(['uint256'], [toEther(1001)]),
+      ethers.AbiCoder.defaultAbiCoder().encode(['uint256'], [toEther(1001)]),
     ])
   })
 
@@ -337,27 +337,27 @@ describe('PriorityPool', () => {
 
     await expect(
       pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    ).to.be.revertedWith('InsufficientDepositRoom()')
+    ).to.be.revertedWithCustomError(pp, 'InsufficientDepositRoom()')
     await strategy.setMaxDeposits(toEther(4900))
     await expect(
       pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    ).to.be.revertedWith('InsufficientQueuedTokens()')
+    ).to.be.revertedWithCustomError(pp, 'InsufficientQueuedTokens()')
     await pp.deposit(toEther(199), true, ['0x'])
     await strategy.setMaxDeposits(toEther(5000))
     await expect(
       pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    ).to.be.revertedWith('InsufficientQueuedTokens()')
+    ).to.be.revertedWithCustomError(pp, 'InsufficientQueuedTokens()')
     await token.transfer(adrs.stakingPool, toEther(1))
     await pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
 
     await pp.setPoolStatus(2)
     await expect(
       pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    ).to.be.revertedWith('DepositsDisabled()')
+    ).to.be.revertedWithCustomError(pp, 'DepositsDisabled()')
     await pp.setPoolStatus(1)
     await expect(
       pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    ).to.be.revertedWith('DepositsDisabled()')
+    ).to.be.revertedWithCustomError(pp, 'DepositsDisabled()')
   })
 
   it('getAccountData should work correctly', async () => {
@@ -481,16 +481,16 @@ describe('PriorityPool', () => {
 
     await expect(
       pp.claimLSDTokens(toEther(301), toEther(300), tree.getProof(1))
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
     await expect(
       pp.claimLSDTokens(toEther(300), toEther(301), tree.getProof(1))
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
     await expect(
       pp.claimLSDTokens(toEther(300), toEther(300), tree.getProof(2))
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
     await expect(
       pp.connect(signers[1]).claimLSDTokens(toEther(300), toEther(300), tree.getProof(1))
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
 
     assert.equal(fromEther(await pp.getLSDTokens(accounts[0], data[1][2])), 300)
     assert.equal(fromEther(await pp.getQueuedTokens(accounts[0], data[1][1])), 700)
@@ -510,7 +510,7 @@ describe('PriorityPool', () => {
 
     await expect(
       pp.connect(signers[1]).claimLSDTokens(toEther(150), toEther(150), tree.getProof(2))
-    ).to.be.revertedWith('NothingToClaim()')
+    ).to.be.revertedWithCustomError(pp, 'NothingToClaim()')
   })
 
   it('unqueueTokens should work correctly', async () => {
@@ -524,7 +524,8 @@ describe('PriorityPool', () => {
     await strategy.setMaxDeposits(toEther(1500))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
 
-    await expect(pp.unqueueTokens(toEther(1501), 0, 0, [])).to.be.revertedWith(
+    await expect(pp.unqueueTokens(toEther(1501), 0, 0, [])).to.be.revertedWithCustomError(
+      pp,
       'InsufficientQueuedTokens()'
     )
 
@@ -566,7 +567,7 @@ describe('PriorityPool', () => {
     ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
     await expect(
       pp.unqueueTokens(toEther(50), toEther(150), toEther(150), tree.getProof(1))
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
 
     await pp
       .connect(signers[1])
@@ -578,7 +579,7 @@ describe('PriorityPool', () => {
 
     await expect(
       pp.connect(signers[2]).unqueueTokens(toEther(500), toEther(50), toEther(50), tree.getProof(3))
-    ).to.be.revertedWith('InsufficientBalance()')
+    ).to.be.revertedWithCustomError(pp, 'InsufficientBalance()')
 
     await pp
       .connect(signers[2])
@@ -728,10 +729,10 @@ describe('PriorityPool', () => {
       pp
         .connect(signers[2])
         .withdraw(toEther(150), toEther(100), toEther(100), tree.getProof(2), true, false, ['0x'])
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
     await expect(
       pp.connect(signers[2]).withdraw(toEther(150), 0, 0, [], true, false, ['0x'])
-    ).to.be.revertedWith('InvalidProof()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidProof()')
     await stakingPool.transfer(accounts[2], toEther(100))
     await pp
       .connect(signers[2])
@@ -782,14 +783,14 @@ describe('PriorityPool', () => {
         1000,
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
       )
-    ).to.be.revertedWith('UnauthorizedToken()')
+    ).to.be.revertedWithCustomError(pp, 'UnauthorizedToken()')
     await expect(
       token.transferAndCall(
         adrs.pp,
         0,
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
       )
-    ).to.be.revertedWith('InvalidValue()')
+    ).to.be.revertedWithCustomError(pp, 'InvalidValue()')
 
     await token
       .connect(signers[1])
