@@ -14,7 +14,10 @@ interface IPriorityPool {
 
     function poolStatus() external view returns (PoolStatus);
 
-    function canWithdraw(address _account, uint256 _distributionAmount) external view returns (uint256);
+    function canWithdraw(
+        address _account,
+        uint256 _distributionAmount
+    ) external view returns (uint256);
 
     function pauseForUpdate() external;
 

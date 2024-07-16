@@ -119,7 +119,8 @@ contract StakingPool is StakingRewardsPool {
         }
 
         uint256 endingBalance = token.balanceOf(address(this));
-        if (endingBalance > startingBalance && endingBalance > unusedDepositLimit) revert InvalidDeposit();
+        if (endingBalance > startingBalance && endingBalance > unusedDepositLimit)
+            revert InvalidDeposit();
     }
 
     /**
