@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../base/Strategy.sol";
-import "../RewardsPool.sol";
+import "../rewardsPools/RewardsPool.sol";
 
 /**
  * @title Strategy Mock
