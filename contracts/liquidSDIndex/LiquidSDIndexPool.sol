@@ -3,6 +3,8 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../core/base/StakingRewardsPool.sol";
 import "./interfaces/ILSDIndexAdapter.sol";
@@ -12,7 +14,7 @@ import "./interfaces/ILSDIndexAdapter.sol";
  * @notice Issues a liquid staking derivative token that's backed by a basket of individual
  * liquid staking derivative tokens
  */
-contract LiquidSDIndexPool is StakingRewardsPool {
+contract LiquidSDIndexPool is StakingRewardsPool, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Fee {
@@ -66,6 +68,8 @@ contract LiquidSDIndexPool is StakingRewardsPool {
         Fee[] calldata _fees,
         uint256 _withdrawalFee
     ) public initializer {
+        __UUPSUpgradeable_init();
+        __Ownable_init();
         __StakingRewardsPool_init(address(0), _derivativeTokenName, _derivativeTokenSymbol);
         setCompositionTolerance(_compositionTolerance);
         setCompositionEnforcementThreshold(_compositionEnforcementThreshold);
@@ -568,4 +572,6 @@ contract LiquidSDIndexPool is StakingRewardsPool {
     function _getWithdrawalFeeAmount(uint256 _amount) internal view returns (uint256) {
         return (_amount * withdrawalFee) / BASIS_POINTS_TOTAL;
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

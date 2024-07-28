@@ -4,17 +4,16 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "./base/StakingRewardsPool.sol";
-import "./interfaces/IRewardsPool.sol";
+import "./base/RewardsPoolController.sol";
 
 /**
  * @title Insurance Pool
  * @notice Allows users to stake LP tokens to earn rewards while insuring the staking pool from significant slashing events
  */
-contract InsurancePool is StakingRewardsPool {
+contract InsurancePool is RewardsPoolController, StakingRewardsPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public totalDeposits;
-    IRewardsPool public rewardsPool;
 
     address public rebaseController;
     uint256 public maxClaimAmountBP;
@@ -46,6 +45,7 @@ contract InsurancePool is StakingRewardsPool {
         uint64 _withdrawalDelayDuration,
         uint64 _withdrawalWindowDuration
     ) public initializer {
+        __RewardsPoolController_init();
         __StakingRewardsPool_init(_lpToken, _liquidTokenName, _liquidTokenSymbol);
         rebaseController = _rebaseController;
         if (_maxClaimAmountBP > 9000) revert InvalidClaimAmount();
@@ -72,7 +72,7 @@ contract InsurancePool is StakingRewardsPool {
     function deposit(uint256 _amount) external whileNoClaimInProgress {
         if (withdrawalRequests[msg.sender] != 0) delete withdrawalRequests[msg.sender];
 
-        rewardsPool.updateReward(msg.sender);
+        _updateRewards(msg.sender);
         token.safeTransferFrom(msg.sender, address(this), _amount);
         _mint(msg.sender, _amount);
         totalDeposits += _amount;
@@ -85,7 +85,7 @@ contract InsurancePool is StakingRewardsPool {
     function withdraw(uint256 _amount) external whileNoClaimInProgress {
         if (!canWithdraw(msg.sender)) revert WithdrawalWindowInactive();
 
-        rewardsPool.updateReward(msg.sender);
+        _updateRewards(msg.sender);
         _burn(msg.sender, _amount);
         totalDeposits -= _amount;
         token.safeTransfer(msg.sender, _amount);
@@ -165,7 +165,7 @@ contract InsurancePool is StakingRewardsPool {
      * @param _account account address
      * @return account's staked amount
      */
-    function staked(address _account) external view returns (uint256) {
+    function staked(address _account) external view override returns (uint256) {
         return sharesOf(_account);
     }
 
@@ -175,16 +175,8 @@ contract InsurancePool is StakingRewardsPool {
      * @dev shares are used so this contract can rebase without affecting rewards
      * @return total staked amount
      */
-    function totalStaked() external view returns (uint256) {
+    function totalStaked() external view override returns (uint256) {
         return totalShares;
-    }
-
-    /**
-     * @notice sets the address of the rewards pool
-     * @param _rewardsPool address of rewards pool
-     */
-    function setRewardsPool(address _rewardsPool) external onlyOwner {
-        rewardsPool = IRewardsPool(_rewardsPool);
     }
 
     /**

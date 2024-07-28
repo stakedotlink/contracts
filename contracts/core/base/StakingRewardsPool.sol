@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 import "../tokens/base/ERC677Upgradeable.sol";
 
 /**
@@ -11,7 +8,7 @@ import "../tokens/base/ERC677Upgradeable.sol";
  * @notice Handles staking and reward distribution for a single asset
  * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
-abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+abstract contract StakingRewardsPool is ERC677Upgradeable {
     uint256 private constant DEAD_SHARES = 10 ** 3;
 
     IERC20Upgradeable public token;
@@ -25,8 +22,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         string memory _derivativeTokenSymbol
     ) public onlyInitializing {
         __ERC677_init(_derivativeTokenName, _derivativeTokenSymbol, 0);
-        __UUPSUpgradeable_init();
-        __Ownable_init();
         token = IERC20Upgradeable(_token);
     }
 
@@ -205,6 +200,4 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
         emit Transfer(_account, address(0), _amount);
     }
-
-    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

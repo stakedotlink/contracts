@@ -2,6 +2,8 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
@@ -11,7 +13,7 @@ import "./interfaces/IStrategy.sol";
  * @notice Allows users to stake an asset and receive liquid staking tokens 1:1, then deposits staked
  * assets into strategy contracts
  */
-contract StakingPool is StakingRewardsPool {
+contract StakingPool is StakingRewardsPool, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Fee {
@@ -51,6 +53,8 @@ contract StakingPool is StakingRewardsPool {
         string memory _liquidTokenSymbol,
         Fee[] memory _fees
     ) public initializer {
+        __UUPSUpgradeable_init();
+        __Ownable_init();
         __StakingRewardsPool_init(_token, _liquidTokenName, _liquidTokenSymbol);
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
@@ -556,4 +560,6 @@ contract StakingPool is StakingRewardsPool {
         }
         return false;
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

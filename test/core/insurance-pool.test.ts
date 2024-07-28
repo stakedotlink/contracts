@@ -51,7 +51,7 @@ describe('InsurancePool', () => {
     ])) as RewardsPoolTimeBased
     adrs.rewardsPool = await rewardsPool.getAddress()
 
-    await insurancePool.setRewardsPool(adrs.rewardsPool)
+    await insurancePool.addToken(adrs.token, adrs.rewardsPool)
     await stakingToken.approve(adrs.insurancePool, ethers.MaxUint256)
     await stakingToken.connect(signers[1]).approve(adrs.insurancePool, ethers.MaxUint256)
     await token.approve(adrs.rewardsPool, ethers.MaxUint256)
