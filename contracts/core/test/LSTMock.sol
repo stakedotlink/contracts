@@ -18,6 +18,14 @@ contract LSTMock is ERC677 {
         return (super.balanceOf(_account) * mulitplierBasisPoints) / 10000;
     }
 
+    function getSharesByStake(uint256 _amount) external view returns (uint256) {
+        return (_amount * 10000) / mulitplierBasisPoints;
+    }
+
+    function getStakeByShares(uint256 _sharesAmount) external view returns (uint256) {
+        return (_sharesAmount * mulitplierBasisPoints) / 10000;
+    }
+
     function setMultiplierBasisPoints(uint256 _multiplierBasisPoints) external {
         mulitplierBasisPoints = _multiplierBasisPoints;
     }
