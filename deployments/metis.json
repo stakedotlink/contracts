@@ -10,6 +10,14 @@
     "METIS_WrappedSDToken": {
       "address": "0xB6196B3B89981483C27ab642b27743a62c3D68aC",
       "artifact": "BurnMintERC677"
+    },
+    "SDLToken": {
+      "address": "0xd7cf0e0fC12fB97e03841CE4f3086dB327CE0F2B",
+      "artifact": "BurnMintERC677"
+    },
+    "LINK_WrappedSDToken": {
+      "address": "0xD6999c1dCb675Ae5568931BB0CFca0c4f4Fe21Ca",
+      "artifact": "BurnMintERC677"
     }
 }
 

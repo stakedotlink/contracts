@@ -3,7 +3,10 @@ import '@nomicfoundation/hardhat-toolbox'
 import '@nomicfoundation/hardhat-ledger'
 import '@openzeppelin/hardhat-upgrades'
 
-export const ledgerAccount = '0x23c4602e63ACfe29b930c530B19d44a84AF0d767'
+export const ledgerAccount = '0x43975fe745cB4171E15ceEd5d8D05A3502e0e87B'
+const ledgerOptions = {
+  derivationFunction: (x: any) => `m/44'/60'/0'/${x}`, // legacy derivation path
+}
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -28,7 +31,9 @@ const config: HardhatUserConfig = {
   networks: {
     localhost: {
       url: 'http://127.0.0.1:8545',
+      accounts,
       ledgerAccounts: [ledgerAccount],
+      ledgerOptions,
     },
     sepolia: {
       url: '',
@@ -36,16 +41,19 @@ const config: HardhatUserConfig = {
     },
     'arbitrum-sepolia': {
       url: '',
-      chainId: 421614,
       accounts,
     },
     mainnet: {
       url: '',
+      accounts,
       ledgerAccounts: [ledgerAccount],
+      ledgerOptions,
     },
     metis: {
       url: '',
+      accounts,
       ledgerAccounts: [ledgerAccount],
+      ledgerOptions,
     },
     testnet: {
       url: '',
@@ -55,6 +63,7 @@ const config: HardhatUserConfig = {
       chainId: 1337,
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
       ledgerAccounts: [ledgerAccount],
+      ledgerOptions,
       mining: {
         auto: true,
         interval: 5000,
