@@ -14,4 +14,6 @@ interface ISequencerVCS {
     function handleIncomingL2Rewards(uint256 _amount) external;
 
     function getVaultDepositMax() external view returns (uint256);
+
+    function getVaultDepositMin() external view returns (uint256);
 }
