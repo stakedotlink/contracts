@@ -42,9 +42,18 @@ contract SequencerVCSMock {
         return lockingInfo.maxLock();
     }
 
+    function getVaultDepositMin() external returns (uint256) {
+        return lockingInfo.minLock();
+    }
+
     function deposit(uint256 _amount) external {
         token.transferFrom(msg.sender, address(this), _amount);
         vault.deposit(_amount);
+    }
+
+    function withdraw(uint256 _amount) external {
+        vault.withdraw(_amount);
+        token.transfer(msg.sender, _amount);
     }
 
     function withdrawOperatorRewards(
@@ -59,6 +68,14 @@ contract SequencerVCSMock {
         uint256 _minRewards
     ) external payable returns (uint256, uint256, uint256) {
         return vault.updateDeposits{value: msg.value}(_minRewards, 0);
+    }
+
+    function initiateExit(uint32 _l2Gas) external payable {
+        vault.initiateExit{value: msg.value}(_l2Gas);
+    }
+
+    function finalizeExit() external {
+        vault.finalizeExit();
     }
 
     function handleIncomingL2Rewards(uint256 _amount) external {

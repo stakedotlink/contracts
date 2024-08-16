@@ -8,6 +8,10 @@ interface ILockingInfoMock {
     function newSequencer(address _owner, uint256 _amount) external;
 
     function increaseLocked(address _owner, uint256 _amount, uint256 _rewardsAmount) external;
+
+    function withdrawLocking(address _owner, uint256 _amount) external;
+
+    function exit(address _owner) external;
 }
 
 /**
@@ -46,12 +50,20 @@ contract MetisLockingPoolMock {
     Sequencer[] public sequencers;
     mapping(address => uint256) public seqOwners;
 
+    mapping(uint256 => uint256) public seqUnlockTimes;
+    uint256 public exitDelayPeriod;
+
+    uint256 public currentBatch;
+
     error InvalidAmount();
     error InvalidMsgValue();
+    error SequencerStopped();
+    error DelayPeriodNotElapsed();
 
-    constructor(address _token, address _lockingInfo) {
+    constructor(address _token, address _lockingInfo, uint256 _exitDelayPeriod) {
         token = IERC20(_token);
         lockingInfo = ILockingInfoMock(_lockingInfo);
+        exitDelayPeriod = _exitDelayPeriod;
         sequencers.push();
     }
 
@@ -83,6 +95,8 @@ contract MetisLockingPoolMock {
     }
 
     function relock(uint256 _seqId, uint256 _amount, bool _lockReward) external {
+        if (seqUnlockTimes[_seqId] != 0) revert SequencerStopped();
+
         uint256 rewards;
         if (_lockReward) {
             rewards = sequencers[_seqId].reward;
@@ -90,6 +104,25 @@ contract MetisLockingPoolMock {
         }
         sequencers[_seqId].amount += _amount + rewards;
         lockingInfo.increaseLocked(msg.sender, _amount, rewards);
+    }
+
+    function withdraw(uint256 _seqId, uint256 _amount) external {
+        if (seqUnlockTimes[_seqId] != 0) revert SequencerStopped();
+        lockingInfo.withdrawLocking(msg.sender, _amount);
+        sequencers[_seqId].amount -= _amount;
+    }
+
+    function unlock(uint256 _seqId, uint32) external payable {
+        if (msg.value == 0) revert InvalidMsgValue();
+        if (seqUnlockTimes[_seqId] != 0) revert SequencerStopped();
+        sequencers[_seqId].reward = 0;
+        seqUnlockTimes[_seqId] = block.timestamp + exitDelayPeriod;
+    }
+
+    function unlockClaim(uint256 _seqId, uint32) external payable {
+        if (block.timestamp < seqUnlockTimes[_seqId]) revert DelayPeriodNotElapsed();
+        lockingInfo.exit(msg.sender);
+        sequencers[_seqId].amount = 0;
     }
 
     function withdrawRewards(uint256 _seqId, uint32) external payable {
@@ -103,5 +136,9 @@ contract MetisLockingPoolMock {
 
     function slashPrincipal(uint256 _seqId, uint256 _amount) external {
         sequencers[_seqId].amount -= _amount;
+    }
+
+    function incrementCurrentBatch() external {
+        currentBatch++;
     }
 }

@@ -32,6 +32,10 @@ interface IMetisLockingPool {
 
     function seqOwners(address _owner) external view returns (uint256 seqId);
 
+    function currentBatch() external view returns (uint256);
+
+    function exitDelayPeriod() external view returns (uint256);
+
     function lockWithRewardRecipient(
         address _signer,
         address _rewardRecipient,
@@ -41,5 +45,11 @@ interface IMetisLockingPool {
 
     function relock(uint256 _seqId, uint256 _amount, bool _lockReward) external;
 
+    function withdraw(uint256 _seqId, uint256 _amount) external;
+
     function withdrawRewards(uint256 _seqId, uint32 _l2Gas) external payable;
+
+    function unlock(uint256 _seqId, uint32 _l2Rewards) external payable;
+
+    function unlockClaim(uint256 _seqId, uint32 _l2Gas) external payable;
 }

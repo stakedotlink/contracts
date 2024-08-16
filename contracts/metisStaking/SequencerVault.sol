@@ -30,12 +30,19 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     uint128 public trackedTotalDeposits;
     uint128 public unclaimedRewards;
 
+    uint64 public lastWithdrawalBatchId;
+    uint64 public exitDelayEndTime;
+
     event WithdrawRewards(address indexed rewardsReceiver, uint256 amount);
     event SetRewardsReceiver(address rewardsReceiver);
 
     error SenderNotAuthorized();
     error ZeroAddress();
     error SequencerNotInitialized();
+    error SequencerStopped();
+    error ExitDelayTimeNotElapsed();
+    error CurrentBatchAlreadyWithdrawn();
+    error AlreadyExited();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -93,6 +100,8 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyVaultController {
+        if (exitDelayEndTime != 0) revert SequencerStopped();
+
         token.safeTransferFrom(msg.sender, address(this), _amount);
         trackedTotalDeposits += SafeCastUpgradeable.toUint128(_amount);
 
@@ -107,6 +116,43 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             );
             seqId = lockingPool.seqOwners(address(this));
         }
+    }
+
+    /**
+     * @notice Withdraws tokens from the Metis locking pool
+     * @param _amount amount to withdraw
+     * @dev can withdraw once per batch epoch
+     * @dev if sequencer has been stopped, will withdraw entire principal balance
+     */
+    function withdraw(uint256 _amount) external onlyVaultController {
+        if (exitDelayEndTime != 0) {
+            if (block.timestamp <= exitDelayEndTime) revert ExitDelayTimeNotElapsed();
+
+            trackedTotalDeposits -= uint128(getPrincipalDeposits());
+            lockingPool.unlockClaim(seqId, 0);
+        } else {
+            if (lastWithdrawalBatchId >= lockingPool.currentBatch())
+                revert CurrentBatchAlreadyWithdrawn();
+
+            lockingPool.withdraw(seqId, _amount);
+            trackedTotalDeposits -= uint128(_amount);
+            lastWithdrawalBatchId = uint64(lockingPool.currentBatch());
+        }
+
+        token.safeTransfer(address(vaultController), token.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Returns the amount that can be withdrawn
+     * @return withdrawable amount
+     */
+    function canWithdraw() external view returns (uint256) {
+        if (exitDelayEndTime != 0 && block.timestamp <= exitDelayEndTime) return 0;
+        if (exitDelayEndTime != 0 && block.timestamp > exitDelayEndTime)
+            return getPrincipalDeposits();
+        if (lastWithdrawalBatchId >= lockingPool.currentBatch()) return 0;
+
+        return getPrincipalDeposits() - vaultController.getVaultDepositMin();
     }
 
     /**
@@ -207,6 +253,41 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
 
         return (totalDeposits, opRewards, claimedRewards);
+    }
+
+    /**
+     * @notice Initiates an exit from the sequencer
+     * @dev updateDeposits must be called before this function is called
+     * @dev will claim any unclaimed rewards
+     * @param _l2Gas gas limit for reward bridging
+     * @return total rewards claimed
+     */
+    function initiateExit(uint32 _l2Gas) external payable onlyVaultController returns (uint256) {
+        if (exitDelayEndTime != 0) revert SequencerStopped();
+
+        uint256 rewards = getRewards();
+        trackedTotalDeposits -= uint128(rewards);
+
+        exitDelayEndTime = uint64(block.timestamp + lockingPool.exitDelayPeriod());
+        lockingPool.unlock{value: msg.value}(seqId, _l2Gas);
+
+        return rewards;
+    }
+
+    /**
+     * @notice Withdraws all principal deposits from exited sequencer
+     */
+    function finalizeExit() external onlyVaultController {
+        if (exitDelayEndTime == 0 || block.timestamp <= exitDelayEndTime)
+            revert ExitDelayTimeNotElapsed();
+
+        uint256 principalDeposits = getPrincipalDeposits();
+        if (principalDeposits == 0) revert AlreadyExited();
+
+        lockingPool.unlockClaim(seqId, 0);
+        trackedTotalDeposits -= uint128(principalDeposits);
+
+        token.safeTransfer(address(vaultController), token.balanceOf(address(this)));
     }
 
     /**
