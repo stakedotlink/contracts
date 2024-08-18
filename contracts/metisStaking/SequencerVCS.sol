@@ -75,25 +75,29 @@ contract SequencerVCS is Strategy {
         address _rewardRecipient,
         Fee[] memory _fees,
         uint256 _operatorRewardPercentage
-    ) public initializer {
-        __Strategy_init(_token, _stakingPool);
+    ) public reinitializer(2) {
+        if (address(token) == address(0)) {
+            __Strategy_init(_token, _stakingPool);
 
-        lockingInfo = IMetisLockingInfo(_lockingInfo);
-        depositController = _depositController;
+            lockingInfo = IMetisLockingInfo(_lockingInfo);
+            depositController = _depositController;
 
-        if (!_isContract(_vaultImplementation)) revert AddressNotContract();
-        vaultImplementation = _vaultImplementation;
+            if (!_isContract(_vaultImplementation)) revert AddressNotContract();
+            vaultImplementation = _vaultImplementation;
 
-        if (_rewardRecipient == address(0)) revert ZeroAddress();
-        rewardRecipient = _rewardRecipient;
+            if (_rewardRecipient == address(0)) revert ZeroAddress();
+            rewardRecipient = _rewardRecipient;
 
-        for (uint256 i = 0; i < _fees.length; ++i) {
-            fees.push(_fees[i]);
+            for (uint256 i = 0; i < _fees.length; ++i) {
+                fees.push(_fees[i]);
+            }
+            if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
+
+            if (_operatorRewardPercentage > 3000) revert FeesTooLarge();
+            operatorRewardPercentage = _operatorRewardPercentage;
+        } else {
+            totalQueuedTokens = token.balanceOf(address(this));
         }
-        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
-
-        if (_operatorRewardPercentage > 3000) revert FeesTooLarge();
-        operatorRewardPercentage = _operatorRewardPercentage;
     }
 
     /**
@@ -378,7 +382,8 @@ contract SequencerVCS is Strategy {
     function getMaxDeposits() public view override returns (uint256) {
         uint256 activeSequencers;
 
-        for (uint256 i = 0; i < vaults.length; ++i) {
+        uint256 numVaults = vaults.length;
+        for (uint256 i = 0; i < numVaults; ++i) {
             if (vaults[i].exitDelayEndTime() == 0) {
                 ++activeSequencers;
             }
@@ -394,7 +399,8 @@ contract SequencerVCS is Strategy {
     function getMinDeposits() public view virtual override returns (uint256) {
         uint256 minDeposits;
 
-        for (uint256 i = 0; i < vaults.length; ++i) {
+        uint256 numVaults = vaults.length;
+        for (uint256 i = 0; i < numVaults; ++i) {
             minDeposits += vaults[i].getPrincipalDeposits() - vaults[i].canWithdraw();
         }
 
