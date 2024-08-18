@@ -38,6 +38,8 @@ contract SequencerVCS is Strategy {
     uint256 public operatorRewardPercentage;
     uint256 private unclaimedOperatorRewards;
 
+    uint256 private totalQueuedTokens;
+
     event VaultAdded(address signer);
     event SetOperatorRewardPercentage(uint256 operatorRewardPercentage);
     event SetVaultImplementation(address vaultImplementation);
@@ -117,13 +119,36 @@ contract SequencerVCS is Strategy {
     function deposit(uint256 _amount, bytes calldata) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalDeposits += _amount;
+        totalQueuedTokens += _amount;
     }
 
     /**
-     * @notice Withdrawals are not yet implemented
+     * @notice Withdraws tokens from this strategy to the staking pool
+     * @param _amount amount to withdraw
      */
-    function withdraw(uint256, bytes calldata) external view onlyStakingPool {
-        revert("withdrawals not yet implemented");
+    function withdraw(uint256 _amount, bytes calldata) external onlyStakingPool {
+        if (_amount > totalQueuedTokens) {
+            uint256 toWithdraw = _amount - totalQueuedTokens;
+
+            for (uint256 i = vaults.length - 1; i >= 0; --i) {
+                uint256 canWithdraw = vaults[i].canWithdraw();
+                if (canWithdraw == 0) continue;
+
+                if (toWithdraw <= canWithdraw) {
+                    vaults[i].withdraw(toWithdraw);
+                    break;
+                } else {
+                    vaults[i].withdraw(canWithdraw);
+                    toWithdraw -= canWithdraw;
+                }
+            }
+        }
+
+        token.safeTransfer(msg.sender, _amount);
+
+        totalDeposits -= _amount;
+        uint256 balance = token.balanceOf(address(this));
+        if (totalQueuedTokens != balance) totalQueuedTokens = balance;
     }
 
     /**
@@ -180,7 +205,7 @@ contract SequencerVCS is Strategy {
      * @return total queued tokens
      */
     function getTotalQueuedTokens() external view returns (uint256) {
-        return token.balanceOf(address(this));
+        return totalQueuedTokens;
     }
 
     /**
@@ -193,9 +218,14 @@ contract SequencerVCS is Strategy {
         uint256[] calldata _vaults,
         uint256[] calldata _amounts
     ) external onlyDepositController {
+        uint256 totalDeposited;
+
         for (uint256 i = 0; i < _vaults.length; ++i) {
             vaults[_vaults[i]].deposit(_amounts[i]);
+            totalDeposited += _amounts[i];
         }
+
+        totalQueuedTokens -= totalDeposited;
     }
 
     /**
@@ -296,6 +326,29 @@ contract SequencerVCS is Strategy {
 
         totalDeposits = vaultDeposits + balance;
         l2Rewards += claimedRewards;
+
+        if (totalQueuedTokens != balance) totalQueuedTokens = balance;
+    }
+
+    /**
+     * @notice Initiates an exit for a sequencer vault
+     * @param _vaultId index of vault to exit
+     * @param _l2Gas gas limit for reward bridging
+     */
+    function initiateExit(uint256 _vaultId, uint32 _l2Gas) external payable onlyOwner {
+        _updateStrategyRewards();
+        uint256 rewards = vaults[_vaultId].initiateExit{value: msg.value}(_l2Gas);
+        l2Rewards += rewards;
+        totalDeposits -= rewards;
+    }
+
+    /**
+     * @notice Withdraws all principal deposits for an exited sequencer vault
+     * @param _vaultId index of vault
+     */
+    function finalizeExit(uint256 _vaultId) external onlyOwner {
+        totalQueuedTokens += vaults[_vaultId].getPrincipalDeposits();
+        vaults[_vaultId].finalizeExit();
     }
 
     /**
@@ -323,7 +376,15 @@ contract SequencerVCS is Strategy {
      * @return maximum deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
-        return vaults.length * getVaultDepositMax();
+        uint256 activeSequencers;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            if (vaults[i].exitDelayEndTime() == 0) {
+                ++activeSequencers;
+            }
+        }
+
+        return activeSequencers * getVaultDepositMax();
     }
 
     /**
@@ -331,7 +392,13 @@ contract SequencerVCS is Strategy {
      * @return minimum deposits
      */
     function getMinDeposits() public view virtual override returns (uint256) {
-        return getTotalDeposits();
+        uint256 minDeposits;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            minDeposits += vaults[i].getPrincipalDeposits() - vaults[i].canWithdraw();
+        }
+
+        return minDeposits;
     }
 
     /**
