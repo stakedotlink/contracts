@@ -18,7 +18,7 @@ import {
   SequencerVaultV2Mock,
 } from '../../typechain-types'
 import { Interface } from 'ethers'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('SequencerVCS', () => {
   async function deployFixture() {
@@ -42,6 +42,7 @@ describe('SequencerVCS', () => {
     const metisLockingPool = (await deploy('MetisLockingPoolMock', [
       adrs.token,
       adrs.metisLockingInfo,
+      86400,
     ])) as MetisLockingPoolMock
     adrs.metisLockingPool = await metisLockingPool.getAddress()
 
@@ -123,10 +124,12 @@ describe('SequencerVCS', () => {
     await stakingPool.deposit(accounts[0], toEther(50), ['0x'])
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 50)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 50)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 50)
 
     await stakingPool.deposit(accounts[0], toEther(200), ['0x'])
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 250)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 250)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 250)
   })
 
   it('depositQueuedTokens should work correctly', async () => {
@@ -136,6 +139,7 @@ describe('SequencerVCS', () => {
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     assert.equal(fromEther(await strategy.getTotalDeposits()), 5000)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 3800)
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 3800)
     assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 1200)
 
@@ -146,6 +150,54 @@ describe('SequencerVCS', () => {
     vault = await ethers.getContractAt('SequencerVault', (await strategy.getVaults())[4])
     assert.equal(fromEther(await vault.getTotalDeposits()), 700)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 700)
+  })
+
+  it('withdraw should work correctly', async () => {
+    const { accounts, adrs, strategy, stakingPool, token, metisLockingPool } = await loadFixture(
+      deployFixture
+    )
+
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
+    await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
+
+    await stakingPool.withdraw(accounts[0], accounts[1], toEther(500), ['0x'])
+
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 4500)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 3300)
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 3300)
+    assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 1200)
+
+    let vault = await ethers.getContractAt('SequencerVault', (await strategy.getVaults())[1])
+    assert.equal(fromEther(await vault.getTotalDeposits()), 500)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 500)
+
+    vault = await ethers.getContractAt('SequencerVault', (await strategy.getVaults())[4])
+    assert.equal(fromEther(await vault.getTotalDeposits()), 700)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 700)
+
+    await metisLockingPool.incrementCurrentBatch()
+    await stakingPool.withdraw(accounts[0], accounts[1], toEther(3400), ['0x'])
+
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1100)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 0)
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 0)
+    assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 1100)
+
+    assert.equal(fromEther(await vault.getTotalDeposits()), 600)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 600)
+
+    await strategy.initiateExit(1, 10, { value: toEther(1) })
+    await time.increase(90000)
+    await stakingPool.withdraw(accounts[0], accounts[1], toEther(200), ['0x'])
+
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 900)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 300)
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 300)
+    assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 600)
+
+    vault = await ethers.getContractAt('SequencerVault', (await strategy.getVaults())[1])
+    assert.equal(fromEther(await vault.getTotalDeposits()), 0)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
   })
 
   it('getDepositChange should work correctly', async () => {
@@ -202,7 +254,7 @@ describe('SequencerVCS', () => {
   })
 
   it('getMaxDeposits and getMinDeposits should work correctly', async () => {
-    const { accounts, strategy, stakingPool } = await loadFixture(deployFixture)
+    const { accounts, strategy, stakingPool, metisLockingPool } = await loadFixture(deployFixture)
 
     assert.equal(fromEther(await strategy.canDeposit()), 5000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
@@ -211,12 +263,27 @@ describe('SequencerVCS', () => {
     await stakingPool.deposit(accounts[0], toEther(2000), ['0x'])
     assert.equal(fromEther(await strategy.canDeposit()), 3000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
-    assert.equal(fromEther(await strategy.getMinDeposits()), 2000)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 0)
+
+    await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(300)])
+    assert.equal(fromEther(await strategy.canDeposit()), 3000)
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 800)
+
+    await metisLockingPool.incrementCurrentBatch()
+    assert.equal(fromEther(await strategy.canDeposit()), 3000)
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 200)
 
     await stakingPool.deposit(accounts[0], toEther(3000), ['0x'])
     assert.equal(fromEther(await strategy.canDeposit()), 0)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
-    assert.equal(fromEther(await strategy.getMinDeposits()), 5000)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 200)
+
+    await strategy.initiateExit(1, 10, { value: 10 })
+    assert.equal(fromEther(await strategy.canDeposit()), 0)
+    assert.equal(fromEther(await strategy.getMaxDeposits()), 4000)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 600)
   })
 
   it('updateDeposits should work correctly', async () => {
@@ -361,6 +428,51 @@ describe('SequencerVCS', () => {
     assert.equal(fromEther(await stakingPool.totalStaked()), 1010)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1005)
     assert.equal(fromEther(await strategy.l2Rewards()), 5)
+  })
+
+  it('initiateExit should work correctly', async () => {
+    const { accounts, strategy, stakingPool, metisLockingPool } = await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
+    await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
+    await metisLockingPool.addReward(1, toEther(77))
+
+    await strategy.initiateExit(1, 10, { value: 10 })
+
+    assert.equal(fromEther(await strategy.l2Rewards()), 77)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 5077)
+
+    let vault = await ethers.getContractAt('SequencerVault', (await strategy.getVaults())[1])
+    assert.notEqual(Number(await vault.exitDelayEndTime()), 0)
+  })
+
+  it('finalizeExit should work correctly', async () => {
+    const { accounts, adrs, strategy, stakingPool, metisLockingPool, token } = await loadFixture(
+      deployFixture
+    )
+
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
+    await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
+    await metisLockingPool.addReward(1, toEther(77))
+
+    await strategy.initiateExit(1, 10, { value: 10 })
+
+    let vault = await ethers.getContractAt('SequencerVault', (await strategy.getVaults())[1])
+    await expect(strategy.finalizeExit(1)).to.be.revertedWithCustomError(
+      vault,
+      'ExitDelayTimeNotElapsed()'
+    )
+
+    await time.increase(90000)
+    await strategy.finalizeExit(1)
+
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 5077)
+    assert.equal(fromEther(await strategy.getTotalQueuedTokens()), 4300)
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 4300)
+    assert.equal(fromEther(await token.balanceOf(adrs.metisLockingInfo)), 700)
+
+    assert.equal(fromEther(await vault.getTotalDeposits()), 0)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
   })
 
   it('withdrawOperatorRewards should work correctly', async () => {
