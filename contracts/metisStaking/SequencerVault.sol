@@ -147,12 +147,16 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return withdrawable amount
      */
     function canWithdraw() external view returns (uint256) {
+        uint256 principalDeposits = getPrincipalDeposits();
+
         if (exitDelayEndTime != 0 && block.timestamp <= exitDelayEndTime) return 0;
-        if (exitDelayEndTime != 0 && block.timestamp > exitDelayEndTime)
-            return getPrincipalDeposits();
+        if (exitDelayEndTime != 0 && block.timestamp > exitDelayEndTime) return principalDeposits;
         if (lastWithdrawalBatchId >= lockingPool.currentBatch()) return 0;
 
-        return getPrincipalDeposits() - vaultController.getVaultDepositMin();
+        return
+            principalDeposits > vaultController.getVaultDepositMin()
+                ? principalDeposits - vaultController.getVaultDepositMin()
+                : 0;
     }
 
     /**
