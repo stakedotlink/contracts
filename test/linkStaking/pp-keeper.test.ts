@@ -124,18 +124,6 @@ describe('PPKeeper', () => {
 
     await token.approve(priorityPool.target, ethers.MaxUint256)
 
-    async function updateVaultGroups(
-      curGroupVaultsToUnbond: number[],
-      nextGroupVaultsTotalUnbonded: number
-    ) {
-      return await fundFlowController.performUpkeep(
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
-          [[], 0, curGroupVaultsToUnbond, toEther(nextGroupVaultsTotalUnbonded)]
-        )
-      )
-    }
-
     return {
       accounts,
       token,
@@ -148,39 +136,38 @@ describe('PPKeeper', () => {
       vaults,
       fundFlowController,
       ppKeeper,
-      updateVaultGroups,
     }
   }
 
   it('checkUpkeep should work correctly', async () => {
-    const { comStrategy, ppKeeper, priorityPool, updateVaultGroups } = await loadFixture(
+    const { comStrategy, ppKeeper, priorityPool, fundFlowController } = await loadFixture(
       deployFixture
     )
 
     await comStrategy.deposit(toEther(1200), encodeVaults([]))
     assert.equal((await ppKeeper.checkUpkeep('0x'))[0], false)
 
-    await updateVaultGroups([0, 5, 10], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([1, 6, 11], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([2, 7], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([3, 8], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([4, 9], 300)
+    await fundFlowController.updateVaultGroups()
     await comStrategy.withdraw(toEther(50), encodeVaults([0, 5]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([0, 5, 10], 300)
+    await fundFlowController.updateVaultGroups()
     await comStrategy.withdraw(toEther(270), encodeVaults([1, 6, 11]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([1, 6, 11], 200)
+    await fundFlowController.updateVaultGroups()
     await comStrategy.withdraw(toEther(100), encodeVaults([2, 7]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([2, 7], 200)
+    await fundFlowController.updateVaultGroups()
     await comStrategy.withdraw(toEther(120), encodeVaults([3, 8]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([3, 8], 200)
+    await fundFlowController.updateVaultGroups()
     await comStrategy.withdraw(toEther(200), encodeVaults([4, 9]))
     await priorityPool.setUpkeepNeeded(true)
 

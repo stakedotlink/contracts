@@ -112,18 +112,6 @@ describe('VaultControllerStrategy', () => {
     await strategy.setFundFlowController(adrs.fundFlowController)
     await strategy2.setFundFlowController(adrs.fundFlowController)
 
-    async function updateVaultGroups(
-      curGroupVaultsToUnbond: number[],
-      nextGroupVaultsTotalUnbonded: number
-    ) {
-      return await fundFlowController.performUpkeep(
-        ethers.AbiCoder.defaultAbiCoder().encode(
-          ['uint256[]', 'uint256', 'uint256[]', 'uint256'],
-          [curGroupVaultsToUnbond, toEther(nextGroupVaultsTotalUnbonded), [], 0]
-        )
-      )
-    }
-
     return {
       accounts,
       adrs,
@@ -135,7 +123,6 @@ describe('VaultControllerStrategy', () => {
       vaults,
       vaultContracts,
       fundFlowController,
-      updateVaultGroups,
     }
   }
 
@@ -155,7 +142,7 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('depositToVaults should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vaults, updateVaultGroups } =
+    const { adrs, strategy, token, stakingController, vaults, fundFlowController } =
       await loadFixture(deployFixture)
 
     // Deposit into vaults that don't yet belong to a group
@@ -178,27 +165,27 @@ describe('VaultControllerStrategy', () => {
 
     // Deposit into vault groups
 
-    await updateVaultGroups([0, 5, 10], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([1, 6, 11], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([2, 7], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([3, 8], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([4, 9], 300)
+    await fundFlowController.updateVaultGroups()
     await strategy.withdraw(toEther(50), encodeVaults([0, 5]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([0, 5, 10], 300)
+    await fundFlowController.updateVaultGroups()
     await strategy.withdraw(toEther(270), encodeVaults([1, 6, 11]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([1, 6, 11], 200)
+    await fundFlowController.updateVaultGroups()
     await strategy.withdraw(toEther(100), encodeVaults([2, 7]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([2, 7], 200)
+    await fundFlowController.updateVaultGroups()
     await strategy.withdraw(toEther(120), encodeVaults([3, 8]))
     await time.increase(claimPeriod)
-    await updateVaultGroups([3, 8], 200)
+    await fundFlowController.updateVaultGroups()
     await strategy.withdraw(toEther(200), encodeVaults([4, 9]))
 
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 460)
@@ -213,9 +200,9 @@ describe('VaultControllerStrategy', () => {
     )
 
     await time.increase(claimPeriod)
-    await updateVaultGroups([4, 9], 250)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([0, 5, 10], 30)
+    await fundFlowController.updateVaultGroups()
 
     await expect(
       strategy.deposit(toEther(200), encodeVaults([6, 11, 4]))
@@ -316,19 +303,19 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('withdraw should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vaults, updateVaultGroups } =
+    const { adrs, strategy, token, stakingController, vaults, fundFlowController } =
       await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(1200), encodeVaults([]))
-    await updateVaultGroups([0, 5, 10], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([1, 6, 11], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([2, 7], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([3, 8], 0)
+    await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
-    await updateVaultGroups([4, 9], 300)
+    await fundFlowController.updateVaultGroups()
 
     await expect(
       strategy.withdraw(toEther(150), encodeVaults([5, 10]))
@@ -350,7 +337,7 @@ describe('VaultControllerStrategy', () => {
     )
 
     await time.increase(claimPeriod)
-    await updateVaultGroups([5, 10], 300)
+    await fundFlowController.updateVaultGroups()
 
     await strategy.withdraw(toEther(75), encodeVaults([1, 6]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 975)
@@ -387,7 +374,7 @@ describe('VaultControllerStrategy', () => {
       'InsufficientTokensUnbonded()'
     )
 
-    await updateVaultGroups([6, 11], 200)
+    await fundFlowController.updateVaultGroups()
 
     await strategy.withdraw(toEther(200), encodeVaults([2, 7]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 650)
