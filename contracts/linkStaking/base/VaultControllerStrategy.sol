@@ -146,6 +146,8 @@ abstract contract VaultControllerStrategy is Strategy {
 
                 vaultGroups[i].totalDepositRoom += uint128(numVaults * diff);
             }
+
+            vaultMaxDeposits = maxDeposits;
         }
 
         uint256 toDeposit = token.balanceOf(address(this));
