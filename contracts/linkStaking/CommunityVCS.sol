@@ -91,22 +91,6 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice Returns the deposit change since deposits were last updated
-     * @dev deposit change could be positive or negative depending on reward rate and whether
-     * any slashing occurred
-     * @return deposit change
-     */
-    function getDepositChange() public view override returns (int) {
-        uint256 totalBalance = token.balanceOf(address(this));
-        for (uint256 i = 0; i < vaults.length; ++i) {
-            uint256 vaultDeposits = vaults[i].getTotalDeposits();
-            if (vaultDeposits == 0) break;
-            totalBalance += vaultDeposits;
-        }
-        return int(totalBalance) - int(totalDeposits);
-    }
-
-    /**
      * @notice Returns the maximum amount of tokens this strategy can hold
      * @return maximum deposits
      */
