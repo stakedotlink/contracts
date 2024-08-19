@@ -54,7 +54,7 @@ abstract contract VaultControllerStrategy is Strategy {
     GlobalVaultState public globalVaultState;
     uint256 internal vaultMaxDeposits;
 
-    uint256[6] private __gap;
+    uint256[5] private __gap;
 
     event UpgradedVaults(uint256[] vaults);
     event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
