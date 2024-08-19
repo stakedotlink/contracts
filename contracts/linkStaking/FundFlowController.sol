@@ -126,58 +126,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns whether a vault group update is needed
-     * @dev an update is needed once per claim period right after the claim period expires for the
-     * current vault group
-     * @return true if update is needed, false otherwise
-     * @return encoded list of vaults to unbond for current vault group and total unbonded for next vault group
-     * for both strategies
-     */
-    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        uint256 nextUnbondedVaultGroup = _getNextGroup(curUnbondedVaultGroup, numVaultGroups);
-
-        if (
-            timeOfLastUpdateByGroup[nextUnbondedVaultGroup] != 0 &&
-            block.timestamp <=
-            timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod + claimPeriod
-        ) return (false, "");
-
-        if (
-            curUnbondedVaultGroup != 0 &&
-            timeOfLastUpdateByGroup[curUnbondedVaultGroup] == 0 &&
-            block.timestamp <= timeOfLastUpdateByGroup[curUnbondedVaultGroup - 1] + claimPeriod
-        ) return (false, "");
-
-        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedVaultGroup] + unbondingPeriod)
-            return (false, "");
-
-        (
-            uint256[] memory curGroupOpVaultsToUnbond,
-            uint256 nextGroupOpVaultsTotalUnbonded
-        ) = _getVaultUpdateData(operatorVCS, nextUnbondedVaultGroup);
-
-        (
-            uint256[] memory curGroupComVaultsToUnbond,
-            uint256 nextGroupComVaultsTotalUnbonded
-        ) = _getVaultUpdateData(communityVCS, nextUnbondedVaultGroup);
-
-        return (
-            true,
-            abi.encode(
-                curGroupOpVaultsToUnbond,
-                nextGroupOpVaultsTotalUnbonded,
-                curGroupComVaultsToUnbond,
-                nextGroupComVaultsTotalUnbonded
-            )
-        );
-    }
-
-    /**
-     * @notice Executes a vault group update
+     * @notice  Executes a vault group update
      * @dev re-unbonds all vaults in the current vault group and increments the current vault group
      * to the next one which will have just entered the claim period
+     * @dev an update is needed once per claim period right after the claim period expires for the
+     * current vault group
      */
-    function performUpkeep(bytes calldata _data) external {
+    function updateVaultGroups() external {
         uint256 nextUnbondedVaultGroup = _getNextGroup(curUnbondedVaultGroup, numVaultGroups);
 
         if (
@@ -197,10 +152,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
         (
             uint256[] memory curGroupOpVaultsToUnbond,
-            uint256 nextGroupOpVaultsTotalUnbonded,
+            uint256 nextGroupOpVaultsTotalUnbonded
+        ) = _getVaultUpdateData(operatorVCS, nextUnbondedVaultGroup);
+
+        (
             uint256[] memory curGroupComVaultsToUnbond,
             uint256 nextGroupComVaultsTotalUnbonded
-        ) = abi.decode(_data, (uint256[], uint256, uint256[], uint256));
+        ) = _getVaultUpdateData(communityVCS, nextUnbondedVaultGroup);
 
         operatorVCS.updateVaultGroups(
             curGroupOpVaultsToUnbond,
