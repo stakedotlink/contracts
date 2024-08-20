@@ -103,7 +103,7 @@ contract OperatorVault is Vault {
      */
     function withdraw(uint256 _amount) external override onlyVaultController {
         trackedTotalDeposits -= SafeCast.toUint128(_amount);
-        stakeController.unstake(_amount, false);
+        stakeController.unstake(_amount);
         token.safeTransfer(vaultController, _amount);
     }
 

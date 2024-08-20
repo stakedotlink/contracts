@@ -69,7 +69,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _amount amount to withdraw
      */
     function withdraw(uint256 _amount) external virtual onlyVaultController {
-        stakeController.unstake(_amount, false);
+        stakeController.unstake(_amount);
         token.safeTransfer(vaultController, _amount);
     }
 

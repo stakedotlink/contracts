@@ -84,7 +84,7 @@ contract StakingMock is IERC677Receiver {
         stakers[msg.sender] = staker;
     }
 
-    function unstake(uint256 _amount, bool) external {
+    function unstake(uint256 _amount) external {
         Staker memory staker = stakers[msg.sender];
 
         if (
