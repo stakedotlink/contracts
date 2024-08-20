@@ -79,7 +79,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             );
             depositData[1] = abi.encode(comVaultDepositOrder);
         } else {
-            depositData[0] = abi.encode(new uint64[](0));
+            depositData[1] = abi.encode(new uint64[](0));
         }
 
         return depositData;
