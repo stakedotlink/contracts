@@ -22,5 +22,5 @@ interface IStaking {
 
     function unbond() external;
 
-    function unstake(uint256 _amount, bool _shouldClaimReward) external;
+    function unstake(uint256 _amount) external;
 }
