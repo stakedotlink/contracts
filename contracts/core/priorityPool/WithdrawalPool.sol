@@ -38,6 +38,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     uint256 public indexOfNextWithdrawal;
 
     WithdrawalBatch[] internal withdrawalBatches;
+    uint128 public withdrawalBatchIdCutoff;
+    uint128 public withdrawalIdCutoff;
 
     uint256 public minWithdrawalAmount;
 
@@ -125,7 +127,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             uint256 batchId;
             uint256 withdrawalId = _withdrawalIds[i];
 
-            for (uint256 j = 0; j < withdrawalBatches.length; ++j) {
+            for (uint256 j = withdrawalBatchIdCutoff; j < withdrawalBatches.length; ++j) {
                 uint256 indexOfLastWithdrawal = withdrawalBatches[j].indexOfLastWithdrawal;
 
                 if (withdrawalId <= indexOfLastWithdrawal) {
@@ -322,6 +324,38 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
         priorityPool.executeQueuedWithdrawals(toWithdraw, data);
         _finalizeWithdrawals(toWithdraw);
+    }
+
+    /**
+     * @notice Updates the withdrawalBatchIdCutoff
+     * @dev this value is used to more efficiently return certain data by skipping old withdrawal batches
+     */
+    function updateWithdrawalBatchIdCutoff() external {
+        uint256 numWithdrawals = queuedWithdrawals.length;
+        uint256 newWithdrawalIdCutoff = withdrawalIdCutoff;
+
+        for (uint256 i = newWithdrawalIdCutoff; i < numWithdrawals; ++i) {
+            newWithdrawalIdCutoff = uint128(i);
+
+            Withdrawal memory withdrawal = queuedWithdrawals[i];
+            if (withdrawal.sharesRemaining != 0 || withdrawal.partiallyWithdrawableAmount != 0) {
+                break;
+            }
+        }
+
+        uint256 numBatches = withdrawalBatches.length;
+        uint256 newWithdrawalBatchIdCutoff = withdrawalBatchIdCutoff;
+
+        for (uint256 i = newWithdrawalBatchIdCutoff; i < numBatches; ++i) {
+            newWithdrawalBatchIdCutoff = i;
+
+            if (withdrawalBatches[i].indexOfLastWithdrawal < newWithdrawalIdCutoff) {
+                break;
+            }
+        }
+
+        withdrawalIdCutoff = uint128(newWithdrawalIdCutoff);
+        withdrawalBatchIdCutoff = uint128(newWithdrawalBatchIdCutoff);
     }
 
     /**
