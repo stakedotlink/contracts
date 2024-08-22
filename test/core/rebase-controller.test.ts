@@ -15,7 +15,7 @@ import {
   RebaseController,
   SDLPoolCCIPControllerMock,
   PriorityPool,
-  InsurancePool,
+  SecurityPool,
 } from '../../typechain-types'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 
@@ -61,7 +61,7 @@ describe('RebaseController', () => {
     ])) as SDLPoolCCIPControllerMock
     adrs.sdlPoolCCIPController = await sdlPoolCCIPController.getAddress()
 
-    const insurancePool = (await deployUpgradeable('InsurancePool', [
+    const securityPool = (await deployUpgradeable('SecurityPool', [
       adrs.token,
       'name',
       'symbol',
@@ -69,14 +69,14 @@ describe('RebaseController', () => {
       3000,
       10,
       100,
-    ])) as InsurancePool
-    adrs.insurancePool = await insurancePool.getAddress()
+    ])) as SecurityPool
+    adrs.securityPool = await securityPool.getAddress()
 
     const rebaseController = (await deploy('RebaseController', [
       adrs.stakingPool,
       adrs.priorityPool,
       adrs.sdlPoolCCIPController,
-      adrs.insurancePool,
+      adrs.securityPool,
       accounts[0],
       3000,
     ])) as RebaseController
@@ -112,7 +112,7 @@ describe('RebaseController', () => {
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(adrs.rebaseController)
     await priorityPool.setRebaseController(adrs.rebaseController)
-    await insurancePool.setRebaseController(adrs.rebaseController)
+    await securityPool.setRebaseController(adrs.rebaseController)
 
     await token.approve(adrs.stakingPool, ethers.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(1000))
@@ -125,7 +125,7 @@ describe('RebaseController', () => {
       stakingPool,
       priorityPool,
       sdlPoolCCIPController,
-      insurancePool,
+      securityPool,
       rebaseController,
       strategy1,
       strategy2,
@@ -172,7 +172,7 @@ describe('RebaseController', () => {
       strategy3,
       stakingPool,
       priorityPool,
-      insurancePool,
+      securityPool,
     } = await loadFixture(deployFixture)
 
     await token.transfer(adrs.strategy2, toEther(100))
@@ -213,11 +213,11 @@ describe('RebaseController', () => {
 
     assert.equal(fromEther(await stakingPool.totalStaked()), 980)
     assert.equal(Number(await priorityPool.poolStatus()), 2)
-    assert.equal(await insurancePool.claimInProgress(), true)
+    assert.equal(await securityPool.claimInProgress(), true)
   })
 
   it('pausing process should work correctly when max loss is exceeded', async () => {
-    const { adrs, token, rebaseController, strategy3, stakingPool, priorityPool, insurancePool } =
+    const { adrs, token, rebaseController, strategy3, stakingPool, priorityPool, securityPool } =
       await loadFixture(deployFixture)
 
     await strategy3.simulateSlash(toEther(300))
@@ -225,7 +225,7 @@ describe('RebaseController', () => {
 
     assert.equal(fromEther(await stakingPool.totalStaked()), 700)
     assert.equal(Number(await priorityPool.poolStatus()), 0)
-    assert.equal(await insurancePool.claimInProgress(), false)
+    assert.equal(await securityPool.claimInProgress(), false)
 
     await token.transfer(adrs.strategy3, toEther(300))
     await rebaseController.updateRewards([2], '0x', [])
@@ -234,7 +234,7 @@ describe('RebaseController', () => {
 
     assert.equal(fromEther(await stakingPool.totalStaked()), 1000)
     assert.equal(Number(await priorityPool.poolStatus()), 2)
-    assert.equal(await insurancePool.claimInProgress(), true)
+    assert.equal(await securityPool.claimInProgress(), true)
     await expect(rebaseController.performUpkeep(encode([[2], 1]))).to.be.revertedWithCustomError(
       rebaseController,
       'PoolClosed()'
@@ -249,7 +249,7 @@ describe('RebaseController', () => {
     await rebaseController.reopenPool([2])
     assert.equal(fromEther(await stakingPool.totalStaked()), 800)
     assert.equal(Number(await priorityPool.poolStatus()), 0)
-    assert.equal(await insurancePool.claimInProgress(), false)
+    assert.equal(await securityPool.claimInProgress(), false)
   })
 
   it('updateRewards should work correctly', async () => {
