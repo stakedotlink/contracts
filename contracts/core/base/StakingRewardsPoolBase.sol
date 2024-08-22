@@ -121,7 +121,11 @@ abstract contract StakingRewardsPoolBase is ERC677Upgradeable {
      * @param _recipient account to transfer to
      * @param _amount amount to transfer
      */
-    function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
+    function _transfer(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) internal virtual override {
         uint256 sharesToTransfer = getSharesByStake(_amount);
 
         require(_sender != address(0), "Transfer from the zero address");
@@ -140,7 +144,11 @@ abstract contract StakingRewardsPoolBase is ERC677Upgradeable {
      * @param _recipient account to transfer to
      * @param _sharesAmount amount of shares to transfer
      */
-    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
+    function _transferShares(
+        address _sender,
+        address _recipient,
+        uint256 _sharesAmount
+    ) internal virtual {
         require(_sender != address(0), "Transfer from the zero address");
         require(_recipient != address(0), "Transfer to the zero address");
         require(shares[_sender] >= _sharesAmount, "Transfer amount exceeds balance");

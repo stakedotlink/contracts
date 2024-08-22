@@ -217,4 +217,32 @@ contract InsurancePool is RewardsPoolController, StakingRewardsPoolBase {
     function _totalStaked() internal view override returns (uint256) {
         return totalDeposits;
     }
+
+    /**
+     * @notice transfers a stake balance from one account to another
+     * @param _sender account to transfer from
+     * @param _recipient account to transfer to
+     * @param _amount amount to transfer
+     */
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
+        _updateRewards(_sender);
+        _updateRewards(_recipient);
+        super._transfer(_sender, _recipient, _amount);
+    }
+
+    /**
+     * @notice transfers shares from one account to another
+     * @param _sender account to transfer from
+     * @param _recipient account to transfer to
+     * @param _sharesAmount amount of shares to transfer
+     */
+    function _transferShares(
+        address _sender,
+        address _recipient,
+        uint256 _sharesAmount
+    ) internal override {
+        _updateRewards(_sender);
+        _updateRewards(_recipient);
+        super._transferShares(_sender, _recipient, _sharesAmount);
+    }
 }
