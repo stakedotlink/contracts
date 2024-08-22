@@ -19,6 +19,7 @@ import {
   ERC20,
 } from '../../typechain-types'
 import { ethers } from 'hardhat'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 /*
 Accounts:
@@ -69,6 +70,9 @@ async function main() {
   const LINK_PriorityPool = (await getContract('LINK_PriorityPool')) as PriorityPool
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
   const lplToken = (await getContract('LPLToken')) as ERC677
+
+  const stLINKCurveLPToken = await getContract('stLINK/LINK_CurveLPToken')
+  const stLINKSecurityPool = await getContract('stLINK_SecurityPool')
 
   const poolOwnersV1 = (await getContract('PoolOwnersV1')) as any
   const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
@@ -144,6 +148,7 @@ async function main() {
     await tx.wait()
     tx = await METISToken.transfer(accounts[i], toEther(10000))
     await tx.wait()
+    await (await stLINKCurveLPToken.transfer(accounts[i], toEther(1000))).wait()
   }
 
   tx = await linkToken.transferAndCall(
@@ -162,12 +167,25 @@ async function main() {
   await tx.wait()
   tx = await ownersRewardsPoolV1.distributeRewards()
   await tx.wait()
+  await (
+    await stLINKCurveLPToken
+      .connect(signers[2])
+      .approve(stLINKSecurityPool.target, ethers.MaxUint256)
+  ).wait()
+  await (await stLINKSecurityPool.connect(signers[2]).deposit(toEther(200))).wait()
+  await time.increase(90000)
 
   // stSDL
 
   // Account 3
   tx = await sdlToken.connect(signers[3]).transferAndCall(delegatorPool.target, toEther(1000), '0x')
   await tx.wait()
+  await (
+    await stLINKCurveLPToken
+      .connect(signers[3])
+      .approve(stLINKSecurityPool.target, ethers.MaxUint256)
+  ).wait()
+  await (await stLINKSecurityPool.connect(signers[3]).deposit(toEther(300))).wait()
 
   // Account 9
   tx = await sdlToken.connect(signers[9]).transferAndCall(delegatorPool.target, toEther(1000), '0x')

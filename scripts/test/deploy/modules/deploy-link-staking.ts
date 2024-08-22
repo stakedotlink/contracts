@@ -128,6 +128,12 @@ const PriorityPoolArgs = {
   queueDepositMin: toEther(1000), // min amount of tokens neede to execute deposit
   queueDepositMax: toEther(200000), // max amount of tokens in a single deposit tx}
 }
+// stLINK/LINK Security Pool
+const SecurityPoolArgs = {
+  maxClaimAmountBP: 3000,
+  withdrawalDelayDuration: 86400,
+  withdrawalWindowDuration: 86400,
+}
 
 export async function deployLINKStaking() {
   const { accounts } = await getAccounts()
@@ -165,6 +171,24 @@ export async function deployLINKStaking() {
   ])
   console.log('stLINK_SDLRewardsPool deployed: ', stLinkSDLRewardsPool.target)
 
+  const curveLPToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+    'Curve.fi Factory Plain Pool: stLINK/LINK',
+    'stLINK-f',
+    1000000,
+  ])
+  console.log('stLINK/LINK_CurveLPToken deployed: ', curveLPToken.target)
+
+  const securityPool = await deployUpgradeable('SecurityPool', [
+    curveLPToken.target,
+    'Security LINK/stLINK LP',
+    'secLINK/stLINK',
+    accounts[0],
+    SecurityPoolArgs.maxClaimAmountBP,
+    SecurityPoolArgs.withdrawalDelayDuration,
+    SecurityPoolArgs.withdrawalWindowDuration,
+  ])
+  console.log('stLINK_SecurityPool deployed: ', securityPool.target)
+
   await (await sdlPoolPrimary.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()
@@ -175,12 +199,16 @@ export async function deployLINKStaking() {
       LINK_PriorityPool: priorityPool.target.toString(),
       LINK_WrappedSDToken: wsdToken.target,
       stLINK_SDLRewardsPool: stLinkSDLRewardsPool.target,
+      'stLINK/LINK_CurveLPToken': curveLPToken.target,
+      stLINK_SecurityPool: securityPool.target,
     },
     {
       LINK_StakingPool: 'StakingPool',
       LINK_PriorityPool: 'PriorityPool',
       LINK_WrappedSDToken: 'WrappedSDToken',
       stLINK_SDLRewardsPool: 'RewardsPoolWSD',
+      'stLINK/LINK_CurveLPToken': 'contracts/core/tokens/base/ERC677.sol:ERC677',
+      stLINK_SecurityPool: 'SecurityPool',
     }
   )
 
