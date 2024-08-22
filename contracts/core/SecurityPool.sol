@@ -7,10 +7,10 @@ import "./base/RewardsPoolController.sol";
 import "./base/StakingRewardsPoolBase.sol";
 
 /**
- * @title Insurance Pool
- * @notice Allows users to stake LP tokens to earn rewards while insuring the staking pool from significant slashing events
+ * @title Security Pool
+ * @notice Allows users to stake LP tokens to earn rewards while protecting the staking pool from significant slashing events
  */
-contract InsurancePool is RewardsPoolController, StakingRewardsPoolBase {
+contract SecurityPool is RewardsPoolController, StakingRewardsPoolBase {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public totalDeposits;

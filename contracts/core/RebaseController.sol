@@ -7,7 +7,7 @@ import "./interfaces/IStakingPool.sol";
 import "./interfaces/IPriorityPool.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/ISDLPoolCCIPControllerPrimary.sol";
-import "./interfaces/IInsurancePool.sol";
+import "./interfaces/ISecurityPool.sol";
 
 /**
  * @title Rebase Controller
@@ -19,7 +19,7 @@ contract RebaseController is Ownable {
     IStakingPool public stakingPool;
     IPriorityPool public priorityPool;
     ISDLPoolCCIPControllerPrimary public sdlPoolCCIPController;
-    IInsurancePool public insurancePool;
+    ISecurityPool public securityPool;
 
     address public rebaseBot;
     uint256 public maxRebaseLossBP;
@@ -34,14 +34,14 @@ contract RebaseController is Ownable {
         address _stakingPool,
         address _priorityPool,
         address _sdlPoolCCIPController,
-        address _insurancePool,
+        address _securityPool,
         address _rebaseBot,
         uint256 _maxRebaseLossBP
     ) {
         stakingPool = IStakingPool(_stakingPool);
         priorityPool = IPriorityPool(_priorityPool);
         sdlPoolCCIPController = ISDLPoolCCIPControllerPrimary(_sdlPoolCCIPController);
-        insurancePool = IInsurancePool(_insurancePool);
+        securityPool = ISecurityPool(_securityPool);
         rebaseBot = _rebaseBot;
         if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
         maxRebaseLossBP = _maxRebaseLossBP;
@@ -129,14 +129,14 @@ contract RebaseController is Ownable {
 
         if ((10000 * totalDepositChange) / stakingPool.totalSupply() > maxRebaseLossBP) {
             priorityPool.setPoolStatus(IPriorityPool.PoolStatus.CLOSED);
-            insurancePool.initiateClaim();
+            securityPool.initiateClaim();
         } else {
             stakingPool.updateStrategyRewards(strategiesToUpdate, "");
         }
     }
 
     /**
-     * @notice Reopens the priority pool and insurance pool after they were paused as a result
+     * @notice Reopens the priority pool and security pool after they were paused as a result
      * of a significant slashing event and rebases the staking pool
      * @dev sender should ensure all strategies with losses are included in the index list and
      * all strategies with gains are excluded
@@ -144,7 +144,7 @@ contract RebaseController is Ownable {
      */
     function reopenPool(uint256[] calldata _strategyIdxs) external onlyOwner {
         priorityPool.setPoolStatus(IPriorityPool.PoolStatus.OPEN);
-        insurancePool.resolveClaim();
+        securityPool.resolveClaim();
         stakingPool.updateStrategyRewards(_strategyIdxs, "");
     }
 
