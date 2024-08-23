@@ -111,11 +111,11 @@ contract StakingPool is StakingRewardsPool {
 
         if (_amount > 0) {
             token.safeTransferFrom(msg.sender, address(this), _amount);
-            depositLiquidity(_data);
+            _depositLiquidity(_data);
             _mint(_account, _amount);
             totalStaked += _amount;
         } else {
-            depositLiquidity(_data);
+            _depositLiquidity(_data);
         }
 
         uint256 endingBalance = token.balanceOf(address(this));
@@ -409,28 +409,6 @@ contract StakingPool is StakingRewardsPool {
     }
 
     /**
-     * @notice Deposits available liquidity into strategies
-     * @dev deposits into strategies in ascending order, only moving to the next once the current is full
-     * @param _data list of deposit data passed to strategies
-     **/
-    function depositLiquidity(bytes[] calldata _data) public {
-        uint256 toDeposit = token.balanceOf(address(this));
-        if (toDeposit > 0) {
-            for (uint256 i = 0; i < strategies.length; i++) {
-                IStrategy strategy = IStrategy(strategies[i]);
-                uint256 strategyCanDeposit = strategy.canDeposit();
-                if (strategyCanDeposit >= toDeposit) {
-                    strategy.deposit(toDeposit, _data[i]);
-                    break;
-                } else if (strategyCanDeposit > 0) {
-                    strategy.deposit(strategyCanDeposit, _data[i]);
-                    toDeposit -= strategyCanDeposit;
-                }
-            }
-        }
-    }
-
-    /**
      * @notice Burns the senders liquid staking tokens, effectively donating their underlying stake to the pool
      * @param _amount amount to burn
      **/
@@ -481,6 +459,28 @@ contract StakingPool is StakingRewardsPool {
      */
     function _totalStaked() internal view override returns (uint256) {
         return totalStaked;
+    }
+
+    /**
+     * @notice Deposits available liquidity into strategies
+     * @dev deposits into strategies in ascending order, only moving to the next once the current is full
+     * @param _data list of deposit data passed to strategies
+     **/
+    function _depositLiquidity(bytes[] calldata _data) private {
+        uint256 toDeposit = token.balanceOf(address(this));
+        if (toDeposit > 0) {
+            for (uint256 i = 0; i < strategies.length; i++) {
+                IStrategy strategy = IStrategy(strategies[i]);
+                uint256 strategyCanDeposit = strategy.canDeposit();
+                if (strategyCanDeposit >= toDeposit) {
+                    strategy.deposit(toDeposit, _data[i]);
+                    break;
+                } else if (strategyCanDeposit > 0) {
+                    strategy.deposit(strategyCanDeposit, _data[i]);
+                    toDeposit -= strategyCanDeposit;
+                }
+            }
+        }
     }
 
     /**
