@@ -67,23 +67,35 @@ describe('PPKeeper', () => {
 
     let vaultImplementation = await deployImplementation('CommunityVault')
 
-    const opStrategy = (await deployUpgradeable('VCSMock', [
-      token.target,
-      accounts[0],
-      stakingController.target,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      toEther(100),
-    ])) as VCSMock
+    const vaultDepositController = await deploy('VaultDepositController')
 
-    const comStrategy = (await deployUpgradeable('VCSMock', [
-      token.target,
-      accounts[0],
-      stakingController.target,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      toEther(100),
-    ])) as VCSMock
+    const opStrategy = (await deployUpgradeable(
+      'VCSMock',
+      [
+        token.target,
+        accounts[0],
+        stakingController.target,
+        vaultImplementation,
+        [[accounts[4], 500]],
+        toEther(100),
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as VCSMock
+
+    const comStrategy = (await deployUpgradeable(
+      'VCSMock',
+      [
+        token.target,
+        accounts[0],
+        stakingController.target,
+        vaultImplementation,
+        [[accounts[4], 500]],
+        toEther(100),
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as VCSMock
 
     const vaults = []
     const vaultContracts = []

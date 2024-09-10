@@ -12,29 +12,32 @@ import "../interfaces/IVault.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IFundFlowController.sol";
 
+struct Fee {
+    address receiver;
+    uint256 basisPoints;
+}
+
+struct VaultGroup {
+    uint64 withdrawalIndex;
+    uint128 totalDepositRoom;
+}
+
+struct GlobalVaultState {
+    uint64 numVaultGroups;
+    uint64 curUnbondedVaultGroup;
+    uint64 groupDepositIndex;
+    uint64 depositIndex;
+}
+
+error InvalidVaultIds();
+error InsufficientTokensUnbonded();
+
 /**
- * @title Vault Controller Strategy
- * @notice Base strategy for managing multiple Chainlink staking vaults
+ * @title Vault Deposit Controller
+ * @notice Handles deposits and withdrawals for VaultControllerStrategy through delegatecall
  */
-abstract contract VaultControllerStrategy is Strategy {
+contract VaultDepositController is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    struct Fee {
-        address receiver;
-        uint256 basisPoints;
-    }
-
-    struct VaultGroup {
-        uint64 withdrawalIndex;
-        uint128 totalDepositRoom;
-    }
-
-    struct GlobalVaultState {
-        uint64 numVaultGroups;
-        uint64 curUnbondedVaultGroup;
-        uint64 groupDepositIndex;
-        uint64 depositIndex;
-    }
 
     IStaking public stakeController;
     Fee[] internal fees;
@@ -48,110 +51,26 @@ abstract contract VaultControllerStrategy is Strategy {
     uint256 public maxDepositSizeBP;
 
     IFundFlowController public fundFlowController;
-    uint256 internal totalUnbonded;
+    uint256 public totalUnbonded;
 
     VaultGroup[] public vaultGroups;
     GlobalVaultState public globalVaultState;
     uint256 internal vaultMaxDeposits;
 
-    uint256[5] private __gap;
-
-    event UpgradedVaults(uint256[] vaults);
-    event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
-    event SetVaultImplementation(address vaultImplementation);
-
-    error FeesTooLarge();
-    error InvalidBasisPoints();
-    error SenderNotAuthorized();
-    error InsufficientTokensUnbonded();
-    error InvalidVaultIds();
-    error InvalidWithdrawalIndexes();
-
-    /**
-     * @notice Initializes contract
-     * @param _token address of LINK token
-     * @param _stakingPool address of the staking pool that controls this strategy
-     * @param _stakeController address of Chainlink staking contract
-     * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
-     * @param _fees list of fees to be paid on rewards
-     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
-     * that can be deposited at once
-     * @param _vaultMaxDeposits maximum deposit limit for a single vault
-     **/
-    function __VaultControllerStrategy_init(
-        address _token,
-        address _stakingPool,
-        address _stakeController,
-        address _vaultImplementation,
-        Fee[] memory _fees,
-        uint256 _maxDepositSizeBP,
-        uint256 _vaultMaxDeposits
-    ) public onlyInitializing {
-        __Strategy_init(_token, _stakingPool);
-
-        stakeController = IStaking(_stakeController);
-
-        vaultImplementation = _vaultImplementation;
-
-        for (uint256 i = 0; i < _fees.length; ++i) {
-            fees.push(_fees[i]);
-        }
-        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
-
-        if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
-        maxDepositSizeBP = _maxDepositSizeBP;
-
-        vaultMaxDeposits = _vaultMaxDeposits;
-    }
-
-    /**
-     * @notice Reverts if sender is not fund flow controller
-     */
-    modifier onlyFundFlowController() {
-        if (msg.sender != address(fundFlowController)) revert SenderNotAuthorized();
-        _;
-    }
-
-    /**
-     * @notice Returns a list of all vaults controlled by this contract
-     * @return list of vault addresses
-     */
-    function getVaults() external view returns (IVault[] memory) {
-        return vaults;
-    }
-
     /**
      * @notice Deposits tokens from the staking pool into vaults
+     * @dev called by VaultControllerStrategy using delegatecall
      * @param _amount amount to deposit
      * @param _data encoded vault deposit order
      */
-    function deposit(uint256 _amount, bytes calldata _data) external onlyStakingPool {
+    function deposit(uint256 _amount, bytes calldata _data) external {
         token.safeTransferFrom(msg.sender, address(this), _amount);
 
         (uint256 minDeposits, uint256 maxDeposits) = getVaultDepositLimits();
 
-        // if vault deposit limit has changed in Chainlink staking contract, make adjustments
-        if (maxDeposits > vaultMaxDeposits) {
-            uint256 diff = maxDeposits - vaultMaxDeposits;
-            uint256 totalVaults = globalVaultState.depositIndex;
-            uint256 numVaultGroups = globalVaultState.numVaultGroups;
-            uint256 vaultsPerGroup = totalVaults / numVaultGroups;
-            uint256 remainder = totalVaults % numVaultGroups;
-
-            for (uint256 i = 0; i < numVaultGroups; ++i) {
-                uint256 numVaults = vaultsPerGroup;
-                if (i < remainder) {
-                    numVaults += 1;
-                }
-
-                vaultGroups[i].totalDepositRoom += uint128(numVaults * diff);
-            }
-
-            vaultMaxDeposits = maxDeposits;
-        }
-
         uint256 toDeposit = token.balanceOf(address(this));
         uint64[] memory vaultIds = abi.decode(_data, (uint64[]));
+
         uint256 deposited = _depositToVaults(toDeposit, minDeposits, maxDeposits, vaultIds);
 
         totalDeposits += deposited;
@@ -164,10 +83,11 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice Withdraws tokens from vaults and sends them to staking pool
+     * @dev called by VaultControllerStrategy using delegatecall
      * @param _amount amount to withdraw
      * @param _data encoded vault withdrawal order
      */
-    function withdraw(uint256 _amount, bytes calldata _data) external onlyStakingPool {
+    function withdraw(uint256 _amount, bytes calldata _data) external {
         if (!fundFlowController.claimPeriodActive() || _amount > totalUnbonded)
             revert InsufficientTokensUnbonded();
 
@@ -189,7 +109,7 @@ abstract contract VaultControllerStrategy is Strategy {
             IVault vault = vaults[vaultIds[i]];
             uint256 deposits = vault.getPrincipalDeposits();
 
-            if (deposits != 0 && vault.unbondingActive()) {
+            if (deposits != 0 && vault.claimPeriodActive() && !vault.isRemoved()) {
                 if (toWithdraw > deposits) {
                     vault.withdraw(deposits);
                     unbondedRemaining -= deposits;
@@ -219,15 +139,291 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
+     * @notice Deposits tokens into vaults
+     * @param _toDeposit amount to deposit
+     * @param _minDeposits minimum amount of deposits that a vault can hold
+     * @param _maxDeposits minimum amount of deposits that a vault can hold
+     * @param _vaultIds list of vaults to deposit into
+     */
+    function _depositToVaults(
+        uint256 _toDeposit,
+        uint256 _minDeposits,
+        uint256 _maxDeposits,
+        uint64[] memory _vaultIds
+    ) private returns (uint256) {
+        uint256 toDeposit = _toDeposit;
+        uint256 totalRebonded;
+        GlobalVaultState memory globalState = globalVaultState;
+        VaultGroup[] memory groups = vaultGroups;
+
+        if (_vaultIds.length != 0 && _vaultIds[0] != globalState.groupDepositIndex)
+            revert InvalidVaultIds();
+
+        // deposit into vaults in the order specified in _vaultIds
+
+        for (uint256 i = 0; i < _vaultIds.length; ++i) {
+            uint256 vaultIndex = _vaultIds[i];
+            if (vaultIndex >= globalState.depositIndex) revert InvalidVaultIds();
+
+            IVault vault = vaults[vaultIndex];
+            uint256 groupIndex = vaultIndex % globalState.numVaultGroups;
+            VaultGroup memory group = groups[groupIndex];
+            uint256 deposits = vault.getPrincipalDeposits();
+            uint256 canDeposit = _maxDeposits - deposits;
+
+            globalState.groupDepositIndex = uint64(vaultIndex);
+
+            if (deposits == 0 && vaultIndex == group.withdrawalIndex) {
+                group.withdrawalIndex += uint64(globalState.numVaultGroups);
+                if (group.withdrawalIndex > globalState.depositIndex) {
+                    group.withdrawalIndex = uint64(groupIndex);
+                }
+            }
+
+            if (canDeposit != 0 && vaultIndex != group.withdrawalIndex && !vault.isRemoved()) {
+                if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
+                    break;
+                }
+
+                if (vault.claimPeriodActive()) {
+                    totalRebonded += deposits;
+                }
+
+                if (toDeposit > canDeposit) {
+                    vault.deposit(canDeposit);
+                    toDeposit -= canDeposit;
+                    group.totalDepositRoom -= uint128(canDeposit);
+                } else {
+                    vault.deposit(toDeposit);
+                    group.totalDepositRoom -= uint128(toDeposit);
+                    toDeposit = 0;
+                    break;
+                }
+            }
+        }
+
+        globalVaultState = globalState;
+
+        for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
+            VaultGroup memory group = vaultGroups[i];
+            if (
+                group.withdrawalIndex != groups[i].withdrawalIndex ||
+                group.totalDepositRoom != groups[i].totalDepositRoom
+            ) {
+                vaultGroups[i] = groups[i];
+            }
+        }
+
+        if (totalRebonded != 0) totalUnbonded -= totalRebonded;
+        if (toDeposit == 0 || toDeposit < _minDeposits) return _toDeposit - toDeposit;
+
+        // cannot be more than a single vault worth of deposit room in each group (current group excepted)
+        for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
+            if (
+                i != globalState.curUnbondedVaultGroup && groups[i].totalDepositRoom >= _maxDeposits
+            ) {
+                return _toDeposit - toDeposit;
+            }
+        }
+
+        //deposit into additional vaults that don't yet belong to a group
+
+        uint256 numVaults = vaults.length;
+        uint256 i = globalState.depositIndex;
+
+        while (i < numVaults) {
+            IVault vault = vaults[i];
+            uint256 deposits = vault.getPrincipalDeposits();
+            uint256 canDeposit = _maxDeposits - deposits;
+
+            if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
+                break;
+            }
+
+            if (toDeposit > canDeposit) {
+                vault.deposit(canDeposit);
+                toDeposit -= canDeposit;
+            } else {
+                vault.deposit(toDeposit);
+                if (toDeposit < canDeposit) {
+                    toDeposit = 0;
+                    break;
+                }
+                toDeposit = 0;
+            }
+
+            ++i;
+        }
+
+        globalVaultState.depositIndex = uint64(i);
+
+        return _toDeposit - toDeposit;
+    }
+
+    /**
+     * @notice Returns the vault deposit limits for vaults controlled by this strategy
+     * @return minimum amount of deposits that a vault can hold
+     * @return maximum amount of deposits that a vault can hold
+     */
+    function getVaultDepositLimits() public view returns (uint256, uint256) {
+        return stakeController.getStakerLimits();
+    }
+
+    function updateDeposits(
+        bytes calldata _data
+    )
+        external
+        returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
+    {}
+
+    function getTotalDeposits() public view override returns (uint256) {}
+
+    function getMaxDeposits() public view override returns (uint256) {}
+
+    function getMinDeposits() public view override returns (uint256) {}
+
+    function getDepositChange() external view returns (int256) {}
+}
+
+/**
+ * @title Vault Controller Strategy
+ * @notice Base strategy for managing multiple Chainlink staking vaults
+ */
+abstract contract VaultControllerStrategy is Strategy {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    IStaking public stakeController;
+    Fee[] internal fees;
+
+    address public vaultImplementation;
+
+    IVault[] internal vaults;
+    uint256 internal totalDeposits;
+    uint256 public totalPrincipalDeposits;
+
+    uint256 public maxDepositSizeBP;
+
+    IFundFlowController public fundFlowController;
+    uint256 public totalUnbonded;
+
+    VaultGroup[] public vaultGroups;
+    GlobalVaultState public globalVaultState;
+    uint256 public vaultMaxDeposits;
+
+    address public vaultDepositController;
+
+    uint256[4] private __gap;
+
+    event UpgradedVaults(uint256[] vaults);
+    event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
+    event SetVaultImplementation(address vaultImplementation);
+
+    error FeesTooLarge();
+    error InvalidBasisPoints();
+    error SenderNotAuthorized();
+    error InvalidWithdrawalIndexes();
+    error DepositFailed();
+    error WithdrawalFailed();
+    error VaultDepositControllerNotSet();
+
+    /**
+     * @notice Initializes contract
+     * @param _token address of LINK token
+     * @param _stakingPool address of the staking pool that controls this strategy
+     * @param _stakeController address of Chainlink staking contract
+     * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
+     * @param _fees list of fees to be paid on rewards
+     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * that can be deposited at once
+     * @param _vaultMaxDeposits maximum deposit limit for a single vault
+     * @param _vaultDepositController address of vault deposit controller
+     **/
+    function __VaultControllerStrategy_init(
+        address _token,
+        address _stakingPool,
+        address _stakeController,
+        address _vaultImplementation,
+        Fee[] memory _fees,
+        uint256 _maxDepositSizeBP,
+        uint256 _vaultMaxDeposits,
+        address _vaultDepositController
+    ) public onlyInitializing {
+        __Strategy_init(_token, _stakingPool);
+
+        stakeController = IStaking(_stakeController);
+
+        vaultImplementation = _vaultImplementation;
+
+        for (uint256 i = 0; i < _fees.length; ++i) {
+            fees.push(_fees[i]);
+        }
+        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
+
+        if (_maxDepositSizeBP > 10000) revert InvalidBasisPoints();
+        maxDepositSizeBP = _maxDepositSizeBP;
+
+        vaultMaxDeposits = _vaultMaxDeposits;
+        vaultDepositController = _vaultDepositController;
+    }
+
+    /**
+     * @notice Reverts if sender is not fund flow controller
+     */
+    modifier onlyFundFlowController() {
+        if (msg.sender != address(fundFlowController)) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
+     * @notice Returns a list of all vaults controlled by this contract
+     * @return list of vault addresses
+     */
+    function getVaults() external view returns (IVault[] memory) {
+        return vaults;
+    }
+
+    /**
+     * @notice Deposits tokens from the staking pool into vaults
+     * @param _amount amount to deposit
+     * @param _data encoded vault deposit order
+     */
+    function deposit(uint256 _amount, bytes calldata _data) external virtual onlyStakingPool {
+        if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
+
+        (bool success, ) = vaultDepositController.delegatecall(
+            abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
+        );
+
+        if (!success) revert DepositFailed();
+    }
+
+    /**
+     * @notice Withdraws tokens from vaults and sends them to staking pool
+     * @param _amount amount to withdraw
+     * @param _data encoded vault withdrawal order
+     */
+    function withdraw(uint256 _amount, bytes calldata _data) external onlyStakingPool {
+        if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
+
+        (bool success, ) = vaultDepositController.delegatecall(
+            abi.encodeWithSelector(VaultDepositController.withdraw.selector, _amount, _data)
+        );
+
+        if (!success) revert WithdrawalFailed();
+    }
+
+    /**
      * @notice Executes a vault group update
      * @dev re-unbonds all vaults in the current vault group and increments the current vault group
      * to the next one which will have just entered the claim period
      * @param _curGroupVaultsToUnbond list of vaults to unbond in current vault group
+     * @param _curGroupTotalDepositRoom total deposit room across all vaults in current vault group
      * @param _nextGroup index of next vault group
      * @param _nextGroupTotalUnbonded total unbonded across all vaults in next vault group
      */
     function updateVaultGroups(
         uint256[] calldata _curGroupVaultsToUnbond,
+        uint256 _curGroupTotalDepositRoom,
         uint256 _nextGroup,
         uint256 _nextGroupTotalUnbonded
     ) external onlyFundFlowController {
@@ -235,6 +431,9 @@ abstract contract VaultControllerStrategy is Strategy {
             vaults[_curGroupVaultsToUnbond[i]].unbond();
         }
 
+        vaultGroups[globalVaultState.curUnbondedVaultGroup].totalDepositRoom = uint128(
+            _curGroupTotalDepositRoom
+        );
         globalVaultState.curUnbondedVaultGroup = uint64(_nextGroup);
         totalUnbonded = _nextGroupTotalUnbonded;
     }
@@ -460,125 +659,12 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice Deposits tokens into vaults
-     * @param _toDeposit amount to deposit
-     * @param _minDeposits minimum amount of deposits that a vault can hold
-     * @param _maxDeposits minimum amount of deposits that a vault can hold
-     * @param _vaultIds list of vaults to deposit into
+     * @notice Sets the vault deposit controller
+     * @dev this contract handles depositing into vaults through delegatecall
+     * @param _vaultDepositController address of vault deposit controller
      */
-    function _depositToVaults(
-        uint256 _toDeposit,
-        uint256 _minDeposits,
-        uint256 _maxDeposits,
-        uint64[] memory _vaultIds
-    ) internal returns (uint256) {
-        uint256 toDeposit = _toDeposit;
-        uint256 totalRebonded;
-        GlobalVaultState memory globalState = globalVaultState;
-        VaultGroup[] memory groups = vaultGroups;
-
-        if (_vaultIds.length != 0 && _vaultIds[0] != globalState.groupDepositIndex)
-            revert InvalidVaultIds();
-
-        // deposit into vaults in the order specified in _vaultIds
-
-        for (uint256 i = 0; i < _vaultIds.length; ++i) {
-            uint256 vaultIndex = _vaultIds[i];
-            if (vaultIndex >= globalState.depositIndex) revert InvalidVaultIds();
-
-            IVault vault = vaults[vaultIndex];
-            uint256 groupIndex = vaultIndex % globalState.numVaultGroups;
-            VaultGroup memory group = groups[groupIndex];
-            uint256 deposits = vault.getPrincipalDeposits();
-            uint256 canDeposit = _maxDeposits - deposits;
-
-            globalState.groupDepositIndex = uint64(vaultIndex);
-
-            if (deposits == 0 && vaultIndex == group.withdrawalIndex) {
-                group.withdrawalIndex += uint64(globalState.numVaultGroups);
-                if (group.withdrawalIndex > globalState.depositIndex) {
-                    group.withdrawalIndex = uint64(groupIndex);
-                }
-            }
-
-            if (canDeposit != 0 && vaultIndex != group.withdrawalIndex) {
-                if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
-                    break;
-                }
-
-                if (vault.unbondingActive()) {
-                    totalRebonded += deposits;
-                }
-
-                if (toDeposit > canDeposit) {
-                    vault.deposit(canDeposit);
-                    toDeposit -= canDeposit;
-                    group.totalDepositRoom -= uint128(canDeposit);
-                } else {
-                    vault.deposit(toDeposit);
-                    group.totalDepositRoom -= uint128(toDeposit);
-                    toDeposit = 0;
-                    break;
-                }
-            }
-        }
-
-        globalVaultState = globalState;
-
-        for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
-            VaultGroup memory group = vaultGroups[i];
-            if (
-                group.withdrawalIndex != groups[i].withdrawalIndex ||
-                group.totalDepositRoom != groups[i].totalDepositRoom
-            ) {
-                vaultGroups[i] = groups[i];
-            }
-        }
-
-        if (totalRebonded != 0) totalUnbonded -= totalRebonded;
-        if (toDeposit == 0 || toDeposit < _minDeposits) return _toDeposit - toDeposit;
-
-        // cannot be more than a single vault worth of deposit room in each group (current group excepted)
-        for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
-            if (
-                i != globalState.curUnbondedVaultGroup && groups[i].totalDepositRoom >= _maxDeposits
-            ) {
-                return _toDeposit - toDeposit;
-            }
-        }
-
-        //deposit into additional vaults that don't yet belong to a group
-
-        uint256 numVaults = vaults.length;
-        uint256 i = globalState.depositIndex;
-
-        while (i < numVaults) {
-            IVault vault = vaults[i];
-            uint256 deposits = vault.getPrincipalDeposits();
-            uint256 canDeposit = _maxDeposits - deposits;
-
-            if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
-                break;
-            }
-
-            if (toDeposit > canDeposit) {
-                vault.deposit(canDeposit);
-                toDeposit -= canDeposit;
-            } else {
-                vault.deposit(toDeposit);
-                if (toDeposit < canDeposit) {
-                    toDeposit = 0;
-                    break;
-                }
-                toDeposit = 0;
-            }
-
-            ++i;
-        }
-
-        globalVaultState.depositIndex = uint64(i);
-
-        return _toDeposit - toDeposit;
+    function setVaultDepositController(address _vaultDepositController) external onlyOwner {
+        vaultDepositController = _vaultDepositController;
     }
 
     /**

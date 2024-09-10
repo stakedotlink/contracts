@@ -5,4 +5,6 @@ interface IFundFlowController {
     function claimPeriodActive() external view returns (bool);
 
     function getDepositData(uint256 _amount) external view returns (bytes[] memory);
+
+    function updateOperatorVaultGroupAccounting(uint256[] calldata _vaultGroups) external;
 }

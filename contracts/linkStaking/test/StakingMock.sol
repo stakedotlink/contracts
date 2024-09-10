@@ -33,6 +33,7 @@ contract StakingMock is IERC677Receiver {
     bool public active;
 
     mapping(address => Staker) public stakers;
+    mapping(address => bool) public isRemoved;
 
     error UnbondingPeriodActive();
     error NotInClaimPeriod();
@@ -127,6 +128,10 @@ contract StakingMock is IERC677Receiver {
         return stakers[_staker].removedPrincipal;
     }
 
+    function getUnbondingEndsAt(address _staker) external view returns (uint256) {
+        return stakers[_staker].unbondingPeriodEndsAt;
+    }
+
     function getClaimPeriodEndsAt(address _staker) external view returns (uint256) {
         return stakers[_staker].claimPeriodEndsAt;
     }
@@ -135,9 +140,19 @@ contract StakingMock is IERC677Receiver {
         return rewardVault;
     }
 
-    function removePrincipal(address _staker, uint256 _amount) external {
-        stakers[_staker].principal -= _amount;
-        stakers[_staker].removedPrincipal += _amount;
+    function removeOperator(address _operator) external {
+        isRemoved[_operator] = true;
+        stakers[_operator].removedPrincipal = stakers[_operator].principal;
+        delete stakers[_operator].principal;
+    }
+
+    function unstakeRemovedPrincipal() external {
+        token.transfer(msg.sender, stakers[msg.sender].removedPrincipal);
+        delete stakers[msg.sender].removedPrincipal;
+    }
+
+    function slashOperator(address _operator, uint256 _amount) external {
+        stakers[_operator].principal -= _amount;
     }
 
     function getMerkleRoot() external view returns (bytes32) {

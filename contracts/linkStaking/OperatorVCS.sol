@@ -15,8 +15,7 @@ contract OperatorVCS is VaultControllerStrategy {
     uint256 private unclaimedOperatorRewards;
 
     mapping(address => bool) private vaultMapping;
-
-    bool private preRelease; // deprecated
+    address[] private vaultsToRemove;
 
     event VaultAdded(address indexed operator);
     event WithdrawExtraRewards(address indexed receiver, uint256 amount);
@@ -25,6 +24,8 @@ contract OperatorVCS is VaultControllerStrategy {
     error InvalidPercentage();
     error UnauthorizedToken();
     error NoExtraRewards();
+    error OperatorNotRemoved();
+    error VaultRemovalAlreadyQueued();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -42,6 +43,7 @@ contract OperatorVCS is VaultControllerStrategy {
      * that can be deposited at once
      * @param _vaultMaxDeposits maximum deposit limit for a single vault
      * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
+     * @param _vaultDepositController address of vault deposit controller
      **/
     function initialize(
         address _token,
@@ -51,7 +53,8 @@ contract OperatorVCS is VaultControllerStrategy {
         Fee[] memory _fees,
         uint256 _maxDepositSizeBP,
         uint256 _vaultMaxDeposits,
-        uint256 _operatorRewardPercentage
+        uint256 _operatorRewardPercentage,
+        address _vaultDepositController
     ) public reinitializer(3) {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
@@ -61,7 +64,8 @@ contract OperatorVCS is VaultControllerStrategy {
                 _vaultImplementation,
                 _fees,
                 _maxDepositSizeBP,
-                _vaultMaxDeposits
+                _vaultMaxDeposits,
+                _vaultDepositController
             );
 
             if (_operatorRewardPercentage > 10000) revert InvalidPercentage();
@@ -158,17 +162,18 @@ contract OperatorVCS is VaultControllerStrategy {
     {
         uint256 minRewards = _data.length == 0 ? 0 : abi.decode(_data, (uint256));
         uint256 newTotalDeposits = totalDeposits;
+        uint256 newTotalPrincipalDeposits;
         uint256 vaultDeposits;
         uint256 operatorRewards;
 
         uint256 vaultCount = vaults.length;
         address receiver = address(this);
         for (uint256 i = 0; i < vaultCount; ++i) {
-            (uint256 deposits, uint256 rewards) = IOperatorVault(address(vaults[i])).updateDeposits(
-                minRewards,
-                receiver
-            );
+            (uint256 deposits, uint256 principal, uint256 rewards) = IOperatorVault(
+                address(vaults[i])
+            ).updateDeposits(minRewards, receiver);
             vaultDeposits += deposits;
+            newTotalPrincipalDeposits += principal;
             operatorRewards += rewards;
         }
 
@@ -210,6 +215,131 @@ contract OperatorVCS is VaultControllerStrategy {
         }
 
         totalDeposits = newTotalDeposits;
+        totalPrincipalDeposits = newTotalPrincipalDeposits;
+    }
+
+    /**
+     * @notice Returns the maximum amount of tokens this strategy can hold
+     * @return maximum deposits
+     */
+    function getMaxDeposits() public view override returns (uint256) {
+        (, uint256 maxDeposits) = getVaultDepositLimits();
+        uint256 totalRemovedDepositRoom;
+
+        if (vaultsToRemove.length != 0) {
+            uint256 numVaults = vaults.length;
+            for (uint256 i = 0; i < numVaults; ++i) {
+                if (vaults[i].isRemoved()) {
+                    totalRemovedDepositRoom += maxDeposits - vaults[i].getPrincipalDeposits();
+                }
+            }
+        }
+
+        return
+            totalDeposits +
+            (
+                stakeController.isActive()
+                    ? MathUpgradeable.min(
+                        vaults.length *
+                            maxDeposits -
+                            totalPrincipalDeposits -
+                            totalRemovedDepositRoom,
+                        ((stakeController.getMaxPoolSize() - stakeController.getTotalPrincipal()) *
+                            maxDepositSizeBP) / 10000
+                    )
+                    : 0
+            );
+    }
+
+    /**
+     * @notice Returns a list of all vaults queued for removal
+     * @return list of vaults
+     */
+    function getVaultRemovalQueue() external view returns (address[] memory) {
+        return vaultsToRemove;
+    }
+
+    /**
+     * @notice Queues a vault for removal
+     * @dev a vault can only be queued for removal if the operator has been removed from the
+     * Chainlink staking contract
+     * @param _index index of vault
+     */
+    function queueVaultRemoval(uint256 _index) external {
+        address vault = address(vaults[_index]);
+
+        if (!IVault(vault).isRemoved()) revert OperatorNotRemoved();
+        for (uint256 i = 0; i < vaultsToRemove.length; ++i) {
+            if (vaultsToRemove[i] == vault) revert VaultRemovalAlreadyQueued();
+        }
+
+        vaultsToRemove.push(address(vaults[_index]));
+
+        if (_index < globalVaultState.depositIndex) {
+            uint256 group = _index % globalVaultState.numVaultGroups;
+            uint256[] memory groups = new uint256[](1);
+            groups[0] = group;
+            fundFlowController.updateOperatorVaultGroupAccounting(groups);
+
+            if (vaults[_index].claimPeriodActive()) {
+                removeVault(vaultsToRemove.length - 1);
+            }
+        }
+    }
+
+    /**
+     * @notice Removed a vault that has been queued for removal
+     * @param _queueIndex index of vault in removal queue
+     */
+    function removeVault(uint256 _queueIndex) public {
+        address vault = vaultsToRemove[_queueIndex];
+
+        vaultsToRemove[_queueIndex] = vaultsToRemove[vaultsToRemove.length - 1];
+        vaultsToRemove.pop();
+
+        _updateStrategyRewards();
+        (uint256 principalWithdrawn, uint256 rewardsWithdrawn) = IOperatorVault(vault).exitVault();
+
+        totalDeposits -= principalWithdrawn + rewardsWithdrawn;
+        totalPrincipalDeposits -= principalWithdrawn;
+
+        uint256 numVaults = vaults.length;
+        uint256 index;
+        for (uint256 i = 0; i < numVaults; ++i) {
+            if (address(vaults[i]) == vault) {
+                index = i;
+                break;
+            }
+        }
+        for (uint256 i = index; i < numVaults - 1; ++i) {
+            vaults[i] = vaults[i + 1];
+        }
+        vaults.pop();
+
+        token.safeTransfer(address(stakingPool), token.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Updates accounting for any number of vault groups
+     * @dev used to correct minor accounting errors that result from the removal or slashing
+     * of operators in the Chainlink staking contract
+     * @param _vaultGroups list of vault groups to update
+     * @param _totalDepositRoom list of totalDepositRoom corresponding to list of vault groups
+     * @param _totalUnbonded total amount currently unbonded
+     * @param _vaultMaxDeposits vault deposit limit as defined in Chainlink staking contract
+     */
+    function updateVaultGroupAccounting(
+        uint256[] calldata _vaultGroups,
+        uint256[] calldata _totalDepositRoom,
+        uint256 _totalUnbonded,
+        uint256 _vaultMaxDeposits
+    ) external onlyFundFlowController {
+        for (uint256 i = 0; i < _vaultGroups.length; ++i) {
+            vaultGroups[_vaultGroups[i]].totalDepositRoom = uint128(_totalDepositRoom[i]);
+        }
+
+        if (_totalUnbonded != totalUnbonded) totalUnbonded = _totalUnbonded;
+        if (_vaultMaxDeposits > vaultMaxDeposits) vaultMaxDeposits = _vaultMaxDeposits;
     }
 
     /**

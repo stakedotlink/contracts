@@ -60,24 +60,36 @@ describe('VaultControllerStrategy', () => {
 
     let vaultImplementation = await deployImplementation('CommunityVault')
 
-    const strategy = (await deployUpgradeable('VCSMock', [
-      adrs.token,
-      accounts[0],
-      adrs.stakingController,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      toEther(100),
-    ])) as VCSMock
+    const vaultDepositController = await deploy('VaultDepositController')
+
+    const strategy = (await deployUpgradeable(
+      'VCSMock',
+      [
+        adrs.token,
+        accounts[0],
+        adrs.stakingController,
+        vaultImplementation,
+        [[accounts[4], 500]],
+        toEther(100),
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as VCSMock
     adrs.strategy = await strategy.getAddress()
 
-    const strategy2 = (await deployUpgradeable('VCSMock', [
-      adrs.token,
-      accounts[0],
-      adrs.stakingController,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      toEther(100),
-    ])) as VCSMock
+    const strategy2 = (await deployUpgradeable(
+      'VCSMock',
+      [
+        adrs.token,
+        accounts[0],
+        adrs.stakingController,
+        vaultImplementation,
+        [[accounts[4], 500]],
+        toEther(100),
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as VCSMock
     adrs.strategy2 = await strategy2.getAddress()
 
     const vaults = []
@@ -101,8 +113,8 @@ describe('VaultControllerStrategy', () => {
     await token.approve(adrs.strategy, ethers.MaxUint256)
 
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
-      adrs.strategy,
       adrs.strategy2,
+      adrs.strategy,
       unbondingPeriod,
       claimPeriod,
       5,
@@ -206,10 +218,10 @@ describe('VaultControllerStrategy', () => {
 
     await expect(
       strategy.deposit(toEther(200), encodeVaults([6, 11, 4]))
-    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+    ).to.be.revertedWithCustomError(strategy, 'DepositFailed()')
     await expect(
       strategy.deposit(toEther(200), encodeVaults([1, 12]))
-    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+    ).to.be.revertedWithCustomError(strategy, 'DepositFailed()')
 
     await strategy.deposit(toEther(200), encodeVaults([1, 6, 11, 4]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 710)
@@ -263,6 +275,12 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[12])), 100)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[13])), 100)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[14])), 100)
+
+    await strategy.setVaultDepositController(ethers.ZeroAddress)
+    await expect(strategy.deposit(toEther(50), encodeVaults([]))).to.be.revertedWithCustomError(
+      strategy,
+      'VaultDepositControllerNotSet()'
+    )
   })
 
   it('deposit should work correctly', async () => {
@@ -286,20 +304,18 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 720)
 
     await stakingController.setDepositLimits(toEther(10), toEther(120))
-    await strategy.deposit(toEther(80), encodeVaults([0, 1, 2, 3, 4, 5, 6]))
+    await strategy.deposit(toEther(80), encodeVaults([]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 800)
-    assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[5])), 120)
-    assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[6])), 120)
-    assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[7])), 60)
+    assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[7])), 100)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 800)
 
     await token.transfer(adrs.strategy, toEther(2000))
     await strategy.deposit(toEther(20), encodeVaults([]))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1700)
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1660)
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 0)
-    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 1700)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 1700)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 1660)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1660)
   })
 
   it('withdraw should work correctly', async () => {
@@ -319,10 +335,10 @@ describe('VaultControllerStrategy', () => {
 
     await expect(
       strategy.withdraw(toEther(150), encodeVaults([5, 10]))
-    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+    ).to.be.revertedWithCustomError(strategy, 'WithdrawalFailed()')
     await expect(
       strategy.withdraw(toEther(150), encodeVaults([0, 1]))
-    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+    ).to.be.revertedWithCustomError(strategy, 'WithdrawalFailed()')
 
     await strategy.withdraw(toEther(150), encodeVaults([0, 5]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1050)
@@ -365,13 +381,13 @@ describe('VaultControllerStrategy', () => {
 
     await expect(
       strategy.withdraw(toEther(101), encodeVaults([6, 11]))
-    ).to.be.revertedWithCustomError(strategy, 'InsufficientTokensUnbonded()')
+    ).to.be.revertedWithCustomError(strategy, 'WithdrawalFailed()')
 
     await time.increase(claimPeriod)
 
     await expect(strategy.withdraw(toEther(20), encodeVaults([6]))).to.be.revertedWithCustomError(
       strategy,
-      'InsufficientTokensUnbonded()'
+      'WithdrawalFailed()'
     )
 
     await fundFlowController.updateVaultGroups()

@@ -12,7 +12,12 @@ interface IVaultControllerStrategy {
 
     function updateVaultGroups(
         uint256[] calldata _curGroupVaultsToUnbond,
+        uint256 _curGroupTotalDepositRoom,
         uint256 _nextGroup,
         uint256 _nextGroupTotalUnbonded
     ) external;
+
+    function totalUnbonded() external view returns (uint256);
+
+    function vaultMaxDeposits() external view returns (uint256);
 }

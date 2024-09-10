@@ -14,7 +14,9 @@ interface IVault {
 
     function getRewards() external view returns (uint256);
 
-    function unbondingActive() external view returns (bool);
+    function claimPeriodActive() external view returns (bool);
+
+    function isRemoved() external view returns (bool);
 
     function migrate(bytes calldata _data) external;
 

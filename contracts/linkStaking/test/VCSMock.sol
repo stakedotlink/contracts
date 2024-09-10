@@ -19,7 +19,8 @@ contract VCSMock is VaultControllerStrategy {
         address _stakeController,
         address _vaultImplementation,
         Fee[] memory _fees,
-        uint256 _vaultMaxDeposits
+        uint256 _vaultMaxDeposits,
+        address _vaultDepositController
     ) public initializer {
         __VaultControllerStrategy_init(
             _token,
@@ -28,7 +29,8 @@ contract VCSMock is VaultControllerStrategy {
             _vaultImplementation,
             _fees,
             9000,
-            _vaultMaxDeposits
+            _vaultMaxDeposits,
+            _vaultDepositController
         );
 
         globalVaultState = GlobalVaultState(5, 0, 0, 0);
