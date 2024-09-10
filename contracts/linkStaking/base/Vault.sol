@@ -106,11 +106,23 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns whether the unbonding or claim period is active for this contract in the Chainlink staking contract
-     * @return rewards balance
+     * @notice Returns whether the claim period is active for this contract in the Chainlink staking contract
+     * @return true if active, false otherwise
      */
-    function unbondingActive() external view returns (bool) {
-        return block.timestamp < stakeController.getClaimPeriodEndsAt(address(this));
+    function claimPeriodActive() external view returns (bool) {
+        uint256 unbondingPeriodEndsAt = stakeController.getUnbondingEndsAt(address(this));
+        if (unbondingPeriodEndsAt == 0 || block.timestamp < unbondingPeriodEndsAt) return false;
+
+        return block.timestamp <= stakeController.getClaimPeriodEndsAt(address(this));
+    }
+
+    /**
+     * @notice Returns whether the operator for this vault has been removed from the Chainlink staking contract
+     * @dev only used by operator vaults but defined here to keep interface consistent
+     * @return true if operator has been removed, false otherwise
+     */
+    function isRemoved() public view virtual returns (bool) {
+        return false;
     }
 
     /**

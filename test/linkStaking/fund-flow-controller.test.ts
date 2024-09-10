@@ -16,6 +16,7 @@ import {
   CommunityVault,
   StakingRewardsMock,
   FundFlowController,
+  OperatorVCS,
 } from '../../typechain-types'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
@@ -61,35 +62,51 @@ describe('FundFlowController', () => {
       claimPeriod,
     ])) as StakingMock
 
-    let vaultImplementation = await deployImplementation('CommunityVault')
+    const vaultDepositController = await deploy('VaultDepositController')
 
-    const opStrategy = (await deployUpgradeable('VCSMock', [
-      token.target,
-      accounts[0],
-      stakingController.target,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      toEther(100),
-    ])) as VCSMock
+    let opVaultImplementation = await deployImplementation('OperatorVault')
 
-    const comStrategy = (await deployUpgradeable('VCSMock', [
-      token.target,
-      accounts[0],
-      stakingController.target,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      toEther(100),
-    ])) as VCSMock
+    const opStrategy = (await deployUpgradeable(
+      'OperatorVCS',
+      [
+        token.target,
+        accounts[0],
+        stakingController.target,
+        opVaultImplementation,
+        [[accounts[4], 500]],
+        10000,
+        toEther(100),
+        1000,
+
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as OperatorVCS
+
+    let comVaultImplementation = await deployImplementation('CommunityVault')
+
+    const comStrategy = (await deployUpgradeable(
+      'VCSMock',
+      [
+        token.target,
+        accounts[0],
+        stakingController.target,
+        comVaultImplementation,
+        [[accounts[4], 500]],
+        toEther(100),
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as VCSMock
 
     const vaults = []
     const vaultContracts = []
     for (let i = 0; i < 15; i++) {
-      let vault = (await deployUpgradeable('CommunityVault', [
-        token.target,
-        comStrategy.target,
-        stakingController.target,
-        rewardsController.target,
-      ])) as CommunityVault
+      let vault = (await deployUpgradeable(
+        'CommunityVault',
+        [token.target, comStrategy.target, stakingController.target, rewardsController.target],
+        { unsafeAllow: ['delegatecall'] }
+      )) as CommunityVault
       vaultContracts.push(vault)
       vaults.push(vault.target)
     }
@@ -255,6 +272,7 @@ describe('FundFlowController', () => {
     )
     assert.equal(Number(await fundFlowController.curUnbondedVaultGroup()), 1)
     assert.equal(fromEther(await comStrategy.canWithdraw()), 0)
+    assert.equal(fromEther((await comStrategy.vaultGroups(0))[1]), 0)
     assert.equal(Number((await comStrategy.globalVaultState())[1]), 1)
 
     await expect(fundFlowController.updateVaultGroups()).to.be.revertedWithCustomError(
@@ -271,6 +289,7 @@ describe('FundFlowController', () => {
     )
     assert.equal(Number(await fundFlowController.curUnbondedVaultGroup()), 2)
     assert.equal(fromEther(await comStrategy.canWithdraw()), 0)
+    assert.equal(fromEther((await comStrategy.vaultGroups(0))[1]), 0)
     assert.equal(Number((await comStrategy.globalVaultState())[1]), 2)
 
     await time.increase(claimPeriod)
@@ -286,6 +305,7 @@ describe('FundFlowController', () => {
     )
     assert.equal(Number(await fundFlowController.curUnbondedVaultGroup()), 0)
     assert.equal(fromEther(await comStrategy.canWithdraw()), 300)
+    assert.equal(fromEther((await comStrategy.vaultGroups(0))[1]), 0)
     assert.equal(Number((await comStrategy.globalVaultState())[1]), 0)
 
     await comStrategy.withdraw(toEther(50), encodeVaults([0, 5]))
@@ -313,30 +333,70 @@ describe('FundFlowController', () => {
     assert.equal(Number(await fundFlowController.curUnbondedVaultGroup()), 0)
     assert.equal(fromEther(await comStrategy.canWithdraw()), 250)
     assert.equal(Number((await comStrategy.globalVaultState())[1]), 0)
+    assert.equal(fromEther((await comStrategy.vaultGroups(0))[1]), 50)
+    assert.equal(fromEther((await comStrategy.vaultGroups(1))[1]), 270)
+    assert.equal(fromEther((await comStrategy.vaultGroups(2))[1]), 100)
+    assert.equal(fromEther((await comStrategy.vaultGroups(3))[1]), 120)
+    assert.equal(fromEther((await comStrategy.vaultGroups(4))[1]), 150)
+  })
+
+  it('updateOperatorVaultGroupAccounting should work correctly', async () => {
+    const { accounts, opStrategy, stakingController, fundFlowController } = await loadFixture(
+      deployFixture
+    )
+
+    for (let i = 0; i < 10; i++) {
+      await opStrategy.addVault(accounts[0], accounts[0], accounts[0])
+    }
+    const vaults = await opStrategy.getVaults()
+
+    await opStrategy.deposit(toEther(1000), encodeVaults([]))
+
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await opStrategy.withdraw(toEther(130), encodeVaults([0, 5]))
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    assert.equal(fromEther((await opStrategy.vaultGroups(0))[1]), 130)
+
+    await stakingController.removeOperator(vaults[5])
+    await opStrategy.queueVaultRemoval(5)
+
+    assert.equal(fromEther(await opStrategy.totalUnbonded()), 200)
+    assert.equal(fromEther(await opStrategy.vaultMaxDeposits()), 100)
+    assert.equal(fromEther((await opStrategy.vaultGroups(0))[1]), 100)
+
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingController.setDepositLimits(toEther(0), toEther(140))
+    await stakingController.slashOperator(vaults[6], toEther(70))
+    await stakingController.slashOperator(vaults[2], toEther(30))
+    await fundFlowController.updateOperatorVaultGroupAccounting([1, 2])
+
+    assert.equal(fromEther(await opStrategy.totalUnbonded()), 170)
+    assert.equal(fromEther(await opStrategy.vaultMaxDeposits()), 140)
+    assert.equal(fromEther((await opStrategy.vaultGroups(1))[1]), 150)
+    assert.equal(fromEther((await opStrategy.vaultGroups(2))[1]), 110)
   })
 
   it('should work correctly with 2 strategies', async () => {
-    const {
-      comStrategy,
-      fundFlowController,
-      token,
-      opStrategy,
-      stakingController,
-      rewardsController,
-    } = await loadFixture(deployFixture)
+    const { comStrategy, fundFlowController, opStrategy, accounts } = await loadFixture(
+      deployFixture
+    )
 
-    let opVaults: any = []
     for (let i = 0; i < 10; i++) {
-      let vault = (await deployUpgradeable('CommunityVault', [
-        token.target,
-        opStrategy.target,
-        stakingController.target,
-        rewardsController.target,
-      ])) as CommunityVault
-      await vault.transferOwnership(opStrategy.target)
-      opVaults.push(vault.target)
+      await opStrategy.addVault(accounts[0], accounts[0], accounts[0])
     }
-    await opStrategy.addVaults(opVaults)
 
     await comStrategy.deposit(toEther(1200), encodeVaults([]))
     await opStrategy.deposit(toEther(600), encodeVaults([]))

@@ -16,8 +16,10 @@ import {
   StakingRewardsMock,
   StakingPool,
   PFAlertsControllerMock,
+  FundFlowController,
+  CommunityVCS,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -55,7 +57,7 @@ describe('OperatorVCS', () => {
     ])) as StakingMock
     adrs.stakingController = await stakingController.getAddress()
 
-    let vaultImplementation = await deployImplementation('OperatorVault')
+    let opVaultImplementation = await deployImplementation('OperatorVault')
 
     const stakingPool = (await deployUpgradeable('StakingPool', [
       adrs.token,
@@ -71,19 +73,56 @@ describe('OperatorVCS', () => {
     ])) as PFAlertsControllerMock
     adrs.pfAlertsController = await pfAlertsController.getAddress()
 
-    const strategy = (await deployUpgradeable('OperatorVCS', [
-      adrs.token,
-      adrs.stakingPool,
-      adrs.stakingController,
-      vaultImplementation,
-      [[accounts[4], 500]],
-      9000,
-      toEther(100),
-      1000,
-    ])) as OperatorVCS
+    const vaultDepositController = await deploy('VaultDepositController')
+
+    const strategy = (await deployUpgradeable(
+      'OperatorVCS',
+      [
+        adrs.token,
+        adrs.stakingPool,
+        adrs.stakingController,
+        opVaultImplementation,
+        [[accounts[4], 500]],
+        9000,
+        toEther(100),
+        1000,
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as OperatorVCS
     adrs.strategy = await strategy.getAddress()
 
+    let comVaultImplementation = await deployImplementation('CommunityVault')
+
+    const comSrategy = (await deployUpgradeable(
+      'CommunityVCS',
+      [
+        adrs.token,
+        adrs.stakingPool,
+        adrs.stakingController,
+        comVaultImplementation,
+        [[accounts[4], 500]],
+        9000,
+        toEther(100),
+        10,
+        20,
+        vaultDepositController.target,
+      ],
+      { unsafeAllow: ['delegatecall'] }
+    )) as CommunityVCS
+
+    const fundFlowController = (await deployUpgradeable('FundFlowController', [
+      strategy.target,
+      comSrategy.target,
+      unbondingPeriod,
+      claimPeriod,
+      5,
+    ])) as FundFlowController
+    await strategy.setFundFlowController(fundFlowController.target)
+    await comSrategy.setFundFlowController(fundFlowController.target)
+
     await stakingPool.addStrategy(adrs.strategy)
+    await stakingPool.addStrategy(comSrategy.target)
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(accounts[0])
 
@@ -108,6 +147,7 @@ describe('OperatorVCS', () => {
       stakingPool,
       strategy,
       vaults,
+      fundFlowController,
     }
   }
 
@@ -174,6 +214,7 @@ describe('OperatorVCS', () => {
 
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 400)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 400)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(adrs.strategy)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 0)
@@ -181,6 +222,7 @@ describe('OperatorVCS', () => {
     await rewardsController.setReward(vaults[1], toEther(100))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 500)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 400)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(adrs.strategy)), 10)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 5)
@@ -188,6 +230,7 @@ describe('OperatorVCS', () => {
     await rewardsController.setReward(vaults[2], toEther(50))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 550)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 400)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(adrs.strategy)), 15.85)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 7.925)
@@ -195,6 +238,7 @@ describe('OperatorVCS', () => {
     await token.transfer(adrs.strategy, toEther(90))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 550)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 400)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(Number(fromEther(await stakingPool.balanceOf(adrs.strategy)).toFixed(2)), 18.31)
     assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[4])).toFixed(2)), 13.66)
@@ -202,39 +246,34 @@ describe('OperatorVCS', () => {
   })
 
   it('updateDeposits should work correctly with slashing', async () => {
-    const { accounts, adrs, strategy, stakingPool, rewardsController, vaults } = await loadFixture(
-      deployFixture
-    )
+    const { accounts, adrs, strategy, stakingPool, rewardsController, vaults, stakingController } =
+      await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[0], toEther(400), [encodeVaults([])])
     await rewardsController.setReward(vaults[2], toEther(100))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 500)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 400)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(adrs.strategy)), 10)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 5)
 
-    await rewardsController.setReward(vaults[2], toEther(50))
+    await stakingController.slashOperator(vaults[2], toEther(50))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 450)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 350)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(adrs.strategy)), 9)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 4.5)
 
-    await rewardsController.setReward(vaults[2], toEther(0))
+    await stakingController.slashOperator(vaults[2], toEther(50))
     await rewardsController.setReward(vaults[3], toEther(20))
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getTotalDeposits()), 420)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 300)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(Number(fromEther(await stakingPool.balanceOf(adrs.strategy)).toFixed(2)), 10.36)
     assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[4])).toFixed(2)), 4.18)
-
-    await rewardsController.setReward(vaults[2], toEther(100))
-    await stakingPool.updateStrategyRewards([0], encode(0))
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 520)
-    assert.equal(fromEther(await strategy.getDepositChange()), 0)
-    assert.equal(Number(fromEther(await stakingPool.balanceOf(adrs.strategy)).toFixed(2)), 12.7)
-    assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[4])).toFixed(2)), 10.13)
   })
 
   it('updateDeposits should work correctly with reward withdrawals', async () => {
@@ -251,6 +290,7 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 0)
     assert.equal(fromEther(await stakingPool.totalStaked()), 1020)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1020)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 1000)
 
     await rewardsController.setReward(vaults[6], toEther(10))
     await rewardsController.setReward(vaults[7], toEther(7))
@@ -260,6 +300,7 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 25)
     assert.equal(fromEther(await stakingPool.totalStaked()), 1052)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1027)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 1000)
   })
 
   it('withdrawOperatorRewards should work correctly', async () => {
@@ -298,6 +339,111 @@ describe('OperatorVCS', () => {
     )
     assert.equal(Number(fromEther(await stakingPool.balanceOf(adrs.strategy)).toFixed(2)), 0)
     assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[1])).toFixed(2)), 1.33)
+  })
+
+  it('queueVaultRemoval should work correctly', async () => {
+    const { accounts, strategy, stakingPool, vaults, stakingController, fundFlowController } =
+      await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
+
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [encodeVaults([0, 5])])
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    assert.equal(fromEther((await strategy.vaultGroups(0))[1]), 130)
+    await expect(strategy.queueVaultRemoval(5)).to.be.revertedWithCustomError(
+      strategy,
+      'OperatorNotRemoved()'
+    )
+
+    await stakingController.removeOperator(vaults[5])
+    await strategy.queueVaultRemoval(5)
+
+    await expect(strategy.queueVaultRemoval(5)).to.be.revertedWithCustomError(
+      strategy,
+      'VaultRemovalAlreadyQueued()'
+    )
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [vaults[5]])
+    assert.equal(fromEther(await strategy.totalUnbonded()), 200)
+    assert.equal(fromEther(await strategy.vaultMaxDeposits()), 100)
+    assert.equal(fromEther((await strategy.vaultGroups(0))[1]), 100)
+
+    await stakingController.removeOperator(vaults[6])
+    await stakingController.setDepositLimits(0, toEther(140))
+    await strategy.queueVaultRemoval(6)
+
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [vaults[5]])
+    assert.equal((await strategy.getVaults()).length, 14)
+    assert.equal(fromEther(await strategy.totalUnbonded()), 100)
+    assert.equal(fromEther(await strategy.vaultMaxDeposits()), 140)
+    assert.equal(fromEther((await strategy.vaultGroups(1))[1]), 40)
+  })
+
+  it('removeVault should work correctly', async () => {
+    const {
+      accounts,
+      strategy,
+      stakingPool,
+      rewardsController,
+      vaults,
+      stakingController,
+      fundFlowController,
+      adrs,
+      token,
+    } = await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
+    await rewardsController.setReward(vaults[5], toEther(40))
+    await rewardsController.setReward(vaults[6], toEther(100))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    await rewardsController.setReward(vaults[5], toEther(50))
+
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [encodeVaults([0, 5])])
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingController.removeOperator(vaults[5])
+    await strategy.queueVaultRemoval(5)
+
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await stakingController.removeOperator(vaults[6])
+    await strategy.queueVaultRemoval(6)
+
+    await strategy.removeVault(0)
+
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [vaults[6]])
+    assert.deepEqual(await strategy.getVaults(), [...vaults.slice(0, 5), ...vaults.slice(6)])
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 900)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 120)
   })
 
   it('setOperatorRewardPercentage should work correctly', async () => {

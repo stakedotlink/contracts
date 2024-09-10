@@ -33,6 +33,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _vaultMaxDeposits maximum deposit limit for a single vault
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
+     * @param _vaultDepositController address of vault deposit controller
      *
      */
     function initialize(
@@ -44,7 +45,8 @@ contract CommunityVCS is VaultControllerStrategy {
         uint256 _maxDepositSizeBP,
         uint256 _vaultMaxDeposits,
         uint128 _vaultDeploymentThreshold,
-        uint128 _vaultDeploymentAmount
+        uint128 _vaultDeploymentAmount,
+        address _vaultDepositController
     ) public initializer {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
@@ -54,7 +56,8 @@ contract CommunityVCS is VaultControllerStrategy {
                 _vaultImplementation,
                 _fees,
                 _maxDepositSizeBP,
-                _vaultMaxDeposits
+                _vaultMaxDeposits,
+                _vaultDepositController
             );
             vaultDeploymentThreshold = _vaultDeploymentThreshold;
             vaultDeploymentAmount = _vaultDeploymentAmount;
@@ -70,6 +73,43 @@ contract CommunityVCS is VaultControllerStrategy {
         for (uint64 i = 0; i < 5; ++i) {
             vaultGroups.push(VaultGroup(i, 0));
         }
+    }
+
+    /**
+     * @notice Deposits tokens from the staking pool into vaults
+     * @param _amount amount to deposit
+     * @param _data encoded vault deposit order
+     */
+    function deposit(uint256 _amount, bytes calldata _data) external override onlyStakingPool {
+        (, uint256 maxDeposits) = getVaultDepositLimits();
+
+        // if vault deposit limit has changed in Chainlink staking contract, make adjustments
+        if (maxDeposits > vaultMaxDeposits) {
+            uint256 diff = maxDeposits - vaultMaxDeposits;
+            uint256 totalVaults = globalVaultState.depositIndex;
+            uint256 numVaultGroups = globalVaultState.numVaultGroups;
+            uint256 vaultsPerGroup = totalVaults / numVaultGroups;
+            uint256 remainder = totalVaults % numVaultGroups;
+
+            for (uint256 i = 0; i < numVaultGroups; ++i) {
+                uint256 numVaults = vaultsPerGroup;
+                if (i < remainder) {
+                    numVaults += 1;
+                }
+
+                vaultGroups[i].totalDepositRoom += uint128(numVaults * diff);
+            }
+
+            vaultMaxDeposits = maxDeposits;
+        }
+
+        if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
+
+        (bool success, ) = vaultDepositController.delegatecall(
+            abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
+        );
+
+        if (!success) revert DepositFailed();
     }
 
     /**

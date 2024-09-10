@@ -5,7 +5,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IVaultControllerStrategy.sol";
+import "./interfaces/IOperatorVCS.sol";
 import "./interfaces/IVault.sol";
+import "./interfaces/IOperatorVault.sol";
 
 /**
  * @title Fund Flow Controller
@@ -152,27 +154,66 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
         (
             uint256[] memory curGroupOpVaultsToUnbond,
+            uint256 curGroupOpVaultsTotalDepositRoom,
             uint256 nextGroupOpVaultsTotalUnbonded
         ) = _getVaultUpdateData(operatorVCS, nextUnbondedVaultGroup);
 
         (
             uint256[] memory curGroupComVaultsToUnbond,
+            uint256 curGroupComVaultsTotalDepositRoom,
             uint256 nextGroupComVaultsTotalUnbonded
         ) = _getVaultUpdateData(communityVCS, nextUnbondedVaultGroup);
 
         operatorVCS.updateVaultGroups(
             curGroupOpVaultsToUnbond,
+            curGroupOpVaultsTotalDepositRoom,
             nextUnbondedVaultGroup,
             nextGroupOpVaultsTotalUnbonded
         );
         communityVCS.updateVaultGroups(
             curGroupComVaultsToUnbond,
+            curGroupComVaultsTotalDepositRoom,
             nextUnbondedVaultGroup,
             nextGroupComVaultsTotalUnbonded
         );
 
         timeOfLastUpdateByGroup[curUnbondedVaultGroup] = uint64(block.timestamp);
         curUnbondedVaultGroup = uint64(nextUnbondedVaultGroup);
+    }
+
+    /**
+     * @notice Calculates and updates totalDepositRoom and totalUnbonded for a list of operator vault groups
+     * @param _vaultGroups list of vault groups
+     */
+    function updateOperatorVaultGroupAccounting(uint256[] calldata _vaultGroups) external {
+        address[] memory vaults = operatorVCS.getVaults();
+        (, uint256 maxDeposits) = operatorVCS.getVaultDepositLimits();
+        (, , , uint64 depositIndex) = operatorVCS.globalVaultState();
+
+        uint256[] memory totalDepositRoom = new uint256[](_vaultGroups.length);
+        uint256 totalUnbonded = operatorVCS.totalUnbonded();
+
+        for (uint256 i = 0; i < _vaultGroups.length; ++i) {
+            (uint256 depositRoom, ) = _getTotalDepositRoom(
+                vaults,
+                numVaultGroups,
+                _vaultGroups[i],
+                maxDeposits,
+                depositIndex
+            );
+            totalDepositRoom[i] = depositRoom;
+
+            if (_vaultGroups[i] == curUnbondedVaultGroup) {
+                totalUnbonded = _getTotalUnbonded(vaults, numVaultGroups, _vaultGroups[i]);
+            }
+        }
+
+        IOperatorVCS(address(operatorVCS)).updateVaultGroupAccounting(
+            _vaultGroups,
+            totalDepositRoom,
+            totalUnbonded,
+            maxDeposits
+        );
     }
 
     /**
@@ -197,7 +238,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         }
 
         (, , uint64 groupDepositIndex, uint64 maxVaultIndex) = _vcs.globalVaultState();
-        (, uint256 maxDeposits) = _vcs.getVaultDepositLimits();
+        uint256 maxDeposits = _vcs.vaultMaxDeposits();
         uint256[] memory groupDepositOrder = _sortIndexesDescending(depositRoom);
 
         uint256[] memory vaultDepositOrder = new uint256[](vaults.length);
@@ -272,7 +313,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             IVault vault = IVault(vaults[i]);
             uint256 deposits = vault.getPrincipalDeposits();
 
-            if (i != withdrawalIndex && deposits != 0 && vault.unbondingActive()) {
+            if (i != withdrawalIndex && deposits != 0 && vault.claimPeriodActive()) {
                 vaultWithdrawalOrder[totalVaultsAdded] = i;
                 totalWithdrawsAdded += deposits;
                 totalVaultsAdded++;
@@ -296,18 +337,26 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _vcs strategy
      * @param _nextUnbondedVaultGroup index of next unbonded vault group
      * @return list of vaults to unbond in current vault group
+     * @return total deposit room across all vaults in current vault group
      * @return total unbonded across all vaults in next vault group
      */
     function _getVaultUpdateData(
         IVaultControllerStrategy _vcs,
         uint256 _nextUnbondedVaultGroup
-    ) internal view returns (uint256[] memory, uint256) {
+    ) internal view returns (uint256[] memory, uint256, uint256) {
         address[] memory vaults = _vcs.getVaults();
-        uint256[] memory curGroupVaultsToUnbond = _getNonEmptyVaults(
-            vaults,
-            numVaultGroups,
-            curUnbondedVaultGroup
-        );
+        (, , , uint64 depositIndex) = _vcs.globalVaultState();
+
+        (
+            uint256 curGroupTotalDepositRoom,
+            uint256[] memory curGroupVaultsToUnbond
+        ) = _getTotalDepositRoom(
+                vaults,
+                numVaultGroups,
+                curUnbondedVaultGroup,
+                _vcs.vaultMaxDeposits(),
+                depositIndex
+            );
 
         uint256 nextGroupTotalUnbonded = _getTotalUnbonded(
             vaults,
@@ -315,26 +364,35 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             _nextUnbondedVaultGroup
         );
 
-        return (curGroupVaultsToUnbond, nextGroupTotalUnbonded);
+        return (curGroupVaultsToUnbond, curGroupTotalDepositRoom, nextGroupTotalUnbonded);
     }
 
     /**
-     * @notice Returns a list of non-empty vaults for a vault group
+     * @notice Returns the total deposit room and a list of non-empty vaults for a vault group
      * @param _vaults list of all vaults
      * @param _numVaultGroups total number of vault groups
      * @param _vaultGroup index of vault group
+     * @param _vaultMaxDeposits max deposits per vault
+     * @return total deposit room
      * @return list of non-empty vaults
      */
-    function _getNonEmptyVaults(
+    function _getTotalDepositRoom(
         address[] memory _vaults,
         uint256 _numVaultGroups,
-        uint256 _vaultGroup
-    ) internal view returns (uint256[] memory) {
+        uint256 _vaultGroup,
+        uint256 _vaultMaxDeposits,
+        uint256 _depositIndex
+    ) internal view returns (uint256, uint256[] memory) {
+        uint256 totalDepositRoom;
         uint256 numNonEmptyVaults;
         uint256[] memory nonEmptyVaults = new uint256[](_vaults.length);
 
-        for (uint256 i = _vaultGroup; i < _vaults.length; i += _numVaultGroups) {
-            if (IVault(_vaults[i]).getPrincipalDeposits() != 0) {
+        for (uint256 i = _vaultGroup; i < _depositIndex; i += _numVaultGroups) {
+            if (IVault(_vaults[i]).isRemoved()) continue;
+
+            uint256 principalDeposits = IVault(_vaults[i]).getPrincipalDeposits();
+            totalDepositRoom += _vaultMaxDeposits - principalDeposits;
+            if (principalDeposits != 0) {
                 nonEmptyVaults[numNonEmptyVaults] = i;
                 numNonEmptyVaults++;
             }
@@ -345,7 +403,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             nonEmptyVaultsFormatted[i] = nonEmptyVaults[i];
         }
 
-        return nonEmptyVaultsFormatted;
+        return (totalDepositRoom, nonEmptyVaultsFormatted);
     }
 
     /**
@@ -363,9 +421,9 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 totalUnbonded;
 
         for (uint256 i = _vaultGroup; i < _vaults.length; i += _numVaultGroups) {
-            if (IVault(_vaults[i]).unbondingActive()) {
-                totalUnbonded += IVault(_vaults[i]).getPrincipalDeposits();
-            }
+            if (!IVault(_vaults[i]).claimPeriodActive() || IVault(_vaults[i]).isRemoved()) continue;
+
+            totalUnbonded += IVault(_vaults[i]).getPrincipalDeposits();
         }
 
         return totalUnbonded;

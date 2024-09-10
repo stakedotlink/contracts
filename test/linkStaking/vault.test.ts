@@ -139,21 +139,21 @@ describe('Vault', () => {
     assert.equal(fromEther(await vault.getTotalDeposits()), 290)
   })
 
-  it('unbondingActive should work correctly', async () => {
+  it('claimPeriodActive should work correctly', async () => {
     const { vault } = await loadFixture(deployFixture)
 
-    assert.equal(await vault.unbondingActive(), false)
+    assert.equal(await vault.claimPeriodActive(), false)
 
     await vault.deposit(toEther(100))
-    assert.equal(await vault.unbondingActive(), false)
+    assert.equal(await vault.claimPeriodActive(), false)
 
     await vault.unbond()
-    assert.equal(await vault.unbondingActive(), true)
+    assert.equal(await vault.claimPeriodActive(), false)
 
     await time.increase(unbondingPeriod + 1)
-    assert.equal(await vault.unbondingActive(), true)
+    assert.equal(await vault.claimPeriodActive(), true)
 
     await time.increase(claimPeriod)
-    assert.equal(await vault.unbondingActive(), false)
+    assert.equal(await vault.claimPeriodActive(), false)
   })
 })

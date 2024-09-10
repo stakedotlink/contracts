@@ -31,6 +31,7 @@ contract OperatorVault is Vault {
     error OnlyRewardsReceiver();
     error ZeroAddress();
     error OperatorAlreadySet();
+    error OperatorNotRemoved();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -147,20 +148,7 @@ contract OperatorVault is Vault {
      * @notice Withdraws the unclaimed operator rewards for this vault
      */
     function withdrawRewards() external onlyRewardsReceiver {
-        uint256 rewards = getUnclaimedRewards();
-        uint256 balance = token.balanceOf(address(this));
-
-        uint256 amountWithdrawn = IOperatorVCS(vaultController).withdrawOperatorRewards(
-            rewardsReceiver,
-            rewards - balance
-        );
-        unclaimedRewards -= SafeCast.toUint128(amountWithdrawn);
-
-        if (balance != 0) {
-            token.safeTransfer(rewardsReceiver, balance);
-        }
-
-        emit WithdrawRewards(rewardsReceiver, amountWithdrawn + balance);
+        _withdrawRewards();
     }
 
     /**
@@ -185,12 +173,13 @@ contract OperatorVault is Vault {
      * @param _minRewards min amount of rewards to claim (set 0 to skip reward claiming)
      * @param _rewardsReceiver address to receive claimed rewards (set if _minRewards > 0)
      * @return totalDeposits the current total deposits in this vault
+     * @return principalDeposits the current principal deposits in this vault
      * @return rewards the rewards earned by this vault since the last update
      */
     function updateDeposits(
         uint256 _minRewards,
         address _rewardsReceiver
-    ) external onlyVaultController returns (uint256, uint256) {
+    ) external onlyVaultController returns (uint256, uint256, uint256) {
         uint256 principal = getPrincipalDeposits();
         uint256 rewards = getRewards();
         uint256 totalDeposits = principal + rewards;
@@ -213,7 +202,41 @@ contract OperatorVault is Vault {
             token.safeTransfer(_rewardsReceiver, rewards);
         }
 
-        return (totalDeposits, opRewards);
+        return (totalDeposits, principal, opRewards);
+    }
+
+    /**
+     * @notice Returns whether the operator for this vault has been removed from the Chainlink staking contract
+     * @return true if operator has been removed, false otherwise
+     */
+    function isRemoved() public view override returns (bool) {
+        return stakeController.isRemoved(address(this));
+    }
+
+    /**
+     * @notice Withdraws tokens from the Chainlink staking contract and sends them to the vault controller
+     * @dev updateDeposits must be called before calling this function
+     * @dev used to withdraw remaining principal and rewards after operator has been removed
+     * @dev will also send any unclaimed operator rewards to rewards receiver
+     * @return total principal withdrawn
+     * @return total rewards withdrawn
+     */
+    function exitVault() external onlyVaultController returns (uint256, uint256) {
+        if (!isRemoved()) revert OperatorNotRemoved();
+
+        uint256 opRewards = getUnclaimedRewards();
+        if (opRewards != 0) _withdrawRewards();
+
+        uint256 rewards = getRewards();
+        if (rewards != 0) rewardsController.claimReward();
+
+        uint256 principal = getPrincipalDeposits();
+        stakeController.unstakeRemovedPrincipal();
+
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(vaultController, balance);
+
+        return (principal, rewards);
     }
 
     /**
@@ -240,5 +263,25 @@ contract OperatorVault is Vault {
         if (_rewardsReceiver == address(0)) revert ZeroAddress();
         rewardsReceiver = _rewardsReceiver;
         emit SetRewardsReceiver(_rewardsReceiver);
+    }
+
+    /**
+     * @notice Withdraws the unclaimed operator rewards for this vault
+     */
+    function _withdrawRewards() private {
+        uint256 rewards = getUnclaimedRewards();
+        uint256 balance = token.balanceOf(address(this));
+
+        uint256 amountWithdrawn = IOperatorVCS(vaultController).withdrawOperatorRewards(
+            rewardsReceiver,
+            rewards - balance
+        );
+        unclaimedRewards -= SafeCast.toUint128(amountWithdrawn);
+
+        if (balance != 0) {
+            token.safeTransfer(rewardsReceiver, balance);
+        }
+
+        emit WithdrawRewards(rewardsReceiver, amountWithdrawn + balance);
     }
 }
