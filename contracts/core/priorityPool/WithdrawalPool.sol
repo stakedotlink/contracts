@@ -43,10 +43,14 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     uint256 public minWithdrawalAmount;
 
+    uint64 public minTimeBetweenWithdrawals;
+    uint64 public timeOfLastWithdrawal;
+
     event QueueWithdrawal(address indexed account, uint256 amount);
     event Withdraw(address indexed account, uint256 amount);
     event WithdrawalsFinalized(uint256 amount);
     event SetMinWithdrawalAmount(uint256 minWithdrawalAmount);
+    event SetMinTimeBetweenWithdrawals(uint64 minTimeBetweenWithdrawals);
 
     error SenderNotAuthorized();
     error InvalidWithdrawalId();
@@ -64,12 +68,14 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @param _lst address of liquid staking token
      * @param _priorityPool address of priority pool
      * @param _minWithdrawalAmount minimum amount that can be queued for withdrawal
+     * @param _minTimeBetweenWithdrawals minimum time between withdrawals
      */
     function initialize(
         address _token,
         address _lst,
         address _priorityPool,
-        uint256 _minWithdrawalAmount
+        uint256 _minWithdrawalAmount,
+        uint64 _minTimeBetweenWithdrawals
     ) public initializer {
         __UUPSUpgradeable_init();
         __Ownable_init();
@@ -80,6 +86,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         minWithdrawalAmount = _minWithdrawalAmount;
         withdrawalBatches.push(WithdrawalBatch(0, 0));
         queuedWithdrawals.push(Withdrawal(0, 0));
+        minTimeBetweenWithdrawals = _minTimeBetweenWithdrawals;
+        timeOfLastWithdrawal = uint64(block.timestamp);
     }
 
     /**
@@ -303,7 +311,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         if (
             _getStakeByShares(totalQueuedShareWithdrawals) != 0 &&
-            priorityPool.canWithdraw(address(this), 0) != 0
+            priorityPool.canWithdraw(address(this), 0) != 0 &&
+            block.timestamp > timeOfLastWithdrawal + minTimeBetweenWithdrawals
         ) {
             return (true, "");
         }
@@ -317,7 +326,13 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     function performUpkeep(bytes calldata _performData) external {
         uint256 canWithdraw = priorityPool.canWithdraw(address(this), 0);
         uint256 totalQueued = _getStakeByShares(totalQueuedShareWithdrawals);
-        if (totalQueued == 0 || canWithdraw == 0) revert NoUpkeepNeeded();
+        if (
+            totalQueued == 0 ||
+            canWithdraw == 0 ||
+            block.timestamp <= timeOfLastWithdrawal + minTimeBetweenWithdrawals
+        ) revert NoUpkeepNeeded();
+
+        timeOfLastWithdrawal = uint64(block.timestamp);
 
         uint256 toWithdraw = totalQueued > canWithdraw ? canWithdraw : totalQueued;
         bytes[] memory data = abi.decode(_performData, (bytes[]));
@@ -365,6 +380,15 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     function setMinWithdrawalAmount(uint256 _minWithdrawalAmount) external onlyOwner {
         minWithdrawalAmount = _minWithdrawalAmount;
         emit SetMinWithdrawalAmount(_minWithdrawalAmount);
+    }
+
+    /**
+     * @notice Sets the minimum amount of of time between calls to performUpkeep to finalize withdrawals
+     * @param _minTimeBetweenWithdrawals minimum time
+     */
+    function setMinTimeBetweenWithdrawals(uint64 _minTimeBetweenWithdrawals) external onlyOwner {
+        minTimeBetweenWithdrawals = _minTimeBetweenWithdrawals;
+        emit SetMinTimeBetweenWithdrawals(_minTimeBetweenWithdrawals);
     }
 
     /**

@@ -207,7 +207,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev can receive both asset tokens (deposit) and liquid staking tokens (withdrawal)
      * @param _sender of the token transfer
      * @param _value of the token transfer
-     * @param _calldata encoded shouldQueue (bool) and deposit/withdrawal data to pass to
+     * @param _calldata encoded shouldQueue (bool) and deposit data to pass to
      * staking pool strategies (bytes[])
      **/
     function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
@@ -218,7 +218,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (msg.sender == address(token)) {
             _deposit(_sender, _value, shouldQueue, data);
         } else if (msg.sender == address(stakingPool)) {
-            uint256 amountQueued = _withdraw(_sender, _value, shouldQueue, data);
+            uint256 amountQueued = _withdraw(_sender, _value, shouldQueue);
             token.safeTransfer(_sender, _value - amountQueued);
         } else {
             revert UnauthorizedToken();
@@ -247,7 +247,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _merkleProof merkle proof for sender's merkle tree entry (generated using IPFS data)
      * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the full withdrawal amount cannot be satisfied
-     * @param _data withdrawal data passed to staking pool strategies
      */
     function withdraw(
         uint256 _amountToWithdraw,
@@ -255,8 +254,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 _sharesAmount,
         bytes32[] calldata _merkleProof,
         bool _shouldUnqueue,
-        bool _shouldQueueWithdrawal,
-        bytes[] calldata _data
+        bool _shouldQueueWithdrawal
     ) external {
         if (_amountToWithdraw == 0) revert InvalidAmount();
 
@@ -294,7 +292,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 address(this),
                 toWithdraw
             );
-            toWithdraw = _withdraw(account, toWithdraw, _shouldQueueWithdrawal, _data);
+            toWithdraw = _withdraw(account, toWithdraw, _shouldQueueWithdrawal);
         }
 
         token.safeTransfer(account, _amountToWithdraw - toWithdraw);
@@ -625,45 +623,30 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice Withdraws asset tokens
-     * @dev will swap liquid staking tokens for queued tokens if there are any queued, then withdraw
-     * from the staking pool if there is withdrawal room; remaining tokens will be queued for withdrawal in the
-     * withdrawal pool if `_shouldQueueWithdrawal` is true, otherwise function will revert
+     * @dev will swap liquid staking tokens for queued tokens if there are any queued, then
+     * remaining tokens will be queued for withdrawal in the withdrawal pool if
+     * `_shouldQueueWithdrawal` is true, otherwise function will revert
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
-     * @param _data withdrawal data passed to staking pool strategies
      * @return the amount of tokens that were queued for withdrawal
      **/
     function _withdraw(
         address _account,
         uint256 _amount,
-        bool _shouldQueueWithdrawal,
-        bytes[] memory _data
+        bool _shouldQueueWithdrawal
     ) internal returns (uint256) {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
         uint256 toWithdraw = _amount;
 
-        if (withdrawalPool.getTotalQueuedWithdrawals() == 0) {
+        if (totalQueued != 0) {
             uint256 toWithdrawFromQueue = toWithdraw <= totalQueued ? toWithdraw : totalQueued;
 
-            if (toWithdrawFromQueue != 0) {
-                totalQueued -= toWithdrawFromQueue;
-                depositsSinceLastUpdate += toWithdrawFromQueue;
-                sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
-                toWithdraw -= toWithdrawFromQueue;
-            }
-
-            if (toWithdraw != 0) {
-                uint256 toWithdrawFromPool = MathUpgradeable.min(
-                    stakingPool.canWithdraw(),
-                    toWithdraw
-                );
-                if (toWithdrawFromPool != 0) {
-                    stakingPool.withdraw(address(this), address(this), toWithdrawFromPool, _data);
-                    toWithdraw -= toWithdrawFromPool;
-                }
-            }
+            totalQueued -= toWithdrawFromQueue;
+            depositsSinceLastUpdate += toWithdrawFromQueue;
+            sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
+            toWithdraw -= toWithdrawFromQueue;
         }
 
         if (toWithdraw != 0) {

@@ -15,7 +15,7 @@ import {
   WithdrawalPool,
 } from '../../../typechain-types'
 import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('WithdrawalPool', () => {
   async function deployFixture() {
@@ -48,6 +48,7 @@ describe('WithdrawalPool', () => {
       stakingPool.target,
       accounts[0],
       toEther(10),
+      86400,
     ])) as WithdrawalPool
 
     await stakingPool.addStrategy(strategy.target)
@@ -384,40 +385,42 @@ describe('WithdrawalPool', () => {
       stakingPool.target,
       priorityPool.target,
       toEther(10),
+      86400,
     ])) as WithdrawalPool
     await stakingPool.approve(priorityPool.target, ethers.MaxUint256)
     await stakingPool.setPriorityPool(priorityPool.target)
     await priorityPool.setWithdrawalPool(withdrawalPool.target)
 
-    await priorityPool.withdraw(toEther(199000), 0, 0, [], false, true, ['0x'])
+    await priorityPool.withdraw(toEther(199000), 0, 0, [], false, true)
     assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [false, '0x'])
     await expect(withdrawalPool.performUpkeep('0x')).to.be.revertedWithCustomError(
       withdrawalPool,
       'NoUpkeepNeeded()'
     )
 
-    await strategy.setMinDeposits(toEther(4000))
+    await time.increase(86400)
     assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [true, '0x'])
     await withdrawalPool.performUpkeep(
       ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']])
     )
-    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 1000)
-    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 3000)
-    assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 3000)
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 195000)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 4000)
+    assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 4000)
+
+    await time.increase(86400)
+    assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [false, '0x'])
+    await expect(withdrawalPool.performUpkeep('0x')).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'NoUpkeepNeeded()'
+    )
 
     await strategy.setMinDeposits(toEther(0))
     assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [true, '0x'])
     await withdrawalPool.performUpkeep(
       ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']])
     )
-    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 4000)
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 199000)
     assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 0)
     assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 0)
-
-    assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [false, '0x'])
-    await expect(withdrawalPool.performUpkeep('0x')).to.be.revertedWithCustomError(
-      withdrawalPool,
-      'NoUpkeepNeeded()'
-    )
   })
 })
