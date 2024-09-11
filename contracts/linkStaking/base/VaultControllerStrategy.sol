@@ -217,10 +217,13 @@ contract VaultDepositController is Strategy {
         if (totalRebonded != 0) totalUnbonded -= totalRebonded;
         if (toDeposit == 0 || toDeposit < _minDeposits) return _toDeposit - toDeposit;
 
-        // cannot be more than a single vault worth of deposit room in each group (current group excepted)
+        // cannot be more than 1 vault worth of deposit room in each group (or 2 in current unbonded group)
         for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
             if (
-                i != globalState.curUnbondedVaultGroup && groups[i].totalDepositRoom >= _maxDeposits
+                (i != globalState.curUnbondedVaultGroup &&
+                    groups[i].totalDepositRoom >= _maxDeposits) ||
+                (i == globalState.curUnbondedVaultGroup &&
+                    groups[i].totalDepositRoom >= 2 * _maxDeposits)
             ) {
                 return _toDeposit - toDeposit;
             }
