@@ -42,4 +42,6 @@ interface IStakingPool is IStakingRewardsPool {
     function getStrategyDepositRoom() external view returns (uint256);
 
     function getUnusedDeposits() external view returns (uint256);
+
+    function burn(uint256 _amount) external;
 }
