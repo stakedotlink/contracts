@@ -48,7 +48,7 @@ contract LSTRewardsSplitterController is Ownable {
     /**
      * @notice ERC677 implementation to receive an LST deposit
      **/
-    function onTokenTransfer(address _sender, uint256 _value, bytes calldata) external virtual {
+    function onTokenTransfer(address _sender, uint256 _value, bytes calldata) external {
         if (msg.sender != lst) revert InvalidToken();
         if (address(splitters[_sender]) == address(0)) revert SenderNotAuthorized();
 
