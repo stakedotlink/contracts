@@ -3,6 +3,7 @@ import { deployCore } from './modules/deploy-core'
 import { deployLINKStaking } from './modules/deploy-link-staking'
 import { deployMETISStaking } from './modules/deploy-metis-staking'
 import { deployTestContracts } from './modules/deploy-test-contracts'
+import { deploySubgraphMockContracts } from './modules/deploy-subgraph-mocks'
 
 const path = './deployments/localhost.json'
 
@@ -15,6 +16,7 @@ async function main() {
   await deployCore()
   await deployLINKStaking()
   await deployMETISStaking()
+  await deploySubgraphMockContracts()
 }
 
 main()
