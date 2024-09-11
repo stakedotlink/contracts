@@ -135,50 +135,51 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * current vault group
      */
     function updateVaultGroups() external {
-        uint256 nextUnbondedVaultGroup = _getNextGroup(curUnbondedVaultGroup, numVaultGroups);
+        uint256 curUnbondedGroup = curUnbondedVaultGroup;
+        uint256 nextUnbondedGroup = _getNextGroup(curUnbondedGroup, numVaultGroups);
 
         if (
-            timeOfLastUpdateByGroup[nextUnbondedVaultGroup] != 0 &&
+            timeOfLastUpdateByGroup[nextUnbondedGroup] != 0 &&
             block.timestamp <=
-            timeOfLastUpdateByGroup[curUnbondedVaultGroup] + unbondingPeriod + claimPeriod
+            timeOfLastUpdateByGroup[curUnbondedGroup] + unbondingPeriod + claimPeriod
         ) revert NoUpdateNeeded();
 
         if (
-            curUnbondedVaultGroup != 0 &&
-            timeOfLastUpdateByGroup[curUnbondedVaultGroup] == 0 &&
-            block.timestamp <= timeOfLastUpdateByGroup[curUnbondedVaultGroup - 1] + claimPeriod
+            curUnbondedGroup != 0 &&
+            timeOfLastUpdateByGroup[curUnbondedGroup] == 0 &&
+            block.timestamp <= timeOfLastUpdateByGroup[curUnbondedGroup - 1] + claimPeriod
         ) revert NoUpdateNeeded();
 
-        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedVaultGroup] + unbondingPeriod)
+        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedGroup] + unbondingPeriod)
             revert NoUpdateNeeded();
 
         (
             uint256[] memory curGroupOpVaultsToUnbond,
             uint256 curGroupOpVaultsTotalDepositRoom,
             uint256 nextGroupOpVaultsTotalUnbonded
-        ) = _getVaultUpdateData(operatorVCS, nextUnbondedVaultGroup);
+        ) = _getVaultUpdateData(operatorVCS, nextUnbondedGroup);
 
         (
             uint256[] memory curGroupComVaultsToUnbond,
             uint256 curGroupComVaultsTotalDepositRoom,
             uint256 nextGroupComVaultsTotalUnbonded
-        ) = _getVaultUpdateData(communityVCS, nextUnbondedVaultGroup);
+        ) = _getVaultUpdateData(communityVCS, nextUnbondedGroup);
 
         operatorVCS.updateVaultGroups(
             curGroupOpVaultsToUnbond,
             curGroupOpVaultsTotalDepositRoom,
-            nextUnbondedVaultGroup,
+            nextUnbondedGroup,
             nextGroupOpVaultsTotalUnbonded
         );
         communityVCS.updateVaultGroups(
             curGroupComVaultsToUnbond,
             curGroupComVaultsTotalDepositRoom,
-            nextUnbondedVaultGroup,
+            nextUnbondedGroup,
             nextGroupComVaultsTotalUnbonded
         );
 
-        timeOfLastUpdateByGroup[curUnbondedVaultGroup] = uint64(block.timestamp);
-        curUnbondedVaultGroup = uint64(nextUnbondedVaultGroup);
+        timeOfLastUpdateByGroup[curUnbondedGroup] = uint64(block.timestamp);
+        curUnbondedVaultGroup = uint64(nextUnbondedGroup);
     }
 
     /**
