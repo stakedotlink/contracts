@@ -16,7 +16,7 @@ contract MockMetisEthUniswapPool {
 
     constructor() {
         slot0 = Slot0({
-            sqrtPriceX96: 921607156908519294832225,
+            sqrtPriceX96: 9016690058901672876185056108,
             tick: -43030,
             observationIndex: 52,
             observationCardinality: 80,

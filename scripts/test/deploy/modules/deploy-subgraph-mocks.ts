@@ -1,4 +1,4 @@
-import { deploy } from '../../../utils/deployment'
+import { deploy, updateDeployments } from '../../../utils/deployment'
 
 export async function deploySubgraphMockContracts() {
   const mockEthUsdAggregator = await deploy(
@@ -30,4 +30,21 @@ export async function deploySubgraphMockContracts() {
     []
   )
   console.log('MockMetisEthUniswapPool deployed: ', mockMetisEthUniswapPool.target)
+
+  updateDeployments(
+    {
+      mockEthUsdAggregator: mockEthUsdAggregator.target,
+      mockLinkSdlSushiPool: mockLinkSdlSushiPool.target,
+      mockLinkSdlUniswapPool: mockLinkSdlUniswapPool.target,
+      mockLinkUsdAggregator: mockLinkUsdAggregator.target,
+      mockMetisEthUniswapPool: mockMetisEthUniswapPool.target,
+    },
+    {
+      mockEthUsdAggregator: 'mockEthUsdAggregator',
+      mockLinkSdlSushiPool: 'mockLinkSdlSushiPool',
+      mockLinkSdlUniswapPool: 'mockLinkSdlUniswapPool',
+      mockLinkUsdAggregator: 'mockLinkUsdAggregator',
+      mockMetisEthUniswapPool: 'mockMetisEthUniswapPool',
+    }
+  )
 }
