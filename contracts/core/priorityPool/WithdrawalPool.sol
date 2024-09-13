@@ -11,7 +11,8 @@ import "../interfaces/IPriorityPool.sol";
 
 /**
  * @title Withdrawal Pool
- * @notice Allows users to queue LST withdrawals if there is insufficient liquidity to satisfy the withdrawal amount
+ * @notice Allows users to queue LST withdrawals if there is insufficient liquidity to satisfy the withdrawal amount.
+ * @dev LST withdrawals will be added to a FIFO queue and will be fulfuilled as funds become available.
  */
 contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -184,6 +185,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns a list of finalized and partially finalized withdrawal ids owned by an account
+     * @dev these withdrawals have funds available for the owner to withdraw
      * @param _account address of account
      * @return list of withdrawal ids
      * @return total withdrawable across all account's withdrawals
@@ -295,7 +297,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Deposits asset tokens in exchange for liquid staking tokens, finalizing withdrawals
-     * at the front of the queue
+     * starting from the front of the queue
      * @param _amount amount of tokens to deposit
      */
     function deposit(uint256 _amount) external onlyPriorityPool {
@@ -343,14 +345,15 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Updates the withdrawalBatchIdCutoff
-     * @dev this value is used to more efficiently return certain data by skipping old withdrawal batches
+     * @dev this value is used to more efficiently return data in getBatchIds by skipping old withdrawal batches
      */
     function updateWithdrawalBatchIdCutoff() external {
         uint256 numWithdrawals = queuedWithdrawals.length;
         uint256 newWithdrawalIdCutoff = withdrawalIdCutoff;
 
+        // find the first withdrawal that has funds remaining
         for (uint256 i = newWithdrawalIdCutoff; i < numWithdrawals; ++i) {
-            newWithdrawalIdCutoff = uint128(i);
+            newWithdrawalIdCutoff = i;
 
             Withdrawal memory withdrawal = queuedWithdrawals[i];
             if (withdrawal.sharesRemaining != 0 || withdrawal.partiallyWithdrawableAmount != 0) {
@@ -361,12 +364,13 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         uint256 numBatches = withdrawalBatches.length;
         uint256 newWithdrawalBatchIdCutoff = withdrawalBatchIdCutoff;
 
+        // find the last batch where all withdrawals have no funds remaining
         for (uint256 i = newWithdrawalBatchIdCutoff; i < numBatches; ++i) {
-            newWithdrawalBatchIdCutoff = i;
-
-            if (withdrawalBatches[i].indexOfLastWithdrawal < newWithdrawalIdCutoff) {
+            if (withdrawalBatches[i].indexOfLastWithdrawal >= newWithdrawalIdCutoff) {
                 break;
             }
+
+            newWithdrawalBatchIdCutoff = i;
         }
 
         withdrawalIdCutoff = uint128(newWithdrawalIdCutoff);
@@ -405,11 +409,13 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             uint256 sharesRemaining = queuedWithdrawals[i].sharesRemaining;
 
             if (sharesRemaining < sharesToWithdraw) {
+                // fully finalize withdrawal
                 sharesToWithdraw -= sharesRemaining;
                 continue;
             }
 
             if (sharesRemaining > sharesToWithdraw) {
+                // partially finalize withdrawal
                 queuedWithdrawals[i] = Withdrawal(
                     uint128(sharesRemaining - sharesToWithdraw),
                     uint128(
@@ -422,6 +428,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
                     WithdrawalBatch(uint128(i - 1), uint128(_getStakeByShares(1 ether)))
                 );
             } else {
+                // fully finalize withdrawal
                 indexOfNextWithdrawal = i + 1;
                 withdrawalBatches.push(
                     WithdrawalBatch(uint128(i), uint128(_getStakeByShares(1 ether)))
@@ -432,6 +439,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             break;
         }
 
+        // entire amount must be accounted for
         assert(sharesToWithdraw == 0);
 
         emit WithdrawalsFinalized(_amount);
