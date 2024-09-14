@@ -15,17 +15,25 @@ contract StakingPool is StakingRewardsPool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct Fee {
+        // address to receive fee
         address receiver;
+        // value of fee in basis points
         uint256 basisPoints;
     }
 
+    // list of all strategies controlled by pool
     address[] private strategies;
+    // total number of tokens staked in the pool
     uint256 public totalStaked;
+    // max number of tokens that can sit in the pool outside of a strategy
     uint256 public unusedDepositLimit;
 
+    // list of fees that are paid on rewards
     Fee[] private fees;
 
+    // address of priority pool
     address public priorityPool;
+    // address of rebase controller
     address public rebaseController;
     uint16 private poolIndex; // deprecated
 
@@ -51,8 +59,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _token address of asset token
      * @param _liquidTokenName name of liquid staking token
      * @param _liquidTokenSymbol symbol of liquid staking token
-     * @param _fees list of fees
-     * @param _unusedDepositLimit maximum amount of unused deposits that can sit in the pool
+     * @param _fees list of fees that are paid on rewards
+     * @param _unusedDepositLimit max number of tokens that can sit in the pool outside of a strategy
      */
     function initialize(
         address _token,
@@ -518,6 +526,7 @@ contract StakingPool is StakingRewardsPool {
         address[][] memory receivers = new address[][](strategies.length + 1);
         uint256[][] memory feeAmounts = new uint256[][](strategies.length + 1);
 
+        // sum up rewards and fees across strategies
         for (uint256 i = 0; i < _strategyIdxs.length; ++i) {
             IStrategy strategy = IStrategy(strategies[_strategyIdxs[i]]);
 
@@ -538,10 +547,12 @@ contract StakingPool is StakingRewardsPool {
             }
         }
 
+        // update totalStaked if there was a net change in deposits
         if (totalRewards != 0) {
             totalStaked = uint256(int256(totalStaked) + totalRewards);
         }
 
+        // calulate fees if net positive rewards were earned
         if (totalRewards > 0) {
             receivers[receivers.length - 1] = new address[](fees.length);
             feeAmounts[feeAmounts.length - 1] = new uint256[](fees.length);
@@ -556,10 +567,12 @@ contract StakingPool is StakingRewardsPool {
             }
         }
 
+        // safety check
         if (totalFeeAmounts >= totalStaked) {
             totalFeeAmounts = 0;
         }
 
+        // distribute fees to receivers if there are any
         if (totalFeeAmounts > 0) {
             uint256 sharesToMint = (totalFeeAmounts * totalShares) /
                 (totalStaked - totalFeeAmounts);
