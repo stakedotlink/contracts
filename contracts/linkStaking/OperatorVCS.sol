@@ -11,10 +11,14 @@ import "./interfaces/IOperatorVault.sol";
 contract OperatorVCS is VaultControllerStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // basis point amount of an operator's earned rewards that they receive
     uint256 public operatorRewardPercentage;
+    // total unclaimed operator LST rewards
     uint256 private unclaimedOperatorRewards;
 
+    // used to check vault membership in this strategy
     mapping(address => bool) private vaultMapping;
+    // list of vaults that are queued for removal
     address[] private vaultsToRemove;
 
     event VaultAdded(address indexed operator);
@@ -39,9 +43,9 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
      * @param _fees list of fees to be paid on rewards
-     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * @param _maxDepositSizeBP max basis point amount of the deposit room in the Chainlink staking contract
      * that can be deposited at once
-     * @param _vaultMaxDeposits maximum deposit limit for a single vault
+     * @param _vaultMaxDeposits max number of tokens that a vault can hold
      * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
      * @param _vaultDepositController address of vault deposit controller
      **/
@@ -220,12 +224,16 @@ contract OperatorVCS is VaultControllerStrategy {
 
     /**
      * @notice Returns the maximum amount of tokens this strategy can hold
+     * @dev accounts for total current deposits + current additional vault space + current space in the Chainlink
+     * staking contract + removed vaults
      * @return maximum deposits
      */
     function getMaxDeposits() public view override returns (uint256) {
         (, uint256 maxDeposits) = getVaultDepositLimits();
         uint256 totalRemovedDepositRoom;
 
+        // account for vaults that have been removed from the Chainlink staking contract but not yet removed
+        // from this contract
         if (vaultsToRemove.length != 0) {
             uint256 numVaults = vaults.length;
             for (uint256 i = 0; i < numVaults; ++i) {
@@ -275,12 +283,14 @@ contract OperatorVCS is VaultControllerStrategy {
 
         vaultsToRemove.push(address(vaults[_index]));
 
+        // update group accounting if vault is part of a group
         if (_index < globalVaultState.depositIndex) {
             uint256 group = _index % globalVaultState.numVaultGroups;
             uint256[] memory groups = new uint256[](1);
             groups[0] = group;
             fundFlowController.updateOperatorVaultGroupAccounting(groups);
 
+            // if possiible, remove vault right away
             if (vaults[_index].claimPeriodActive()) {
                 removeVault(vaultsToRemove.length - 1);
             }
@@ -288,7 +298,7 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice Removed a vault that has been queued for removal
+     * @notice Removes a vault that has been queued for removal
      * @param _queueIndex index of vault in removal queue
      */
     function removeVault(uint256 _queueIndex) public {

@@ -17,11 +17,16 @@ import "../interfaces/IStakingRewards.sol";
 abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // address of staking token
     IERC20Upgradeable public token;
+    // address of strategy that controls this vault
     address public vaultController;
+    // address of Chainlink staking contract
     IStaking public stakeController;
+    // address of Chainlink staking rewards contract
     IStakingRewards public rewardsController;
 
+    // storage gap for upgradeability
     uint256[9] private __gap;
 
     error OnlyVaultController();
@@ -29,7 +34,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Initializes contract
      * @param _token address of LINK token
-     * @param _vaultController address of the strategy that controls this vault
+     * @param _vaultController address of strategy that controls this vault
      * @param _stakeController address of Chainlink staking contract
      * @param _rewardsController address of Chainlink staking rewards contract
      **/

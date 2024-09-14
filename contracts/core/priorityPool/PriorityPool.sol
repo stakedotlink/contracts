@@ -27,31 +27,51 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         CLOSED
     }
 
+    // address of staking asset token
     IERC20Upgradeable public token;
+    // address of staking pool and liquid staking token
     IStakingPool public stakingPool;
+    // address of SDL pool
     ISDLPool public sdlPool;
+    // address of oracle contract that handles LST distribution
     address public distributionOracle;
 
+    // min amount of tokens that can be deposited into the staking pool in a single tx
     uint128 public queueDepositMin;
+    // max amount of tokens that can be deposited into the staking pool in a single tx
     uint128 public queueDepositMax;
+    // current status of the pool
     PoolStatus public poolStatus;
 
+    // merkle root for the latest distribution tree
     bytes32 public merkleRoot;
+    // ipfs hash where the latest distribution tree is stored
     bytes32 public ipfsHash;
+    // number of entries in the latest distribution tree
     uint256 public merkleTreeSize;
 
+    // total number of tokens queued for deposit into the staking pool
     uint256 public totalQueued;
+    // total number of tokens deposited into the staking pool since the last distribution
     uint256 public depositsSinceLastUpdate;
+    // total number of shares received for tokens deposited into the staking pool since the last distribution
     uint256 private sharesSinceLastUpdate;
 
+    // list of all accounts that have ever queued tokens
     address[] private accounts;
+    // stores each account's index in the distribution tree
     mapping(address => uint256) private accountIndexes;
+    // stores the lifetime amount of queued tokens for each account less any tokens that were unqueued
     mapping(address => uint256) private accountQueuedTokens;
+    // stores the total amount of LSTs that each account has claimed
     mapping(address => uint256) private accountClaimed;
+    // stored the total amount of LST shares that each account has claimed
     mapping(address => uint256) private accountSharesClaimed;
 
+    // address with authorization to pause the pool
     address public rebaseController;
 
+    // address of withdrawal pool
     IWithdrawalPool public withdrawalPool;
 
     event UnqueueTokens(address indexed account, uint256 amount);
@@ -90,11 +110,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice Initializes contract
-     * @param _token address of asset token
+     * @param _token address of staking asset token
      * @param _stakingPool address of staking pool
      * @param _sdlPool address of SDL pool
-     * @param _queueDepositMin min amount of tokens required for deposit into staking pool strategies
-     * @param _queueDepositMax max amount of tokens that can be deposited into staking pool strategies at once
+     * @param _queueDepositMin min amount of tokens that can be deposited into the staking pool in a single tx
+     * @param _queueDepositMax mmaxin amount of tokens that can be deposited into the staking pool in a single tx
      **/
     function initialize(
         address _token,
@@ -261,6 +281,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 toWithdraw = _amountToWithdraw;
         address account = msg.sender;
 
+        // attempt to unqueue tokens before withdrawing if flag is set
         if (_shouldUnqueue == true) {
             _requireNotPaused();
 
@@ -286,6 +307,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             }
         }
 
+        // attempt to withdraw if tokens remain after unqueueing
         if (toWithdraw != 0) {
             IERC20Upgradeable(address(stakingPool)).safeTransferFrom(
                 account,
@@ -315,6 +337,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (_amountToUnqueue > totalQueued) revert InsufficientQueuedTokens();
 
         address account = msg.sender;
+
+        // verify merkle proof only if sender is included in tree
         if (accountIndexes[account] < merkleTreeSize) {
             bytes32 node = keccak256(
                 bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount)))
@@ -489,6 +513,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     /**
      * @notice Executes a batch of withdrawals that have been queued in the withdrawal pool
+     * @dev withdraws tokens from the staking pool and sends them to the withdrawal pool
      * @param _amount total amount to withdraw
      * @param _data list of withdrawal data passed to staking pool strategies
      */

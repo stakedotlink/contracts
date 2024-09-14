@@ -11,17 +11,24 @@ import "./interfaces/IOperatorVault.sol";
 
 /**
  * @title Fund Flow Controller
- * @notice Manages deposits and withdrawals for the Chainlink staking vaults
+ * @notice Manages deposits and withdrawals for Chainlink staking vaults in the OperatorVCS and CommunityVCS
  */
 contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
+    // address of operator vcs
     IVaultControllerStrategy public operatorVCS;
+    // address of community vcs
     IVaultControllerStrategy public communityVCS;
 
+    // duration of the unbonding period in the Chainlink staking contract
     uint64 public unbondingPeriod;
+    // duration of the claim period in the Chainlink staking contract
     uint64 public claimPeriod;
 
+    // total number of vault groups
     uint64 public numVaultGroups;
+    // index of current unbonded vault group
     uint64 public curUnbondedVaultGroup;
+    // time that each vault group was last unbonded
     uint256[] public timeOfLastUpdateByGroup;
 
     error SenderNotAuthorized();
@@ -61,6 +68,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns encoded vault deposit order for each strategy
+     * @dev return data should be passed to the priority pool when depositing into the staking pool
      * @param _toDeposit amount to deposit
      * @return list of encoded vault deposit data
      */
@@ -89,6 +97,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns encoded vault withdrawal order for each strategy
+     * @dev return data should be passed to the priority pool when withdrawing from the staking pool
      * @param _toWithdraw amount to withdraw
      * @return list of encoded vault withdrawal data
      */
@@ -138,18 +147,22 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 curUnbondedGroup = curUnbondedVaultGroup;
         uint256 nextUnbondedGroup = _getNextGroup(curUnbondedGroup, numVaultGroups);
 
+        // claim period must be concluded for current group
         if (
             timeOfLastUpdateByGroup[nextUnbondedGroup] != 0 &&
             block.timestamp <=
             timeOfLastUpdateByGroup[curUnbondedGroup] + unbondingPeriod + claimPeriod
         ) revert NoUpdateNeeded();
 
+        // vault group unbonding must be properly spaced out with a full claim period between each group
+        // (only applies to the first cycle through the vault groups)
         if (
             curUnbondedGroup != 0 &&
             timeOfLastUpdateByGroup[curUnbondedGroup] == 0 &&
             block.timestamp <= timeOfLastUpdateByGroup[curUnbondedGroup - 1] + claimPeriod
         ) revert NoUpdateNeeded();
 
+        // unbonding period must be concluded for next group
         if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedGroup] + unbondingPeriod)
             revert NoUpdateNeeded();
 
@@ -184,6 +197,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Calculates and updates totalDepositRoom and totalUnbonded for a list of operator vault groups
+     * @dev used to correct minor accounting errors that result from the removal or slashing
+     * of operators in the Chainlink staking contract
      * @param _vaultGroups list of vault groups
      */
     function updateOperatorVaultGroupAccounting(uint256[] calldata _vaultGroups) external {
@@ -240,12 +255,14 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
         (, , uint64 groupDepositIndex, uint64 maxVaultIndex) = _vcs.globalVaultState();
         uint256 maxDeposits = _vcs.vaultMaxDeposits();
+        // sort groups in descending order from most deposit room to least deposit room
         uint256[] memory groupDepositOrder = _sortIndexesDescending(depositRoom);
 
         uint256[] memory vaultDepositOrder = new uint256[](vaults.length);
         uint256 totalVaultsAdded;
         uint256 totalDepositsAdded;
 
+        // deposits continue with the vault they left off at during the previous call regardless of group deposit order
         if (groupDepositIndex < maxVaultIndex) {
             vaultDepositOrder[0] = groupDepositIndex;
             ++totalVaultsAdded;
@@ -258,6 +275,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             }
         }
 
+        // iterate through groups in group deposit order filling each vault and group entirely before moving onto the next
         for (uint256 i = 0; i < numVaultGroups; ++i) {
             (uint256 withdrawalIndex, ) = _vcs.vaultGroups(groupDepositOrder[i]);
 
@@ -266,6 +284,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
                 if (j != groupDepositIndex && deposits != maxDeposits) {
                     vaultDepositOrder[totalVaultsAdded] = j;
                     ++totalVaultsAdded;
+                    // only count deposit room if withdrawalIndex is not equal to the current vault
                     if (j != withdrawalIndex || deposits == 0)
                         totalDepositsAdded += maxDeposits - deposits;
                     if (totalDepositsAdded >= _toDeposit) break;
@@ -304,12 +323,15 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 totalVaultsAdded;
         uint256 totalWithdrawsAdded;
 
+        // withdrawals continue with the vault they left off at during the previous call when the current
+        // group was unbonded
         if (withdrawalIndex < maxVaultIndex) {
             vaultWithdrawalOrder[0] = withdrawalIndex;
             ++totalVaultsAdded;
             totalWithdrawsAdded += IVault(vaults[withdrawalIndex]).getPrincipalDeposits();
         }
 
+        // iterate through vaults in the current unbonded group emptying each entirely before moving onto the next
         for (uint256 i = curUnbondedVaultGroup; i < maxVaultIndex; i += numVaultGroups) {
             IVault vault = IVault(vaults[i]);
             uint256 deposits = vault.getPrincipalDeposits();
@@ -408,7 +430,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns a the total amount unbonded for a vault group
+     * @notice Returns the total amount currently unbonded for a vault group
      * @param _vaults list of all vaults
      * @param _numVaultGroups total number of vault groups
      * @param _vaultGroup index of vault group
@@ -440,7 +462,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns a sorted list of indexes for a list of values in descending order
+     * @notice Sorts a list of values in descending order and returns the correspodning list of indexes
+     * sorted in the same order
      * @param _values list of values
      * @return sorted list of indexes
      */

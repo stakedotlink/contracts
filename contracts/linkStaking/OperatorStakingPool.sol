@@ -11,18 +11,25 @@ import "../core/interfaces/IStakingPool.sol";
 /**
  * @title Operator Staking Pool
  * @notice Tracks node operator LST balances for the purpose of differentiating from community LST balances
+ * @dev node operators are required to stake their LSTs into this contract
  */
 contract OperatorStakingPool is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // address of liquid staking token
     IStakingPool public lst;
 
+    // list of whitelisted operators
     address[] private operators;
+    // used to check membership of operators in this pool
     mapping(address => bool) private operatorMap;
 
+    // stores the LST share balance for each operator
     mapping(address => uint256) private shareBalances;
+    // total number of LST shares staked in this pool
     uint256 private totalShares;
 
+    // max LST deposits per operator
     uint256 public depositLimit;
 
     event Deposit(address account, uint256 amount, uint256 sharesAmount);
@@ -42,7 +49,7 @@ contract OperatorStakingPool is Initializable, UUPSUpgradeable, OwnableUpgradeab
     /**
      * @notice Initializes contract
      * @param _lst address of liquid staking token
-     * @param _depositLimit max deposits per operator
+     * @param _depositLimit max LST deposits per operator
      **/
     function initialize(address _lst, uint256 _depositLimit) public initializer {
         __Ownable_init();

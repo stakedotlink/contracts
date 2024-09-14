@@ -13,19 +13,27 @@ import "../interfaces/IStaking.sol";
 import "../interfaces/IFundFlowController.sol";
 
 struct Fee {
+    // address to recieve fee
     address receiver;
+    // value of fee in basis points
     uint256 basisPoints;
 }
 
 struct VaultGroup {
+    // index of next vault in the group to be withdrawn from
     uint64 withdrawalIndex;
+    // total deposit room across all vaults in the group
     uint128 totalDepositRoom;
 }
 
 struct GlobalVaultState {
+    // total number of groups
     uint64 numVaultGroups;
+    // index of the current unbonded group
     uint64 curUnbondedVaultGroup;
+    // index of next vault to receive deposits across all groups
     uint64 groupDepositIndex;
+    // index of next non-group vault to receive deposits
     uint64 depositIndex;
 }
 
@@ -35,26 +43,39 @@ error InsufficientTokensUnbonded();
 /**
  * @title Vault Deposit Controller
  * @notice Handles deposits and withdrawals for VaultControllerStrategy through delegatecall
+ * @dev this contract was required to avoid exceeding the contract size limit
  */
 contract VaultDepositController is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // address of Chainlink staking contract
     IStaking public stakeController;
+    // list of fees that are paid on rewards
     Fee[] internal fees;
 
+    // address of vault implementation contract to be used when adding new vaults
     address public vaultImplementation;
 
+    // list of all vaults controlled by this strategy
     IVault[] internal vaults;
+    // total number of tokens staked in this strategy
     uint256 internal totalDeposits;
+    // total number of tokens staked through this strategy as principal in the Chainlink staking contract
     uint256 public totalPrincipalDeposits;
 
+    // max basis point amount of the deposit room in the Chainlink staking contract that can be deposited at once
     uint256 public maxDepositSizeBP;
 
+    // address of fund flow controller
     IFundFlowController public fundFlowController;
+    // total number of tokens currently unbonded in the Chainlink staking contract
     uint256 public totalUnbonded;
 
+    // list of vault groups
     VaultGroup[] public vaultGroups;
+    // global state across all vault groups
     GlobalVaultState public globalVaultState;
+    // max number of tokens that a vault can hold
     uint256 internal vaultMaxDeposits;
 
     /**
@@ -95,6 +116,7 @@ contract VaultDepositController is Strategy {
         uint64[] memory vaultIds = abi.decode(_data, (uint64[]));
         VaultGroup memory group = vaultGroups[globalState.curUnbondedVaultGroup];
 
+        // withdrawals must continue with the vault they left off at during the previous call
         if (vaultIds[0] != group.withdrawalIndex) revert InvalidVaultIds();
 
         uint256 toWithdraw = _amount;
@@ -102,6 +124,7 @@ contract VaultDepositController is Strategy {
         (uint256 minDeposits, ) = getVaultDepositLimits();
 
         for (uint256 i = 0; i < vaultIds.length; ++i) {
+            // vault must be a member of the current unbonded group
             if (vaultIds[i] % globalState.numVaultGroups != globalState.curUnbondedVaultGroup)
                 revert InvalidVaultIds();
 
@@ -115,6 +138,7 @@ contract VaultDepositController is Strategy {
                     unbondedRemaining -= deposits;
                     toWithdraw -= deposits;
                 } else if (deposits - toWithdraw > 0 && deposits - toWithdraw < minDeposits) {
+                    // cannot leave a vault with less than minimum deposits
                     vault.withdraw(deposits);
                     unbondedRemaining -= deposits;
                     break;
@@ -156,13 +180,14 @@ contract VaultDepositController is Strategy {
         GlobalVaultState memory globalState = globalVaultState;
         VaultGroup[] memory groups = vaultGroups;
 
+        // deposits must continue with the vault they left off at during the previous call
         if (_vaultIds.length != 0 && _vaultIds[0] != globalState.groupDepositIndex)
             revert InvalidVaultIds();
 
         // deposit into vaults in the order specified in _vaultIds
-
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
             uint256 vaultIndex = _vaultIds[i];
+            // vault must be a member of a group
             if (vaultIndex >= globalState.depositIndex) revert InvalidVaultIds();
 
             IVault vault = vaults[vaultIndex];
@@ -173,6 +198,7 @@ contract VaultDepositController is Strategy {
 
             globalState.groupDepositIndex = uint64(vaultIndex);
 
+            // if vault is empty and equal to withdrawal index, increment withdrawal index to the next vault in the group
             if (deposits == 0 && vaultIndex == group.withdrawalIndex) {
                 group.withdrawalIndex += uint64(globalState.numVaultGroups);
                 if (group.withdrawalIndex > globalState.depositIndex) {
@@ -185,6 +211,7 @@ contract VaultDepositController is Strategy {
                     break;
                 }
 
+                // unbonded funds are rebonded if the vault receives deposits
                 if (vault.claimPeriodActive()) {
                     totalRebonded += deposits;
                 }
@@ -204,6 +231,7 @@ contract VaultDepositController is Strategy {
 
         globalVaultState = globalState;
 
+        // update vault groups if state was changed
         for (uint256 i = 0; i < globalState.numVaultGroups; ++i) {
             VaultGroup memory group = vaultGroups[i];
             if (
@@ -229,8 +257,7 @@ contract VaultDepositController is Strategy {
             }
         }
 
-        //deposit into additional vaults that don't yet belong to a group
-
+        // deposit into additional vaults that don't yet belong to a group
         uint256 numVaults = vaults.length;
         uint256 i = globalState.depositIndex;
 
@@ -239,6 +266,7 @@ contract VaultDepositController is Strategy {
             uint256 deposits = vault.getPrincipalDeposits();
             uint256 canDeposit = _maxDeposits - deposits;
 
+            // cannot leave a vault with less than minimum deposits
             if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
                 break;
             }
@@ -272,6 +300,8 @@ contract VaultDepositController is Strategy {
         return stakeController.getStakerLimits();
     }
 
+    // remaining functions are required to satisfy the strategy interface
+
     function updateDeposits(
         bytes calldata _data
     )
@@ -295,26 +325,40 @@ contract VaultDepositController is Strategy {
 abstract contract VaultControllerStrategy is Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // address of Chainlink staking contract
     IStaking public stakeController;
+    // list of fees that are paid on rewards
     Fee[] internal fees;
 
+    // address of vault implementation contract to be used when deploying new vaults
     address public vaultImplementation;
 
+    // list of all vaults controlled by this strategy
     IVault[] internal vaults;
+    // total number of tokens staked in this strategy
     uint256 internal totalDeposits;
+    // total number of tokens staked through this strategy as principal in the Chainlink staking contract
     uint256 public totalPrincipalDeposits;
 
+    // max basis point amount of the deposit room in the Chainlink staking contract that can be deposited at once
     uint256 public maxDepositSizeBP;
 
+    // address of fund flow controller
     IFundFlowController public fundFlowController;
+    // total number of tokens currently unbonded in the Chainlink staking contract
     uint256 public totalUnbonded;
 
+    // list of vault groups
     VaultGroup[] public vaultGroups;
+    // global state across all vault groups
     GlobalVaultState public globalVaultState;
-    uint256 public vaultMaxDeposits;
+    // max number of tokens that a vault can hold
+    uint256 internal vaultMaxDeposits;
 
+    // address of vault deposit controller
     address public vaultDepositController;
 
+    // storage gap for upgradeability
     uint256[4] private __gap;
 
     event UpgradedVaults(uint256[] vaults);
@@ -336,9 +380,9 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
      * @param _fees list of fees to be paid on rewards
-     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * @param _maxDepositSizeBP max basis point amount of the deposit room in the Chainlink staking contract
      * that can be deposited at once
-     * @param _vaultMaxDeposits maximum deposit limit for a single vault
+     * @param _vaultMaxDeposits max number of tokens that a vault can hold
      * @param _vaultDepositController address of vault deposit controller
      **/
     function __VaultControllerStrategy_init(
@@ -522,6 +566,8 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice Returns the maximum amount of tokens this strategy can hold
+     * @dev accounts for total current deposits + current additional vault space + current space in the Chainlink
+     * staking contract
      * @return maximum deposits
      */
     function getMaxDeposits() public view virtual override returns (uint256) {

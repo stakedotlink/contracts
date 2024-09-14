@@ -12,16 +12,20 @@ import "../tokens/base/ERC677Upgradeable.sol";
  * @dev Rewards can be positive or negative (user balances can increase and decrease)
  */
 abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, OwnableUpgradeable {
+    // used to prevent vault inflation attack
     uint256 private constant DEAD_SHARES = 10 ** 3;
 
+    // address of staking asset token
     IERC20Upgradeable public token;
 
+    // mapping of staker address to their shares balance
     mapping(address => uint256) private shares;
+    // total number of shares minted
     uint256 public totalShares;
 
     /**
      * @notice Initializes the contract
-     * @param _token address of asset token
+     * @param _token address of staking asset token
      * @param _liquidTokenName name of liquid staking token
      * @param _liquidTokenSymbol symbol of liquid staking token
      */

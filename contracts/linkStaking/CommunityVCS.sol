@@ -9,7 +9,9 @@ import "./interfaces/ICommunityVault.sol";
  * @notice Implemented strategy for managing multiple Chainlink community staking vaults
  */
 contract CommunityVCS is VaultControllerStrategy {
+    // min number of non-full vaults before a new batch is deployed
     uint128 public vaultDeploymentThreshold;
+    // number of vaults to deploy when threshold is met
     uint128 public vaultDeploymentAmount;
 
     event SetVaultDeploymentParams(uint128 vaultDeploymentThreshold, uint128 vaultDeploymentAmount);
@@ -28,11 +30,11 @@ contract CommunityVCS is VaultControllerStrategy {
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
      * @param _fees list of fees to be paid on rewards
-     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * @param _maxDepositSizeBP max basis point amount of the deposit room in the Chainlink staking contract
      * that can be deposited at once
-     * @param _vaultMaxDeposits maximum deposit limit for a single vault
-     * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
-     * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
+     * @param _vaultMaxDeposits max number of tokens that a vault can hold
+     * @param _vaultDeploymentThreshold min number of non-full vaults before a new batch is deployed
+     * @param _vaultDeploymentAmount number of vaults to deploy when threshold is met
      * @param _vaultDepositController address of vault deposit controller
      *
      */

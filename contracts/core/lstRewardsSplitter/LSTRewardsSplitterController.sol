@@ -15,10 +15,14 @@ import "./LSTRewardsSplitter.sol";
 contract LSTRewardsSplitterController is Ownable {
     using SafeERC20 for IERC677;
 
+    // mapping of account address to corresponding splitter
     mapping(address => ILSTRewardsSplitter) public splitters;
+    // list of accounts that have splitters
     address[] internal accounts;
 
+    // address of liquid staking token
     address public lst;
+    // min amount of new rewards required to split
     uint256 public rewardThreshold;
 
     error InvalidToken();

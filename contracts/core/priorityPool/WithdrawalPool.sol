@@ -17,34 +17,54 @@ import "../interfaces/IPriorityPool.sol";
 contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // a withdrawal request made by an account
     struct Withdrawal {
+        // number of LST shares remaining (may be withdrawable or not)
         uint128 sharesRemaining;
+        // number of tokens that can be withdrawn
         uint128 partiallyWithdrawableAmount;
     }
 
+    // a withdrawal batch created when some withdrawals were finalized
     struct WithdrawalBatch {
+        // index of last withdrawal that was finalized in this batch
         uint128 indexOfLastWithdrawal;
+        // the exchange rate of LSTs per underlying shares at the time of this batch
         uint128 stakePerShares;
     }
 
+    // address of staking token
     IERC20Upgradeable public token;
+    // address of liquid staking token
     IERC20Upgradeable public lst;
+    // address of priority pool
     IPriorityPool public priorityPool;
 
+    // list of withdrawal requests in order of creation
     Withdrawal[] internal queuedWithdrawals;
+    // stores a list of withdrawal requests for each account
     mapping(address => uint256[]) internal queuedWithdrawalsByAccount;
+    // mapping of withdrawal request index to the request owner
     mapping(uint256 => address) internal withdrawalOwners;
 
+    // total number of LST shares queued for withdrawal
     uint256 internal totalQueuedShareWithdrawals;
+    // index of the withdrawal that's at the front of the queue
     uint256 public indexOfNextWithdrawal;
 
+    // list of withdrawal batches in order of creation
     WithdrawalBatch[] internal withdrawalBatches;
+    // all batches before this index have had all withdrawal requests fully withdrawn
     uint128 public withdrawalBatchIdCutoff;
+    // all withdrawal requests before this index have been fully withdrawn
     uint128 public withdrawalIdCutoff;
 
+    // min amount of LSTs that can be queued for withdrawal
     uint256 public minWithdrawalAmount;
 
+    // min amount of time between execution of withdrawals
     uint64 public minTimeBetweenWithdrawals;
+    // time of last execution of withdrawals
     uint64 public timeOfLastWithdrawal;
 
     event QueueWithdrawal(address indexed account, uint256 amount);
@@ -68,8 +88,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      * @param _token address of asset token
      * @param _lst address of liquid staking token
      * @param _priorityPool address of priority pool
-     * @param _minWithdrawalAmount minimum amount that can be queued for withdrawal
-     * @param _minTimeBetweenWithdrawals minimum time between withdrawals
+     * @param _minWithdrawalAmount minimum amount of LSTs that can be queued for withdrawal
+     * @param _minTimeBetweenWithdrawals min amount of time between execution of withdrawals
      */
     function initialize(
         address _token,

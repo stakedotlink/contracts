@@ -110,6 +110,7 @@ contract OperatorVault is Vault {
 
     /**
      * @notice Returns the principal balance of this contract in the Chainlink staking contract
+     * @dev includes principal that was removed due to a removal of this operator in the Chainlink contract
      * @return principal balance
      */
     function getPrincipalDeposits() public view override returns (uint256) {
@@ -206,7 +207,7 @@ contract OperatorVault is Vault {
     }
 
     /**
-     * @notice Returns whether the operator for this vault has been removed from the Chainlink staking contract
+     * @notice Returns whether this vault has been removed as an operator from the Chainlink staking contract
      * @return true if operator has been removed, false otherwise
      */
     function isRemoved() public view override returns (bool) {

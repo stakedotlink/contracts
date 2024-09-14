@@ -16,15 +16,21 @@ contract LSTRewardsSplitter is Ownable {
     using SafeERC20 for IERC677;
 
     struct Fee {
+        // address to receive fee
         address receiver;
+        // value of fee in basis points
         uint256 basisPoints;
     }
 
+    // address of contract that conrols this splitter
     ILSTRewardsSplitterController public controller;
+    // address of liquid staking token
     IERC677 public lst;
 
+    // list of fees that are paid on rewards
     Fee[] private fees;
 
+    // total number of tokens deposited without rewards
     uint256 public principalDeposits;
 
     event Deposit(uint256 amount);
