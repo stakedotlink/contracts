@@ -76,7 +76,7 @@ contract VaultDepositController is Strategy {
     // global state across all vault groups
     GlobalVaultState public globalVaultState;
     // max number of tokens that a vault can hold
-    uint256 internal vaultMaxDeposits;
+    uint256 public vaultMaxDeposits;
 
     /**
      * @notice Deposits tokens from the staking pool into vaults
@@ -353,7 +353,7 @@ abstract contract VaultControllerStrategy is Strategy {
     // global state across all vault groups
     GlobalVaultState public globalVaultState;
     // max number of tokens that a vault can hold
-    uint256 internal vaultMaxDeposits;
+    uint256 public vaultMaxDeposits;
 
     // address of vault deposit controller
     address public vaultDepositController;
