@@ -15,6 +15,9 @@ contract PriorityPoolMock is Pausable {
 
     uint256 public depositsSinceLastUpdate;
 
+    bytes public lastPerformData;
+    bool public upkeepNeeded;
+
     constructor(uint256 _depositsSinceLastUpdate) {
         depositsSinceLastUpdate = _depositsSinceLastUpdate;
     }
@@ -33,11 +36,23 @@ contract PriorityPoolMock is Pausable {
         ipfsHash = _ipfsHash;
     }
 
+    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        return (upkeepNeeded, upkeepNeeded ? abi.encode(150 ether) : bytes(""));
+    }
+
+    function performUpkeep(bytes calldata _data) external {
+        lastPerformData = _data;
+    }
+
     function pauseForUpdate() external {
         _pause();
     }
 
     function setDepositsSinceLastUpdate(uint256 _depositsSinceLastUpdate) external {
         depositsSinceLastUpdate = _depositsSinceLastUpdate;
+    }
+
+    function setUpkeepNeeded(bool _upkeepNeeded) external {
+        upkeepNeeded = _upkeepNeeded;
     }
 }

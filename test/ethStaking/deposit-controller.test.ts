@@ -49,6 +49,7 @@ describe('DepositController', () => {
       'LinkPool ETH',
       'lplETH',
       [],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 
@@ -218,7 +219,7 @@ describe('DepositController', () => {
 
   //   type DepositData = [string, string, string, number, number, number[], number[]]
   //   await wETH.wrap({ value: toEther(1000) })
-  //   await stakingPool.deposit(accounts[0], toEther(1000))
+  //   await stakingPool.deposit(accounts[0], toEther(1000), ['0x'])
 
   //   let depositData = (await depositController.getNextValidators(1)).slice(0, -2) as DepositData
   //   await expect(

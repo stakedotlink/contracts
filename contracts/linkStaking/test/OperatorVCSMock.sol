@@ -31,6 +31,15 @@ contract OperatorVCSMock {
         vault.deposit(_amount);
     }
 
+    function withdraw(uint256 _amount) external {
+        vault.withdraw(_amount);
+        token.safeTransfer(msg.sender, _amount);
+    }
+
+    function unbond() external {
+        vault.unbond();
+    }
+
     function withdrawOperatorRewards(
         address _receiver,
         uint256 _amount
@@ -42,13 +51,17 @@ contract OperatorVCSMock {
     function updateDeposits(
         uint256 _minRewards,
         address _rewardsReceiver
-    ) external returns (uint256, uint256) {
+    ) external returns (uint256, uint256, uint256) {
         return vault.updateDeposits(_minRewards, _rewardsReceiver);
     }
 
     function addVault(address _vault) external {
         vault = IOperatorVault(_vault);
         token.approve(_vault, type(uint256).max);
+    }
+
+    function removeVault() external returns (uint256, uint256) {
+        return vault.exitVault();
     }
 
     function setWithdrawalPercentage(uint256 _withdrawalPercentage) external {

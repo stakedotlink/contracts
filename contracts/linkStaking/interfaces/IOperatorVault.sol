@@ -9,7 +9,9 @@ interface IOperatorVault is IVault {
     function updateDeposits(
         uint256 _minRewards,
         address _rewardsReceiver
-    ) external returns (uint256, uint256);
+    ) external returns (uint256, uint256, uint256);
+
+    function exitVault() external returns (uint256, uint256);
 
     function setOperator(address _operator) external;
 

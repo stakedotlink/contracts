@@ -40,7 +40,7 @@ describe('Strategy', () => {
   it('should be able to upgrade contract, state should persist', async () => {
     const { adrs, token, strategy } = await loadFixture(deployFixture)
 
-    await strategy.deposit(toEther(1000))
+    await strategy.deposit(toEther(1000), '0x')
 
     let StrategyV2 = await ethers.getContractFactory('StrategyMockV2')
     let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.strategy, StrategyV2, {

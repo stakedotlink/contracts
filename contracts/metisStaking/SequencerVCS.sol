@@ -114,7 +114,7 @@ contract SequencerVCS is Strategy {
      * @notice Deposits tokens into this strategy from the staking pool
      * @param _amount amount to deposit
      */
-    function deposit(uint256 _amount) external onlyStakingPool {
+    function deposit(uint256 _amount, bytes calldata) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalDeposits += _amount;
     }
@@ -122,7 +122,7 @@ contract SequencerVCS is Strategy {
     /**
      * @notice Withdrawals are not yet implemented
      */
-    function withdraw(uint256) external view onlyStakingPool {
+    function withdraw(uint256, bytes calldata) external view onlyStakingPool {
         revert("withdrawals not yet implemented");
     }
 

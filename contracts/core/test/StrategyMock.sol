@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "../base/Strategy.sol";
-import "../RewardsPool.sol";
+import "../rewardsPools/RewardsPool.sol";
 
 /**
  * @title Strategy Mock
@@ -42,13 +42,13 @@ contract StrategyMock is Strategy {
         return int(token.balanceOf(address(this))) - int(totalDeposits);
     }
 
-    function deposit(uint256 _amount) external onlyStakingPool {
+    function deposit(uint256 _amount, bytes calldata) external onlyStakingPool {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalDeposits += _amount;
         // Deposit into earning protocol/node
     }
 
-    function withdraw(uint256 _amount) external onlyStakingPool {
+    function withdraw(uint256 _amount, bytes calldata) external onlyStakingPool {
         require(_amount <= canWithdraw(), "Total deposits must remain >= minimum");
         totalDeposits -= _amount;
         //Withdraw from earning protocol/node
