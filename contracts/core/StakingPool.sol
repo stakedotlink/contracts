@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "./base/StakingRewardsPool.sol";
 import "./interfaces/IStrategy.sol";
+import "./interfaces/IPriorityPool.sol";
 
 /**
  * @title Staking Pool
@@ -48,6 +49,7 @@ contract StakingPool is StakingRewardsPool {
 
     error SenderNotAuthorized();
     error InvalidDeposit();
+    error PoolClosed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -475,6 +477,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _data list of deposit data passed to strategies
      **/
     function _depositLiquidity(bytes[] calldata _data) private {
+        if (_getPoolStatus() != IPriorityPool.PoolStatus.OPEN) revert PoolClosed();
+
         uint256 toDeposit = token.balanceOf(address(this));
         if (toDeposit > 0) {
             for (uint256 i = 0; i < strategies.length; i++) {
@@ -498,6 +502,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _data list of withdrawal data passed to strategies
      **/
     function _withdrawLiquidity(uint256 _amount, bytes[] calldata _data) private {
+        if (_getPoolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
+
         uint256 toWithdraw = _amount;
 
         for (uint256 i = strategies.length; i > 0; i--) {
@@ -520,6 +526,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _data update data passed to each strategy
      **/
     function _updateStrategyRewards(uint256[] memory _strategyIdxs, bytes memory _data) private {
+        if (_getPoolStatus() != IPriorityPool.PoolStatus.OPEN) revert PoolClosed();
+
         int256 totalRewards;
         uint256 totalFeeAmounts;
         uint256 totalFeeCount;
@@ -597,6 +605,14 @@ contract StakingPool is StakingRewardsPool {
         }
 
         emit UpdateStrategyRewards(msg.sender, totalStaked, totalRewards, totalFeeAmounts);
+    }
+
+    /**
+     * @notice Returns the the current pool status
+     * @return pool status
+     **/
+    function _getPoolStatus() private view returns (IPriorityPool.PoolStatus) {
+        return IPriorityPool(priorityPool).poolStatus();
     }
 
     /**

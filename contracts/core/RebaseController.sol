@@ -24,6 +24,8 @@ contract RebaseController is Ownable {
     address public rebaseBot;
     uint256 public maxRebaseLossBP;
 
+    address public emergencyPauser;
+
     error NoStrategiesToUpdate();
     error PositiveDepositChange();
     error InvalidMaxRebaseLoss();
@@ -36,7 +38,8 @@ contract RebaseController is Ownable {
         address _sdlPoolCCIPController,
         address _insurancePool,
         address _rebaseBot,
-        uint256 _maxRebaseLossBP
+        uint256 _maxRebaseLossBP,
+        address _emergencyPauser
     ) {
         stakingPool = IStakingPool(_stakingPool);
         priorityPool = IPriorityPool(_priorityPool);
@@ -45,6 +48,7 @@ contract RebaseController is Ownable {
         rebaseBot = _rebaseBot;
         if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
         maxRebaseLossBP = _maxRebaseLossBP;
+        emergencyPauser = _emergencyPauser;
     }
 
     modifier onlyRebaseBot() {
@@ -112,7 +116,7 @@ contract RebaseController is Ownable {
 
     /**
      * @notice Updates rewards in the case of a negative rebase or pauses the priority
-     * pool if losses exceed the maximum
+     * pool and initiates an insurance claim if losses exceed the maximum
      * @dev should be called by a custom bot (not CL automation)
      * @param _performData abi encoded list of strategy indexes to update and their total deposit change
      */
@@ -133,6 +137,16 @@ contract RebaseController is Ownable {
         } else {
             stakingPool.updateStrategyRewards(strategiesToUpdate, "");
         }
+    }
+
+    /**
+     * @notice Pauses the priority pool and initiates an insurance claim
+     * @dev used in the case of an emergency
+     */
+    function emergencyPause() external {
+        if (msg.sender != emergencyPauser) revert SenderNotAuthorized();
+        priorityPool.setPoolStatus(IPriorityPool.PoolStatus.CLOSED);
+        insurancePool.initiateClaim();
     }
 
     /**
@@ -164,5 +178,13 @@ contract RebaseController is Ownable {
     function setMaxRebaseLossBP(uint256 _maxRebaseLossBP) external onlyOwner {
         if (_maxRebaseLossBP > 9000) revert InvalidMaxRebaseLoss();
         maxRebaseLossBP = _maxRebaseLossBP;
+    }
+
+    /**
+     * @notice sets the emergency pauser
+     * @param _emergencyPauser address of emergency pauser
+     */
+    function setEmergencyPauser(address _emergencyPauser) external onlyOwner {
+        emergencyPauser = _emergencyPauser;
     }
 }
