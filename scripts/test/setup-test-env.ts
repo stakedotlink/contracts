@@ -81,6 +81,7 @@ async function main() {
   const METISToken = (await getContract('METISToken')) as ERC20
   const METIS_StakingPool = (await getContract('METIS_StakingPool')) as StakingPool
   const METIS_PriorityPool = (await getContract('METIS_PriorityPool')) as PriorityPool
+
   const strategyMockMETIS = (await ethers.getContractAt(
     'StrategyMock',
     (
@@ -95,8 +96,8 @@ async function main() {
 
   // LINK Staking
 
-  await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
-  await (await LINK_StakingPool.removeStrategy(0, '0x')).wait()
+  await (await LINK_StakingPool.removeStrategy(0, '0x', '0x')).wait()
+  await (await LINK_StakingPool.removeStrategy(0, '0x', '0x')).wait()
 
   const strategyMockLINK = (await deployUpgradeable('StrategyMock', [
     linkToken.target,
@@ -154,10 +155,11 @@ async function main() {
   tx = await linkToken.transferAndCall(
     LINK_PriorityPool.target,
     toEther(500),
-    ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [false])
+    ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
   )
+
   await (await METISToken.approve(METIS_PriorityPool.target, ethers.MaxUint256)).wait()
-  await (await METIS_PriorityPool.deposit(toEther(500), false)).wait()
+  await (await METIS_PriorityPool.deposit(toEther(500), false, ['0x'])).wait()
 
   // Account 2
 
@@ -220,13 +222,13 @@ async function main() {
     .transferAndCall(
       LINK_PriorityPool.target,
       toEther(100),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [false])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
     )
   await tx.wait()
   await (
     await METISToken.connect(signers[3]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
-  await (await METIS_PriorityPool.connect(signers[3]).deposit(toEther(100), false)).wait()
+  await (await METIS_PriorityPool.connect(signers[3]).deposit(toEther(100), false, ['0x'])).wait()
 
   await tx.wait()
   tx = await LINK_StakingPool.transferAndCall(delegatorPool.target, toEther(100), '0x')
@@ -241,13 +243,13 @@ async function main() {
     .transferAndCall(
       LINK_PriorityPool.target,
       toEther(500),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
     )
   await tx.wait()
   await (
     await METISToken.connect(signers[4]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
-  await (await METIS_PriorityPool.connect(signers[4]).deposit(toEther(500), true)).wait()
+  await (await METIS_PriorityPool.connect(signers[4]).deposit(toEther(500), true, ['0x'])).wait()
 
   // Account 5
 
@@ -265,12 +267,12 @@ async function main() {
     .transferAndCall(
       LINK_PriorityPool.target,
       toEther(200),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
     )
   await (
     await METISToken.connect(signers[5]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
-  await (await METIS_PriorityPool.connect(signers[5]).deposit(toEther(200), true)).wait()
+  await (await METIS_PriorityPool.connect(signers[5]).deposit(toEther(200), true, ['0x'])).wait()
 
   // Account 6
 
@@ -287,13 +289,13 @@ async function main() {
     .transferAndCall(
       LINK_PriorityPool.target,
       toEther(300),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
     )
   await tx.wait()
   await (
     await METISToken.connect(signers[6]).approve(METIS_PriorityPool.target, ethers.MaxUint256)
   ).wait()
-  await (await METIS_PriorityPool.connect(signers[6]).deposit(toEther(300), true)).wait()
+  await (await METIS_PriorityPool.connect(signers[6]).deposit(toEther(300), true, ['0x'])).wait()
 
   // Reward Distributions
 
@@ -332,7 +334,7 @@ async function main() {
   tx = await strategyMockLINK.setMaxDeposits(toEther(2200))
   await tx.wait()
 
-  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000))
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000), ['0x'])
   await tx.wait()
 
   tx = await LINK_PriorityPool.pauseForUpdate()
@@ -348,7 +350,7 @@ async function main() {
   tx = await strategyMockMETIS.setMaxDeposits(toEther(2200))
   await tx.wait()
 
-  tx = await METIS_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000))
+  tx = await METIS_PriorityPool.depositQueuedTokens(toEther(0), toEther(10000), ['0x'])
   await tx.wait()
 
   tx = await METIS_PriorityPool.pauseForUpdate()
@@ -368,7 +370,7 @@ async function main() {
     .transferAndCall(
       LINK_PriorityPool.target,
       toEther(100),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
     )
   await tx.wait()
 
@@ -381,13 +383,13 @@ async function main() {
     .transferAndCall(
       LINK_PriorityPool.target,
       toEther(5000),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool'], [true])
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
     )
   await tx.wait()
 
   tx = await strategyMockLINK.setMaxDeposits(toEther(6200))
   await tx.wait()
-  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000))
+  tx = await LINK_PriorityPool.depositQueuedTokens(toEther(0), toEther(100000), ['0x'])
   await tx.wait()
 
   const vestingStart = 1695312000 // Sep 21 2023 12pm EDT
