@@ -18,23 +18,14 @@ contract SequencerVCSMock {
     IMetisLockingInfo public lockingInfo;
 
     uint256 public operatorRewardPercentage;
-    uint256 public withdrawalPercentage;
 
     ISequencerVault public vault;
     address public rewardRecipient;
 
-    uint256 public lastL2RewardsAmount;
-
-    constructor(
-        address _token,
-        address _lockingInfo,
-        uint256 _operatorRewardPercentage,
-        uint256 _withdrawalPercentage
-    ) {
+    constructor(address _token, address _lockingInfo, uint256 _operatorRewardPercentage) {
         token = IERC20(_token);
         lockingInfo = IMetisLockingInfo(_lockingInfo);
         operatorRewardPercentage = _operatorRewardPercentage;
-        withdrawalPercentage = _withdrawalPercentage;
         rewardRecipient = address(9);
     }
 
@@ -56,39 +47,23 @@ contract SequencerVCSMock {
         token.transfer(msg.sender, _amount);
     }
 
-    function withdrawOperatorRewards(
-        address _receiver,
-        uint256 _amount
-    ) external returns (uint256) {
-        uint256 withdrawalAmount = (_amount * withdrawalPercentage) / 10000;
-        return withdrawalAmount;
-    }
-
     function updateDeposits(
         uint256 _minRewards
     ) external payable returns (uint256, uint256, uint256) {
         return vault.updateDeposits{value: msg.value}(_minRewards, 0);
     }
 
-    function initiateExit(uint32 _l2Gas) external payable {
-        vault.initiateExit{value: msg.value}(_l2Gas);
+    function initiateExit() external {
+        vault.initiateExit();
     }
 
     function finalizeExit() external {
         vault.finalizeExit();
     }
 
-    function handleIncomingL2Rewards(uint256 _amount) external {
-        lastL2RewardsAmount = _amount;
-    }
-
     function addVault(address _vault) external {
         vault = ISequencerVault(_vault);
         token.approve(_vault, type(uint256).max);
-    }
-
-    function setWithdrawalPercentage(uint256 _withdrawalPercentage) external {
-        withdrawalPercentage = _withdrawalPercentage;
     }
 
     receive() external payable {}
