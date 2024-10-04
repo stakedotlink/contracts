@@ -19,7 +19,9 @@ interface ISequencerVault {
 
     function canWithdraw() external view returns (uint256);
 
-    function initiateExit(uint32 _l2Gas) external payable returns (uint256);
+    function rewardsReceiver() external view returns (address);
+
+    function initiateExit() external;
 
     function finalizeExit() external;
 
