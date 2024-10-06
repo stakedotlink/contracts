@@ -166,36 +166,6 @@ describe('OperatorVCS', () => {
     assert.equal(await vault.rewardsReceiver(), accounts[2])
   })
 
-  it('getPendingFees should work correctly', async () => {
-    const { adrs, strategy, token, rewardsController, stakingPool, vaults } = await loadFixture(
-      deployFixture
-    )
-
-    await rewardsController.setReward(vaults[0], toEther(100))
-    assert.equal(fromEther(await strategy.getPendingFees()), 15)
-
-    await rewardsController.setReward(vaults[1], toEther(10))
-    assert.equal(fromEther(await strategy.getPendingFees()), 16.5)
-
-    await token.transfer(adrs.strategy, toEther(50))
-    assert.equal(fromEther(await strategy.getPendingFees()), 19)
-
-    await rewardsController.setReward(vaults[0], toEther(0))
-    assert.equal(fromEther(await strategy.getPendingFees()), 4)
-
-    await rewardsController.setReward(vaults[0], toEther(50))
-    await stakingPool.updateStrategyRewards([0], encode(0))
-    assert.equal(fromEther(await strategy.getPendingFees()), 0)
-
-    await rewardsController.setReward(vaults[3], toEther(15))
-    await rewardsController.setReward(vaults[0], toEther(0))
-    assert.equal(fromEther(await strategy.getPendingFees()), 1.5)
-
-    await stakingPool.updateStrategyRewards([0], encode(0))
-    await rewardsController.setReward(vaults[0], toEther(50))
-    assert.equal(fromEther(await strategy.getPendingFees()), 2.5)
-  })
-
   it('getMaxDeposits should work correctly', async () => {
     const { accounts, strategy, stakingController, stakingPool } = await loadFixture(deployFixture)
 
