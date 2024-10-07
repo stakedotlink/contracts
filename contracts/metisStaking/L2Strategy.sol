@@ -251,6 +251,7 @@ contract L2Strategy is Strategy {
 
         uint256 totalRewardShares;
         for (uint256 i = 0; i < _opRewardReceivers.length; ++i) {
+            if (_opRewardAmounts[i] == 0) continue;
             uint256 rewardShares = stakingPool.getSharesByStake(_opRewardAmounts[i]);
             operatorRewardShares[_opRewardReceivers[i]] += rewardShares;
             totalRewardShares += rewardShares;
