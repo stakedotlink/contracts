@@ -113,7 +113,7 @@ contract MetisLockingPoolMock {
     }
 
     function unlock(uint256 _seqId, uint32) external payable {
-        if (msg.value == 0) revert InvalidMsgValue();
+        if (msg.value == 0 && sequencers[_seqId].reward != 0) revert InvalidMsgValue();
         if (seqUnlockTimes[_seqId] != 0) revert SequencerStopped();
         sequencers[_seqId].reward = 0;
         seqUnlockTimes[_seqId] = block.timestamp + exitDelayPeriod;
