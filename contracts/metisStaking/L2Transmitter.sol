@@ -36,6 +36,9 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
     // address of L1 Transmitter on L1
     address public l1Transmitter;
 
+    // must exceed this amount of queued tokens to deposit to L1
+    uint256 public minDepositThreshold;
+
     // min amount of time between calls to executeUpdate
     uint64 public minTimeBetweenUpdates;
     // time of last call to executeUpdate
@@ -68,6 +71,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @param _l2StandardBridgeGasOracle address of OVM_GasPriceOracle
      * @param _l1Transmitter address of L1 Transmitter on L1
      * @param _withdrawalPool address of Withdrawal Pool
+     * @param _minDepositThreshold must exceed this amount of queued tokens to deposit to L1
      * @param _minTimeBetweenUpdates min amount of time between calls to executeUpdate
      * @param _router address of CCIP router
      * @param _l1ChainSelector CCIP selector for L1
@@ -80,6 +84,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         address _l2StandardBridgeGasOracle,
         address _l1Transmitter,
         address _withdrawalPool,
+        uint256 _minDepositThreshold,
         uint64 _minTimeBetweenUpdates,
         address _router,
         uint64 _l1ChainSelector,
@@ -96,6 +101,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         l2StandardBridgeGasOracle = IL2StandardBridgeGasOracle(_l2StandardBridgeGasOracle);
         l1Transmitter = _l1Transmitter;
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
+        minDepositThreshold = _minDepositThreshold;
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
         l1ChainSelector = _l1ChainSelector;
         extraArgs = _extraArgs;
@@ -178,7 +184,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
             queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         }
 
-        if (queuedTokens != 0) {
+        if (queuedTokens > minDepositThreshold) {
             uint256 fee = l2StandardBridgeGasOracle.minErc20BridgeCost();
             l2Strategy.handleOutgoingTokensToL1(queuedTokens);
             l2StandardBridge.withdrawMetisTo{value: fee}(l1Transmitter, queuedTokens, 0, "");
@@ -208,6 +214,14 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      **/
     function setMinTimeBetweenUpdates(uint64 _minTimeBetweenUpdates) external onlyOwner {
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
+    }
+
+    /**
+     * @notice Sets the amount of queued tokens that must be exceeded to deposit to L1
+     * @param _minDepositThreshold min amount of tokens
+     **/
+    function setMinDepositThreshold(uint256 _minDepositThreshold) external onlyOwner {
+        minDepositThreshold = _minDepositThreshold;
     }
 
     /**

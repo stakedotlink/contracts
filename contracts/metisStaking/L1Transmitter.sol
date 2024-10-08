@@ -48,6 +48,8 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
     uint256 public depositsSinceLastUpdate;
     // total queued withdrawals since the last update
     uint256 public queuedWithdrawals;
+    // must exceed this amount of withdrawable tokens to withdraw to L2
+    uint256 public minWithdrawalThreshold;
 
     event CCIPMessageSent(bytes32 indexed messageId);
     event CCIPMessageReceived(bytes32 indexed messageId);
@@ -72,6 +74,7 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @param _l2Transmitter address of L2 Transmitter on L2
      * @param _l2ChainId chain id of L2
      * @param _l2MetisToken address of METIS token on L2
+     * @param _minWithdrawalThreshold must exceed this amount of withdrawable tokens to withdraw to L2
      * @param _router address of CCIP router
      * @param _l2ChainSelector CCIP chain selector for L2
      * @param _extraArgs extra args for outgoing CCIP messages
@@ -85,6 +88,7 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         address _l2Transmitter,
         uint256 _l2ChainId,
         address _l2MetisToken,
+        uint256 _minWithdrawalThreshold,
         address _router,
         uint64 _l2ChainSelector,
         bytes memory _extraArgs
@@ -102,6 +106,7 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         l2Transmitter = _l2Transmitter;
         l2ChainId = _l2ChainId;
         l2MetisToken = _l2MetisToken;
+        minWithdrawalThreshold = _minWithdrawalThreshold;
         l2ChainSelector = _l2ChainSelector;
         extraArgs = _extraArgs;
     }
@@ -166,6 +171,14 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
     }
 
     /**
+     * @notice Sets the amount of withdrawable tokens that must be exceeded to withdraw to L2
+     * @param _minWithdrawalThreshold min amount of tokens
+     **/
+    function setMinWithdrawalThreshold(uint256 _minWithdrawalThreshold) external onlyOwner {
+        minWithdrawalThreshold = _minWithdrawalThreshold;
+    }
+
+    /**
      * @notice Sets the address authorized to deposit queued tokens
      * @param _depositController address of deposit controller
      */
@@ -202,10 +215,10 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         uint256 l2Gas = l1StandardBridgeGasOracle.getMinL2Gas();
         uint256 l2Fee = l2Gas * l1StandardBridgeGasOracle.getDiscount();
 
-        // execute queued withdrawals if there are any
+        // execute queued withdrawals
         uint256 canWithdraw = l1Strategy.canWithdraw();
         uint256 toWithdraw = queuedWithdrawals > canWithdraw ? canWithdraw : queuedWithdrawals;
-        if (toWithdraw != 0) {
+        if (toWithdraw > minWithdrawalThreshold) {
             l1Strategy.withdraw(toWithdraw);
 
             metisToken.safeApprove(address(l1StandardBridge), toWithdraw);
