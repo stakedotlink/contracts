@@ -11,7 +11,6 @@ import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/
 import "./interfaces/IL2Strategy.sol";
 import "./interfaces/IL2StandardBridge.sol";
 import "./interfaces/IL2StandardBridgeGasOracle.sol";
-import "../core/interfaces/IPriorityPool.sol";
 import "../core/interfaces/IWithdrawalPool.sol";
 import "../core/ccip/base/CCIPReceiverUpgradeable.sol";
 
@@ -25,8 +24,6 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
     // address of METIS token
     IERC20Upgradeable public metisToken;
 
-    // address of Priority Pool
-    IPriorityPool public priorityPool;
     // address of Withdrawal Pool
     IWithdrawalPool public withdrawalPool;
 
@@ -70,7 +67,6 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @param _l2StandardBridge address of the L2 standard bridge
      * @param _l2StandardBridgeGasOracle address of OVM_GasPriceOracle
      * @param _l1Transmitter address of L1 Transmitter on L1
-     * @param _priorityPool address of Priority Pool
      * @param _withdrawalPool address of Withdrawal Pool
      * @param _minTimeBetweenUpdates min amount of time between calls to executeUpdate
      * @param _router address of CCIP router
@@ -83,7 +79,6 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         address _l2StandardBridge,
         address _l2StandardBridgeGasOracle,
         address _l1Transmitter,
-        address _priorityPool,
         address _withdrawalPool,
         uint64 _minTimeBetweenUpdates,
         address _router,
@@ -96,10 +91,10 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
 
         metisToken = IERC20Upgradeable(_metisToken);
         l2Strategy = IL2Strategy(_l2Strategy);
+        metisToken.safeApprove(_l2Strategy, type(uint256).max);
         l2StandardBridge = IL2StandardBridge(_l2StandardBridge);
         l2StandardBridgeGasOracle = IL2StandardBridgeGasOracle(_l2StandardBridgeGasOracle);
         l1Transmitter = _l1Transmitter;
-        priorityPool = IPriorityPool(_priorityPool);
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
         l1ChainSelector = _l1ChainSelector;
@@ -137,7 +132,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @notice Executes withdrawals queued in the Withdrawal Pool
      **/
     function executeQueuedWithdrawals() public {
-        uint256 queuedTokens = l2Strategy.getTotalQueued();
+        uint256 queuedTokens = l2Strategy.getTotalQueuedTokens();
         uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         uint256 toWithdraw = MathUpgradeable.min(queuedTokens, queuedWithdrawals);
 
@@ -145,7 +140,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
 
         bytes[] memory args = new bytes[](1);
         args[0] = "0x";
-        priorityPool.executeQueuedWithdrawals(toWithdraw, args);
+        withdrawalPool.performUpkeep(abi.encode(args));
     }
 
     /**
@@ -155,9 +150,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
     function getExecuteUpdateFee() external view returns (uint256) {
         uint256 depositFee = l2StandardBridgeGasOracle.minErc20BridgeCost();
 
-        Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPWithdrawalMessage(
-            type(uint256).max
-        );
+        Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(type(uint256).max);
         uint256 withdrawalFee = IRouterClient(getRouter()).getFee(l1ChainSelector, evm2AnyMessage);
 
         return MathUpgradeable.max(depositFee, withdrawalFee);
@@ -176,30 +169,30 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         }
         if (getAvailableTokens() != 0 && getOutstandingTokens() != 0) depositTokensFromL1();
 
-        uint256 queuedTokens = l2Strategy.getTotalQueued();
+        uint256 queuedTokens = l2Strategy.getTotalQueuedTokens();
         uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
 
         if (queuedTokens != 0 && queuedWithdrawals != 0) {
             executeQueuedWithdrawals();
-            queuedTokens = l2Strategy.getTotalQueued();
+            queuedTokens = l2Strategy.getTotalQueuedTokens();
             queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         }
 
         if (queuedTokens != 0) {
             uint256 fee = l2StandardBridgeGasOracle.minErc20BridgeCost();
             l2Strategy.handleOutgoingTokensToL1(queuedTokens);
-            l2StandardBridge.withdrawMetisTo{value: fee}(l1Transmitter, queuedTokens, 0, "0x");
-        } else if (queuedWithdrawals != 0 && queuedWithdrawals > getOutstandingTokens()) {
-            Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPWithdrawalMessage(
-                queuedWithdrawals - getOutstandingTokens()
-            );
-            uint256 fee = IRouterClient(getRouter()).getFee(l1ChainSelector, evm2AnyMessage);
-            bytes32 messageId = IRouterClient(getRouter()).ccipSend{value: fee}(
-                l1ChainSelector,
-                evm2AnyMessage
-            );
-            emit CCIPMessageSent(messageId);
+            l2StandardBridge.withdrawMetisTo{value: fee}(l1Transmitter, queuedTokens, 0, "");
         }
+
+        Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
+            queuedWithdrawals - MathUpgradeable.min(getOutstandingTokens(), queuedWithdrawals)
+        );
+        uint256 fee = IRouterClient(getRouter()).getFee(l1ChainSelector, evm2AnyMessage);
+        bytes32 messageId = IRouterClient(getRouter()).ccipSend{value: fee}(
+            l1ChainSelector,
+            evm2AnyMessage
+        );
+        emit CCIPMessageSent(messageId);
 
         timeOfLastUpdate = uint64(block.timestamp);
 
@@ -264,7 +257,7 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @notice Builds a CCIP withdrawal message
      * @param _amountToWithdraw amount of tokens to withdraw
      **/
-    function _buildCCIPWithdrawalMessage(
+    function _buildCCIPMessage(
         uint256 _amountToWithdraw
     ) private view returns (Client.EVM2AnyMessage memory) {
         return

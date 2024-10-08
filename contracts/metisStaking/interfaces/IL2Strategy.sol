@@ -8,7 +8,7 @@ interface IL2Strategy {
 
     function tokensInTransitFromL1() external view returns (uint256);
 
-    function getTotalQueued() external view returns (uint256);
+    function getTotalQueuedTokens() external view returns (uint256);
 
     function handleUpdateFromL1(
         uint256 _totalDeposits,
