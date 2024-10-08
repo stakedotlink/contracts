@@ -7,4 +7,6 @@ interface IWithdrawalPool {
     function deposit(uint256 _amount) external;
 
     function queueWithdrawal(address _account, uint256 _amount) external;
+
+    function performUpkeep(bytes calldata _performData) external;
 }
