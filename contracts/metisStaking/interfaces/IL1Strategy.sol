@@ -22,4 +22,6 @@ interface IL1Strategy {
     function getVaultDepositMax() external view returns (uint256);
 
     function getVaultDepositMin() external view returns (uint256);
+
+    function canWithdraw() external view returns (uint256);
 }

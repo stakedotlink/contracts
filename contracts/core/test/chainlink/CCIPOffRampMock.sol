@@ -47,7 +47,7 @@ contract CCIPOffRampMock {
                 _tokenAmounts
             ),
             GAS_FOR_CALL_EXACT_CHECK,
-            1000000,
+            10000000,
             _receiver
         );
         return success;
