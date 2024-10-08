@@ -106,6 +106,7 @@ describe('L1Transmitter', () => {
     ])) as L1Transmitter
 
     await strategy.setL1Transmitter(transmitter.target)
+    await signers[0].sendTransaction({ to: transmitter.target, value: toEther(100) })
 
     return {
       signers,
@@ -167,7 +168,7 @@ describe('L1Transmitter', () => {
   })
 
   it('ccipReceive should work correctly', async () => {
-    const { signers, offRamp, transmitter } = await loadFixture(deployFixture)
+    const { signers, offRamp, transmitter, onRamp } = await loadFixture(deployFixture)
 
     await offRamp.executeSingleMessage(
       ethers.encodeBytes32String('messageId'),
@@ -178,6 +179,9 @@ describe('L1Transmitter', () => {
     )
 
     assert.equal(fromEther(await transmitter.queuedWithdrawals()), 0)
+    let lastRequestData = await onRamp.getLastRequestData()
+    assert.equal(fromEther(lastRequestData[0]), 0)
+    assert.equal(lastRequestData[1], ethers.ZeroAddress)
 
     await offRamp
       .connect(signers[5])
@@ -190,6 +194,9 @@ describe('L1Transmitter', () => {
       )
 
     assert.equal(fromEther(await transmitter.queuedWithdrawals()), 100)
+    lastRequestData = await onRamp.getLastRequestData()
+    assert.equal(fromEther(lastRequestData[0]), 3)
+    assert.equal(lastRequestData[1], transmitter.target)
   })
 
   it('executeUpdate should work correctly', async () => {
@@ -207,7 +214,6 @@ describe('L1Transmitter', () => {
       bridge,
     } = await loadFixture(deployFixture)
 
-    await signers[0].sendTransaction({ to: transmitter.target, value: toEther(100) })
     await token.transfer(transmitter.target, toEther(1000))
     await transmitter.depositQueuedTokens(
       [0, 1, 2, 3, 4],

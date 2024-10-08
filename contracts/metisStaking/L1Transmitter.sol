@@ -203,15 +203,19 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         uint256 l2Fee = l2Gas * l1StandardBridgeGasOracle.getDiscount();
 
         // execute queued withdrawals if there are any
-        if (queuedWithdrawals != 0) {
-            l1Strategy.withdraw(queuedWithdrawals);
-            metisToken.safeApprove(address(l1StandardBridge), queuedWithdrawals);
+        uint256 canWithdraw = l1Strategy.canWithdraw();
+        uint256 toWithdraw = queuedWithdrawals > canWithdraw ? canWithdraw : queuedWithdrawals;
+        if (toWithdraw != 0) {
+            l1Strategy.withdraw(toWithdraw);
+
+            metisToken.safeApprove(address(l1StandardBridge), toWithdraw);
+
             l1StandardBridge.depositERC20ToByChainId{value: l2Fee}(
                 l2ChainId,
                 address(metisToken),
                 l2MetisToken,
                 l2Transmitter,
-                queuedWithdrawals,
+                toWithdraw,
                 uint32(l2Gas),
                 ""
             );
@@ -239,7 +243,7 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         );
 
         depositsSinceLastUpdate = 0;
-        queuedWithdrawals = 0;
+        queuedWithdrawals -= toWithdraw;
 
         emit CCIPMessageSent(messageId);
     }

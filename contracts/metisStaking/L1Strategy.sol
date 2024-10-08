@@ -309,6 +309,19 @@ contract L1Strategy is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice returns the available withdrawal room for this strategy
+     * @return available withdrawal room
+     */
+    function canWithdraw() external view returns (uint256) {
+        uint256 deposits = getTotalDeposits();
+        if (deposits <= getMinDeposits()) {
+            return 0;
+        } else {
+            return deposits - getMinDeposits();
+        }
+    }
+
+    /**
      * @notice Returns the minimum that can be deposited into a vault
      * @return minimum vault deposit
      */
