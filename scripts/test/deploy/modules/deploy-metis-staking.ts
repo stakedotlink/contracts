@@ -82,6 +82,7 @@ export async function deployMETISStaking() {
     sdlPoolPrimary.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
+    true,
   ])) as PriorityPool
   console.log('METIS_PriorityPool deployed: ', priorityPool.target)
 
