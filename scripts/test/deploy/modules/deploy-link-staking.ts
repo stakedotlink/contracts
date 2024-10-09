@@ -173,6 +173,7 @@ export async function deployLINKStaking() {
     sdlPoolPrimary.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
+    false,
   ])) as PriorityPool
   console.log('LINK_PriorityPool deployed: ', priorityPool.target)
 

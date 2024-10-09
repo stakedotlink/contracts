@@ -61,6 +61,7 @@ describe('L2Transmitter', () => {
       sdlPool.target,
       toEther(100),
       toEther(1000),
+      true,
     ])) as PriorityPool
 
     const withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
@@ -222,7 +223,7 @@ describe('L2Transmitter', () => {
     await stakingPool.connect(signers[1]).approve(priorityPool.target, ethers.MaxUint256)
     await priorityPool.connect(signers[1]).deposit(toEther(1000), false, ['0x'])
     await transmitter.executeUpdate({ value: toEther(10) })
-    await priorityPool.connect(signers[1]).withdraw(toEther(500), 0, 0, [], false, true)
+    await priorityPool.connect(signers[1]).withdraw(toEther(500), 0, 0, [], false, true, ['0x'])
     await token.transfer(transmitter.target, toEther(200))
     await offRamp
       .connect(signers[5])
@@ -297,7 +298,7 @@ describe('L2Transmitter', () => {
       [accounts[5], 1000, 0, '0x']
     )
 
-    await priorityPool.connect(signers[1]).withdraw(toEther(500), 0, 0, [], false, true)
+    await priorityPool.connect(signers[1]).withdraw(toEther(500), 0, 0, [], false, true, ['0x'])
     await token.transfer(transmitter.target, toEther(200))
     await offRamp
       .connect(signers[5])

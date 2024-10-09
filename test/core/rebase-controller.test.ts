@@ -53,6 +53,7 @@ describe('RebaseController', () => {
       accounts[0],
       toEther(100),
       toEther(1000),
+      false,
     ])) as PriorityPool
     adrs.priorityPool = await priorityPool.getAddress()
 
