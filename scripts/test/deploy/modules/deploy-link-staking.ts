@@ -74,6 +74,8 @@ async function deployOperatorVCS(vaultDepositController: string) {
     { LINK_OperatorVCS: operatorVCS.target.toString() },
     { LINK_OperatorVCS: 'OperatorVCS' }
   )
+
+  return operatorVCS.target
 }
 
 // Community Vault Controller Strategy
@@ -128,6 +130,8 @@ async function deployCommunityVCS(vaultDepositController: string) {
     { LINK_CommunityVCS: communityVCS.target },
     { LINK_CommunityVCS: 'CommunityVCS' }
   )
+
+  return communityVCS.target
 }
 
 // Wrapped stLINK
@@ -223,11 +227,6 @@ export async function deployLINKStaking() {
   ])
   console.log('stLINK_SecurityPool deployed: ', securityPool.target)
 
-  await (await sdlPoolPrimary.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
-  await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
-  await (await priorityPool.setDistributionOracle(accounts[0])).wait()
-  await (await priorityPool.setWithdrawalPool(withdrawalPool.target)).wait()
-
   updateDeployments(
     {
       LINK_StakingPool: stakingPool.target.toString(),
@@ -249,8 +248,26 @@ export async function deployLINKStaking() {
     }
   )
 
+  await (await sdlPoolPrimary.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
+  await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
+  await (await priorityPool.setDistributionOracle(accounts[0])).wait()
+  await (await priorityPool.setWithdrawalPool(withdrawalPool.target)).wait()
+
   const vaultDepositController = await deploy('VaultDepositController')
 
-  await deployOperatorVCS(vaultDepositController.target)
-  await deployCommunityVCS(vaultDepositController.target)
+  const operatorVCS = await deployOperatorVCS(vaultDepositController.target)
+  const communityVCS = await deployCommunityVCS(vaultDepositController.target)
+
+  const fundFlowController = await deployUpgradeable('FundFlowController', [
+    operatorVCS,
+    communityVCS,
+    28 * 86400,
+    7 * 86400,
+    5,
+  ])
+  console.log('FundFlowController deployed at', fundFlowController.target)
+
+  updateDeployments({
+    FundFlowController: fundFlowController.target,
+  })
 }
