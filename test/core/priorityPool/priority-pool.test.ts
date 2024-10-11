@@ -749,9 +749,11 @@ describe('PriorityPool', () => {
 
     await strategy.setMinDeposits(0)
     await pp.deposit(toEther(2000), true, ['0x'])
-    assert.equal(fromEther(await pp.canWithdraw(accounts[0], 0)), 2000)
+    assert.equal(fromEther(await pp.canWithdraw(accounts[0], 0)), 1000)
     await strategy.setMaxDeposits(toEther(1100))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
+    assert.equal(fromEther(await pp.canWithdraw(accounts[0], 0)), 900)
+    await pp.setAllowInstantWithdrawals(true)
     assert.equal(fromEther(await pp.canWithdraw(accounts[0], 0)), 1900)
     await pp.pauseForUpdate()
     assert.equal(fromEther(await pp.canWithdraw(accounts[0], 0)), 1000)
