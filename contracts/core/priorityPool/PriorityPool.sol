@@ -220,10 +220,19 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 canUnqueue = paused()
             ? 0
             : MathUpgradeable.min(getQueuedTokens(_account, _distributionAmount), totalQueued);
-        uint256 stLINKCanWithdraw = MathUpgradeable.min(
-            stakingPool.balanceOf(_account),
-            stakingPool.canWithdraw() + totalQueued - canUnqueue
-        );
+        uint256 stLINKCanWithdraw = poolStatus == PoolStatus.CLOSED
+            ? 0
+            : MathUpgradeable.min(
+                stakingPool.balanceOf(_account),
+                (
+                    ((allowInstantWithdrawals && withdrawalPool.getTotalQueuedWithdrawals() == 0) ||
+                        _account == address(withdrawalPool))
+                        ? stakingPool.canWithdraw()
+                        : 0
+                ) +
+                    totalQueued -
+                    canUnqueue
+            );
         return canUnqueue + stLINKCanWithdraw;
     }
 
@@ -693,7 +702,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             toWithdraw -= toWithdrawFromQueue;
         }
 
-        if (toWithdraw != 0 && allowInstantWithdrawals) {
+        if (
+            toWithdraw != 0 &&
+            allowInstantWithdrawals &&
+            withdrawalPool.getTotalQueuedWithdrawals() == 0
+        ) {
             uint256 toWithdrawFromPool = MathUpgradeable.min(stakingPool.canWithdraw(), toWithdraw);
             if (toWithdrawFromPool != 0) {
                 stakingPool.withdraw(address(this), address(this), toWithdrawFromPool, _data);
