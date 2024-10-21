@@ -14,10 +14,40 @@ interface IPriorityPool {
 
     function poolStatus() external view returns (PoolStatus);
 
+    function ipfsHash() external view returns (bytes32);
+
     function canWithdraw(
         address _account,
         uint256 _distributionAmount
     ) external view returns (uint256);
+
+    function getQueuedTokens(
+        address _account,
+        uint256 _distributionAmount
+    ) external view returns (uint256);
+
+    function getLSDTokens(
+        address _account,
+        uint256 _distributionShareAmount
+    ) external view returns (uint256);
+
+    function deposit(uint256 _amount, bool _shouldQueue, bytes[] calldata _data) external;
+
+    function withdraw(
+        uint256 _amountToWithdraw,
+        uint256 _amount,
+        uint256 _sharesAmount,
+        bytes32[] calldata _merkleProof,
+        bool _shouldUnqueue,
+        bool _shouldQueueWithdrawal,
+        bytes[] calldata _data
+    ) external;
+
+    function claimLSDTokens(
+        uint256 _amount,
+        uint256 _sharesAmount,
+        bytes32[] calldata _merkleProof
+    ) external;
 
     function pauseForUpdate() external;
 

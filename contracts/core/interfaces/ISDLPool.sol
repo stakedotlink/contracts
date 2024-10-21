@@ -16,6 +16,8 @@ interface ISDLPool is IRewardsPoolController {
 
     function ownerOf(uint256 _lockId) external view returns (address);
 
+    function getLockIdsByOwner(address _owner) external view returns (uint256[] memory);
+
     function supportedTokens() external view returns (address[] memory);
 
     function handleOutgoingRESDL(
