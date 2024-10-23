@@ -1,6 +1,6 @@
 import { updateDeployments, deploy } from '../../../utils/deployment'
 
-export async function deployTestContracts() {
+export async function deployDeprecated() {
   const lplToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
     'LinkPool',
     'LPL',
@@ -14,9 +14,6 @@ export async function deployTestContracts() {
     1000000000,
   ])
   console.log('LINKToken deployed: ', linkToken.target)
-
-  const multicall = await deploy('Multicall3', [])
-  console.log('Multicall3 deployed: ', multicall.target)
 
   const poolOwners = await deploy('PoolOwnersV1', [lplToken.target])
   console.log('PoolOwners (v1) deployed: ', poolOwners.target)
@@ -34,7 +31,7 @@ export async function deployTestContracts() {
     'linkLPLA',
     poolOwners.target,
   ])
-  console.log('PoolAllowance (v1) deployed: ', multicall.target)
+  console.log('PoolAllowance (v1) deployed: ', poolAllowance.target)
 
   let tx = await poolOwners.addRewardToken(
     linkToken.target,
@@ -50,7 +47,6 @@ export async function deployTestContracts() {
       PoolOwnersV1: poolOwners.target,
       LINK_OwnersRewardsPoolV1: ownersRewardsPoolV1.target,
       PoolAllowanceV1: poolAllowance.target,
-      Multicall3: multicall.target,
     },
     {
       LPLToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',

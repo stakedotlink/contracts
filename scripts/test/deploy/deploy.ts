@@ -2,7 +2,8 @@ import fs from 'fs'
 import { deployCore } from './modules/deploy-core'
 import { deployLINKStaking } from './modules/deploy-link-staking'
 import { deployMETISStaking } from './modules/deploy-metis-staking'
-import { deployTestContracts } from './modules/deploy-test-contracts'
+import { deployDeprecated } from './modules/deploy-deprecated'
+import { deployOther } from './modules/deploy-other'
 
 const path = './deployments/localhost.json'
 
@@ -11,10 +12,11 @@ async function main() {
     fs.unlinkSync(path)
   }
 
-  await deployTestContracts()
+  await deployDeprecated()
   await deployCore()
   await deployLINKStaking()
   await deployMETISStaking()
+  await deployOther()
 }
 
 main()
