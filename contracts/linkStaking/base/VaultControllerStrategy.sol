@@ -500,23 +500,6 @@ abstract contract VaultControllerStrategy is Strategy {
     }
 
     /**
-     * @notice Returns the total amount of fees that will be paid on the next call to updateDeposits()
-     * @dev fees are only paid when the depositChange since the last update is positive
-     * @return total fees
-     */
-    function getPendingFees() external view virtual override returns (uint256) {
-        int256 depositChange = getDepositChange();
-        uint256 totalFees;
-
-        if (depositChange > 0) {
-            for (uint256 i = 0; i < fees.length; ++i) {
-                totalFees += (uint256(depositChange) * fees[i].basisPoints) / 10000;
-            }
-        }
-        return totalFees;
-    }
-
-    /**
      * @notice Updates deposit accounting and calculates fees on newly earned rewards
      * @return depositChange change in deposits since last update
      * @return receivers list of fee receivers

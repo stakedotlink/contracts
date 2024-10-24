@@ -128,6 +128,27 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Returns the total amount of liquid staking tokens queued for withdrawal by an account
+     * @param _account address of account
+     * @return total amount queued across all account's withdrawals
+     */
+    function getAccountTotalQueuedWithdrawals(address _account) external view returns (uint256) {
+        uint256[] memory withdrawalIds = getWithdrawalIdsByOwner(_account);
+        uint256[] memory batchIds = getBatchIds(withdrawalIds);
+
+        uint256 totalUnfinalizedWithdrawals;
+        for (uint256 i = 0; i < batchIds.length; ++i) {
+            Withdrawal memory withdrawal = queuedWithdrawals[withdrawalIds[i]];
+
+            if (batchIds[i] == 0) {
+                totalUnfinalizedWithdrawals += uint256(withdrawal.sharesRemaining);
+            }
+        }
+
+        return _getStakeByShares(totalUnfinalizedWithdrawals);
+    }
+
+    /**
      * @notice Returns a list of withdrawals
      * @param _withdrawalIds list of withdrawal ids
      * @return list of withdrawals corresponding to withdrawal ids

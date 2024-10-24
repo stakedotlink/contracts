@@ -13,24 +13,21 @@ import {
 } from '../../../utils/deployment'
 import { getAccounts, toEther } from '../../../utils/helpers'
 
-async function deploySequencerVCS() {
+async function deployL2Strategy() {
   const metisToken = (await getContract('METISToken')) as ERC20
   const stakingPool = (await getContract('METIS_StakingPool')) as StakingPool
 
-  const sequencerVCS = await deployUpgradeable('StrategyMock', [
+  const l2Strategy = await deployUpgradeable('StrategyMock', [
     metisToken.target,
     stakingPool.target,
-    toEther(1000),
-    toEther(10),
+    toEther(100000),
+    toEther(20000),
   ])
-  console.log('SequencerVCS deployed: ', sequencerVCS.target)
+  console.log('METIS_L2Strategy deployed: ', l2Strategy.target)
 
-  await (await stakingPool.addStrategy(sequencerVCS.target)).wait()
+  await (await stakingPool.addStrategy(l2Strategy.target)).wait()
 
-  updateDeployments(
-    { METIS_SequencerVCS: sequencerVCS.target },
-    { METIS_SequencerVCS: 'SequencerVCS' }
-  )
+  updateDeployments({ METIS_L2Strategy: l2Strategy.target }, { METIS_L2Strategy: 'StrategyMock' })
 }
 
 // Wrapped stMETIS
@@ -82,6 +79,7 @@ export async function deployMETISStaking() {
     sdlPoolPrimary.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
+    true,
   ])) as PriorityPool
   console.log('METIS_PriorityPool deployed: ', priorityPool.target)
 
@@ -108,9 +106,9 @@ export async function deployMETISStaking() {
   ])
   console.log('stMetis_SDLRewardsPool deployed: ', stMetisSDLRewardsPool.target)
 
-  await (await stakingPool.addFee(stMetisSDLRewardsPool.target, 1000)).wait()
   await (await sdlPoolPrimary.addToken(stakingPool.target, stMetisSDLRewardsPool.target)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
+  await (await stakingPool.setRebaseController(accounts[0])).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()
   await (await priorityPool.setWithdrawalPool(withdrawalPool.target)).wait()
 
@@ -133,5 +131,5 @@ export async function deployMETISStaking() {
     }
   )
 
-  await deploySequencerVCS()
+  await deployL2Strategy()
 }

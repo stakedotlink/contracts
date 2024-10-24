@@ -15,8 +15,6 @@ export const getAccounts = async (): Promise<any> => {
   return { signers, accounts }
 }
 
-export const setupToken = async (token: ERC677, accounts: string[]) => {
-  return Promise.all(
-    accounts.map((account, index) => token.transfer(account, toEther(index < 4 ? 10000 : 0)))
-  )
+export const setupToken = async (token: any, accounts: string[]) => {
+  return Promise.all(accounts.map((account) => token.transfer(account, toEther(10000))))
 }

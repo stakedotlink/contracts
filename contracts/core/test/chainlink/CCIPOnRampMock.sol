@@ -16,8 +16,8 @@ contract CCIPOnRampMock {
     mapping(address => address) public tokenPools;
     address public linkToken;
 
-    Client.EVM2AnyMessage[] public requestMessages;
-    RequestData[] public requestData;
+    Client.EVM2AnyMessage private lastRequestMessage;
+    RequestData private lastRequestData;
 
     constructor(address[] memory _tokens, address[] memory _tokenPools, address _linkToken) {
         for (uint256 i = 0; i < _tokens.length; ++i) {
@@ -27,11 +27,11 @@ contract CCIPOnRampMock {
     }
 
     function getLastRequestMessage() external view returns (Client.EVM2AnyMessage memory) {
-        return requestMessages[requestMessages.length - 1];
+        return lastRequestMessage;
     }
 
     function getLastRequestData() external view returns (RequestData memory) {
-        return requestData[requestData.length - 1];
+        return lastRequestData;
     }
 
     function getFee(
@@ -51,8 +51,8 @@ contract CCIPOnRampMock {
         uint256 _feeTokenAmount,
         address _originalSender
     ) external returns (bytes32) {
-        requestMessages.push(_message);
-        requestData.push(RequestData(_feeTokenAmount, _originalSender));
+        lastRequestMessage = _message;
+        lastRequestData = RequestData(_feeTokenAmount, _originalSender);
         return keccak256(abi.encode(block.timestamp));
     }
 

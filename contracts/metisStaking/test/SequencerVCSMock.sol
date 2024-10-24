@@ -18,23 +18,14 @@ contract SequencerVCSMock {
     IMetisLockingInfo public lockingInfo;
 
     uint256 public operatorRewardPercentage;
-    uint256 public withdrawalPercentage;
 
     ISequencerVault public vault;
     address public rewardRecipient;
 
-    uint256 public lastL2RewardsAmount;
-
-    constructor(
-        address _token,
-        address _lockingInfo,
-        uint256 _operatorRewardPercentage,
-        uint256 _withdrawalPercentage
-    ) {
+    constructor(address _token, address _lockingInfo, uint256 _operatorRewardPercentage) {
         token = IERC20(_token);
         lockingInfo = IMetisLockingInfo(_lockingInfo);
         operatorRewardPercentage = _operatorRewardPercentage;
-        withdrawalPercentage = _withdrawalPercentage;
         rewardRecipient = address(9);
     }
 
@@ -42,17 +33,18 @@ contract SequencerVCSMock {
         return lockingInfo.maxLock();
     }
 
+    function getVaultDepositMin() external returns (uint256) {
+        return lockingInfo.minLock();
+    }
+
     function deposit(uint256 _amount) external {
         token.transferFrom(msg.sender, address(this), _amount);
         vault.deposit(_amount);
     }
 
-    function withdrawOperatorRewards(
-        address _receiver,
-        uint256 _amount
-    ) external returns (uint256) {
-        uint256 withdrawalAmount = (_amount * withdrawalPercentage) / 10000;
-        return withdrawalAmount;
+    function withdraw(uint256 _amount) external {
+        vault.withdraw(_amount);
+        token.transfer(msg.sender, _amount);
     }
 
     function updateDeposits(
@@ -61,17 +53,17 @@ contract SequencerVCSMock {
         return vault.updateDeposits{value: msg.value}(_minRewards, 0);
     }
 
-    function handleIncomingL2Rewards(uint256 _amount) external {
-        lastL2RewardsAmount = _amount;
+    function initiateExit() external {
+        vault.initiateExit();
+    }
+
+    function finalizeExit() external {
+        vault.finalizeExit();
     }
 
     function addVault(address _vault) external {
         vault = ISequencerVault(_vault);
         token.approve(_vault, type(uint256).max);
-    }
-
-    function setWithdrawalPercentage(uint256 _withdrawalPercentage) external {
-        withdrawalPercentage = _withdrawalPercentage;
     }
 
     receive() external payable {}

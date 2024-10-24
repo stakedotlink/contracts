@@ -39,6 +39,17 @@ contract MetisLockingInfoMock {
         token.safeTransferFrom(_owner, address(this), _amount);
     }
 
+    function withdrawLocking(address _owner, uint256 _amount) external {
+        require(_amount > 0 && (locked[_owner] - _amount) >= minLock, "invalid amount");
+        locked[_owner] -= _amount;
+        token.safeTransfer(_owner, _amount);
+    }
+
+    function exit(address _owner) external {
+        token.safeTransfer(_owner, locked[_owner]);
+        locked[_owner] = 0;
+    }
+
     function setManager(address _manager) external {
         manager = _manager;
     }
