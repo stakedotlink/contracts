@@ -308,7 +308,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 );
                 if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node))
                     revert InvalidProof();
-            } else if (accountIndexes[account] < merkleTreeSize) {
+            } else if (accountIndexes[account] != 0 && accountIndexes[account] < merkleTreeSize) {
                 revert InvalidProof();
             }
 
@@ -362,7 +362,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         address account = msg.sender;
 
         // verify merkle proof only if sender is included in tree
-        if (accountIndexes[account] < merkleTreeSize) {
+        if (accountIndexes[account] != 0 && accountIndexes[account] < merkleTreeSize) {
             bytes32 node = keccak256(
                 bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount)))
             );
