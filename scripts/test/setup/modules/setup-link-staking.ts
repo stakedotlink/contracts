@@ -23,7 +23,7 @@ Accounts:
 
 /*
 Priority Pool IPFS mock data
-CID: Qmd6Dw11iCiMaYGiQVE2E44mjLMwyqh1rX5fNPC5YFUJeY
+CID: QmXKA7JRqUA6q8CC9A6LxUVQy5KfHMze84btjLNCiYVaTp
 data:
 {
   "merkleRoot": "0x636b20fe97efac2148da6cc0342a0dfc7e670ee78681c00cfdf4338c8984d23f",
@@ -33,12 +33,12 @@ data:
       "sharesAmount": "0"
     },
     "0x444485D3d01447da706550B1c10362676193CAd0": {
-      "amount": "30000000000000000000",
-      "sharesAmount": "15000000000000000000"
+      "amount": "300000000000000000000",
+      "sharesAmount": "150000000000000000000"
     },
     "0x555f27995D7BB56c989d7C1cA4e5e03e930ecA67": {
-      "amount": "40000000000000000000",
-      "sharesAmount": "20000000000000000000"
+      "amount": "400000000000000000000",
+      "sharesAmount": "200000000000000000000"
     },
   }
 }
@@ -154,7 +154,7 @@ export async function setupLINKStaking() {
     await priorityPool.updateDistribution(
       tree.root,
       '0x' +
-        Buffer.from(base58.decode('Qmd6Dw11iCiMaYGiQVE2E44mjLMwyqh1rX5fNPC5YFUJeY'))
+        Buffer.from(base58.decode('QmXKA7JRqUA6q8CC9A6LxUVQy5KfHMze84btjLNCiYVaTp'))
           .toString('hex')
           .slice(4),
       toEther(700),
