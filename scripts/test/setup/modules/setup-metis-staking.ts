@@ -16,7 +16,7 @@ Accounts:
 
 /*
 Priority Pool IPFS mock data
-CID: Qmd6Dw11iCiMaYGiQVE2E44mjLMwyqh1rX5fNPC5YFUJeY
+CID: QmPmDRJy6EZNAu64Sp37G2k3UgLnSGU3957biQhMjZ4auv
 data:
 {
   "merkleRoot": "0x636b20fe97efac2148da6cc0342a0dfc7e670ee78681c00cfdf4338c8984d23f",
@@ -139,7 +139,7 @@ export async function setupMETISStaking() {
     await priorityPool.updateDistribution(
       tree.root,
       '0x' +
-        Buffer.from(base58.decode('Qmd6Dw11iCiMaYGiQVE2E44mjLMwyqh1rX5fNPC5YFUJeY'))
+        Buffer.from(base58.decode('QmPmDRJy6EZNAu64Sp37G2k3UgLnSGU3957biQhMjZ4auv'))
           .toString('hex')
           .slice(4),
       toEther(700),
