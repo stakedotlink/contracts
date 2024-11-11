@@ -218,8 +218,10 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
         // execute queued withdrawals
         uint256 canWithdraw = l1Strategy.canWithdraw();
         uint256 toWithdraw = queuedWithdrawals > canWithdraw ? canWithdraw : queuedWithdrawals;
+        uint256 withdrawn;
         if (toWithdraw > minWithdrawalThreshold) {
             l1Strategy.withdraw(toWithdraw);
+            withdrawn = toWithdraw;
 
             metisToken.safeApprove(address(l1StandardBridge), toWithdraw);
 
@@ -243,7 +245,7 @@ contract L1Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPUpdateMessage(
             totalDeposits,
-            claimedRewards + queuedWithdrawals,
+            claimedRewards + withdrawn,
             depositsSinceLastUpdate,
             opRewardReceivers,
             opRewardAmounts
