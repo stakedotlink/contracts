@@ -325,6 +325,7 @@ contract OperatorVCS is VaultControllerStrategy {
             vaults[i] = vaults[i + 1];
         }
         vaults.pop();
+        delete vaultMapping[vault];
 
         token.safeTransfer(address(stakingPool), token.balanceOf(address(this)));
     }
