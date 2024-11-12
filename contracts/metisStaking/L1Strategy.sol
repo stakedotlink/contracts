@@ -400,7 +400,7 @@ contract L1Strategy is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Sets the basis point amount of an operator's earned rewards that they receive
-     * @dev updateDeposits should be called before calling this function
+     * @dev L2Transmitter::executeUpdate should be called on L2 right before calling this function
      * @param _operatorRewardPercentage basis point amount
      */
     function setOperatorRewardPercentage(uint256 _operatorRewardPercentage) public onlyOwner {

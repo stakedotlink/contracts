@@ -315,8 +315,7 @@ contract L2Strategy is Strategy {
 
     /**
      * @notice Adds a new fee
-     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
-     * the old rate before the percentage changes
+     * @dev L2Transmitter::executeUpdate should be called right before calling this function
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
@@ -328,8 +327,7 @@ contract L2Strategy is Strategy {
 
     /**
      * @notice Updates an existing fee
-     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
-     * the old rate before the percentage changes
+     * @dev L2Transmitter::executeUpdate should be called right before calling this function
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
