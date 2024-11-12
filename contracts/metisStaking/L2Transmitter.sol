@@ -138,6 +138,9 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @notice Executes withdrawals queued in the Withdrawal Pool
      **/
     function executeQueuedWithdrawals() public {
+        (bool upkeepNeeded, ) = withdrawalPool.checkUpkeep("");
+        if (!upkeepNeeded) return;
+
         uint256 queuedTokens = l2Strategy.getTotalQueuedTokens();
         uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
         uint256 toWithdraw = MathUpgradeable.min(queuedTokens, queuedWithdrawals);
