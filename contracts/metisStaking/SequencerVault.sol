@@ -211,7 +211,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Updates the deposit and reward accounting for this vault
      * @dev will only pay out rewards if the vault is net positive when accounting for lost deposits
-     * @param _minRewards min amount of rewards to relock/claim (set 0 to skip reward claiming)
+     * @param _minRewards min amount of rewards to relock/claim (set 0 to skip reward claiming/relocking)
      * @param _l2Gas L2 gasLimit for bridging rewards
      * @return the current total deposits in this vault
      * @return the operator rewards earned by this vault since the last update
