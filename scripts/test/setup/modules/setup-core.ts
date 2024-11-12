@@ -1,6 +1,6 @@
 import { getAccounts, toEther, setupToken } from '../../../utils/helpers'
 import { getContract } from '../../../utils/deployment'
-import { StakingAllowance, ERC677, DelegatorPool } from '../../../../typechain-types'
+import { StakingAllowance, ERC677, DelegatorPool, LPLMigration } from '../../../../typechain-types'
 import { ethers } from 'hardhat'
 
 /*
@@ -18,12 +18,24 @@ export async function setupCore() {
   const sdlPool = await getContract('SDLPool')
   const lplToken = (await getContract('LPLToken')) as ERC677
   const delegatorPool = (await getContract('DelegatorPool')) as DelegatorPool
+  const poolOwnersV1 = (await getContract('PoolOwnersV1')) as any
+  const ownersRewardsPoolV1 = (await getContract('LINK_OwnersRewardsPoolV1')) as any
+  const linkToken = (await getContract('LINKToken')) as ERC677
+  const lplMigration = (await getContract('LPLMigration')) as LPLMigration
+
+  // Account 1
+  // LPL migration
+
+  await sdlToken.mint(lplMigration.target, toEther(100000))
+  await (await lplToken.transfer(accounts[1], toEther(500))).wait()
+  await lplToken.connect(signers[1]).transferAndCall(poolOwnersV1.target, toEther(10), '0x')
+  await linkToken.transfer(ownersRewardsPoolV1.target, toEther(10))
+  await ownersRewardsPoolV1.distributeRewards()
 
   // Token Setup
 
   await (await sdlToken.mint(accounts[0], toEther(100000000))).wait()
   await setupToken(sdlToken, accounts)
-  await (await lplToken.transfer(accounts[1], toEther(500))).wait()
 
   // Account 2
 
