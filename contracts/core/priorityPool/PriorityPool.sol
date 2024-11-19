@@ -36,9 +36,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     // address of oracle contract that handles LST distribution
     address public distributionOracle;
 
-    // min amount of tokens that can be deposited into the staking pool in a single tx
+    // min amount of tokens that can be deposited into the staking pool strategies in a single tx
     uint128 public queueDepositMin;
-    // max amount of tokens that can be deposited into the staking pool in a single tx
+    // max amount of tokens that can be deposited into the staking pool strategies in a single tx
     uint128 public queueDepositMax;
     // current status of the pool
     PoolStatus public poolStatus;
@@ -52,9 +52,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     // total number of tokens queued for deposit into the staking pool
     uint256 public totalQueued;
-    // total number of tokens deposited into the staking pool since the last distribution
+    // total number of tokens deposited into the staking pool or swapped for LSTs since the last distribution
     uint256 public depositsSinceLastUpdate;
-    // total number of shares received for tokens deposited into the staking pool since the last distribution
+    // total number of shares received for depositSinceLastUpdate
     uint256 private sharesSinceLastUpdate;
 
     // list of all accounts that have ever queued tokens
@@ -440,8 +440,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice Returns the amount of new deposits into the staking pool since the last call to
-     * updateDistribution and the amount of shares received for those deposits
+     * @notice Returns the total number of tokens deposited into the staking pool or swapped for LSTs since
+     * the last call to updateDistribution and the amount of shares received for those tokens
      * @return amount of deposits
      * @return amount of shares
      */
