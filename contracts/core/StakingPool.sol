@@ -48,6 +48,7 @@ contract StakingPool is StakingRewardsPool {
 
     error SenderNotAuthorized();
     error InvalidDeposit();
+    error NothingStaked();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -431,6 +432,7 @@ contract StakingPool is StakingRewardsPool {
      * @param _amount amount to deposit
      **/
     function donateTokens(uint256 _amount) external {
+        if (totalStaked == 0) revert NothingStaked();
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalStaked += _amount;
         emit DonateTokens(msg.sender, _amount);
