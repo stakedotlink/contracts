@@ -331,6 +331,18 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice Manually unbonds a vault
+     * @dev a vault can only be manually unbonded if the operator has been removed from the
+     * Chainlink staking contract
+     * @param _index index of vault
+     */
+    function unbondVault(uint256 _index) external onlyOwner {
+        IVault vault = vaults[_index];
+        if (!IVault(vault).isRemoved()) revert OperatorNotRemoved();
+        vaults[_index].unbond();
+    }
+
+    /**
      * @notice Updates accounting for any number of vault groups
      * @dev used to correct minor accounting errors that result from the removal or slashing
      * of operators in the Chainlink staking contract
