@@ -78,7 +78,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
-    event Deposit(address indexed account, uint256 poolAmount, uint256 queueAmount);
+    event Deposit(address indexed account, uint256 instantAmount, uint256 queueAmount);
     event Withdraw(address indexed account, uint256 amount);
     event UpdateDistribution(
         bytes32 merkleRoot,
