@@ -49,7 +49,7 @@ contract CommunityVCS is VaultControllerStrategy {
         uint128 _vaultDeploymentThreshold,
         uint128 _vaultDeploymentAmount,
         address _vaultDepositController
-    ) public initializer {
+    ) public reinitializer(2) {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
                 _token,
