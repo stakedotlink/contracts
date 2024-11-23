@@ -59,7 +59,7 @@ contract OperatorVCS is VaultControllerStrategy {
         uint256 _vaultMaxDeposits,
         uint256 _operatorRewardPercentage,
         address _vaultDepositController
-    ) public reinitializer(3) {
+    ) public reinitializer(4) {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
                 _token,
