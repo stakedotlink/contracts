@@ -266,6 +266,11 @@ contract VaultDepositController is Strategy {
             uint256 deposits = vault.getPrincipalDeposits();
             uint256 canDeposit = _maxDeposits - deposits;
 
+            if (vault.isRemoved()) {
+                ++i;
+                continue;
+            }
+
             // cannot leave a vault with less than minimum deposits
             if (deposits < _minDeposits && toDeposit < (_minDeposits - deposits)) {
                 break;
