@@ -419,11 +419,11 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
         // find the last batch where all withdrawals have no funds remaining
         for (uint256 i = newWithdrawalBatchIdCutoff; i < numBatches; ++i) {
+            newWithdrawalBatchIdCutoff = i;
+
             if (withdrawalBatches[i].indexOfLastWithdrawal >= newWithdrawalIdCutoff) {
                 break;
             }
-
-            newWithdrawalBatchIdCutoff = i;
         }
 
         withdrawalIdCutoff = uint128(newWithdrawalIdCutoff);
