@@ -201,7 +201,7 @@ contract VaultDepositController is Strategy {
             // if vault is empty and equal to withdrawal index, increment withdrawal index to the next vault in the group
             if (deposits == 0 && vaultIndex == group.withdrawalIndex) {
                 group.withdrawalIndex += uint64(globalState.numVaultGroups);
-                if (group.withdrawalIndex > globalState.depositIndex) {
+                if (group.withdrawalIndex >= globalState.depositIndex) {
                     group.withdrawalIndex = uint64(groupIndex);
                 }
             }
