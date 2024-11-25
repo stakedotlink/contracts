@@ -491,7 +491,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         for (uint256 i = 0; i < reSDLBalances.length; ++i) {
             address account = accounts[i];
-            reSDLBalances[i] = sdlPool.effectiveBalanceOf(account);
+            reSDLBalances[i] = address(sdlPool) == address(0)
+                ? 0
+                : sdlPool.effectiveBalanceOf(account);
             queuedBalances[i] = accountQueuedTokens[account];
         }
 
