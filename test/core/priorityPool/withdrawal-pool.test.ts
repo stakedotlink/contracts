@@ -225,6 +225,61 @@ describe('WithdrawalPool', () => {
     )
   })
 
+  it('forceWithdraw should work correctly', async () => {
+    const { signers, accounts, withdrawalPool, token } = await loadFixture(deployFixture)
+
+    await withdrawalPool.queueWithdrawal(accounts[0], toEther(1000))
+    await withdrawalPool.queueWithdrawal(accounts[1], toEther(250))
+    await withdrawalPool.queueWithdrawal(accounts[0], toEther(500))
+    await withdrawalPool.deposit(toEther(1200))
+
+    await expect(withdrawalPool.forceWithdraw([1, 3], [1, 1])).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'InvalidWithdrawalId()'
+    )
+
+    await withdrawalPool.deposit(toEther(550))
+
+    await expect(withdrawalPool.forceWithdraw([1], [2])).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'InvalidWithdrawalId()'
+    )
+
+    let startingBalance1 = await token.balanceOf(accounts[1])
+    let startingBalance0 = await token.balanceOf(accounts[0])
+
+    await withdrawalPool.forceWithdraw([2, 1, 3], [2, 1, 2])
+    assert.equal(fromEther((await token.balanceOf(accounts[1])) - startingBalance1), 250)
+    assert.deepEqual(
+      (await withdrawalPool.getWithdrawalIdsByOwner(accounts[1])).map((id) => Number(id)),
+      []
+    )
+    assert.deepEqual(
+      (await withdrawalPool.getWithdrawals([2])).map((d: any) => [
+        fromEther(d[0]),
+        fromEther(d[1]),
+      ]),
+      [[0, 0]]
+    )
+
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - startingBalance0), 1500)
+    assert.deepEqual(
+      (await withdrawalPool.getWithdrawalIdsByOwner(accounts[1])).map((id) => Number(id)),
+      []
+    )
+    assert.deepEqual(
+      (await withdrawalPool.getWithdrawals([1, 2, 3])).map((d: any) => [
+        fromEther(d[0]),
+        fromEther(d[1]),
+      ]),
+      [
+        [0, 0],
+        [0, 0],
+        [0, 0],
+      ]
+    )
+  })
+
   it('getWithdrawalIdsByOwner should work correctly', async () => {
     const { signers, accounts, withdrawalPool } = await loadFixture(deployFixture)
 

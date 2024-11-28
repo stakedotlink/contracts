@@ -220,7 +220,12 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             totalDepositRoom[i] = depositRoom;
 
             if (_vaultGroups[i] == curUnbondedVaultGroup) {
-                totalUnbonded = _getTotalUnbonded(vaults, numVaultGroups, _vaultGroups[i]);
+                totalUnbonded = _getTotalUnbonded(
+                    vaults,
+                    numVaultGroups,
+                    _vaultGroups[i],
+                    depositIndex
+                );
             }
         }
 
@@ -384,7 +389,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 nextGroupTotalUnbonded = _getTotalUnbonded(
             vaults,
             numVaultGroups,
-            _nextUnbondedVaultGroup
+            _nextUnbondedVaultGroup,
+            depositIndex
         );
 
         return (curGroupVaultsToUnbond, curGroupTotalDepositRoom, nextGroupTotalUnbonded);
@@ -396,6 +402,7 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _numVaultGroups total number of vault groups
      * @param _vaultGroup index of vault group
      * @param _vaultMaxDeposits max deposits per vault
+     * @param _depositIndex global deposit index
      * @return total deposit room
      * @return list of non-empty vaults
      */
@@ -434,16 +441,18 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _vaults list of all vaults
      * @param _numVaultGroups total number of vault groups
      * @param _vaultGroup index of vault group
+     * @param _depositIndex global deposit index
      * @return total unbonded
      */
     function _getTotalUnbonded(
         address[] memory _vaults,
         uint256 _numVaultGroups,
-        uint256 _vaultGroup
+        uint256 _vaultGroup,
+        uint256 _depositIndex
     ) internal view returns (uint256) {
         uint256 totalUnbonded;
 
-        for (uint256 i = _vaultGroup; i < _vaults.length; i += _numVaultGroups) {
+        for (uint256 i = _vaultGroup; i < _depositIndex; i += _numVaultGroups) {
             if (!IVault(_vaults[i]).claimPeriodActive() || IVault(_vaults[i]).isRemoved()) continue;
 
             totalUnbonded += IVault(_vaults[i]).getPrincipalDeposits();

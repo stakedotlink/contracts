@@ -59,7 +59,7 @@ contract OperatorVCS is VaultControllerStrategy {
         uint256 _vaultMaxDeposits,
         uint256 _operatorRewardPercentage,
         address _vaultDepositController
-    ) public reinitializer(3) {
+    ) public reinitializer(4) {
         if (address(token) == address(0)) {
             __VaultControllerStrategy_init(
                 _token,
@@ -325,8 +325,21 @@ contract OperatorVCS is VaultControllerStrategy {
             vaults[i] = vaults[i + 1];
         }
         vaults.pop();
+        delete vaultMapping[vault];
 
         token.safeTransfer(address(stakingPool), token.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Manually unbonds a vault
+     * @dev a vault can only be manually unbonded if the operator has been removed from the
+     * Chainlink staking contract
+     * @param _index index of vault
+     */
+    function unbondVault(uint256 _index) external onlyOwner {
+        IVault vault = vaults[_index];
+        if (!IVault(vault).isRemoved()) revert OperatorNotRemoved();
+        vaults[_index].unbond();
     }
 
     /**

@@ -295,6 +295,39 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Executes a group of fully finalized withdrawals
+     * @dev used by owner in the case that withdrawalBatchIdCutoff cannot be updated due to
+     * outstanding withdrawals
+     * @param _withdrawalIds list of withdrawal ids to execute
+     * @param _batchIds list of batch ids corresponding to withdrawal ids
+     */
+    function forceWithdraw(
+        uint256[] calldata _withdrawalIds,
+        uint256[] calldata _batchIds
+    ) external onlyOwner {
+        for (uint256 i = 0; i < _withdrawalIds.length; ++i) {
+            uint256 withdrawalId = _withdrawalIds[i];
+            Withdrawal memory withdrawal = queuedWithdrawals[_withdrawalIds[i]];
+            uint256 batchId = _batchIds[i];
+            WithdrawalBatch memory batch = withdrawalBatches[batchId];
+            address owner = withdrawalOwners[withdrawalId];
+
+            if (withdrawalId <= withdrawalBatches[batchId - 1].indexOfLastWithdrawal)
+                revert InvalidWithdrawalId();
+            if (withdrawalId > batch.indexOfLastWithdrawal) revert InvalidWithdrawalId();
+
+            uint256 amountToWithdraw = withdrawal.partiallyWithdrawableAmount +
+                (uint256(batch.stakePerShares) * uint256(withdrawal.sharesRemaining)) /
+                1e18;
+            delete queuedWithdrawals[withdrawalId];
+            delete withdrawalOwners[withdrawalId];
+
+            token.safeTransfer(owner, amountToWithdraw);
+            emit Withdraw(owner, amountToWithdraw);
+        }
+    }
+
+    /**
      * @notice Queues a withdrawal of liquid staking tokens for an account
      * @param _account address of account
      * @param _amount amount of LST
@@ -386,11 +419,11 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
         // find the last batch where all withdrawals have no funds remaining
         for (uint256 i = newWithdrawalBatchIdCutoff; i < numBatches; ++i) {
+            newWithdrawalBatchIdCutoff = i;
+
             if (withdrawalBatches[i].indexOfLastWithdrawal >= newWithdrawalIdCutoff) {
                 break;
             }
-
-            newWithdrawalBatchIdCutoff = i;
         }
 
         withdrawalIdCutoff = uint128(newWithdrawalIdCutoff);

@@ -36,9 +36,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     // address of oracle contract that handles LST distribution
     address public distributionOracle;
 
-    // min amount of tokens that can be deposited into the staking pool in a single tx
+    // min amount of tokens that can be deposited into the staking pool strategies in a single tx
     uint128 public queueDepositMin;
-    // max amount of tokens that can be deposited into the staking pool in a single tx
+    // max amount of tokens that can be deposited into the staking pool strategies in a single tx
     uint128 public queueDepositMax;
     // current status of the pool
     PoolStatus public poolStatus;
@@ -52,9 +52,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     // total number of tokens queued for deposit into the staking pool
     uint256 public totalQueued;
-    // total number of tokens deposited into the staking pool since the last distribution
+    // total number of tokens deposited into the staking pool or swapped for LSTs since the last distribution
     uint256 public depositsSinceLastUpdate;
-    // total number of shares received for tokens deposited into the staking pool since the last distribution
+    // total number of shares received for depositsSinceLastUpdate
     uint256 private sharesSinceLastUpdate;
 
     // list of all accounts that have ever queued tokens
@@ -102,6 +102,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error InvalidAmount();
     error StatusAlreadySet();
     error InsufficientLiquidity();
+    error WithdrawFailed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -238,8 +239,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (msg.sender == address(token)) {
             _deposit(_sender, _value, shouldQueue, data);
         } else if (msg.sender == address(stakingPool)) {
-            uint256 amountQueued = _withdraw(_sender, _value, shouldQueue);
-            token.safeTransfer(_sender, _value - amountQueued);
+            uint256 amountWithdrawn = _withdraw(_sender, _value, shouldQueue, true);
+            token.safeTransfer(_sender, amountWithdrawn);
         } else {
             revert UnauthorizedToken();
         }
@@ -314,7 +315,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 address(this),
                 toWithdraw
             );
-            toWithdraw = _withdraw(account, toWithdraw, _shouldQueueWithdrawal);
+            toWithdraw -= _withdraw(
+                account,
+                toWithdraw,
+                _shouldQueueWithdrawal,
+                toWithdraw == _amountToWithdraw
+            );
         }
 
         token.safeTransfer(account, _amountToWithdraw - toWithdraw);
@@ -440,8 +446,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
-     * @notice Returns the amount of new deposits into the staking pool since the last call to
-     * updateDistribution and the amount of shares received for those deposits
+     * @notice Returns the total number of tokens deposited into the staking pool or swapped for LSTs since
+     * the last call to updateDistribution and the amount of shares received for those tokens
      * @return amount of deposits
      * @return amount of shares
      */
@@ -654,16 +660,20 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _account account to withdraw for
      * @param _amount amount to withdraw
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
-     * @return the amount of tokens that were queued for withdrawal
+     * @param _shouldRevertOnZero whether call should revert if nothing is withdrawn or queued for withdrawal
+     * @return the amount of tokens that were withdrawn
      **/
     function _withdraw(
         address _account,
         uint256 _amount,
-        bool _shouldQueueWithdrawal
+        bool _shouldQueueWithdrawal,
+        bool _shouldRevertOnZero
     ) internal returns (uint256) {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
         uint256 toWithdraw = _amount;
+        uint256 withdrawn;
+        uint256 queued;
 
         if (totalQueued != 0) {
             uint256 toWithdrawFromQueue = toWithdraw <= totalQueued ? toWithdraw : totalQueued;
@@ -672,15 +682,24 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             depositsSinceLastUpdate += toWithdrawFromQueue;
             sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
             toWithdraw -= toWithdrawFromQueue;
+            withdrawn = toWithdrawFromQueue;
         }
 
         if (toWithdraw != 0) {
             if (!_shouldQueueWithdrawal) revert InsufficientLiquidity();
-            withdrawalPool.queueWithdrawal(_account, toWithdraw);
+
+            if (toWithdraw >= withdrawalPool.minWithdrawalAmount()) {
+                withdrawalPool.queueWithdrawal(_account, toWithdraw);
+                queued = toWithdraw;
+            } else {
+                IERC20Upgradeable(address(stakingPool)).safeTransfer(_account, toWithdraw);
+            }
         }
 
-        emit Withdraw(_account, _amount - toWithdraw);
-        return toWithdraw;
+        if (_shouldRevertOnZero && withdrawn + queued == 0) revert WithdrawFailed();
+        if (_amount != toWithdraw) emit Withdraw(_account, _amount - toWithdraw);
+
+        return withdrawn;
     }
 
     /**

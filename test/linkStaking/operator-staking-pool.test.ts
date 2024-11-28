@@ -87,15 +87,16 @@ describe('OperatorStakingPool', () => {
     assert.equal(fromEther(await opPool.getOperatorStaked(accounts[1])), 300)
     assert.equal(fromEther(await opPool.getTotalPrincipal()), 300)
     assert.equal(fromEther(await opPool.getTotalStaked()), 300)
+    assert.equal(fromEther(await lst.balanceOf(opPool.target)), 300)
 
-    await lst.setMultiplierBasisPoints(20000)
-    await opPool.connect(signers[1]).withdraw(toEther(500))
+    await opPool.connect(signers[1]).withdraw(toEther(200))
     assert.equal(fromEther(await opPool.getOperatorPrincipal(accounts[0])), 0)
     assert.equal(fromEther(await opPool.getOperatorStaked(accounts[0])), 0)
     assert.equal(fromEther(await opPool.getOperatorPrincipal(accounts[1])), 100)
     assert.equal(fromEther(await opPool.getOperatorStaked(accounts[1])), 100)
     assert.equal(fromEther(await opPool.getTotalPrincipal()), 100)
     assert.equal(fromEther(await opPool.getTotalStaked()), 100)
+    assert.equal(fromEther(await lst.balanceOf(opPool.target)), 100)
   })
 
   it('addOperators should work correctly', async () => {

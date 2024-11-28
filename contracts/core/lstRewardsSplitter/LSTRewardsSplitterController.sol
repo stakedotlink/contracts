@@ -135,7 +135,7 @@ contract LSTRewardsSplitterController is Ownable {
         uint256 principalDeposits = splitter.principalDeposits();
         if (balance != 0) {
             if (balance != principalDeposits) splitter.splitRewards();
-            splitter.withdraw(balance, _account);
+            splitter.withdraw(splitter.principalDeposits(), _account);
         }
 
         delete splitters[_account];

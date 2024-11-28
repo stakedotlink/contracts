@@ -193,13 +193,15 @@ contract OperatorStakingPool is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
     /**
      * @notice Withdraws tokens
-     * @param _operator address of operator with withdraw for
+     * @param _operator address of operator to withdraw for
      * @param _amount amount to withdraw
      **/
     function _withdraw(address _operator, uint256 _amount) private {
         uint256 sharesAmount = lst.getSharesByStake(_amount);
         shareBalances[_operator] -= sharesAmount;
         totalShares -= sharesAmount;
+
+        lst.transferShares(_operator, sharesAmount);
 
         emit Withdraw(_operator, _amount, sharesAmount);
     }

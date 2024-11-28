@@ -48,6 +48,7 @@ contract StakingPool is StakingRewardsPool {
 
     error SenderNotAuthorized();
     error InvalidDeposit();
+    error NothingStaked();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -345,6 +346,12 @@ contract StakingPool is StakingRewardsPool {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
+        uint256[] memory strategyIdxs = new uint256[](strategies.length);
+        for (uint256 i = 0; i < strategyIdxs.length; ++i) {
+            strategyIdxs[i] = i;
+        }
+        _updateStrategyRewards(strategyIdxs, "");
+
         fees.push(Fee(_receiver, _feeBasisPoints));
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
     }
@@ -361,6 +368,12 @@ contract StakingPool is StakingRewardsPool {
         uint256 _feeBasisPoints
     ) external onlyOwner {
         require(_index < fees.length, "Fee does not exist");
+
+        uint256[] memory strategyIdxs = new uint256[](strategies.length);
+        for (uint256 i = 0; i < strategyIdxs.length; ++i) {
+            strategyIdxs[i] = i;
+        }
+        _updateStrategyRewards(strategyIdxs, "");
 
         if (_feeBasisPoints == 0) {
             fees[_index] = fees[fees.length - 1];
@@ -431,6 +444,7 @@ contract StakingPool is StakingRewardsPool {
      * @param _amount amount to deposit
      **/
     function donateTokens(uint256 _amount) external {
+        if (totalStaked == 0) revert NothingStaked();
         token.safeTransferFrom(msg.sender, address(this), _amount);
         totalStaked += _amount;
         emit DonateTokens(msg.sender, _amount);

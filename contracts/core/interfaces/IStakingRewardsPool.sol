@@ -28,4 +28,6 @@ interface IStakingRewardsPool is IERC677 {
     function totalShares() external view returns (uint256);
 
     function totalSupply() external view returns (uint256);
+
+    function transferShares(address _recipient, uint256 _sharesAmount) external returns (bool);
 }
