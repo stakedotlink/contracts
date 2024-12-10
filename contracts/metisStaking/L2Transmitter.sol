@@ -157,12 +157,12 @@ contract L2Transmitter is UUPSUpgradeable, OwnableUpgradeable, CCIPReceiverUpgra
      * @return fee in native token
      **/
     function getExecuteUpdateFee() external view returns (uint256) {
-        uint256 depositFee = l2StandardBridgeGasOracle.minErc20BridgeCost();
+        uint256 bridgeFee = l2StandardBridgeGasOracle.minErc20BridgeCost();
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(type(uint256).max);
-        uint256 withdrawalFee = IRouterClient(getRouter()).getFee(l1ChainSelector, evm2AnyMessage);
+        uint256 ccipFee = IRouterClient(getRouter()).getFee(l1ChainSelector, evm2AnyMessage);
 
-        return MathUpgradeable.max(depositFee, withdrawalFee);
+        return bridgeFee + ccipFee;
     }
 
     /**

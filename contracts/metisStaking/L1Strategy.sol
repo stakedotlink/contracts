@@ -63,7 +63,7 @@ contract L1Strategy is UUPSUpgradeable, OwnableUpgradeable {
      * @param _token address of METIS token
      * @param _lockingInfo address of Metis locking info contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
-     * @param _rewardRecipient address on l2 that will claimed receive rewards
+     * @param _rewardRecipient address on l2 that will receive claimed rewards
      * @param _minRewardsToClaim min amount of rewards required to relock/claim in vaults on a call to updateDeposits
      * @param _operatorRewardPercentage basis point amount of an operator's earned rewards that they receive
      **/

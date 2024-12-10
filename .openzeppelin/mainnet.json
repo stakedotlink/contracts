@@ -124,6 +124,16 @@
       "address": "0xAc12290b097f6893322F5430627e472131fBC1B5",
       "txHash": "0xc6872c8c1121511a8eff4730bf0c3419c9461e231170b6b74d8cba8778af6fcd",
       "kind": "uups"
+    },
+    {
+      "address": "0x93c3d7039743f0a8cdB6D3e240f07153F2B52Ef1",
+      "txHash": "0x6a687219cf18c253fae0b80e4fb109db449dbb5fa3400fb0dc321dab7e3a51c2",
+      "kind": "uups"
+    },
+    {
+      "address": "0x5e2A7B992769E43D4E76a4bB92de9c0532F25Cde",
+      "txHash": "0xa20e100161964021ee3a4c569c2a244d2d6a67cfd63b62ad32d4e3e88ac9aa79",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -9703,6 +9713,621 @@
             "numberOfBytes": "1"
           }
         }
+      }
+    },
+    "7000ce39e715bb4f4f5b11d848042029636579053e3c32dc3dee398ac249b3fe": {
+      "address": "0x9CBB383D2Db695aBBCbb37D4ff15949F5490C394",
+      "txHash": "0xc5cacbaa17c802a59381ca0aaaa2c39cde20862b8a5d00a5ffd15eefb48c5cb4",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)882",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:22"
+          },
+          {
+            "label": "vaultController",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IL1Strategy)4173",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:24"
+          },
+          {
+            "label": "lockingPool",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IMetisLockingPool)4278",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:26"
+          },
+          {
+            "label": "pubkey",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_bytes_storage",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:29"
+          },
+          {
+            "label": "signer",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_address",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:31"
+          },
+          {
+            "label": "seqId",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_uint256",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:33"
+          },
+          {
+            "label": "rewardsReceiver",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_address",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:36"
+          },
+          {
+            "label": "trackedTotalDeposits",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_uint128",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:38"
+          },
+          {
+            "label": "lastWithdrawalBatchId",
+            "offset": 16,
+            "slot": "208",
+            "type": "t_uint64",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:41"
+          },
+          {
+            "label": "exitDelayEndTime",
+            "offset": 24,
+            "slot": "208",
+            "type": "t_uint64",
+            "contract": "SequencerVault",
+            "src": "contracts/metisStaking/SequencerVault.sol:43"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes_storage": {
+            "label": "bytes",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20Upgradeable)882": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IL1Strategy)4173": {
+            "label": "contract IL1Strategy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IMetisLockingPool)4278": {
+            "label": "contract IMetisLockingPool",
+            "numberOfBytes": "20"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "147b696485a2995a6327cc5c29d9c79090e0979d8ccd137cc58e56d1acf8ba15": {
+      "address": "0xD6999c1dCb675Ae5568931BB0CFca0c4f4Fe21Ca",
+      "txHash": "0xaa688439a9e20abc3f9747a4f807d725b6035101681d050bfe3e4fe48bbb530a",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)3982",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:21"
+          },
+          {
+            "label": "l1Transmitter",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:23"
+          },
+          {
+            "label": "lockingInfo",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IMetisLockingInfo)29675",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:26"
+          },
+          {
+            "label": "rewardRecipient",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_address",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:29"
+          },
+          {
+            "label": "minRewardsToClaim",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_uint256",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:31"
+          },
+          {
+            "label": "vaultImplementation",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_address",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:34"
+          },
+          {
+            "label": "vaults",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_array(t_contract(ISequencerVault)29854)dyn_storage",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:36"
+          },
+          {
+            "label": "totalDeposits",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_uint256",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:39"
+          },
+          {
+            "label": "totalQueuedTokens",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_uint256",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:41"
+          },
+          {
+            "label": "operatorRewardPercentage",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_uint256",
+            "contract": "L1Strategy",
+            "src": "contracts/metisStaking/L1Strategy.sol:44"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(ISequencerVault)29854)dyn_storage": {
+            "label": "contract ISequencerVault[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20Upgradeable)3982": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IMetisLockingInfo)29675": {
+            "label": "contract IMetisLockingInfo",
+            "numberOfBytes": "20"
+          },
+          "t_contract(ISequencerVault)29854": {
+            "label": "contract ISequencerVault",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "6274d4af51845c5458d68b07f272575edc924f668c25a19bfa0f6152c91f1e8e": {
+      "address": "0xB1abE6Ddc78cAeC754b690cC499E5fC8496B1063",
+      "txHash": "0x97a343c969b5366cbe0c2b3d13a44bdc3cd477a54fcc17edbfae68f63a137198",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "i_router",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_address",
+            "contract": "CCIPReceiverUpgradeable",
+            "src": "contracts/core/ccip/base/CCIPReceiverUpgradeable.sol:20"
+          },
+          {
+            "label": "metisToken",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IERC20Upgradeable)3982",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:23"
+          },
+          {
+            "label": "depositController",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_address",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:26"
+          },
+          {
+            "label": "l1Strategy",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IL1Strategy)29597",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:29"
+          },
+          {
+            "label": "l2Transmitter",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_address",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:31"
+          },
+          {
+            "label": "l1StandardBridge",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_contract(IL1StandardBridge)29514",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:34"
+          },
+          {
+            "label": "l1StandardBridgeGasOracle",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_contract(IL1StandardBridgeGasOracle)29527",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:36"
+          },
+          {
+            "label": "l2ChainId",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_uint256",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:38"
+          },
+          {
+            "label": "l2MetisToken",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_address",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:40"
+          },
+          {
+            "label": "l2ChainSelector",
+            "offset": 20,
+            "slot": "209",
+            "type": "t_uint64",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:43"
+          },
+          {
+            "label": "extraArgs",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_bytes_storage",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:45"
+          },
+          {
+            "label": "depositsSinceLastUpdate",
+            "offset": 0,
+            "slot": "211",
+            "type": "t_uint256",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:48"
+          },
+          {
+            "label": "queuedWithdrawals",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_uint256",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:50"
+          },
+          {
+            "label": "minWithdrawalThreshold",
+            "offset": 0,
+            "slot": "213",
+            "type": "t_uint256",
+            "contract": "L1Transmitter",
+            "src": "contracts/metisStaking/L1Transmitter.sol:52"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes_storage": {
+            "label": "bytes",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20Upgradeable)3982": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IL1StandardBridge)29514": {
+            "label": "contract IL1StandardBridge",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IL1StandardBridgeGasOracle)29527": {
+            "label": "contract IL1StandardBridgeGasOracle",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IL1Strategy)29597": {
+            "label": "contract IL1Strategy",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
       }
     }
   }
