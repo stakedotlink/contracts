@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { ERC677 } from '../../typechain-types'
+import axios from 'axios'
 
 export const toEther = (amount: string | number) => {
   return ethers.parseEther(amount.toString())
@@ -15,8 +15,35 @@ export const getAccounts = async (): Promise<any> => {
   return { signers, accounts }
 }
 
-export const setupToken = async (token: ERC677, accounts: string[]) => {
-  return Promise.all(
-    accounts.map((account, index) => token.transfer(account, toEther(index < 4 ? 10000 : 0)))
-  )
+export const setupToken = async (token: any, accounts: string[]) => {
+  return Promise.all(accounts.map((account) => token.transfer(account, toEther(10000))))
+}
+
+export const switchNetwork = async (chainId: number, host: string): Promise<void> => {
+  const chainIdHex = `0x${chainId.toString(16)}`
+  const params = [
+    {
+      chainId: chainIdHex,
+    },
+  ]
+
+  try {
+    const response = await axios.post(`http://${host}:1248`, {
+      jsonrpc: '2.0',
+      method: 'wallet_switchEthereumChain',
+      params: params,
+      id: 1,
+    })
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to switch network: ${response.statusText}`)
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorText = error.response?.data || error.message
+      throw new Error(`Failed to switch network: ${errorText}`)
+    } else {
+      throw error
+    }
+  }
 }

@@ -22,19 +22,15 @@ async function main() {
   })
 
   const sdlPool = (await getContract('SDLPool', true)) as SDLPoolPrimary
-  const stakingPool = await getContract('METIS_StakingPool', true)
-  const stMetisSDLRewardsPool = await getContract('stMETIS_SDLRewardsPool', true)
+  const wstMetis = await getContract('METIS_WrappedSDToken', true)
+  const wstMetisSDLRewardsPool = await getContract('wstMETIS_SDLRewardsPool', true)
 
   const transactions: MetaTransactionData[] = [
     {
       to: sdlPool.target.toString(),
       data:
-        (
-          await sdlPool.addToken.populateTransaction(
-            stakingPool.target,
-            stMetisSDLRewardsPool.target
-          )
-        ).data || '',
+        (await sdlPool.addToken.populateTransaction(wstMetis.target, wstMetisSDLRewardsPool.target))
+          .data || '',
       value: '0',
     },
   ]

@@ -1,21 +1,30 @@
 {
-    "METISToken": {
-      "address": "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000",
-      "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
-    },
-    "METIS_SequencerRewardsCCIPSender": {
-      "address": "0x8d87CBD8C3632b7ef117A15F8100943a23b7D03b",
-      "artifact": "SequencerRewardsCCIPSender"
-    },
-    "METIS_WrappedSDToken": {
-      "address": "0xB6196B3B89981483C27ab642b27743a62c3D68aC",
-      "artifact": "BurnMintERC677"
-    }
+  "METISToken": {
+    "address": "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "METIS_StakingPool": {
+    "address": "0x19282e0365a5b90c9864446448E29465A9d226Eb",
+    "artifact": "StakingPool"
+  },
+  "METIS_L2Strategy": {
+    "address": "0xfb8256CFCeeAcfb4835a3EbF47EBEa2902e30567",
+    "artifact": "L2Strategy"
+  },
+  "METIS_L2Transmitter": {
+    "address": "0xc4bAf9Df7Da0dB146D8AeDEe447246ed47b4c2E4",
+    "artifact": "L2Transmitter"
+  },
+  "METIS_PriorityPool": {
+    "address": "0xbEF37783DC468050722db5053F19E1cC91C80E3b",
+    "artifact": "PriorityPool"
+  },
+  "METIS_WithdrawalPool": {
+    "address": "0xa68285a07F683a447775E19D50a06Cd6748a4fAe",
+    "artifact": "WithdrawalPool"
+  },
+  "METIS_WrappedSDToken": {
+    "address": "0x7F89e4A071136f8E3Ec12D8F87793Dc84038C054",
+    "artifact": "WrappedSDToken"
+  }
 }
-
-
-
-
-
-  
-

@@ -129,27 +129,6 @@ contract OperatorVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice Returns the total amount of fees that will be paid on the next call to updateDeposits()
-     * @return total fees
-     */
-    function getPendingFees() external view override returns (uint256) {
-        uint256 totalFees;
-
-        uint256 vaultCount = vaults.length;
-        for (uint256 i = 0; i < vaultCount; ++i) {
-            totalFees += IOperatorVault(address(vaults[i])).getPendingRewards();
-        }
-
-        int256 depositChange = getDepositChange();
-        if (depositChange > 0) {
-            for (uint256 i = 0; i < fees.length; ++i) {
-                totalFees += (uint256(depositChange) * fees[i].basisPoints) / 10000;
-            }
-        }
-        return totalFees;
-    }
-
-    /**
      * @notice Updates deposit accounting and calculates fees on newly earned rewards
      * @param _data encoded minRewards (uint256) - min amount of rewards required to claim (set 0 to skip reward claiming)
      * @return depositChange change in deposits since last update

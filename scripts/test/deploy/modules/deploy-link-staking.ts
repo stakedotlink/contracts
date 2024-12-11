@@ -34,7 +34,7 @@ async function deployOperatorVCS(vaultDepositController: string) {
     stakingRewardsMock.target,
     toEther(1000),
     toEther(75000),
-    toEther(10000000),
+    toEther(1000000),
     28 * 86400,
     7 * 86400,
   ])
@@ -64,7 +64,7 @@ async function deployOperatorVCS(vaultDepositController: string) {
   await (await linkToken.transfer(pfAlertsControllerMock.target, toEther(10000))).wait()
   await (await stakingPool.addStrategy(operatorVCS.target)).wait()
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     await (
       await operatorVCS.addVault(ethers.ZeroAddress, accounts[0], pfAlertsControllerMock.target)
     ).wait()
@@ -80,9 +80,9 @@ async function deployOperatorVCS(vaultDepositController: string) {
 
 // Community Vault Controller Strategy
 const CommunityVCSArgs = {
-  maxDepositSizeBP: 9000, //basis point amount of the remaing deposit room in the Chainlink staking contract that can be deposited at once
+  maxDepositSizeBP: 10000, //basis point amount of the remaing deposit room in the Chainlink staking contract that can be deposited at once
   vaultDeploymentThreshold: 10, // the min number of non-full vaults before a new batch is deployed
-  vaultDeploymentAmount: 10, // amount of vaults to deploy when threshold is met
+  vaultDeploymentAmount: 5, // amount of vaults to deploy when threshold is met
   fees: [], // fee receivers & percentage amounts in basis points
   vaultMaxDeposits: toEther(15000), // max number of tokens that a vault can hold
 }
@@ -97,7 +97,7 @@ async function deployCommunityVCS(vaultDepositController: string) {
     stakingRewardsMock.target,
     toEther(1000),
     toEther(15000),
-    toEther(10000000),
+    toEther(1000000),
     28 * 86400,
     7 * 86400,
   ])
@@ -183,6 +183,7 @@ export async function deployLINKStaking() {
     sdlPoolPrimary.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
+    false,
   ])) as PriorityPool
   console.log('LINK_PriorityPool deployed: ', priorityPool.target)
 
@@ -250,6 +251,7 @@ export async function deployLINKStaking() {
 
   await (await sdlPoolPrimary.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
+  await (await stakingPool.setRebaseController(accounts[0])).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()
   await (await priorityPool.setWithdrawalPool(withdrawalPool.target)).wait()
 
@@ -265,9 +267,14 @@ export async function deployLINKStaking() {
     7 * 86400,
     5,
   ])
-  console.log('FundFlowController deployed at', fundFlowController.target)
+  console.log('LINK_FundFlowController deployed at', fundFlowController.target)
 
-  updateDeployments({
-    FundFlowController: fundFlowController.target,
-  })
+  updateDeployments(
+    {
+      LINK_FundFlowController: fundFlowController.target,
+    },
+    {
+      LINK_FundFlowController: 'FundFlowController',
+    }
+  )
 }

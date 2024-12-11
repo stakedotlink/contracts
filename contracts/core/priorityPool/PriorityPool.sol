@@ -73,10 +73,12 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
     // address of withdrawal pool
     IWithdrawalPool public withdrawalPool;
+    // whether instant withdrawals are enabled
+    bool public allowInstantWithdrawals;
 
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
-    event Deposit(address indexed account, uint256 poolAmount, uint256 queueAmount);
+    event Deposit(address indexed account, uint256 instantAmount, uint256 queueAmount);
     event Withdraw(address indexed account, uint256 amount);
     event UpdateDistribution(
         bytes32 merkleRoot,
@@ -116,13 +118,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _sdlPool address of SDL pool
      * @param _queueDepositMin min amount of tokens that can be deposited into the staking pool in a single tx
      * @param _queueDepositMax mmaxin amount of tokens that can be deposited into the staking pool in a single tx
+     * @param _allowInstantWithdrawals whether instant withdrawals are enabled
      **/
     function initialize(
         address _token,
         address _stakingPool,
         address _sdlPool,
         uint128 _queueDepositMin,
-        uint128 _queueDepositMax
+        uint128 _queueDepositMax,
+        bool _allowInstantWithdrawals
     ) public initializer {
         __UUPSUpgradeable_init();
         __Ownable_init();
@@ -132,6 +136,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         sdlPool = ISDLPool(_sdlPool);
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
+        allowInstantWithdrawals = _allowInstantWithdrawals;
         accounts.push(address(0));
         token.safeIncreaseAllowance(_stakingPool, type(uint256).max);
     }
@@ -216,10 +221,19 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 canUnqueue = paused()
             ? 0
             : MathUpgradeable.min(getQueuedTokens(_account, _distributionAmount), totalQueued);
-        uint256 stLINKCanWithdraw = MathUpgradeable.min(
-            stakingPool.balanceOf(_account),
-            stakingPool.canWithdraw() + totalQueued - canUnqueue
-        );
+        uint256 stLINKCanWithdraw = poolStatus == PoolStatus.CLOSED
+            ? 0
+            : MathUpgradeable.min(
+                stakingPool.balanceOf(_account),
+                (
+                    ((allowInstantWithdrawals && withdrawalPool.getTotalQueuedWithdrawals() == 0) ||
+                        _account == address(withdrawalPool))
+                        ? stakingPool.canWithdraw()
+                        : 0
+                ) +
+                    totalQueued -
+                    canUnqueue
+            );
         return canUnqueue + stLINKCanWithdraw;
     }
 
@@ -228,7 +242,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @dev can receive both asset tokens (deposit) and liquid staking tokens (withdrawal)
      * @param _sender of the token transfer
      * @param _value of the token transfer
-     * @param _calldata encoded shouldQueue (bool) and deposit data to pass to
+     * @param _calldata encoded shouldQueue (bool) and deposit/withdrawal data to pass to
      * staking pool strategies (bytes[])
      **/
     function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
@@ -239,7 +253,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (msg.sender == address(token)) {
             _deposit(_sender, _value, shouldQueue, data);
         } else if (msg.sender == address(stakingPool)) {
-            uint256 amountWithdrawn = _withdraw(_sender, _value, shouldQueue, true);
+            uint256 amountWithdrawn = _withdraw(_sender, _value, shouldQueue, true, data);
             token.safeTransfer(_sender, amountWithdrawn);
         } else {
             revert UnauthorizedToken();
@@ -268,6 +282,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _merkleProof merkle proof for sender's merkle tree entry (generated using IPFS data)
      * @param _shouldUnqueue whether tokens should be unqueued before taking LSD tokens
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the full withdrawal amount cannot be satisfied
+     * @param _data list of withdrawal data passed to staking pool strategies if executing instant withdrawal
      */
     function withdraw(
         uint256 _amountToWithdraw,
@@ -275,7 +290,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 _sharesAmount,
         bytes32[] calldata _merkleProof,
         bool _shouldUnqueue,
-        bool _shouldQueueWithdrawal
+        bool _shouldQueueWithdrawal,
+        bytes[] calldata _data
     ) external {
         if (_amountToWithdraw == 0) revert InvalidAmount();
 
@@ -292,7 +308,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 );
                 if (!MerkleProofUpgradeable.verify(_merkleProof, merkleRoot, node))
                     revert InvalidProof();
-            } else if (accountIndexes[account] < merkleTreeSize) {
+            } else if (accountIndexes[account] != 0 && accountIndexes[account] < merkleTreeSize) {
                 revert InvalidProof();
             }
 
@@ -319,7 +335,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
                 account,
                 toWithdraw,
                 _shouldQueueWithdrawal,
-                toWithdraw == _amountToWithdraw
+                toWithdraw == _amountToWithdraw,
+                _data
             );
         }
 
@@ -345,7 +362,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         address account = msg.sender;
 
         // verify merkle proof only if sender is included in tree
-        if (accountIndexes[account] < merkleTreeSize) {
+        if (accountIndexes[account] != 0 && accountIndexes[account] < merkleTreeSize) {
             bytes32 node = keccak256(
                 bytes.concat(keccak256(abi.encode(account, _amount, _sharesAmount)))
             );
@@ -474,7 +491,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         for (uint256 i = 0; i < reSDLBalances.length; ++i) {
             address account = accounts[i];
-            reSDLBalances[i] = sdlPool.effectiveBalanceOf(account);
+            reSDLBalances[i] = address(sdlPool) == address(0)
+                ? 0
+                : sdlPool.effectiveBalanceOf(account);
             queuedBalances[i] = accountQueuedTokens[account];
         }
 
@@ -559,6 +578,16 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
+    }
+
+    /**
+     * @notice Sets whether instant withdrawals are enabled
+     * @dev if disabled, all withdrawals will be queued through the withdrawal pool
+     * event if there is withdrawal room in the staking pool
+     * @param _allowInstantWithdrawals true to allow instant withdrawals, false otherwise
+     */
+    function setAllowInstantWithdrawals(bool _allowInstantWithdrawals) external onlyOwner {
+        allowInstantWithdrawals = _allowInstantWithdrawals;
     }
 
     /**
@@ -661,13 +690,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      * @param _amount amount to withdraw
      * @param _shouldQueueWithdrawal whether a withdrawal should be queued if the the full amount cannot be satisfied
      * @param _shouldRevertOnZero whether call should revert if nothing is withdrawn or queued for withdrawal
+     * @param _data list of withdrawal data passed to staking pool strategies if executing instant withdrawal
      * @return the amount of tokens that were withdrawn
      **/
     function _withdraw(
         address _account,
         uint256 _amount,
         bool _shouldQueueWithdrawal,
-        bool _shouldRevertOnZero
+        bool _shouldRevertOnZero,
+        bytes[] memory _data
     ) internal returns (uint256) {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
@@ -683,6 +714,18 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
             toWithdraw -= toWithdrawFromQueue;
             withdrawn = toWithdrawFromQueue;
+        }
+
+        if (
+            toWithdraw != 0 &&
+            allowInstantWithdrawals &&
+            withdrawalPool.getTotalQueuedWithdrawals() == 0
+        ) {
+            uint256 toWithdrawFromPool = MathUpgradeable.min(stakingPool.canWithdraw(), toWithdraw);
+            if (toWithdrawFromPool != 0) {
+                stakingPool.withdraw(address(this), address(this), toWithdrawFromPool, _data);
+                toWithdraw -= toWithdrawFromPool;
+            }
         }
 
         if (toWithdraw != 0) {

@@ -434,6 +434,7 @@ describe('WithdrawalPool', () => {
       accounts[0],
       0,
       0,
+      false,
     ])) as PriorityPool
     const withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
       stakingPool.target,
@@ -446,7 +447,7 @@ describe('WithdrawalPool', () => {
     await stakingPool.setPriorityPool(priorityPool.target)
     await priorityPool.setWithdrawalPool(withdrawalPool.target)
 
-    await priorityPool.withdraw(toEther(199000), 0, 0, [], false, true)
+    await priorityPool.withdraw(toEther(199000), 0, 0, [], false, true, ['0x'])
     assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [false, '0x'])
     await expect(withdrawalPool.performUpkeep('0x')).to.be.revertedWithCustomError(
       withdrawalPool,

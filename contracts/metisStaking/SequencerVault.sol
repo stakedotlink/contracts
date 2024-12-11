@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
-import "./interfaces/ISequencerVCS.sol";
+import "./interfaces/IL1Strategy.sol";
 import "./interfaces/IMetisLockingPool.sol";
 
 /**
@@ -18,24 +18,39 @@ import "./interfaces/IMetisLockingPool.sol";
 contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // address of METIS token
     IERC20Upgradeable public token;
-    ISequencerVCS public vaultController;
+    // address of L1 Strategy
+    IL1Strategy public vaultController;
+    // address of Metis LockingPool
     IMetisLockingPool public lockingPool;
 
+    // public key of sequencer
     bytes public pubkey;
+    // signer address of sequencer
     address public signer;
+    // id of sequencer
     uint256 public seqId;
 
+    // address on L2 to receive operator rewards
     address public rewardsReceiver;
+    // tracks what total deposits should be without slashing
     uint128 public trackedTotalDeposits;
-    uint128 public unclaimedRewards;
 
-    event WithdrawRewards(address indexed rewardsReceiver, uint256 amount);
+    // id of current locking pool batch during the latest withdrawal
+    uint64 public lastWithdrawalBatchId;
+    // time that sequencer can be exited after initiating an exit
+    uint64 public exitDelayEndTime;
+
     event SetRewardsReceiver(address rewardsReceiver);
 
     error SenderNotAuthorized();
     error ZeroAddress();
-    error SequencerNotInitialized();
+    error SequencerStopped();
+    error ExitDelayTimeNotElapsed();
+    error CurrentBatchAlreadyWithdrawn();
+    error AlreadyExited();
+    error UnclaimedRewards();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -45,12 +60,12 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Initializes contract
      * @param _token address of METIS token
-     * @param _vaultController address of the strategy that controls this vault
-     * @param _lockingPool address of Metis locking pool contract
-     * @param _lockingInfo address of Metis locking info contract
+     * @param _vaultController address of L1 Strategy
+     * @param _lockingPool address of Metis LockingPool
+     * @param _lockingInfo address of Metis LockingInfo
      * @param _pubkey public key of sequencer
      * @param _signer signer address of sequencer
-     * @param _rewardsReceiver address authorized to claim rewards
+     * @param _rewardsReceiver address on L2 to receive operator rewards
      **/
     function initialize(
         address _token,
@@ -64,7 +79,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         __Ownable_init();
         __UUPSUpgradeable_init();
         token = IERC20Upgradeable(_token);
-        vaultController = ISequencerVCS(_vaultController);
+        vaultController = IL1Strategy(_vaultController);
         lockingPool = IMetisLockingPool(_lockingPool);
         token.approve(_lockingInfo, type(uint256).max);
         pubkey = _pubkey;
@@ -93,6 +108,8 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external onlyVaultController {
+        if (exitDelayEndTime != 0) revert SequencerStopped();
+
         token.safeTransferFrom(msg.sender, address(this), _amount);
         trackedTotalDeposits += SafeCastUpgradeable.toUint128(_amount);
 
@@ -107,6 +124,47 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             );
             seqId = lockingPool.seqOwners(address(this));
         }
+    }
+
+    /**
+     * @notice Withdraws tokens from the Metis locking pool
+     * @param _amount amount to withdraw
+     * @dev can withdraw once per batch epoch
+     * @dev if sequencer has been stopped, will withdraw entire principal balance
+     */
+    function withdraw(uint256 _amount) external onlyVaultController {
+        if (exitDelayEndTime != 0) {
+            if (block.timestamp <= exitDelayEndTime) revert ExitDelayTimeNotElapsed();
+
+            trackedTotalDeposits -= uint128(getPrincipalDeposits());
+            lockingPool.unlockClaim(seqId, 0);
+        } else {
+            if (lastWithdrawalBatchId >= lockingPool.currentBatch())
+                revert CurrentBatchAlreadyWithdrawn();
+
+            lockingPool.withdraw(seqId, _amount);
+            trackedTotalDeposits -= uint128(_amount);
+            lastWithdrawalBatchId = uint64(lockingPool.currentBatch());
+        }
+
+        token.safeTransfer(address(vaultController), token.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Returns the amount that can be withdrawn
+     * @return withdrawable amount
+     */
+    function canWithdraw() external view returns (uint256) {
+        uint256 principalDeposits = getPrincipalDeposits();
+
+        if (exitDelayEndTime != 0 && block.timestamp <= exitDelayEndTime) return 0;
+        if (exitDelayEndTime != 0 && block.timestamp > exitDelayEndTime) return principalDeposits;
+        if (lastWithdrawalBatchId >= lockingPool.currentBatch()) return 0;
+
+        return
+            principalDeposits > vaultController.getVaultDepositMin()
+                ? principalDeposits - vaultController.getVaultDepositMin()
+                : 0;
     }
 
     /**
@@ -137,19 +195,6 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Withdraws the unclaimed operator rewards for this vault
-     */
-    function withdrawRewards() external onlyRewardsReceiver {
-        uint256 amountWithdrawn = vaultController.withdrawOperatorRewards(
-            rewardsReceiver,
-            unclaimedRewards
-        );
-        unclaimedRewards -= SafeCastUpgradeable.toUint128(amountWithdrawn);
-
-        emit WithdrawRewards(rewardsReceiver, amountWithdrawn);
-    }
-
-    /**
      * @notice Returns the amount of operator rewards that will be earned by this vault on the next update
      * @return newly earned rewards
      */
@@ -166,7 +211,7 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Updates the deposit and reward accounting for this vault
      * @dev will only pay out rewards if the vault is net positive when accounting for lost deposits
-     * @param _minRewards min amount of rewards to relock/claim (set 0 to skip reward claiming)
+     * @param _minRewards min amount of rewards to relock/claim (set 0 to skip reward claiming/relocking)
      * @param _l2Gas L2 gasLimit for bridging rewards
      * @return the current total deposits in this vault
      * @return the operator rewards earned by this vault since the last update
@@ -186,13 +231,15 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             opRewards =
                 (uint256(depositChange) * vaultController.operatorRewardPercentage()) /
                 10000;
-            unclaimedRewards += SafeCastUpgradeable.toUint128(opRewards);
             trackedTotalDeposits = SafeCastUpgradeable.toUint128(totalDeposits);
         }
 
         uint256 claimedRewards;
         if (_minRewards != 0 && rewards >= _minRewards) {
-            if ((principal + rewards) <= vaultController.getVaultDepositMax()) {
+            if (
+                (principal + rewards) <= vaultController.getVaultDepositMax() &&
+                exitDelayEndTime == 0
+            ) {
                 lockingPool.relock(seqId, 0, true);
             } else {
                 lockingPool.withdrawRewards{value: msg.value}(seqId, _l2Gas);
@@ -207,6 +254,37 @@ contract SequencerVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
 
         return (totalDeposits, opRewards, claimedRewards);
+    }
+
+    /**
+     * @notice Initiates an exit from the sequencer
+     * @dev all sequencer rewards must be claimed before this function is called
+     */
+    function initiateExit() external onlyVaultController {
+        if (exitDelayEndTime != 0) revert SequencerStopped();
+        if (getRewards() != 0) revert UnclaimedRewards();
+
+        exitDelayEndTime = uint64(block.timestamp + lockingPool.exitDelayPeriod());
+        lockingPool.unlock(seqId, 0);
+    }
+
+    /**
+     * @notice Withdraws all principal deposits from exited sequencer
+     * @dev all sequencer rewards must be claimed before this function is called
+     */
+    function finalizeExit() external onlyVaultController {
+        if (exitDelayEndTime == 0 || block.timestamp <= exitDelayEndTime) {
+            revert ExitDelayTimeNotElapsed();
+        }
+        if (getRewards() != 0) revert UnclaimedRewards();
+
+        uint256 principalDeposits = getPrincipalDeposits();
+        if (principalDeposits == 0) revert AlreadyExited();
+
+        lockingPool.unlockClaim(seqId, 0);
+        trackedTotalDeposits -= uint128(principalDeposits);
+
+        token.safeTransfer(address(vaultController), token.balanceOf(address(this)));
     }
 
     /**
