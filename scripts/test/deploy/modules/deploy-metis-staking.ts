@@ -43,11 +43,17 @@ const StakingPoolArgs = {
   derivativeTokenName: 'Staked METIS', // METIS liquid staking token name
   derivativeTokenSymbol: 'stMETIS', // METIS liquid staking token symbol
   fees: [], // fee receivers & percentage amounts in basis points
+  unusedDepositLimit: toEther(10000), // max number of tokens that can sit in the pool outside of a strategy
 }
-// LINK Priority Pool
+// METIS Priority Pool
 const PriorityPoolArgs = {
   queueDepositMin: toEther(1000), // min amount of tokens neede to execute deposit
   queueDepositMax: toEther(200000), // max amount of tokens in a single deposit tx
+}
+// METIS Withdrawal Pool
+const WithdrawalPoolArgs = {
+  minWithdrawalAmount: toEther(1), // minimum amount of LSTs that can be queued for withdrawal
+  minTimeBetweenWithdrawals: 86400, // min amount of time between execution of withdrawals
 }
 
 export async function deployMETISStaking() {
@@ -66,6 +72,7 @@ export async function deployMETISStaking() {
     StakingPoolArgs.derivativeTokenName,
     StakingPoolArgs.derivativeTokenSymbol,
     StakingPoolArgs.fees,
+    StakingPoolArgs.unusedDepositLimit,
   ])) as StakingPool
   console.log('METIS_StakingPool deployed: ', stakingPool.target)
 
@@ -77,6 +84,15 @@ export async function deployMETISStaking() {
     PriorityPoolArgs.queueDepositMax,
   ])) as PriorityPool
   console.log('METIS_PriorityPool deployed: ', priorityPool.target)
+
+  const withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
+    metisToken.target,
+    stakingPool.target,
+    priorityPool.target,
+    WithdrawalPoolArgs.minWithdrawalAmount,
+    WithdrawalPoolArgs.minTimeBetweenWithdrawals,
+  ])) as PriorityPool
+  console.log('METIS_WithdrawalPool deployed: ', withdrawalPool.target)
 
   const wsdToken = await deploy('WrappedSDToken', [
     stakingPool.target,
@@ -96,12 +112,14 @@ export async function deployMETISStaking() {
   await (await sdlPoolPrimary.addToken(stakingPool.target, stMetisSDLRewardsPool.target)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()
+  await (await priorityPool.setWithdrawalPool(withdrawalPool.target)).wait()
 
   updateDeployments(
     {
       METISToken: metisToken.target.toString(),
       METIS_StakingPool: stakingPool.target.toString(),
       METIS_PriorityPool: priorityPool.target.toString(),
+      METIS_WithdrawalPool: withdrawalPool.target.toString(),
       METIS_WrappedSDToken: wsdToken.target,
       stMETIS_SDLRewardsPool: stMetisSDLRewardsPool.target,
     },
@@ -109,6 +127,7 @@ export async function deployMETISStaking() {
       METISToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
       METIS_StakingPool: 'StakingPool',
       METIS_PriorityPool: 'PriorityPool',
+      METIS_WithdrawalPool: 'WithdrawalPool',
       METIS_WrappedSDToken: 'WrappedSDToken',
       stMETIS_SDLRewardsPool: 'RewardsPoolWSD',
     }

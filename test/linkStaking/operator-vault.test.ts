@@ -9,7 +9,10 @@ import {
   StakingMock,
   StakingRewardsMock,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+
+const unbondingPeriod = 28 * 86400
+const claimPeriod = 7 * 86400
 
 describe('OperatorVault', () => {
   async function deployFixture() {
@@ -34,6 +37,8 @@ describe('OperatorVault', () => {
       toEther(10),
       toEther(100),
       toEther(10000),
+      unbondingPeriod,
+      claimPeriod,
     ])) as StakingMock
     adrs.stakingController = await stakingController.getAddress()
 
@@ -86,6 +91,26 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 200)
   })
 
+  it('withdraw should work correctly', async () => {
+    const { adrs, strategy, token, stakingController, vault } = await loadFixture(deployFixture)
+
+    await strategy.unbond()
+
+    await expect(strategy.withdraw(toEther(30))).to.be.revertedWithCustomError(
+      stakingController,
+      'NotInClaimPeriod()'
+    )
+
+    await time.increase(unbondingPeriod + 1)
+
+    await strategy.withdraw(toEther(30))
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 70)
+    assert.equal(fromEther(await stakingController.getStakerPrincipal(adrs.vault)), 70)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 70)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
+    assert.equal(fromEther(await vault.trackedTotalDeposits()), 70)
+  })
+
   it('raiseAlert should work correctly', async () => {
     const { signers, accounts, adrs, token, vault } = await loadFixture(deployFixture)
 
@@ -104,7 +129,7 @@ describe('OperatorVault', () => {
     const { adrs, stakingController, vault } = await loadFixture(deployFixture)
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
-    await stakingController.removePrincipal(adrs.vault, toEther(30))
+    await stakingController.removeOperator(adrs.vault)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
   })
 
@@ -130,12 +155,13 @@ describe('OperatorVault', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
-    const { accounts, adrs, strategy, vault, rewardsController } = await loadFixture(deployFixture)
+    const { accounts, adrs, strategy, vault, rewardsController, stakingController } =
+      await loadFixture(deployFixture)
 
     await rewardsController.setReward(adrs.vault, toEther(10))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
-      [110, 1]
+      [110, 100, 1]
     )
     await strategy.updateDeposits(0, accounts[3])
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
@@ -145,7 +171,7 @@ describe('OperatorVault', () => {
     await rewardsController.setReward(adrs.vault, toEther(5))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
-      [105, 0]
+      [105, 100, 0]
     )
     await strategy.updateDeposits(0, accounts[3])
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
@@ -155,7 +181,7 @@ describe('OperatorVault', () => {
     await rewardsController.setReward(adrs.vault, toEther(8))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
-      [108, 0]
+      [108, 100, 0]
     )
     await strategy.updateDeposits(0, accounts[3])
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
@@ -165,7 +191,7 @@ describe('OperatorVault', () => {
     await rewardsController.setReward(adrs.vault, toEther(11))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
-      [111, 0.1]
+      [111, 100, 0.1]
     )
     await strategy.updateDeposits(0, accounts[3])
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
@@ -213,6 +239,33 @@ describe('OperatorVault', () => {
     await vault.connect(signers[2]).withdrawRewards()
 
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
+  })
+
+  it('exitVault should work correctly', async () => {
+    const { accounts, adrs, strategy, token, vault, rewardsController, stakingController } =
+      await loadFixture(deployFixture)
+
+    await rewardsController.setReward(adrs.vault, toEther(10))
+    await strategy.updateDeposits(0, accounts[3])
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 110)
+
+    await expect(strategy.removeVault()).to.be.revertedWithCustomError(
+      vault,
+      'OperatorNotRemoved()'
+    )
+
+    await stakingController.removeOperator(adrs.vault)
+    assert.deepEqual(
+      (await strategy.removeVault.staticCall()).map((v) => fromEther(v)),
+      [100, 10]
+    )
+    await strategy.removeVault()
+
+    assert.equal(fromEther(await vault.getPendingRewards()), 0)
+    assert.equal(fromEther(await vault.getUnclaimedRewards()), 0.5)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 0)
   })
 
   it('setRewardsReceiver should work correctly', async () => {

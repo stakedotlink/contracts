@@ -50,6 +50,7 @@ describe('SequencerVCS', () => {
       'Staked LINK',
       'stLINK',
       [],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 
@@ -119,11 +120,11 @@ describe('SequencerVCS', () => {
   it('deposit should work correctly', async () => {
     const { accounts, adrs, strategy, stakingPool, token } = await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(50))
+    await stakingPool.deposit(accounts[0], toEther(50), ['0x'])
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 50)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 50)
 
-    await stakingPool.deposit(accounts[0], toEther(200))
+    await stakingPool.deposit(accounts[0], toEther(200), ['0x'])
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 250)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 250)
   })
@@ -131,7 +132,7 @@ describe('SequencerVCS', () => {
   it('depositQueuedTokens should work correctly', async () => {
     const { accounts, adrs, strategy, stakingPool, token } = await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     assert.equal(fromEther(await strategy.getTotalDeposits()), 5000)
@@ -152,7 +153,7 @@ describe('SequencerVCS', () => {
       deployFixture
     )
 
-    await stakingPool.deposit(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
@@ -177,7 +178,7 @@ describe('SequencerVCS', () => {
       deployFixture
     )
 
-    await stakingPool.deposit(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(500), toEther(700)])
 
     await metisLockingPool.addReward(1, toEther(100))
@@ -207,12 +208,12 @@ describe('SequencerVCS', () => {
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
     assert.equal(fromEther(await strategy.getMinDeposits()), 0)
 
-    await stakingPool.deposit(accounts[0], toEther(2000))
+    await stakingPool.deposit(accounts[0], toEther(2000), ['0x'])
     assert.equal(fromEther(await strategy.canDeposit()), 3000)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
     assert.equal(fromEther(await strategy.getMinDeposits()), 2000)
 
-    await stakingPool.deposit(accounts[0], toEther(3000))
+    await stakingPool.deposit(accounts[0], toEther(3000), ['0x'])
     assert.equal(fromEther(await strategy.canDeposit()), 0)
     assert.equal(fromEther(await strategy.getMaxDeposits()), 5000)
     assert.equal(fromEther(await strategy.getMinDeposits()), 5000)
@@ -223,7 +224,7 @@ describe('SequencerVCS', () => {
       deployFixture
     )
 
-    await stakingPool.deposit(accounts[0], toEther(400))
+    await stakingPool.deposit(accounts[0], toEther(400), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(200), toEther(200)])
 
     await stakingPool.updateStrategyRewards([0], '0x')
@@ -259,7 +260,7 @@ describe('SequencerVCS', () => {
       deployFixture
     )
 
-    await stakingPool.deposit(accounts[0], toEther(400))
+    await stakingPool.deposit(accounts[0], toEther(400), ['0x'])
     await strategy.depositQueuedTokens([1, 4], [toEther(200), toEther(200)])
 
     await metisLockingPool.addReward(2, toEther(100))
@@ -296,7 +297,7 @@ describe('SequencerVCS', () => {
     const { accounts, strategy, stakingPool, metisLockingInfo, metisLockingPool } =
       await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x'])
     await metisLockingInfo.setMaxLock(toEther(100))
     await strategy.depositQueuedTokens(
       [0, 1, 2, 3, 4],
@@ -338,7 +339,7 @@ describe('SequencerVCS', () => {
     const { accounts, adrs, strategy, stakingPool, token, metisLockingInfo, metisLockingPool } =
       await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x'])
     await strategy.depositQueuedTokens([0], [toEther(100)])
     await metisLockingInfo.setMaxLock(toEther(100))
 
@@ -366,7 +367,7 @@ describe('SequencerVCS', () => {
     const { signers, accounts, adrs, strategy, stakingPool, vaults, metisLockingPool } =
       await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(200))
+    await stakingPool.deposit(accounts[0], toEther(200), ['0x'])
     await strategy.depositQueuedTokens([0, 1], [toEther(100), toEther(100)])
 
     let vault = (await ethers.getContractAt('SequencerVault', vaults[0])) as SequencerVault
@@ -407,7 +408,7 @@ describe('SequencerVCS', () => {
   it('setOperatorRewardPercentage should work correctly', async () => {
     const { accounts, strategy, stakingPool, metisLockingPool } = await loadFixture(deployFixture)
 
-    await stakingPool.deposit(accounts[0], toEther(300))
+    await stakingPool.deposit(accounts[0], toEther(300), ['0x'])
     await strategy.depositQueuedTokens([0], [toEther(300)])
 
     await expect(strategy.setOperatorRewardPercentage(10001)).to.be.revertedWithCustomError(

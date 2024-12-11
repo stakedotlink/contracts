@@ -9,7 +9,9 @@ import "./interfaces/ICommunityVault.sol";
  * @notice Implemented strategy for managing multiple Chainlink community staking vaults
  */
 contract CommunityVCS is VaultControllerStrategy {
+    // min number of non-full vaults before a new batch is deployed
     uint128 public vaultDeploymentThreshold;
+    // number of vaults to deploy when threshold is met
     uint128 public vaultDeploymentAmount;
 
     event SetVaultDeploymentParams(uint128 vaultDeploymentThreshold, uint128 vaultDeploymentAmount);
@@ -22,16 +24,18 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of LINK token
      * @param _stakingPool address of the staking pool that controls this strategy
      * @param _stakeController address of Chainlink staking contract
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
      * @param _fees list of fees to be paid on rewards
-     * @param _maxDepositSizeBP basis point amount of the remaing deposit room in the Chainlink staking contract
+     * @param _maxDepositSizeBP max basis point amount of the deposit room in the Chainlink staking contract
      * that can be deposited at once
-     * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
-     * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
+     * @param _vaultMaxDeposits max number of tokens that a vault can hold
+     * @param _vaultDeploymentThreshold min number of non-full vaults before a new batch is deployed
+     * @param _vaultDeploymentAmount number of vaults to deploy when threshold is met
+     * @param _vaultDepositController address of vault deposit controller
      *
      */
     function initialize(
@@ -41,26 +45,79 @@ contract CommunityVCS is VaultControllerStrategy {
         address _vaultImplementation,
         Fee[] memory _fees,
         uint256 _maxDepositSizeBP,
+        uint256 _vaultMaxDeposits,
         uint128 _vaultDeploymentThreshold,
-        uint128 _vaultDeploymentAmount
-    ) public initializer {
-        __VaultControllerStrategy_init(
-            _token,
-            _stakingPool,
-            _stakeController,
-            _vaultImplementation,
-            _fees,
-            _maxDepositSizeBP
-        );
-        vaultDeploymentThreshold = _vaultDeploymentThreshold;
-        vaultDeploymentAmount = _vaultDeploymentAmount;
-        _deployVaults(_vaultDeploymentAmount);
+        uint128 _vaultDeploymentAmount,
+        address _vaultDepositController
+    ) public reinitializer(2) {
+        if (address(token) == address(0)) {
+            __VaultControllerStrategy_init(
+                _token,
+                _stakingPool,
+                _stakeController,
+                _vaultImplementation,
+                _fees,
+                _maxDepositSizeBP,
+                _vaultMaxDeposits,
+                _vaultDepositController
+            );
+            vaultDeploymentThreshold = _vaultDeploymentThreshold;
+            vaultDeploymentAmount = _vaultDeploymentAmount;
+            _deployVaults(_vaultDeploymentAmount);
+            globalVaultState = GlobalVaultState(5, 0, 0, 0);
+        } else {
+            globalVaultState = GlobalVaultState(5, 0, 0, uint64(maxDepositSizeBP + 1));
+            maxDepositSizeBP = _maxDepositSizeBP;
+            delete fundFlowController;
+            vaultMaxDeposits = _vaultMaxDeposits;
+        }
+
+        for (uint64 i = 0; i < 5; ++i) {
+            vaultGroups.push(VaultGroup(i, 0));
+        }
     }
 
     /**
-     * @notice claims Chanlink staking rewards from vaults
+     * @notice Deposits tokens from the staking pool into vaults
+     * @param _amount amount to deposit
+     * @param _data encoded vault deposit order
+     */
+    function deposit(uint256 _amount, bytes calldata _data) external override onlyStakingPool {
+        (, uint256 maxDeposits) = getVaultDepositLimits();
+
+        // if vault deposit limit has changed in Chainlink staking contract, make adjustments
+        if (maxDeposits > vaultMaxDeposits) {
+            uint256 diff = maxDeposits - vaultMaxDeposits;
+            uint256 totalVaults = globalVaultState.depositIndex;
+            uint256 numVaultGroups = globalVaultState.numVaultGroups;
+            uint256 vaultsPerGroup = totalVaults / numVaultGroups;
+            uint256 remainder = totalVaults % numVaultGroups;
+
+            for (uint256 i = 0; i < numVaultGroups; ++i) {
+                uint256 numVaults = vaultsPerGroup;
+                if (i < remainder) {
+                    numVaults += 1;
+                }
+
+                vaultGroups[i].totalDepositRoom += uint128(numVaults * diff);
+            }
+
+            vaultMaxDeposits = maxDeposits;
+        }
+
+        if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
+
+        (bool success, ) = vaultDepositController.delegatecall(
+            abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
+        );
+
+        if (!success) revert DepositFailed();
+    }
+
+    /**
+     * @notice Claims Chanlink staking rewards from vaults
      * @param _vaults list if vault indexes to claim from
-     * @param _minRewards min amount of rewards required to claim
+     * @param _minRewards min amount of rewards per vault required to claim
      */
     function claimRewards(
         uint256[] calldata _vaults,
@@ -76,23 +133,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns the deposit change since deposits were last updated
-     * @dev deposit change could be positive or negative depending on reward rate and whether
-     * any slashing occurred
-     * @return deposit change
-     */
-    function getDepositChange() public view override returns (int) {
-        uint256 totalBalance = token.balanceOf(address(this));
-        for (uint256 i = 0; i < vaults.length; ++i) {
-            uint256 vaultDeposits = vaults[i].getTotalDeposits();
-            if (vaultDeposits == 0) break;
-            totalBalance += vaultDeposits;
-        }
-        return int(totalBalance) - int(totalDeposits);
-    }
-
-    /**
-     * @notice returns the maximum that can be deposited into this strategy
+     * @notice Returns the maximum amount of tokens this strategy can hold
      * @return maximum deposits
      */
     function getMaxDeposits() public view virtual override returns (uint256) {
@@ -100,26 +141,27 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice returns whether a new batch of vaults should be deployed
-     * @dev used by chainlink keepers
+     * @notice Returns whether a new batch of vaults should be deployed
+     * @return true if new batch should be deployed, false otherwise
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
-        return ((vaults.length - 1 - indexOfLastFullVault) < vaultDeploymentThreshold, bytes(""));
+        return (
+            (vaults.length - globalVaultState.depositIndex) < vaultDeploymentThreshold,
+            bytes("")
+        );
     }
 
     /**
-     * @notice deploys a new batch of vaults
-     * @dev will revert if the number of non-full vaults is not less than vaultDeploymentThreshold
-     * @dev used by chainlink keepers
+     * @notice Deploys a new batch of vaults
      */
     function performUpkeep(bytes calldata) external {
-        if ((vaults.length - 1 - indexOfLastFullVault) >= vaultDeploymentThreshold)
+        if ((vaults.length - globalVaultState.depositIndex) >= vaultDeploymentThreshold)
             revert VaultsAboveThreshold();
         _deployVaults(vaultDeploymentAmount);
     }
 
     /**
-     * @notice deploys a new batch of vaults
+     * @notice Deploys a new batch of vaults
      * @param _numVaults number of vaults to deploy
      */
     function addVaults(uint256 _numVaults) external onlyOwner {
@@ -127,7 +169,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice sets the vault deployment parameters
+     * @notice Sets the vault deployment parameters
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
      */
@@ -141,7 +183,7 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
-     * @notice deploys new vaults
+     * @notice Deploys new vaults
      * @param _numVaults number of vaults to deploy
      */
     function _deployVaults(uint256 _numVaults) internal {

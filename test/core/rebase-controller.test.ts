@@ -43,6 +43,7 @@ describe('RebaseController', () => {
       'LinkPool LINK',
       'lpLINK',
       [[accounts[4], 1000]],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 
@@ -115,7 +116,7 @@ describe('RebaseController', () => {
     await securityPool.setRebaseController(adrs.rebaseController)
 
     await token.approve(adrs.stakingPool, ethers.MaxUint256)
-    await stakingPool.deposit(accounts[0], toEther(1000))
+    await stakingPool.deposit(accounts[0], toEther(1000), ['0x', '0x', '0x'])
 
     return {
       signers,

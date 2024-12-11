@@ -6,13 +6,9 @@ export const deploy = async (contractName: string, args: any[] = [], useLedgerSi
   return ethers.deployContract(contractName, args) as any
 }
 
-export const deployUpgradeable = async (
-  contractName: string,
-  args: any[] = [],
-  useLedgerSigner = false
-) => {
+export const deployUpgradeable = async (contractName: string, args: any[] = [], options = {}) => {
   const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups' }) as any
+  return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
 }
 
 export const deployImplementation = async (contractName: string, useLedgerSigner = false) => {

@@ -29,6 +29,7 @@ describe('WrappedSDToken', () => {
       'LinkPool LINK',
       'lplLINK',
       [[accounts[4], 0]],
+      toEther(10000),
     ])) as StakingPool
     adrs.stakingPool = await stakingPool.getAddress()
 
@@ -49,7 +50,7 @@ describe('WrappedSDToken', () => {
 
     async function stake(account: number, amount: number) {
       await token.connect(signers[account]).transfer(accounts[0], toEther(amount))
-      await stakingPool.deposit(accounts[account], toEther(amount))
+      await stakingPool.deposit(accounts[account], toEther(amount), ['0x'])
     }
 
     await stakingPool.addStrategy(adrs.strategy1)
@@ -57,7 +58,7 @@ describe('WrappedSDToken', () => {
     await stakingPool.setRebaseController(accounts[0])
 
     await token.approve(adrs.stakingPool, ethers.MaxUint256)
-    await stakingPool.deposit(accounts[0], 1000)
+    await stakingPool.deposit(accounts[0], 1000, ['0x'])
 
     return { signers, accounts, adrs, token, stakingPool, wsdToken, strategy1, stake }
   }

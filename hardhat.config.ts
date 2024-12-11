@@ -28,7 +28,6 @@ const config: HardhatUserConfig = {
   networks: {
     localhost: {
       url: 'http://127.0.0.1:8545',
-      ledgerAccounts: [ledgerAccount],
     },
     sepolia: {
       url: '',
@@ -54,7 +53,6 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 1337,
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
-      ledgerAccounts: [ledgerAccount],
       mining: {
         auto: true,
         interval: 5000,

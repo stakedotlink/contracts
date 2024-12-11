@@ -17,19 +17,24 @@ import "../interfaces/IStakingRewards.sol";
 abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    // address of staking token
     IERC20Upgradeable public token;
+    // address of strategy that controls this vault
     address public vaultController;
+    // address of Chainlink staking contract
     IStaking public stakeController;
+    // address of Chainlink staking rewards contract
     IStakingRewards public rewardsController;
 
+    // storage gap for upgradeability
     uint256[9] private __gap;
 
     error OnlyVaultController();
 
     /**
-     * @notice initializes contract
+     * @notice Initializes contract
      * @param _token address of LINK token
-     * @param _vaultController address of the strategy that controls this vault
+     * @param _vaultController address of strategy that controls this vault
      * @param _stakeController address of Chainlink staking contract
      * @param _rewardsController address of Chainlink staking rewards contract
      **/
@@ -48,7 +53,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice reverts if sender is not vaultController
+     * @notice Reverts if sender is not vault controller
      **/
     modifier onlyVaultController() {
         if (msg.sender != vaultController) revert OnlyVaultController();
@@ -56,7 +61,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice deposits tokens from the vaultController into the Chainlink staking contract
+     * @notice Deposits tokens from the vault controller into the Chainlink staking contract
      * @param _amount amount to deposit
      */
     function deposit(uint256 _amount) external virtual onlyVaultController {
@@ -65,14 +70,23 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice withdrawals are not yet implemented
+     * @notice Withdraws tokens from the Chainlink staking contract and sends them to the vault controller
+     * @param _amount amount to withdraw
      */
-    function withdraw(uint256) external view onlyVaultController {
-        revert("withdrawals not yet implemented");
+    function withdraw(uint256 _amount) external virtual onlyVaultController {
+        stakeController.unstake(_amount);
+        token.safeTransfer(vaultController, _amount);
     }
 
     /**
-     * @notice returns the total balance of this contract in the Chainlink staking contract
+     * @notice Unbonds tokens in the Chainlink staking contract
+     */
+    function unbond() external onlyVaultController {
+        stakeController.unbond();
+    }
+
+    /**
+     * @notice Returns the total balance of this contract in the Chainlink staking contract
      * @dev includes principal plus any rewards
      * @return total balance
      */
@@ -81,7 +95,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the principal balance of this contract in the Chainlink staking contract
+     * @notice Returns the principal balance of this contract in the Chainlink staking contract
      * @return principal balance
      */
     function getPrincipalDeposits() public view virtual returns (uint256) {
@@ -89,11 +103,31 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice returns the claimable rewards balance of this contract in the Chainlink staking rewards contract
+     * @notice Returns the claimable rewards balance of this contract in the Chainlink staking rewards contract
      * @return rewards balance
      */
     function getRewards() public view returns (uint256) {
         return rewardsController.getReward(address(this));
+    }
+
+    /**
+     * @notice Returns whether the claim period is active for this contract in the Chainlink staking contract
+     * @return true if active, false otherwise
+     */
+    function claimPeriodActive() external view returns (bool) {
+        uint256 unbondingPeriodEndsAt = stakeController.getUnbondingEndsAt(address(this));
+        if (unbondingPeriodEndsAt == 0 || block.timestamp < unbondingPeriodEndsAt) return false;
+
+        return block.timestamp <= stakeController.getClaimPeriodEndsAt(address(this));
+    }
+
+    /**
+     * @notice Returns whether the operator for this vault has been removed from the Chainlink staking contract
+     * @dev only used by operator vaults but defined here to keep interface consistent
+     * @return true if operator has been removed, false otherwise
+     */
+    function isRemoved() public view virtual returns (bool) {
+        return false;
     }
 
     /**
