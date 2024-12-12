@@ -13,17 +13,14 @@ import {
   StrategyMock,
   StakingPool,
   RebaseController,
-  SDLPoolCCIPControllerMock,
   PriorityPool,
   SecurityPool,
 } from '../../typechain-types'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 
 describe('RebaseController', () => {
-  const decode = (data: any) =>
-    ethers.AbiCoder.defaultAbiCoder().decode(['uint256[]', 'uint256'], data)
-  const encode = (data: any) =>
-    ethers.AbiCoder.defaultAbiCoder().encode(['uint256[]', 'uint256'], data)
+  const decode = (data: any) => ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], data)
+  const encode = (data: any) => ethers.AbiCoder.defaultAbiCoder().encode(['uint256'], data)
 
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
@@ -57,12 +54,6 @@ describe('RebaseController', () => {
     ])) as PriorityPool
     adrs.priorityPool = await priorityPool.getAddress()
 
-    const sdlPoolCCIPController = (await deploy('SDLPoolCCIPControllerMock', [
-      accounts[0],
-      accounts[0],
-    ])) as SDLPoolCCIPControllerMock
-    adrs.sdlPoolCCIPController = await sdlPoolCCIPController.getAddress()
-
     const securityPool = (await deployUpgradeable('SecurityPool', [
       adrs.token,
       'name',
@@ -77,10 +68,8 @@ describe('RebaseController', () => {
     const rebaseController = (await deploy('RebaseController', [
       adrs.stakingPool,
       adrs.priorityPool,
-      adrs.sdlPoolCCIPController,
       adrs.securityPool,
       accounts[0],
-      3000,
     ])) as RebaseController
     adrs.rebaseController = await rebaseController.getAddress()
 
@@ -126,7 +115,6 @@ describe('RebaseController', () => {
       token,
       stakingPool,
       priorityPool,
-      sdlPoolCCIPController,
       securityPool,
       rebaseController,
       strategy1,
@@ -135,155 +123,116 @@ describe('RebaseController', () => {
     }
   }
 
+  it('updateRewards should work correctly', async () => {
+    const { adrs, token, rebaseController, strategy1, strategy2, strategy3 } = await loadFixture(
+      deployFixture
+    )
+
+    await token.transfer(adrs.strategy2, toEther(100))
+    await strategy1.simulateSlash(toEther(10))
+    await strategy3.simulateSlash(toEther(10))
+
+    await rebaseController.updateRewards('0x')
+
+    assert.equal(fromEther(await strategy1.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy2.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy3.getDepositChange()), 0)
+
+    await token.transfer(adrs.strategy2, toEther(10))
+    await token.transfer(adrs.strategy3, toEther(20))
+
+    await rebaseController.updateRewards('0x')
+
+    assert.equal(fromEther(await strategy1.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy2.getDepositChange()), 0)
+    assert.equal(fromEther(await strategy3.getDepositChange()), 0)
+  })
+
   it('checkUpkeep should work correctly', async () => {
     const { adrs, token, rebaseController, strategy1, strategy3 } = await loadFixture(deployFixture)
 
     await token.transfer(adrs.strategy2, toEther(100))
 
-    let data = await rebaseController.checkUpkeep('0x00')
+    let data = await rebaseController.checkUpkeep('0x')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
 
     await strategy3.simulateSlash(toEther(20))
 
-    data = await rebaseController.checkUpkeep('0x00')
+    data = await rebaseController.checkUpkeep('0x')
     assert.equal(data[0], true, 'upkeepNeeded incorrect')
-    assert.deepEqual(
-      decode(data[1])[0].map((v: any) => Number(v)),
-      [2]
-    )
-    assert.equal(fromEther(decode(data[1])[1]), 20)
+    assert.equal(Number(decode(data[1])), 2)
 
     await strategy1.simulateSlash(toEther(30))
 
-    data = await rebaseController.checkUpkeep('0x00')
+    data = await rebaseController.checkUpkeep('0x')
     assert.equal(data[0], true, 'upkeepNeeded incorrect')
-    assert.deepEqual(
-      decode(data[1])[0].map((v: any) => Number(v)),
-      [0, 2]
-    )
-    assert.equal(fromEther(decode(data[1])[1]), 50)
+    assert.equal(Number(decode(data[1])), 0)
+
+    await rebaseController.pausePool()
+
+    data = await rebaseController.checkUpkeep('0x')
+    assert.equal(data[0], false, 'upkeepNeeded incorrect')
   })
 
   it('performUpkeep should work correctly', async () => {
-    const {
-      adrs,
-      token,
-      rebaseController,
-      strategy1,
-      strategy2,
-      strategy3,
-      stakingPool,
-      priorityPool,
-      securityPool,
-    } = await loadFixture(deployFixture)
-
-    await token.transfer(adrs.strategy2, toEther(100))
-    await strategy1.simulateSlash(toEther(10))
-    await strategy3.simulateSlash(toEther(10))
-
-    await rebaseController.performUpkeep(encode([[0, 2], toEther(20)]))
-
-    let data = await rebaseController.checkUpkeep('0x00')
-    assert.equal(data[0], false, 'upkeepNeeded incorrect')
-    assert.equal(
-      fromEther(await strategy1.getDepositChange()),
-      0,
-      'strategy1 depositChange incorrect'
-    )
-    assert.equal(
-      fromEther(await strategy2.getDepositChange()),
-      100,
-      'strategy2 depositChange incorrect'
-    )
-    assert.equal(
-      fromEther(await strategy3.getDepositChange()),
-      0,
-      'strategy3 depositChange incorrect'
-    )
-
-    await expect(rebaseController.performUpkeep(encode([[], 10]))).to.be.revertedWithCustomError(
-      rebaseController,
-      'NoStrategiesToUpdate()'
-    )
-    await expect(rebaseController.performUpkeep(encode([[1], 0]))).to.be.revertedWithCustomError(
-      rebaseController,
-      'NoStrategiesToUpdate()'
-    )
-
-    await strategy3.simulateSlash(toEther(301))
-    await rebaseController.performUpkeep(encode([[2], toEther(301)]))
-
-    assert.equal(fromEther(await stakingPool.totalStaked()), 980)
-    assert.equal(Number(await priorityPool.poolStatus()), 2)
-    assert.equal(await securityPool.claimInProgress(), true)
-  })
-
-  it('pausing process should work correctly when max loss is exceeded', async () => {
-    const { adrs, token, rebaseController, strategy3, stakingPool, priorityPool, securityPool } =
+    const { adrs, token, rebaseController, strategy1, strategy3, priorityPool, securityPool } =
       await loadFixture(deployFixture)
 
-    await strategy3.simulateSlash(toEther(300))
-    await rebaseController.performUpkeep(encode([[2], toEther(300)]))
-
-    assert.equal(fromEther(await stakingPool.totalStaked()), 700)
-    assert.equal(Number(await priorityPool.poolStatus()), 0)
-    assert.equal(await securityPool.claimInProgress(), false)
-
-    await token.transfer(adrs.strategy3, toEther(300))
-    await rebaseController.updateRewards([2], '0x', [])
-    await strategy3.simulateSlash(toEther(301))
-    await rebaseController.performUpkeep(encode([[2], toEther(301)]))
-
-    assert.equal(fromEther(await stakingPool.totalStaked()), 1000)
-    assert.equal(Number(await priorityPool.poolStatus()), 2)
-    assert.equal(await securityPool.claimInProgress(), true)
-    await expect(rebaseController.performUpkeep(encode([[2], 1]))).to.be.revertedWithCustomError(
-      rebaseController,
-      'PoolClosed()'
-    )
-    await expect(rebaseController.updateRewards([2], '0x', [])).to.be.revertedWithCustomError(
-      rebaseController,
-      'PoolClosed()'
-    )
-    assert.equal((await rebaseController.checkUpkeep('0x00'))[0], false)
-
-    await stakingPool.donateTokens(toEther(101))
-    await rebaseController.reopenPool([2])
-    assert.equal(fromEther(await stakingPool.totalStaked()), 800)
-    assert.equal(Number(await priorityPool.poolStatus()), 0)
-    assert.equal(await securityPool.claimInProgress(), false)
-  })
-
-  it('updateRewards should work correctly', async () => {
-    const {
-      adrs,
-      token,
-      rebaseController,
-      strategy1,
-      strategy2,
-      strategy3,
-      sdlPoolCCIPController,
-    } = await loadFixture(deployFixture)
-
     await token.transfer(adrs.strategy2, toEther(100))
     await strategy1.simulateSlash(toEther(10))
     await strategy3.simulateSlash(toEther(10))
 
-    await rebaseController.updateRewards([0, 2], '0x', [])
+    await expect(rebaseController.performUpkeep(encode([1]))).to.be.revertedWithCustomError(
+      rebaseController,
+      'NoLossDetected()'
+    )
 
-    assert.equal(fromEther(await strategy1.getDepositChange()), 0)
-    assert.equal(fromEther(await strategy2.getDepositChange()), 100)
-    assert.equal(fromEther(await strategy3.getDepositChange()), 0)
-    assert.equal(Number(await sdlPoolCCIPController.rewardsDistributed()), 1)
+    await rebaseController.performUpkeep(encode([0]))
+    assert.equal(Number(await priorityPool.poolStatus()), 2)
+    assert.equal(await securityPool.claimInProgress(), true)
 
-    await token.transfer(adrs.strategy2, toEther(10))
-    await token.transfer(adrs.strategy3, toEther(20))
+    await expect(rebaseController.performUpkeep(encode([0]))).to.be.revertedWithCustomError(
+      rebaseController,
+      'PoolClosed()'
+    )
+  })
 
-    await rebaseController.updateRewards([0, 1, 2], '0x', [])
+  it('pausePool should work correctly', async () => {
+    const { rebaseController, strategy3, priorityPool, securityPool } = await loadFixture(
+      deployFixture
+    )
 
-    assert.equal(fromEther(await strategy1.getDepositChange()), 0)
-    assert.equal(fromEther(await strategy2.getDepositChange()), 0)
-    assert.equal(fromEther(await strategy3.getDepositChange()), 0)
-    assert.equal(Number(await sdlPoolCCIPController.rewardsDistributed()), 2)
+    await strategy3.simulateSlash(toEther(300))
+    await rebaseController.pausePool()
+
+    assert.equal(Number(await priorityPool.poolStatus()), 2)
+    assert.equal(await securityPool.claimInProgress(), true)
+
+    await expect(rebaseController.pausePool()).to.be.revertedWithCustomError(
+      rebaseController,
+      'PoolClosed()'
+    )
+  })
+
+  it('reopenPool should work correctly', async () => {
+    const {
+      rebaseController,
+      strategy3,
+      priorityPool,
+      stakingPool,
+      securityPool,
+      token,
+      strategy1,
+    } = await loadFixture(deployFixture)
+
+    await strategy3.simulateSlash(toEther(300))
+    await token.transfer(strategy1.target, toEther(50))
+    await rebaseController.pausePool()
+    await rebaseController.reopenPool('0x')
+
+    assert.equal(Number(await priorityPool.poolStatus()), 0)
+    assert.equal(await securityPool.claimInProgress(), false)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 750)
+    assert.equal(fromEther(await stakingPool.getStrategyRewards([0, 1, 2])), 0)
   })
 })
