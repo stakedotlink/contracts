@@ -13,16 +13,27 @@ import "./interfaces/ISecurityPool.sol";
  * @notice Updates strategy rewards in the Staking Pool and and performs emergency pausing/reopening of the pool
  */
 contract RebaseController is Ownable {
+    // address of staking pool
     IStakingPool public stakingPool;
+    // address of priority pool
     IPriorityPool public priorityPool;
+    // address of security pool
     ISecurityPool public securityPool;
 
+    // address authorized to pause pool in case of emergency
     address public emergencyPauser;
 
     error PoolClosed();
     error SenderNotAuthorized();
     error NoLossDetected();
 
+    /**
+     * @notice Initializes contract
+     * @param _stakingPool address of staking pool
+     * @param _priorityPool address of priority pool
+     * @param _securityPool address of security pool
+     * @param _emergencyPauser address authorized to pause pool in case of emergency
+     */
     constructor(
         address _stakingPool,
         address _priorityPool,
@@ -35,6 +46,9 @@ contract RebaseController is Ownable {
         emergencyPauser = _emergencyPauser;
     }
 
+    /**
+     * @notice Reverts if sender is not emergency pauser
+     */
     modifier onlyEmergencyPauser() {
         if (msg.sender != emergencyPauser) revert SenderNotAuthorized();
         _;
