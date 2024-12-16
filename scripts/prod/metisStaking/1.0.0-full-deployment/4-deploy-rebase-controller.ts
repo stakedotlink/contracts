@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { deploy, getContract, updateDeployments } from '../../utils/deployment'
+import { deploy, getContract, updateDeployments } from '../../../utils/deployment'
 
 const emergencyPauser = '' // address authorized to pause pool in case of emergency
 
