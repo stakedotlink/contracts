@@ -24,6 +24,7 @@ contract RebaseController is Ownable {
     address public emergencyPauser;
 
     error PoolClosed();
+    error PoolOpen();
     error SenderNotAuthorized();
     error NoLossDetected();
 
@@ -116,6 +117,8 @@ contract RebaseController is Ownable {
      * @param _data encoded data to pass to strategies
      */
     function reopenPool(bytes calldata _data) external onlyOwner {
+        if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.OPEN) revert PoolOpen();
+
         priorityPool.setPoolStatus(IPriorityPool.PoolStatus.OPEN);
         if (address(securityPool) != address(0) && securityPool.claimInProgress()) {
             securityPool.resolveClaim();
