@@ -3,7 +3,7 @@ import {
   ERC677,
   OperatorVCS,
   PriorityPool,
-  SDLPoolPrimary,
+  SDLPool,
   StakingPool,
 } from '../../../../typechain-types'
 import {
@@ -166,7 +166,7 @@ const WithdrawalPoolArgs = {
 export async function deployLINKStaking() {
   const { accounts } = await getAccounts()
   const linkToken = (await getContract('LINKToken')) as ERC677
-  const sdlPoolPrimary = (await getContract('SDLPool')) as SDLPoolPrimary
+  const sdlPool = (await getContract('SDLPool')) as SDLPool
 
   const stakingPool = (await deployUpgradeable('StakingPool', [
     linkToken.target,
@@ -180,7 +180,7 @@ export async function deployLINKStaking() {
   const priorityPool = (await deployUpgradeable('PriorityPool', [
     linkToken.target,
     stakingPool.target,
-    sdlPoolPrimary.target,
+    sdlPool.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
     false,
@@ -204,7 +204,7 @@ export async function deployLINKStaking() {
   console.log('LINK_WrappedSDToken token deployed: ', wsdToken.target)
 
   const stLinkSDLRewardsPool = await deploy('RewardsPoolWSD', [
-    sdlPoolPrimary.target,
+    sdlPool.target,
     stakingPool.target,
     wsdToken.target,
   ])
@@ -249,7 +249,7 @@ export async function deployLINKStaking() {
     }
   )
 
-  await (await sdlPoolPrimary.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
+  await (await sdlPool.addToken(stakingPool.target, stLinkSDLRewardsPool.target)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
   await (await stakingPool.setRebaseController(accounts[0])).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()

@@ -4,13 +4,13 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 
-import "../../base/RewardsPoolController.sol";
-import "../../interfaces/IBoostController.sol";
-import "../../interfaces/IERC721Receiver.sol";
+import "../base/RewardsPoolController.sol";
+import "../interfaces/IBoostController.sol";
+import "../interfaces/IERC721Receiver.sol";
 
 /**
  * @title SDL Pool
- * @notice Base SDL Pool contract to inherit from
+ * @notice Allows users to stake/lock SDL tokens and receive a percentage of the protocol's earned rewards
  */
 contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -26,25 +26,23 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     string public name;
     string public symbol;
 
-    mapping(address => mapping(address => bool)) internal operatorApprovals;
-    mapping(uint256 => address) internal tokenApprovals;
+    mapping(address => mapping(address => bool)) private operatorApprovals;
+    mapping(uint256 => address) private tokenApprovals;
 
     IERC20Upgradeable public sdlToken;
     IBoostController public boostController;
 
     uint256 public lastLockId;
-    mapping(uint256 => Lock) internal locks;
-    mapping(uint256 => address) internal lockOwners;
-    mapping(address => uint256) internal balances;
+    mapping(uint256 => Lock) private locks;
+    mapping(uint256 => address) private lockOwners;
+    mapping(address => uint256) private balances;
 
     uint256 public totalEffectiveBalance;
-    mapping(address => uint256) internal effectiveBalances;
+    mapping(address => uint256) private effectiveBalances;
 
-    address public ccipController;
+    address public delegatorPool;
 
     string public baseURI;
-
-    uint256[3] __gap;
 
     event InitiateUnlock(address indexed owner, uint256 indexed lockId, uint64 expiry);
     event Withdraw(address indexed owner, uint256 indexed lockId, uint256 amount);
@@ -62,19 +60,17 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         uint256 boostAmount,
         uint64 lockingDuration
     );
-    event OutgoingRESDL(address indexed sender, uint256 indexed lockId);
-    event IncomingRESDL(address indexed receiver, uint256 indexed lockId);
 
     error SenderNotAuthorized();
     error InvalidLockId();
+    error InvalidValue();
     error InvalidLockingDuration();
+    error InvalidParams();
     error TransferFromIncorrectOwner();
-    error TransferToInvalidAddress();
+    error TransferToZeroAddress();
     error TransferToNonERC721Implementer();
     error ApprovalToCurrentOwner();
     error ApprovalToCaller();
-    error InvalidValue();
-    error InvalidParams();
     error UnauthorizedToken();
     error TotalDurationNotElapsed();
     error HalfDurationNotElapsed();
@@ -84,39 +80,38 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     error ContractNotFound();
     error UnlockAlreadyInitiated();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice initializes contract
      * @param _name name of the staking derivative token
      * @param _symbol symbol of the staking derivative token
-     * @param _sdlToken address of the SDL token
      * @param _boostController address of the boost controller
+     * @param _delegatorPool address of the old contract this one will replace
      **/
-    function __SDLPoolBase_init(
+    function initialize(
         string memory _name,
         string memory _symbol,
         address _sdlToken,
-        address _boostController
-    ) public onlyInitializing {
+        address _boostController,
+        address _delegatorPool
+    ) public initializer {
         __RewardsPoolController_init();
         name = _name;
         symbol = _symbol;
         sdlToken = IERC20Upgradeable(_sdlToken);
         boostController = IBoostController(_boostController);
+        delegatorPool = _delegatorPool;
     }
 
     /**
      * @notice reverts if `_owner` is not the owner of `_lockId`
      **/
     modifier onlyLockOwner(uint256 _lockId, address _owner) {
-        _onlyLockOwner(_lockId, _owner);
-        _;
-    }
-
-    /**
-     * @notice reverts if sender is not the CCIP controller
-     **/
-    modifier onlyCCIPController() {
-        if (msg.sender != ccipController) revert SenderNotAuthorized();
+        if (_owner != ownerOf(_lockId)) revert SenderNotAuthorized();
         _;
     }
 
@@ -192,6 +187,132 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         assert(lockIdsFound == lockCount);
 
         return lockIds;
+    }
+
+    /**
+     * @notice ERC677 implementation to stake/lock SDL tokens or distribute rewards
+     * @dev
+     * - will update/create a lock if the token transferred is SDL or will distribute rewards otherwise
+     *
+     * For Non-SDL:
+     * - reverts if token is unsupported
+     *
+     * For SDL:
+     * - set lockId to 0 to create a new lock or set lockId to > 0 to stake more into an existing lock
+     * - set lockingDuration to 0 to stake without locking or set lockingDuration to > 0 to lock for an amount
+     *   time in seconds
+     * - see _updateLock() for more details on updating an existing lock or _createLock() for more details on
+     *   creating a new lock
+     * @param _sender of the stake
+     * @param _value of the token transfer
+     * @param _calldata encoded lockId (uint256) and lockingDuration (uint64)
+     **/
+    function onTokenTransfer(
+        address _sender,
+        uint256 _value,
+        bytes calldata _calldata
+    ) external override {
+        if (msg.sender != address(sdlToken) && !isTokenSupported(msg.sender))
+            revert UnauthorizedToken();
+
+        if (_value == 0) revert InvalidValue();
+
+        if (msg.sender == address(sdlToken)) {
+            (uint256 lockId, uint64 lockingDuration) = abi.decode(_calldata, (uint256, uint64));
+            if (lockId > 0) {
+                _updateLock(_sender, lockId, _value, lockingDuration);
+            } else {
+                _createLock(_sender, _value, lockingDuration);
+            }
+        } else {
+            distributeToken(msg.sender);
+        }
+    }
+
+    /**
+     * @notice extends the locking duration of a lock
+     * @dev
+     * - reverts if `_lockId` is invalid or sender is not owner of lock
+     * - reverts if `_lockingDuration` is less than current locking duration of lock
+     * - reverts if `_lockingDuration` is 0 or exceeds the maximum
+     * @param _lockId id of lock
+     * @param _lockingDuration new locking duration to set
+     **/
+    function extendLockDuration(uint256 _lockId, uint64 _lockingDuration) external {
+        if (_lockingDuration == 0) revert InvalidLockingDuration();
+        _updateLock(msg.sender, _lockId, 0, _lockingDuration);
+    }
+
+    /**
+     * @notice initiates the unlock period for a lock
+     * @dev
+     * - at least half of the locking duration must have elapsed to initiate the unlock period
+     * - the unlock period consists of half of the locking duration
+     * - boost will be set to 0 upon initiation of the unlock period
+     *
+     * - reverts if `_lockId` is invalid or sender is not owner of lock
+     * - reverts if a minimum of half the locking duration has not elapsed
+     * @param _lockId id of lock
+     **/
+    function initiateUnlock(
+        uint256 _lockId
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
+        if (locks[_lockId].expiry != 0) revert UnlockAlreadyInitiated();
+        uint64 halfDuration = locks[_lockId].duration / 2;
+        if (locks[_lockId].startTime + halfDuration > block.timestamp)
+            revert HalfDurationNotElapsed();
+
+        uint64 expiry = uint64(block.timestamp) + halfDuration;
+        locks[_lockId].expiry = expiry;
+
+        uint256 boostAmount = locks[_lockId].boostAmount;
+        locks[_lockId].boostAmount = 0;
+        effectiveBalances[msg.sender] -= boostAmount;
+        totalEffectiveBalance -= boostAmount;
+
+        emit InitiateUnlock(msg.sender, _lockId, expiry);
+    }
+
+    /**
+     * @notice withdraws unlocked SDL
+     * @dev
+     * - SDL can only be withdrawn if unlocked (once the unlock period has elapsed or if it was never
+     *   locked in the first place)
+     * - reverts if `_lockId` is invalid or sender is not owner of lock
+     * - reverts if not unlocked
+     * - reverts if `_amount` exceeds the amount staked in the lock
+     * @param _lockId id of the lock
+     * @param _amount amount to withdraw from the lock
+     **/
+    function withdraw(
+        uint256 _lockId,
+        uint256 _amount
+    ) external onlyLockOwner(_lockId, msg.sender) updateRewards(msg.sender) {
+        if (locks[_lockId].startTime != 0) {
+            uint64 expiry = locks[_lockId].expiry;
+            if (expiry == 0) revert UnlockNotInitiated();
+            if (expiry > block.timestamp) revert TotalDurationNotElapsed();
+        }
+
+        uint256 baseAmount = locks[_lockId].amount;
+        if (_amount > baseAmount) revert InsufficientBalance();
+
+        emit Withdraw(msg.sender, _lockId, _amount);
+
+        if (_amount == baseAmount) {
+            delete locks[_lockId];
+            delete lockOwners[_lockId];
+            balances[msg.sender] -= 1;
+            if (tokenApprovals[_lockId] != address(0)) delete tokenApprovals[_lockId];
+            emit Transfer(msg.sender, address(0), _lockId);
+        } else {
+            locks[_lockId].amount = baseAmount - _amount;
+        }
+
+        effectiveBalances[msg.sender] -= _amount;
+        totalEffectiveBalance -= _amount;
+
+        sdlToken.safeTransfer(msg.sender, _amount);
     }
 
     /**
@@ -324,16 +445,6 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice adds a new token
-     * @param _token token to add
-     * @param _rewardsPool token rewards pool to add
-     **/
-    function addToken(address _token, address _rewardsPool) public override onlyOwner {
-        if (_token == address(sdlToken)) revert InvalidToken();
-        super.addToken(_token, _rewardsPool);
-    }
-
-    /**
      * @notice returns whether this contract supports an interface
      * @param _interfaceId id of interface
      * @return whether contract supports interface or not
@@ -369,28 +480,47 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
     }
 
     /**
-     * @notice sets the CCIP controller
-     * @dev this contract interfaces with CCIP
-     * @param _ccipController address of CCIP controller
+     * @notice used by the delegator pool to migrate user stakes to this contract
+     * @dev
+     * - creates a new lock to represent the migrated stake
+     * - reverts if `_lockingDuration` exceeds maximum
+     * @param _sender owner of lock
+     * @param _amount amount to stake
+     * @param _lockingDuration duration of lock
      */
-    function setCCIPController(address _ccipController) external onlyOwner {
-        ccipController = _ccipController;
+    function migrate(address _sender, uint256 _amount, uint64 _lockingDuration) external {
+        if (msg.sender != delegatorPool) revert SenderNotAuthorized();
+        sdlToken.safeTransferFrom(delegatorPool, address(this), _amount);
+        _createLock(_sender, _amount, _lockingDuration);
     }
 
     /**
      * @notice creates a new lock
      * @dev reverts if `_lockingDuration` exceeds maximum
+     * @param _sender owner of lock
      * @param _amount amount to stake
      * @param _lockingDuration duration of lock
      */
     function _createLock(
+        address _sender,
         uint256 _amount,
         uint64 _lockingDuration
-    ) internal view returns (Lock memory) {
+    ) private updateRewards(_sender) {
         uint256 boostAmount = boostController.getBoostAmount(_amount, _lockingDuration);
+        uint256 totalAmount = _amount + boostAmount;
         uint64 startTime = _lockingDuration != 0 ? uint64(block.timestamp) : 0;
+        uint256 lockId = lastLockId + 1;
 
-        return Lock(_amount, boostAmount, startTime, _lockingDuration, 0);
+        locks[lockId] = Lock(_amount, boostAmount, startTime, _lockingDuration, 0);
+        lockOwners[lockId] = _sender;
+        balances[_sender] += 1;
+        lastLockId++;
+
+        effectiveBalances[_sender] += totalAmount;
+        totalEffectiveBalance += totalAmount;
+
+        emit CreateLock(_sender, lockId, _amount, boostAmount, _lockingDuration);
+        emit Transfer(address(0), _sender, lockId);
     }
 
     /**
@@ -399,55 +529,61 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * - reverts if `_lockId` is invalid
      * - reverts if `_lockingDuration` is less than current locking duration of lock
      * - reverts if `_lockingDuration` exceeds maximum
-     * @param _lock lock to update
+     * @param _sender owner of lock
+     * @param _lockId id of lock
      * @param _amount additional amount to stake
      * @param _lockingDuration duration of lock
      */
     function _updateLock(
-        Lock memory _lock,
+        address _sender,
+        uint256 _lockId,
         uint256 _amount,
         uint64 _lockingDuration
-    ) internal view returns (Lock memory) {
+    ) private onlyLockOwner(_lockId, _sender) updateRewards(_sender) {
+        uint64 curLockingDuration = locks[_lockId].duration;
+        uint64 curExpiry = locks[_lockId].expiry;
         if (
-            (_lock.expiry == 0 || _lock.expiry > block.timestamp) &&
-            _lockingDuration < _lock.duration
+            (curExpiry == 0 || curExpiry > block.timestamp) && _lockingDuration < curLockingDuration
         ) {
             revert InvalidLockingDuration();
         }
 
-        Lock memory lock = Lock(
-            _lock.amount,
-            _lock.boostAmount,
-            _lock.startTime,
-            _lock.duration,
-            _lock.expiry
-        );
+        uint256 curBaseAmount = locks[_lockId].amount;
 
-        uint256 baseAmount = _lock.amount + _amount;
+        uint256 baseAmount = curBaseAmount + _amount;
         uint256 boostAmount = boostController.getBoostAmount(baseAmount, _lockingDuration);
 
-        if (_lockingDuration != 0) {
-            lock.startTime = uint64(block.timestamp);
-        } else {
-            delete lock.startTime;
+        if (_amount != 0) {
+            locks[_lockId].amount = baseAmount;
         }
 
-        lock.amount = baseAmount;
-        lock.boostAmount = boostAmount;
-        lock.duration = _lockingDuration;
-        lock.expiry = 0;
+        if (_lockingDuration != curLockingDuration) {
+            locks[_lockId].duration = _lockingDuration;
+        }
 
-        return lock;
-    }
+        if (_lockingDuration != 0) {
+            locks[_lockId].startTime = uint64(block.timestamp);
+        } else if (curLockingDuration != 0) {
+            delete locks[_lockId].startTime;
+        }
 
-    /**
-     * @notice checks if a lock is owned by an certain account
-     * @dev reverts if lock is not owner by account
-     * @param _lockId id of lock
-     * @param _owner owner address
-     **/
-    function _onlyLockOwner(uint256 _lockId, address _owner) internal view {
-        if (_owner != ownerOf(_lockId)) revert SenderNotAuthorized();
+        if (locks[_lockId].expiry != 0) {
+            locks[_lockId].expiry = 0;
+        }
+
+        int256 diffTotalAmount = int256(baseAmount + boostAmount) -
+            int256(curBaseAmount + locks[_lockId].boostAmount);
+        if (diffTotalAmount > 0) {
+            effectiveBalances[_sender] += uint256(diffTotalAmount);
+            totalEffectiveBalance += uint256(diffTotalAmount);
+        } else if (diffTotalAmount < 0) {
+            effectiveBalances[_sender] -= uint256(-1 * diffTotalAmount);
+            totalEffectiveBalance -= uint256(-1 * diffTotalAmount);
+        }
+
+        locks[_lockId].boostAmount = boostAmount;
+
+        emit UpdateLock(_sender, _lockId, baseAmount, boostAmount, _lockingDuration);
     }
 
     /**
@@ -459,10 +595,9 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _to address to transfer to
      * @param _lockId id of lock to transfer
      **/
-    function _transfer(address _from, address _to, uint256 _lockId) internal virtual {
+    function _transfer(address _from, address _to, uint256 _lockId) private {
         if (_from != ownerOf(_lockId)) revert TransferFromIncorrectOwner();
-        if (_to == address(0) || _to == ccipController || _to == _from)
-            revert TransferToInvalidAddress();
+        if (_to == address(0)) revert TransferToZeroAddress();
 
         delete tokenApprovals[_lockId];
 
@@ -497,7 +632,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
         address _to,
         uint256 _lockId,
         bytes memory _data
-    ) internal returns (bool) {
+    ) private returns (bool) {
         if (_to.code.length > 0) {
             try IERC721Receiver(_to).onERC721Received(msg.sender, _from, _lockId, _data) returns (
                 bytes4 retval
@@ -525,7 +660,7 @@ contract SDLPool is RewardsPoolController, IERC721Upgradeable, IERC721MetadataUp
      * @param _lockId id of lock
      * @return whether address is authorized ot not
      **/
-    function _isApprovedOrOwner(address _spender, uint256 _lockId) internal view returns (bool) {
+    function _isApprovedOrOwner(address _spender, uint256 _lockId) private view returns (bool) {
         address owner = ownerOf(_lockId);
         return (_spender == owner ||
             isApprovedForAll(owner, _spender) ||

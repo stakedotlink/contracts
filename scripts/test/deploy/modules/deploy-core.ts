@@ -18,7 +18,7 @@ const LinearBoostControllerArgs = {
   maxBoost: 8, // maximum boost amount
 }
 // SDL Pool Primary
-const SDLPoolPrimaryArgs = {
+const SDLPoolArgs = {
   derivativeTokenName: 'Reward Escrowed SDL', // SDL staking derivative token name
   derivativeTokenSymbol: 'reSDL', // SDL staking derivative token symbol
 }
@@ -52,24 +52,23 @@ export async function deployCore() {
   ])
   console.log('LinearBoostController deployed: ', lbc.target)
 
-  const sdlPoolPrimary = await deployUpgradeable('SDLPoolPrimary', [
-    SDLPoolPrimaryArgs.derivativeTokenName,
-    SDLPoolPrimaryArgs.derivativeTokenSymbol,
+  const sdlPool = await deployUpgradeable('SDLPool', [
+    SDLPoolArgs.derivativeTokenName,
+    SDLPoolArgs.derivativeTokenSymbol,
     sdlToken.target,
     lbc.target,
+    delegatorPool.target,
   ])
-  console.log('SDLPool deployed: ', sdlPoolPrimary.target)
-
-  await (await sdlPoolPrimary.setDelegatorPool(delegatorPool.target)).wait()
+  console.log('SDLPool deployed: ', sdlPool.target)
 
   updateDeployments(
     {
       SDLToken: sdlToken.target,
       LPLMigration: lplMigration.target,
       LinearBoostController: lbc.target,
-      SDLPool: sdlPoolPrimary.target,
+      SDLPool: sdlPool.target,
       DelegatorPool: delegatorPool.target,
     },
-    { SDLToken: 'StakingAllowance', SDLPool: 'SDLPoolPrimary' }
+    { SDLToken: 'StakingAllowance' }
   )
 }
