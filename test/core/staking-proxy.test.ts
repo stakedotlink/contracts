@@ -21,7 +21,6 @@ import {
 import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
-import { SDLPoolPrimary } from '../../typechain-types'
 
 describe('StakingProxy', () => {
   async function deployFixture() {
@@ -60,11 +59,12 @@ describe('StakingProxy', () => {
 
     const boostController = await deploy('LinearBoostController', [10, 4 * 365 * 86400, 4])
 
-    const sdlPool = await deployUpgradeable('SDLPoolPrimary', [
+    const sdlPool = await deployUpgradeable('SDLPool', [
       'Reward Escrowed SDL',
       'reSDL',
       sdlToken.target,
       boostController.target,
+      ethers.ZeroAddress,
     ])
 
     const rewardsPool = (await deploy('RewardsPoolWSD', [
