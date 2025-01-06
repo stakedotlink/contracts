@@ -1,10 +1,4 @@
-import {
-  ERC20,
-  ERC677,
-  PriorityPool,
-  SDLPoolPrimary,
-  StakingPool,
-} from '../../../../typechain-types'
+import { ERC20, ERC677, PriorityPool, SDLPool, StakingPool } from '../../../../typechain-types'
 import {
   updateDeployments,
   deploy,
@@ -55,7 +49,7 @@ const WithdrawalPoolArgs = {
 
 export async function deployMETISStaking() {
   const { accounts } = await getAccounts()
-  const sdlPoolPrimary = (await getContract('SDLPool')) as SDLPoolPrimary
+  const sdlPool = (await getContract('SDLPool')) as SDLPool
 
   const metisToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
     'Metis',
@@ -76,7 +70,7 @@ export async function deployMETISStaking() {
   const priorityPool = (await deployUpgradeable('PriorityPool', [
     metisToken.target,
     stakingPool.target,
-    sdlPoolPrimary.target,
+    sdlPool.target,
     PriorityPoolArgs.queueDepositMin,
     PriorityPoolArgs.queueDepositMax,
     true,
@@ -100,13 +94,13 @@ export async function deployMETISStaking() {
   console.log('METIS_WrappedSDToken token deployed: ', wsdToken.target)
 
   const stMetisSDLRewardsPool = await deploy('RewardsPoolWSD', [
-    sdlPoolPrimary.target,
+    sdlPool.target,
     stakingPool.target,
     wsdToken.target,
   ])
   console.log('stMetis_SDLRewardsPool deployed: ', stMetisSDLRewardsPool.target)
 
-  await (await sdlPoolPrimary.addToken(stakingPool.target, stMetisSDLRewardsPool.target)).wait()
+  await (await sdlPool.addToken(stakingPool.target, stMetisSDLRewardsPool.target)).wait()
   await (await stakingPool.setPriorityPool(priorityPool.target)).wait()
   await (await stakingPool.setRebaseController(accounts[0])).wait()
   await (await priorityPool.setDistributionOracle(accounts[0])).wait()
