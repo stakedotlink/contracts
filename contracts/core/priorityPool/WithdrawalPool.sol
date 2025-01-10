@@ -497,6 +497,13 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
                             _getStakeByShares(sharesToWithdraw)
                     )
                 );
+
+                // handle remaining dust
+                if (queuedWithdrawals[i].sharesRemaining < 100) {
+                    totalQueuedShareWithdrawals -= queuedWithdrawals[i].sharesRemaining;
+                    delete queuedWithdrawals[i].sharesRemaining;
+                }
+
                 indexOfNextWithdrawal = i;
                 withdrawalBatches.push(
                     WithdrawalBatch(uint128(i - 1), uint128(_getStakeByShares(1 ether)))
