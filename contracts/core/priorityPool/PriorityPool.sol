@@ -703,7 +703,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
 
         uint256 toWithdraw = _amount;
-        uint256 withdrawn;
         uint256 queued;
 
         if (totalQueued != 0) {
@@ -713,7 +712,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             depositsSinceLastUpdate += toWithdrawFromQueue;
             sharesSinceLastUpdate += stakingPool.getSharesByStake(toWithdrawFromQueue);
             toWithdraw -= toWithdrawFromQueue;
-            withdrawn = toWithdrawFromQueue;
         }
 
         if (
@@ -739,8 +737,10 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
             }
         }
 
+        uint256 withdrawn = _amount - toWithdraw;
+
         if (_shouldRevertOnZero && withdrawn + queued == 0) revert WithdrawFailed();
-        if (_amount != toWithdraw) emit Withdraw(_account, _amount - toWithdraw);
+        if (withdrawn != 0) emit Withdraw(_account, withdrawn);
 
         return withdrawn;
     }
