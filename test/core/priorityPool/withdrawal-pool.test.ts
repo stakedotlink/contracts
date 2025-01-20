@@ -74,6 +74,12 @@ describe('WithdrawalPool', () => {
 
     assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 1750)
     assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 1750)
+    assert.equal(
+      fromEther(await withdrawalPool.getAccountTotalQueuedWithdrawals(accounts[0])),
+      1500
+    )
+    assert.equal(fromEther(await withdrawalPool.getAccountTotalQueuedWithdrawals(accounts[1])), 250)
+
     assert.deepEqual(
       (await withdrawalPool.getWithdrawalIdsByOwner(accounts[0])).map((id) => Number(id)),
       [1, 3]
@@ -104,6 +110,11 @@ describe('WithdrawalPool', () => {
     assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 400)
     assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 1350)
     assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 1350)
+    assert.equal(
+      fromEther(await withdrawalPool.getAccountTotalQueuedWithdrawals(accounts[0])),
+      1100
+    )
+    assert.equal(fromEther(await withdrawalPool.getAccountTotalQueuedWithdrawals(accounts[1])), 250)
     assert.equal(Number(await withdrawalPool.indexOfNextWithdrawal()), 1)
     assert.deepEqual(
       (await withdrawalPool.getWithdrawals([1, 2, 3])).map((d: any) => [
