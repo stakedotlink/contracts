@@ -215,7 +215,7 @@ contract OperatorVCS is VaultControllerStrategy {
 
         // account for vaults that have been removed from the Chainlink staking contract but not yet removed
         // from this contract
-        if (vaultsToRemove.length != 0) {
+        if (vaultsToRemove.length != 0 || removedVaults.length != 0) {
             uint256 numVaults = vaults.length;
             for (uint256 i = 0; i < numVaults; ++i) {
                 if (vaults[i].isRemoved()) {
