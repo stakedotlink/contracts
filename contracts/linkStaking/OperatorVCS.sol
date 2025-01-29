@@ -18,10 +18,12 @@ contract OperatorVCS is VaultControllerStrategy {
 
     // used to check vault membership in this strategy
     mapping(address => bool) private vaultMapping;
-    // list of vaults that are queued for removal
-    address[] private vaultsToRemove;
+    // list of vaults indexes that are queued for removal
+    uint256[] private vaultsToRemove;
+    // list of vaults indexes that have been removed
+    uint256[] private removedVaults;
 
-    event VaultAdded(address indexed operator);
+    event VaultAdded(address indexed operator, address vault);
     event WithdrawExtraRewards(address indexed receiver, uint256 amount);
     event SetOperatorRewardPercentage(uint256 rewardPercentage);
 
@@ -242,8 +244,17 @@ contract OperatorVCS is VaultControllerStrategy {
      * @notice Returns a list of all vaults queued for removal
      * @return list of vaults
      */
-    function getVaultRemovalQueue() external view returns (address[] memory) {
+    function getVaultRemovalQueue() external view returns (uint256[] memory) {
         return vaultsToRemove;
+    }
+
+    /**
+     * @notice Returns a list of all vaults that have been removed
+     * @dev these vaults will be replaced when new operators are added
+     * @return list of vaults
+     */
+    function getRemovedVaults() external view returns (uint256[] memory) {
+        return removedVaults;
     }
 
     /**
@@ -253,14 +264,14 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _index index of vault
      */
     function queueVaultRemoval(uint256 _index) external {
-        address vault = address(vaults[_index]);
+        IVault vault = vaults[_index];
 
-        if (!IVault(vault).isRemoved()) revert OperatorNotRemoved();
+        if (!vault.isRemoved()) revert OperatorNotRemoved();
         for (uint256 i = 0; i < vaultsToRemove.length; ++i) {
-            if (vaultsToRemove[i] == vault) revert VaultRemovalAlreadyQueued();
+            if (vaultsToRemove[i] == _index) revert VaultRemovalAlreadyQueued();
         }
 
-        vaultsToRemove.push(address(vaults[_index]));
+        vaultsToRemove.push(_index);
 
         // update group accounting if vault is part of a group
         if (_index < globalVaultState.depositIndex) {
@@ -269,8 +280,8 @@ contract OperatorVCS is VaultControllerStrategy {
             groups[0] = group;
             fundFlowController.updateOperatorVaultGroupAccounting(groups);
 
-            // if possiible, remove vault right away
-            if (vaults[_index].claimPeriodActive()) {
+            // if possible, remove vault right away
+            if (vaults[_index].claimPeriodActive() || vaults[_index].getTotalDeposits() == 0) {
                 removeVault(vaultsToRemove.length - 1);
             }
         }
@@ -278,13 +289,11 @@ contract OperatorVCS is VaultControllerStrategy {
 
     /**
      * @notice Removes a vault that has been queued for removal
+     * @dev withdraws all funds and marks vault as removed
      * @param _queueIndex index of vault in removal queue
      */
     function removeVault(uint256 _queueIndex) public {
-        address vault = vaultsToRemove[_queueIndex];
-
-        vaultsToRemove[_queueIndex] = vaultsToRemove[vaultsToRemove.length - 1];
-        vaultsToRemove.pop();
+        address vault = address(vaults[vaultsToRemove[_queueIndex]]);
 
         _updateStrategyRewards();
         (uint256 principalWithdrawn, uint256 rewardsWithdrawn) = IOperatorVault(vault).exitVault();
@@ -292,21 +301,14 @@ contract OperatorVCS is VaultControllerStrategy {
         totalDeposits -= principalWithdrawn + rewardsWithdrawn;
         totalPrincipalDeposits -= principalWithdrawn;
 
-        uint256 numVaults = vaults.length;
-        uint256 index;
-        for (uint256 i = 0; i < numVaults; ++i) {
-            if (address(vaults[i]) == vault) {
-                index = i;
-                break;
-            }
-        }
-        for (uint256 i = index; i < numVaults - 1; ++i) {
-            vaults[i] = vaults[i + 1];
-        }
-        vaults.pop();
+        removedVaults.push(vaultsToRemove[_queueIndex]);
         delete vaultMapping[vault];
+        vaultsToRemove[_queueIndex] = vaultsToRemove[vaultsToRemove.length - 1];
+        vaultsToRemove.pop();
 
-        token.safeTransfer(address(stakingPool), token.balanceOf(address(this)));
+        if (principalWithdrawn + rewardsWithdrawn != 0) {
+            token.safeTransfer(address(stakingPool), token.balanceOf(address(this)));
+        }
     }
 
     /**
@@ -319,29 +321,6 @@ contract OperatorVCS is VaultControllerStrategy {
         IVault vault = vaults[_index];
         if (!IVault(vault).isRemoved()) revert OperatorNotRemoved();
         vaults[_index].unbond();
-    }
-
-    /**
-     * @notice Updates accounting for any number of vault groups
-     * @dev used to correct minor accounting errors that result from the removal or slashing
-     * of operators in the Chainlink staking contract
-     * @param _vaultGroups list of vault groups to update
-     * @param _totalDepositRoom list of totalDepositRoom corresponding to list of vault groups
-     * @param _totalUnbonded total amount currently unbonded
-     * @param _vaultMaxDeposits vault deposit limit as defined in Chainlink staking contract
-     */
-    function updateVaultGroupAccounting(
-        uint256[] calldata _vaultGroups,
-        uint256[] calldata _totalDepositRoom,
-        uint256 _totalUnbonded,
-        uint256 _vaultMaxDeposits
-    ) external onlyFundFlowController {
-        for (uint256 i = 0; i < _vaultGroups.length; ++i) {
-            vaultGroups[_vaultGroups[i]].totalDepositRoom = uint128(_totalDepositRoom[i]);
-        }
-
-        if (_totalUnbonded != totalUnbonded) totalUnbonded = _totalUnbonded;
-        if (_vaultMaxDeposits > vaultMaxDeposits) vaultMaxDeposits = _vaultMaxDeposits;
     }
 
     /**
@@ -366,8 +345,44 @@ contract OperatorVCS is VaultControllerStrategy {
             _rewardsReceiver
         );
         _deployVault(data);
-        vaultMapping[address(vaults[vaults.length - 1])] = true;
-        emit VaultAdded(_operator);
+
+        address newVault = address(vaults[vaults.length - 1]);
+        vaultMapping[newVault] = true;
+
+        // replace a removed vault if there are any
+        if (removedVaults.length != 0) {
+            uint256 index = removedVaults[removedVaults.length - 1];
+            vaults[index] = IVault(newVault);
+            vaults.pop();
+            removedVaults.pop();
+            uint256 group = index % globalVaultState.numVaultGroups;
+            vaultGroups[group].totalDepositRoom += uint128(vaultMaxDeposits);
+        }
+
+        emit VaultAdded(_operator, newVault);
+    }
+
+    /**
+     * @notice Updates accounting for any number of vault groups
+     * @dev used to correct minor accounting errors that result from the removal or slashing
+     * of operators in the Chainlink staking contract
+     * @param _vaultGroups list of vault groups to update
+     * @param _totalDepositRoom list of totalDepositRoom corresponding to list of vault groups
+     * @param _totalUnbonded total amount currently unbonded
+     * @param _vaultMaxDeposits vault deposit limit as defined in Chainlink staking contract
+     */
+    function updateVaultGroupAccounting(
+        uint256[] calldata _vaultGroups,
+        uint256[] calldata _totalDepositRoom,
+        uint256 _totalUnbonded,
+        uint256 _vaultMaxDeposits
+    ) external onlyFundFlowController {
+        for (uint256 i = 0; i < _vaultGroups.length; ++i) {
+            vaultGroups[_vaultGroups[i]].totalDepositRoom = uint128(_totalDepositRoom[i]);
+        }
+
+        if (_totalUnbonded != totalUnbonded) totalUnbonded = _totalUnbonded;
+        if (_vaultMaxDeposits > vaultMaxDeposits) vaultMaxDeposits = _vaultMaxDeposits;
     }
 
     /**
