@@ -483,7 +483,7 @@ contract StakingPool is StakingRewardsPool {
                     break;
                 } else if (strategyCanDeposit > 0) {
                     strategy.deposit(strategyCanDeposit, _data[i]);
-                    toDeposit -= strategyCanDeposit;
+                    toDeposit = token.balanceOf(address(this));
                 }
             }
         }
@@ -497,6 +497,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function _withdrawLiquidity(uint256 _amount, bytes[] calldata _data) private {
         uint256 toWithdraw = _amount;
+        uint256 balance = token.balanceOf(address(this));
 
         for (uint256 i = strategies.length; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
@@ -507,7 +508,9 @@ contract StakingPool is StakingRewardsPool {
                 break;
             } else if (strategyCanWithdrawdraw > 0) {
                 strategy.withdraw(strategyCanWithdrawdraw, _data[i - 1]);
-                toWithdraw -= strategyCanWithdrawdraw;
+                uint256 withdrawn = token.balanceOf(address(this)) - balance;
+                balance += withdrawn;
+                toWithdraw -= withdrawn;
             }
         }
     }
