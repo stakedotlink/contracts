@@ -70,6 +70,7 @@ describe('RebaseController', () => {
       adrs.priorityPool,
       adrs.securityPool,
       accounts[0],
+      accounts[0],
     ])) as RebaseController
     adrs.rebaseController = await rebaseController.getAddress()
 

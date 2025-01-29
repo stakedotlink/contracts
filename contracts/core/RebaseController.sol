@@ -22,6 +22,8 @@ contract RebaseController is Ownable {
 
     // address authorized to pause pool in case of emergency
     address public emergencyPauser;
+    // address authorized to update rewards
+    address public rewardsUpdater;
 
     error PoolClosed();
     error PoolOpen();
@@ -34,17 +36,20 @@ contract RebaseController is Ownable {
      * @param _priorityPool address of priority pool
      * @param _securityPool address of security pool
      * @param _emergencyPauser address authorized to pause pool in case of emergency
+     * @param _rewardsUpdater address authorized to update rewards
      */
     constructor(
         address _stakingPool,
         address _priorityPool,
         address _securityPool,
-        address _emergencyPauser
+        address _emergencyPauser,
+        address _rewardsUpdater
     ) {
         stakingPool = IStakingPool(_stakingPool);
         priorityPool = IPriorityPool(_priorityPool);
         securityPool = ISecurityPool(_securityPool);
         emergencyPauser = _emergencyPauser;
+        rewardsUpdater = _rewardsUpdater;
     }
 
     /**
@@ -56,10 +61,18 @@ contract RebaseController is Ownable {
     }
 
     /**
+     * @notice Reverts if sender is not rewards updater
+     */
+    modifier onlyRewardsUpdater() {
+        if (msg.sender != rewardsUpdater) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
      * @notice Updates strategy rewards in the staking pool
      * @param _data encoded data to pass to strategies
      **/
-    function updateRewards(bytes calldata _data) external {
+    function updateRewards(bytes calldata _data) external onlyRewardsUpdater {
         if (priorityPool.poolStatus() == IPriorityPool.PoolStatus.CLOSED) revert PoolClosed();
         _updateRewards(_data);
     }
@@ -132,6 +145,14 @@ contract RebaseController is Ownable {
      */
     function setEmergencyPauser(address _emergencyPauser) external onlyOwner {
         emergencyPauser = _emergencyPauser;
+    }
+
+    /**
+     * @notice Sets the address authorized to update rewards
+     * @param _rewardsUpdater address of rewards updater
+     */
+    function setRewardsUpdater(address _rewardsUpdater) external onlyOwner {
+        rewardsUpdater = _rewardsUpdater;
     }
 
     /**
