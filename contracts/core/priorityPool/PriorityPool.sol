@@ -701,6 +701,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         bytes[] memory _data
     ) internal returns (uint256) {
         if (poolStatus == PoolStatus.CLOSED) revert WithdrawalsDisabled();
+        if (_amount == 0) revert InvalidAmount();
 
         uint256 toWithdraw = _amount;
         uint256 queued;
