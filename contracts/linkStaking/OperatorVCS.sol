@@ -32,6 +32,7 @@ contract OperatorVCS is VaultControllerStrategy {
     error NoExtraRewards();
     error OperatorNotRemoved();
     error VaultRemovalAlreadyQueued();
+    error VaultAlreadyRemoved();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -269,6 +270,9 @@ contract OperatorVCS is VaultControllerStrategy {
         if (!vault.isRemoved()) revert OperatorNotRemoved();
         for (uint256 i = 0; i < vaultsToRemove.length; ++i) {
             if (vaultsToRemove[i] == _index) revert VaultRemovalAlreadyQueued();
+        }
+        for (uint256 i = 0; i < removedVaults.length; ++i) {
+            if (removedVaults[i] == _index) revert VaultAlreadyRemoved();
         }
 
         vaultsToRemove.push(_index);
