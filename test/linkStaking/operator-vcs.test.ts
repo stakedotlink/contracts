@@ -344,7 +344,7 @@ describe('OperatorVCS', () => {
       strategy,
       'VaultRemovalAlreadyQueued()'
     )
-    assert.deepEqual(await strategy.getVaultRemovalQueue(), [vaults[5]])
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [5n])
     assert.equal(fromEther(await strategy.totalUnbonded()), 200)
     assert.equal(fromEther(await strategy.vaultMaxDeposits()), 100)
     assert.equal(fromEther((await strategy.vaultGroups(0))[1]), 100)
@@ -353,8 +353,6 @@ describe('OperatorVCS', () => {
     await stakingController.setDepositLimits(0, toEther(140))
     await strategy.queueVaultRemoval(6)
 
-    assert.deepEqual(await strategy.getVaultRemovalQueue(), [vaults[5]])
-    assert.equal((await strategy.getVaults()).length, 14)
     assert.equal(fromEther(await strategy.totalUnbonded()), 100)
     assert.equal(fromEther(await strategy.vaultMaxDeposits()), 140)
     assert.equal(fromEther((await strategy.vaultGroups(1))[1]), 40)
@@ -394,7 +392,9 @@ describe('OperatorVCS', () => {
     await fundFlowController.updateVaultGroups()
 
     await stakingController.removeOperator(vaults[5])
+    await stakingController.removeOperator(vaults[4])
     await strategy.queueVaultRemoval(5)
+    await strategy.queueVaultRemoval(4)
 
     await time.increase(claimPeriod)
     await fundFlowController.updateVaultGroups()
@@ -404,16 +404,48 @@ describe('OperatorVCS', () => {
     await fundFlowController.updateVaultGroups()
     await time.increase(claimPeriod)
     await fundFlowController.updateVaultGroups()
+    await strategy.removeVault(0)
+
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [4n])
+    assert.deepEqual(await strategy.getRemovedVaults(), [5n])
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 900)
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 1020)
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 120)
+  })
+
+  it('addVault should work correctly with removed vaults', async () => {
+    const { accounts, adrs, strategy, stakingPool, fundFlowController, stakingController, vaults } =
+      await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
+
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
     await stakingController.removeOperator(vaults[6])
     await strategy.queueVaultRemoval(6)
 
-    await strategy.removeVault(0)
-
-    assert.deepEqual(await strategy.getVaultRemovalQueue(), [vaults[6]])
-    assert.deepEqual(await strategy.getVaults(), [...vaults.slice(0, 5), ...vaults.slice(6)])
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 900)
-    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 120)
+    await strategy.addVault(accounts[2], accounts[3], accounts[4])
+    assert.equal((await strategy.getVaults()).length, 15)
+    let vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[6])
+    assert.equal(await vault.token(), adrs.token)
+    assert.equal(await vault.stakeController(), adrs.stakingController)
+    assert.equal(await vault.vaultController(), adrs.strategy)
+    assert.equal(await vault.rewardsController(), adrs.rewardsController)
+    assert.equal(await vault.pfAlertsController(), accounts[4])
+    assert.equal(await vault.operator(), accounts[2])
+    assert.equal(await vault.rewardsReceiver(), accounts[3])
+    assert.equal(fromEther((await strategy.vaultGroups(1))[1]), 100)
   })
 
   it('setOperatorRewardPercentage should work correctly', async () => {

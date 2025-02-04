@@ -89,16 +89,15 @@ contract VaultDepositController is Strategy {
 
         (uint256 minDeposits, uint256 maxDeposits) = getVaultDepositLimits();
 
-        uint256 toDeposit = token.balanceOf(address(this));
         uint64[] memory vaultIds = abi.decode(_data, (uint64[]));
 
-        uint256 deposited = _depositToVaults(toDeposit, minDeposits, maxDeposits, vaultIds);
+        uint256 deposited = _depositToVaults(_amount, minDeposits, maxDeposits, vaultIds);
 
         totalDeposits += deposited;
         totalPrincipalDeposits += deposited;
 
-        if (deposited < toDeposit) {
-            token.safeTransfer(address(stakingPool), toDeposit - deposited);
+        if (deposited < _amount) {
+            token.safeTransfer(address(stakingPool), _amount - deposited);
         }
     }
 

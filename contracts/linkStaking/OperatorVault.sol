@@ -232,10 +232,10 @@ contract OperatorVault is Vault {
         if (rewards != 0) rewardsController.claimReward();
 
         uint256 principal = getPrincipalDeposits();
-        stakeController.unstakeRemovedPrincipal();
+        if (principal != 0) stakeController.unstakeRemovedPrincipal();
 
         uint256 balance = token.balanceOf(address(this));
-        token.safeTransfer(vaultController, balance);
+        if (balance != 0) token.safeTransfer(vaultController, balance);
 
         return (principal, rewards);
     }

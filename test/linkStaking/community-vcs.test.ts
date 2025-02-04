@@ -9,13 +9,7 @@ import {
   fromEther,
   deployImplementation,
 } from '../utils/helpers'
-import {
-  ERC677,
-  CommunityVCS,
-  StakingMock,
-  StakingRewardsMock,
-  CommunityVault,
-} from '../../typechain-types'
+import { ERC677, CommunityVCS, StakingMock, StakingRewardsMock } from '../../typechain-types'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const unbondingPeriod = 28 * 86400
@@ -170,8 +164,8 @@ describe('CommunityVCS', () => {
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 200)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 200)
 
-    await token.transfer(adrs.strategy, toEther(500))
-    await strategy.deposit(toEther(20), encodeVaults([]))
+    await token.transfer(adrs.strategy, toEther(300))
+    await strategy.deposit(toEther(520), encodeVaults([]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 720)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 720)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 720)
@@ -184,12 +178,5 @@ describe('CommunityVCS', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[7])), 60)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 800)
-
-    await token.transfer(adrs.strategy, toEther(2000))
-    await strategy.deposit(toEther(20), encodeVaults([]))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 2300)
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 0)
-    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 2300)
-    assert.equal(fromEther(await strategy.getTotalDeposits()), 2300)
   })
 })
