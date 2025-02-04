@@ -137,6 +137,36 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Returns whether vault groups should be updated
+     * @return true if vault groups should be updated, false otherwise
+     */
+    function shouldUpdateVaultGroups() external view returns (bool) {
+        uint256 curUnbondedGroup = curUnbondedVaultGroup;
+        uint256 nextUnbondedGroup = _getNextGroup(curUnbondedGroup, numVaultGroups);
+
+        // claim period must be concluded for current group
+        if (
+            timeOfLastUpdateByGroup[nextUnbondedGroup] != 0 &&
+            block.timestamp <=
+            timeOfLastUpdateByGroup[curUnbondedGroup] + unbondingPeriod + claimPeriod
+        ) return false;
+
+        // vault group unbonding must be properly spaced out with a full claim period between each group
+        // (only applies to the first cycle through the vault groups)
+        if (
+            curUnbondedGroup != 0 &&
+            timeOfLastUpdateByGroup[curUnbondedGroup] == 0 &&
+            block.timestamp <= timeOfLastUpdateByGroup[curUnbondedGroup - 1] + claimPeriod
+        ) return false;
+
+        // unbonding period must be concluded for next group
+        if (block.timestamp < timeOfLastUpdateByGroup[nextUnbondedGroup] + unbondingPeriod)
+            return false;
+
+        return true;
+    }
+
+    /**
      * @notice  Executes a vault group update
      * @dev re-unbonds all vaults in the current vault group and increments the current vault group
      * to the next one which will have just entered the claim period
