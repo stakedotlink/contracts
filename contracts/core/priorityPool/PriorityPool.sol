@@ -206,6 +206,28 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
+     * @notice Returns the current amount of withdrawable LSD tokens for multiple accounts
+     * @dev _distributionShareAmounts are stored on IPFS and should align with the provided accounts
+     * @param _accounts List of account addresses
+     * @param _distributionShareAmounts List of distribution share amounts corresponding to each account
+     * @return Array of withdrawable LSD token amounts for each account
+     */
+    function getLSDTokensBatch(
+        address[] calldata _accounts,
+        uint256[] calldata _distributionShareAmounts
+    ) external view returns (uint256[] memory) {
+        uint256[] memory withdrawableAmounts = new uint256[](_accounts.length);
+
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            address account = _accounts[i];
+            uint256 sharesToClaim = _distributionShareAmounts[i] - accountSharesClaimed[account];
+            withdrawableAmounts[i] = stakingPool.getStakeByShares(sharesToClaim);
+        }
+
+        return withdrawableAmounts;
+    }
+
+    /**
      * @notice Returns the total amount of asset tokens that an account can withdraw
      * @dev includes account's queued tokens and LST balance and checks both priority pool
      * and staking pool liquidity
