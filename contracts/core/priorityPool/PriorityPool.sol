@@ -216,8 +216,6 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         address[] calldata _accounts,
         uint256[] calldata _distributionShareAmounts
     ) external view returns (uint256[] memory) {
-        require(_accounts.length == _distributionShareAmounts.length, "Input length mismatch");
-
         uint256[] memory withdrawableAmounts = new uint256[](_accounts.length);
 
         for (uint256 i = 0; i < _accounts.length; i++) {
