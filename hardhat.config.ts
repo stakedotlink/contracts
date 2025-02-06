@@ -3,8 +3,6 @@ import '@nomicfoundation/hardhat-toolbox'
 import '@nomicfoundation/hardhat-ledger'
 import '@openzeppelin/hardhat-upgrades'
 
-export const ledgerAccount = '0x23c4602e63ACfe29b930c530B19d44a84AF0d767'
-
 const balance = '100000000000000000000000'
 const accounts = [
   'c3381a96fa2be2aae2f2798e0887272e634417710aa09ecad9328754cdc8db8a', //0x11187eff852069a33d102476b2E8A9cc9167dAde
@@ -29,24 +27,14 @@ const config: HardhatUserConfig = {
     localhost: {
       url: 'http://127.0.0.1:8545',
     },
-    sepolia: {
-      url: '',
-      accounts,
-    },
-    'arbitrum-sepolia': {
-      url: '',
-      chainId: 421614,
-      accounts,
-    },
     mainnet: {
       url: '',
-      ledgerAccounts: [ledgerAccount],
+      accounts,
     },
+    // mainnet: {
+    //   url: 'http://127.0.0.1:8545',
+    // },
     metis: {
-      url: '',
-      ledgerAccounts: [ledgerAccount],
-    },
-    testnet: {
       url: '',
       accounts,
     },
@@ -57,6 +45,10 @@ const config: HardhatUserConfig = {
         auto: true,
         interval: 5000,
       },
+      // forking: {
+      //   url: '',
+      //   blockNumber: 21424068,
+      // },
     },
   },
   etherscan: {

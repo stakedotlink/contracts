@@ -4,7 +4,7 @@
     "artifact": "contracts/core/tokens/base/ERC677.sol:ERC677"
   },
   "LINKToken": {
-    "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+    "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
     "artifact": "contracts/core/tokens/base/ERC677.sol:ERC677"
   },
   "SDLToken": {
