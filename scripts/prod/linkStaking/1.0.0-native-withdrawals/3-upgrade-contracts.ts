@@ -8,13 +8,13 @@ import { MetaTransactionData } from '@safe-global/types-kit'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const priorityPoolImp = ''
-const stakingPoolImp = ''
-const operatorVCSImp = ''
-const communityVCSImp = ''
-const operatorVaultImp = ''
-const communityVaultImp = ''
-const vaultDepositController = ''
+const priorityPoolImp = '0x7F89e4A071136f8E3Ec12D8F87793Dc84038C054'
+const stakingPoolImp = '0x88D89A8B037e9df1A750415826C16e9841Be9F9a'
+const operatorVCSImp = '0xfb8256CFCeeAcfb4835a3EbF47EBEa2902e30567'
+const communityVCSImp = '0xDD0c427D8A4a59e1D99EC2e9B69C6ABF85ec21e5'
+const operatorVaultImp = '0xc4bAf9Df7Da0dB146D8AeDEe447246ed47b4c2E4'
+const communityVaultImp = '0xE162e1093F30Fd0B9434b9B654fC6bd8Cf96A850'
+const vaultDepositController = '0x15FbAB6fD5d82fD7b326E4f3a1562A4D464eA1Bc'
 
 // Staking Pool
 const StakingPoolArgs = {
@@ -22,7 +22,7 @@ const StakingPoolArgs = {
 }
 // Operator VCS
 const OperatorVCSArgs = {
-  maxDepositSizeBP: 9000,
+  maxDepositSizeBP: 10000,
   vaultMaxDeposits: toEther(75000),
 }
 // Community VCS
@@ -32,7 +32,7 @@ const CommunityVCSArgs = {
 }
 
 async function main() {
-  const { signers, accounts } = await getAccounts()
+  const { accounts } = await getAccounts()
 
   const apiKit = new SafeApiKit({
     chainId: 1n,
@@ -40,7 +40,7 @@ async function main() {
 
   const protocolKitOwner = await Safe.init({
     provider: hre.network.provider,
-    signer: signers[0],
+    signer: accounts[0],
     safeAddress: multisigAddress,
   })
 
@@ -209,7 +209,10 @@ async function main() {
       value: '0',
     },
   ]
-  const safeTransaction = await protocolKitOwner.createTransaction({ transactions })
+  const safeTransaction = await protocolKitOwner.createTransaction({
+    transactions,
+    options: { nonce: 52 },
+  })
   const safeTxHash = await protocolKitOwner.getTransactionHash(safeTransaction)
   const senderSignature = await protocolKitOwner.signHash(safeTxHash)
 
