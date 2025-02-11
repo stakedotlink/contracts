@@ -4,7 +4,7 @@
     "artifact": "contracts/core/tokens/base/ERC677.sol:ERC677"
   },
   "LINKToken": {
-    "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+    "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
     "artifact": "contracts/core/tokens/base/ERC677.sol:ERC677"
   },
   "SDLToken": {
@@ -190,5 +190,17 @@
   "METIS_WrappedSDToken": {
     "address": "0xd7cf0e0fC12fB97e03841CE4f3086dB327CE0F2B",
     "artifact": "WrappedSDToken"
+  },
+  "LINK_RebaseController": {
+    "address": "0x1711e93eec78ba83D38C26f0fF284eB478bdbec4",
+    "artifact": "RebaseController"
+  },
+  "LINK_WithdrawalPool": {
+    "address": "0xa60B5146E44ff755e32BD51532842ceB41D0C248",
+    "artifact": "WithdrawalPool"
+  },
+  "LINK_FundFlowController": {
+    "address": "0xd2e7381d8d3FcC97C1b4d88761bDBc8Dd26a0200",
+    "artifact": "FundFlowController"
   }
 }

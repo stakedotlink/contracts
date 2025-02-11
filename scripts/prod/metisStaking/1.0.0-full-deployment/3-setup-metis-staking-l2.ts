@@ -1,5 +1,5 @@
-import { L2Transmitter } from '../../../typechain-types/contracts/metisStaking/L2Transmitter'
-import { getContract } from '../../utils/deployment'
+import { L2Transmitter } from '../../../../typechain-types/contracts/metisStaking/L2Transmitter'
+import { getContract } from '../../../utils/deployment'
 
 const l1Transmitter = ''
 

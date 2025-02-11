@@ -1,8 +1,13 @@
 import { ethers } from 'hardhat'
-import { ERC20, PriorityPool, StakingPool } from '../../../typechain-types'
-import { updateDeployments, deploy, getContract, deployUpgradeable } from '../../utils/deployment'
-import { toEther } from '../../utils/helpers'
-import { L2Strategy } from '../../../typechain-types/contracts/metisStaking/L2Strategy'
+import { ERC20, PriorityPool, StakingPool } from '../../../../typechain-types'
+import {
+  updateDeployments,
+  deploy,
+  getContract,
+  deployUpgradeable,
+} from '../../../utils/deployment'
+import { toEther } from '../../../utils/helpers'
+import { L2Strategy } from '../../../../typechain-types/contracts/metisStaking/L2Strategy'
 
 // Wrapped stMETIS
 const WrappedSDTokenArgs = {
