@@ -100,6 +100,7 @@ describe('VaultControllerStrategy', () => {
         adrs.strategy,
         adrs.stakingController,
         adrs.rewardsController,
+        accounts[0],
       ])) as CommunityVault
       vaultContracts.push(vault)
       vaults.push(await vault.getAddress())
@@ -536,6 +537,7 @@ describe('VaultControllerStrategy', () => {
           adrs.strategy,
           adrs.stakingController,
           adrs.rewardsController,
+          accounts[0],
           accounts[0],
           accounts[i],
           accounts[0],

@@ -105,6 +105,7 @@ describe('PPKeeper', () => {
         comStrategy.target,
         stakingController.target,
         rewardsController.target,
+        accounts[0],
       ])) as CommunityVault
       vaultContracts.push(vault)
       vaults.push(vault.target)

@@ -20,4 +20,6 @@ interface IVaultControllerStrategy {
     function totalUnbonded() external view returns (uint256);
 
     function vaultMaxDeposits() external view returns (uint256);
+
+    function fundFlowController() external view returns (address);
 }
