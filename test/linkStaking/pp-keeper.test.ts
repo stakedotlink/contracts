@@ -122,6 +122,8 @@ describe('PPKeeper', () => {
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
       opStrategy.target,
       comStrategy.target,
+      token.target,
+      accounts[0],
       unbondingPeriod,
       claimPeriod,
       5,

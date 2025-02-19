@@ -116,6 +116,8 @@ describe('VaultControllerStrategy', () => {
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
       adrs.strategy2,
       adrs.strategy,
+      token.target,
+      accounts[0],
       unbondingPeriod,
       claimPeriod,
       5,

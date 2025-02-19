@@ -114,6 +114,8 @@ describe('OperatorVCS', () => {
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
       strategy.target,
       comSrategy.target,
+      token.target,
+      accounts[0],
       unbondingPeriod,
       claimPeriod,
       5,

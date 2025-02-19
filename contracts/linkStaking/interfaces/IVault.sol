@@ -20,6 +20,10 @@ interface IVault {
 
     function migrate(bytes calldata _data) external;
 
+    function delegate(address _to, bytes32 _rights, bool _enable) external;
+
+    function withdrawTokenRewards(address[] calldata _tokens) external;
+
     function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
 
     function upgradeTo(address _newImplementation) external;
