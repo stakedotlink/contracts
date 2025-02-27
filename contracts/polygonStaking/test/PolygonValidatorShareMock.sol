@@ -99,4 +99,9 @@ contract PolygonValidatorShareMock {
         liquidRewards[_user] += _amount;
         stakeManager.deposit(msg.sender, _amount);
     }
+
+    function removeReward(address _user, uint256 _amount) external {
+        liquidRewards[_user] -= _amount;
+        stakeManager.withdraw(msg.sender, _amount);
+    }
 }
