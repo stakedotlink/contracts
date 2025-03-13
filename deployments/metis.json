@@ -26,5 +26,9 @@
   "METIS_WrappedSDToken": {
     "address": "0x7F89e4A071136f8E3Ec12D8F87793Dc84038C054",
     "artifact": "WrappedSDToken"
+  },
+  "METIS_RebaseController": {
+    "address": "0x7f9bD75bddCC7AB80433bD288a0E71Fd0ffcFC3D",
+    "artifact": "RebaseController"
   }
 }

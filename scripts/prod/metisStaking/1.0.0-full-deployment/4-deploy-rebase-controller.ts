@@ -1,7 +1,8 @@
 import { ethers } from 'hardhat'
 import { deploy, getContract, updateDeployments } from '../../../utils/deployment'
 
-const emergencyPauser = '' // address authorized to pause pool in case of emergency
+const emergencyPauser = ethers.ZeroAddress // address authorized to pause pool in case of emergency
+const rewardsUpdater = '0xf5c08D55a77063ac4E5E18F1a470804088BE1ad4' // address authorized to update rewards
 
 async function main() {
   const priorityPool = await getContract('METIS_PriorityPool')
@@ -12,6 +13,7 @@ async function main() {
     priorityPool.target,
     ethers.ZeroAddress,
     emergencyPauser,
+    rewardsUpdater,
   ])
   console.log('METIS_RebaseController deployed: ', rebaseController.target)
 
