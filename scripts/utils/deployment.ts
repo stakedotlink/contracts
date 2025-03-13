@@ -1,4 +1,4 @@
-import { Contract } from 'ethers'
+import { Addressable, Contract } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
 
@@ -17,7 +17,7 @@ export const deployImplementation = async (contractName: string, useLedgerSigner
 }
 
 export const upgradeProxy = async (
-  proxyAddress: string,
+  proxyAddress: string | Addressable,
   implementationContractName: string,
   useDeployedImplementation = false,
   call?: { fn: string; args?: unknown[] } | undefined
