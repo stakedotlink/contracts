@@ -16,5 +16,9 @@ contract WithdrawalPoolMock {
         totalQueuedWithdrawals = _totalQueuedWithdrawals;
     }
 
+    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
+        return (totalQueuedWithdrawals != 0, "0x");
+    }
+
     function performUpkeep(bytes calldata) external {}
 }

@@ -64,6 +64,9 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function deposit(uint256 _amount) external onlyVaultController {
         token.safeTransferFrom(msg.sender, address(this), _amount);
         validatorPool.buyVoucher(_amount, 0);
+
+        uint256 balance = token.balanceOf(address(this));
+        if (balance != 0) token.safeTransfer(msg.sender, balance);
     }
 
     /**
@@ -72,7 +75,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function withdraw() external onlyVaultController returns (uint256) {
         validatorPool.unstakeClaimTokens();
         uint256 amount = token.balanceOf(address(this));
-        token.safeTransfer(vaultController, amount);
+        token.safeTransfer(msg.sender, amount);
         return amount;
     }
 
@@ -92,7 +95,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns the total balance of this contract
-     * @dev includes principal, rewards, and tokens sitting in this contract
+     * @dev includes principal, rewards, queued withdrawals, and tokens sitting in this contract
      * @return total balance
      */
     function getTotalDeposits() public view returns (uint256) {
@@ -135,7 +138,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function isWithdrawable() external view returns (bool) {
         (uint256 shares, uint256 withdrawEpoch) = validatorPool.delegators(address(this));
         return
-            shares != 0 && withdrawEpoch + stakeManager.withdrawalDelay() <= stakeManager.epoch();
+            shares != 0 && stakeManager.epoch() >= (withdrawEpoch + stakeManager.withdrawalDelay());
     }
 
     /**
@@ -144,7 +147,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function isUnbonding() external view returns (bool) {
         (, uint256 withdrawEpoch) = validatorPool.delegators(address(this));
-        return withdrawEpoch + stakeManager.withdrawalDelay() > stakeManager.epoch();
+        return stakeManager.epoch() < (withdrawEpoch + stakeManager.withdrawalDelay());
     }
 
     /**
