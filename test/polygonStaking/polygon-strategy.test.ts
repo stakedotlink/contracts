@@ -613,7 +613,7 @@ describe('PolygonStrategy', () => {
       strategy,
       'RemovalAlreadyQueued()'
     )
-    assert.deepEqual(await strategy.validatorRemoval(), [true, 0n, toEther(45)])
+    assert.deepEqual(await strategy.validatorRemoval(), [true, 0n, toEther(75)])
     assert.equal(await strategy.totalStaked(), 1n)
     assert.equal(await strategy.staked(accounts[1]), 0n)
     assert.equal(await strategy.staked(accounts[2]), 1n)
