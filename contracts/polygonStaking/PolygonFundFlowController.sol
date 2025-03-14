@@ -26,6 +26,8 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     // time of last unbonding call
     uint64 public timeOfLastUnbond;
 
+    event SetMinTimeBetweenUnbonding(uint64 minTimeBetweenUnbonding);
+
     error SenderNotAuthorized();
     error NoUnbondingNeeded();
 
@@ -64,7 +66,7 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns whether tokens can deposited
+     * @notice Returns whether tokens can be deposited
      * @return true if tokens can be deposited, false otherwise
      */
     function canDepositQueuedTokens() external view returns (bool) {
@@ -142,7 +144,9 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     function withdrawVaults(uint256[][] calldata _vaultIds) external {
         strategy.unstakeClaim(_vaultIds);
 
-        if (withdrawalPool.getTotalQueuedWithdrawals() != 0) {
+        (bool upkeepNeeded, ) = withdrawalPool.checkUpkeep("0x");
+
+        if (upkeepNeeded) {
             withdrawalPool.performUpkeep("");
         }
     }
@@ -294,6 +298,7 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      */
     function setMinTimeBetweenUnbonding(uint64 _minTimeBetweenUnbonding) external onlyOwner {
         minTimeBetweenUnbonding = _minTimeBetweenUnbonding;
+        emit SetMinTimeBetweenUnbonding(_minTimeBetweenUnbonding);
     }
 
     /**

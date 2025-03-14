@@ -77,7 +77,17 @@ contract PolygonStrategy is Strategy {
     // index of validator to withdraw from on next withdrawal
     uint256 public validatorWithdrawalIndex;
 
+    event DepositQueuedTokens();
+    event Unbond(uint256 amount);
+    event UnstakeClaim(uint256 amount);
+    event RestakeRewards();
+    event AddValidator(address indexed pool, address rewardsReceiver);
+    event QueueValidatorRemoval(address indexed pool, address rewardsReceiver);
+    event FinalizeValidatorRemoval(address indexed pool, address rewardsReceiver);
     event UpgradedVaults();
+    event AddFee(address receiver, uint256 feeBasisPoints);
+    event UpdateFee(uint256 index, address receiver, uint256 feeBasisPoints);
+    event SetValidatorMEVRewardsPercentage(uint256 validatorMEVRewardsPercentage);
     event SetVaultImplementation(address vaultImplementation);
 
     error FeesTooLarge();
@@ -184,7 +194,7 @@ contract PolygonStrategy is Strategy {
         ) revert InvalidVaultIds();
         if (numVaultsUnbonding != 0) revert UnbondingInProgress();
 
-        uint256 totalDeposited;
+        uint256 preBalance = token.balanceOf(address(this));
 
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
             uint256 depositIndex = validators[i].depositIndex;
@@ -198,13 +208,20 @@ contract PolygonStrategy is Strategy {
 
                 if (index == depositIndex) ++depositIndex;
                 vaults[i][index].deposit(amount);
-                totalDeposited += amount;
             }
 
             validators[i].depositIndex = depositIndex;
         }
 
-        totalQueued -= totalDeposited;
+        // balance change could be positive if many rewards are claimed while depositing
+        int256 balanceChange = int256(token.balanceOf(address(this))) - int256(preBalance);
+        if (balanceChange < 0) {
+            totalQueued -= uint256(-1 * balanceChange);
+        } else if (balanceChange > 0) {
+            totalQueued += uint256(balanceChange);
+        }
+
+        emit DepositQueuedTokens();
     }
 
     /**
@@ -255,6 +272,8 @@ contract PolygonStrategy is Strategy {
         }
 
         numVaultsUnbonding = totalVaultsUnbonded;
+
+        emit Unbond(_toUnbond);
     }
 
     /**
@@ -269,7 +288,7 @@ contract PolygonStrategy is Strategy {
             _vaultIds[validatorRemoval.validatorId].length != 0
         ) revert InvalidVaultIds();
 
-        uint256 beforeBalance = token.balanceOf(address(this));
+        uint256 preBalance = token.balanceOf(address(this));
         uint256 vaultsWithdrawn;
 
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
@@ -282,8 +301,10 @@ contract PolygonStrategy is Strategy {
         if (vaultsWithdrawn != numVaultsUnbonding) revert MustWithdrawAllVaults();
         numVaultsUnbonding = 0;
 
-        uint256 amountWithdrawn = token.balanceOf(address(this)) - beforeBalance;
+        uint256 amountWithdrawn = token.balanceOf(address(this)) - preBalance;
         totalQueued += amountWithdrawn;
+
+        emit UnstakeClaim(amountWithdrawn);
     }
 
     /**
@@ -354,6 +375,8 @@ contract PolygonStrategy is Strategy {
                 vaults[i][_vaultIds[i][j]].restakeRewards();
             }
         }
+
+        emit RestakeRewards();
     }
 
     /**
@@ -432,6 +455,8 @@ contract PolygonStrategy is Strategy {
             token.safeApprove(vault, type(uint256).max);
             vaults[vaults.length - 1].push(IPolygonVault(vault));
         }
+
+        emit AddValidator(_pool, _rewardsReceiver);
     }
 
     /**
@@ -466,6 +491,11 @@ contract PolygonStrategy is Strategy {
             uint64(_validatorId),
             uint128(totalValidatorDeposits)
         );
+
+        emit QueueValidatorRemoval(
+            validators[_validatorId].pool,
+            validators[_validatorId].rewardsReceiver
+        );
     }
 
     /**
@@ -487,6 +517,11 @@ contract PolygonStrategy is Strategy {
 
         uint256 amountWithdrawn = token.balanceOf(address(this)) - balanceBefore;
         totalQueued += amountWithdrawn;
+
+        emit FinalizeValidatorRemoval(
+            validators[validatorId].pool,
+            validators[validatorId].rewardsReceiver
+        );
 
         validators[validatorId] = validators[validators.length - 1];
         validators.pop();
@@ -531,6 +566,7 @@ contract PolygonStrategy is Strategy {
         _updateStrategyRewards();
         fees.push(Fee(_receiver, _feeBasisPoints));
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
+        emit AddFee(_receiver, _feeBasisPoints);
     }
 
     /**
@@ -557,6 +593,7 @@ contract PolygonStrategy is Strategy {
         }
 
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
+        emit UpdateFee(_index, _receiver, _feeBasisPoints);
     }
 
     /**
@@ -575,6 +612,7 @@ contract PolygonStrategy is Strategy {
         uint256 _validatorMEVRewardsPercentage
     ) external onlyOwner {
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
+        emit SetValidatorMEVRewardsPercentage(_validatorMEVRewardsPercentage);
     }
 
     /**
