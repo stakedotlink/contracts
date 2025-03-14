@@ -259,12 +259,15 @@ contract PolygonStrategy is Strategy {
 
     /**
      * @notice Claims and withdraws tokens from vaults that are unbonded
-     * @dev can cause validatorWithdrawal.queuedWithdrawals to be incorrect if _vaultIds is incorrect while
-     * a validator is queued for removal
      * @param _vaultIds list of vaults to withdraw from
      */
     function unstakeClaim(uint256[][] calldata _vaultIds) external onlyFundFlowController {
         if (numVaultsUnbonding == 0) revert NoVaultsUnbonding();
+        if (
+            validatorRemoval.isActive &&
+            _vaultIds.length > validatorRemoval.validatorId &&
+            _vaultIds[validatorRemoval.validatorId].length != 0
+        ) revert InvalidVaultIds();
 
         uint256 beforeBalance = token.balanceOf(address(this));
         uint256 vaultsWithdrawn;
@@ -442,11 +445,17 @@ contract PolygonStrategy is Strategy {
 
         for (uint256 i = 0; i < vaults[_validatorId].length; ++i) {
             IPolygonVault vault = vaults[_validatorId][i];
+
             uint256 deposits = vault.getTotalDeposits();
-            if (deposits != 0 && vault.getQueuedWithdrawals() == 0) {
+            if (deposits == 0) continue;
+
+            if (vault.isUnbonding() || vault.isWithdrawable()) {
+                --numVaultsUnbonding;
+            } else {
                 vault.unbond();
-                totalValidatorDeposits += deposits;
             }
+
+            totalValidatorDeposits += deposits;
         }
 
         validatorMEVRewardsPool.updateReward(validators[_validatorId].rewardsReceiver);

@@ -16,6 +16,8 @@ interface IPolygonVault {
 
     function getQueuedWithdrawals() external view returns (uint256);
 
+    function getRewards() external view returns (uint256);
+
     function isUnbonding() external view returns (bool);
 
     function isWithdrawable() external view returns (bool);
