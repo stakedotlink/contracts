@@ -678,6 +678,38 @@ describe('PolygonStrategy', () => {
     assert.equal(await vaults[0][3].isUnbonding(), false)
   })
 
+  it('setVaultsPerValidator should work correctly', async () => {
+    const { strategy } = await loadFixture(deployFixture)
+
+    await expect(strategy.setVaultsPerValidator(5)).to.be.revertedWithCustomError(
+      strategy,
+      'InvalidVaultsPerValidator()'
+    )
+
+    await strategy.setVaultsPerValidator(7)
+
+    assert.equal(await strategy.vaultsPerValidator(), 7n)
+
+    let vaults = await strategy.getVaults()
+    assert.equal(vaults.length, 2)
+
+    let validators = await strategy.getValidators()
+
+    let map: any = {}
+    for (let i = 0; i < 2; i++) {
+      assert.equal(vaults[i].length, 7)
+      for (let j = 0; j < 7; j++) {
+        let vault = vaults[i][j]
+        assert.isTrue(!map[vault])
+        assert.equal(
+          await (await ethers.getContractAt('PolygonVault', vault)).validatorPool(),
+          validators[i].pool
+        )
+        map[vault] = true
+      }
+    }
+  })
+
   it('upgradeVaults should work correctly', async () => {
     const { strategy, vaults } = await loadFixture(deployFixture)
 
