@@ -100,6 +100,7 @@ contract PolygonStrategy is Strategy {
     error InvalidVaultIds();
     error InvalidAmount();
     error NoVaultsUnbonding();
+    error InvalidVaultsPerValidator();
 
     /**
      * @notice Initializes contract
@@ -594,6 +595,37 @@ contract PolygonStrategy is Strategy {
 
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
         emit UpdateFee(_index, _receiver, _feeBasisPoints);
+    }
+
+    /**
+     * @notice Sets the number of vaults to deploy per validator
+     * @dev will deploy new vaults for every validator equal to the difference between the new value and current
+     * @param _vaultsPerValidator number of vaults
+     */
+    function setVaultsPerValidator(uint256 _vaultsPerValidator) external onlyOwner {
+        if (_vaultsPerValidator <= vaultsPerValidator) revert InvalidVaultsPerValidator();
+
+        uint256 numVaultsToDeploy = _vaultsPerValidator - vaultsPerValidator;
+        vaultsPerValidator = _vaultsPerValidator;
+
+        for (uint256 i = 0; i < validators.length; ++i) {
+            for (uint256 j = 0; j < numVaultsToDeploy; ++j) {
+                address vault = address(
+                    new ERC1967Proxy(
+                        vaultImplementation,
+                        abi.encodeWithSignature(
+                            "initialize(address,address,address,address)",
+                            address(token),
+                            address(this),
+                            stakeManager,
+                            validators[i].pool
+                        )
+                    )
+                );
+                token.safeApprove(vault, type(uint256).max);
+                vaults[i].push(IPolygonVault(vault));
+            }
+        }
     }
 
     /**
