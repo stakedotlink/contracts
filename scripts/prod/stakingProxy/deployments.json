@@ -1,0 +1,6 @@
+{
+    "StakingProxy0": {
+      "address": "0xc1b7a5346c4342D352205DEEB15b049f567Da740",
+      "artifact": "contracts/core/StakingProxy.sol"
+    }
+}
