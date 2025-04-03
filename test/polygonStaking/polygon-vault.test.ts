@@ -94,17 +94,38 @@ describe('PolygonVault', () => {
     assert.equal(await vault.isWithdrawable(), false)
     assert.equal(fromEther(await vault.getQueuedWithdrawals()), 0)
 
-    await vault.unbond()
+    await vault.unbond(toEther(30))
 
-    await expect(vault.unbond()).to.be.revertedWithCustomError(validatorShare, 'ZeroBalance()')
+    await expect(vault.unbond(toEther(70))).to.be.revertedWithCustomError(
+      vault,
+      'UnbondingInProgress()'
+    )
 
     assert.equal(await vault.isUnbonding(), true)
     assert.equal(await vault.isWithdrawable(), false)
-    assert.equal(fromEther(await vault.getQueuedWithdrawals()), 100)
-    assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
+    assert.equal(fromEther(await vault.getQueuedWithdrawals()), 30)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
     assert.equal(fromEther(await token.balanceOf(vault.target)), 50)
+
+    await time.increase(withdrawalDelay)
+    await vault.withdraw()
+
+    await expect(vault.unbond(toEther(71))).to.be.revertedWithCustomError(
+      validatorShare,
+      'InsufficientBalance()'
+    )
+
+    await vault.unbond(toEther(70))
+
+    assert.equal(await vault.isUnbonding(), true)
+    assert.equal(await vault.isWithdrawable(), false)
+    assert.equal(fromEther(await vault.getQueuedWithdrawals()), 70)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
+    assert.equal(fromEther(await vault.getRewards()), 0)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 70)
+    assert.equal(fromEther(await token.balanceOf(vault.target)), 0)
   })
 
   it('withdraw should work correctly', async () => {
@@ -114,7 +135,31 @@ describe('PolygonVault', () => {
 
     await vault.deposit(toEther(100))
     await validatorShare.addReward(vault.target, toEther(50))
-    await vault.unbond()
+    await vault.unbond(toEther(30))
+
+    assert.equal(await vault.isWithdrawable(), false)
+    await expect(vault.withdraw()).to.be.revertedWithCustomError(
+      validatorShare,
+      'IncompleteWithdrawalPeriod()'
+    )
+
+    await time.increase(withdrawalDelay)
+
+    assert.equal(await vault.isUnbonding(), false)
+    assert.equal(await vault.isWithdrawable(), true)
+
+    await vault.withdraw()
+
+    assert.equal(await vault.isUnbonding(), false)
+    assert.equal(await vault.isWithdrawable(), false)
+    assert.equal(fromEther(await vault.getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
+    assert.equal(fromEther(await vault.getRewards()), 0)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 70)
+    assert.equal(fromEther(await token.balanceOf(vault.target)), 0)
+    assert.equal(await token.balanceOf(accounts[0]), preBalance - toEther(70))
+
+    await vault.unbond(toEther(70))
 
     assert.equal(await vault.isWithdrawable(), false)
     await expect(vault.withdraw()).to.be.revertedWithCustomError(
