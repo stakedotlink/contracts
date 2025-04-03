@@ -26,6 +26,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IPolygonStaking public validatorPool;
 
     error OnlyVaultController();
+    error UnbondingInProgress();
 
     /**
      * @notice Initializes contract
@@ -63,7 +64,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function deposit(uint256 _amount) external onlyVaultController {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        validatorPool.buyVoucher(_amount, 0);
+        validatorPool.buyVoucherPOL(_amount, 0);
 
         uint256 balance = token.balanceOf(address(this));
         if (balance != 0) token.safeTransfer(msg.sender, balance);
@@ -73,7 +74,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Withdraws tokens from the validator pool and sends them to the vault controller
      */
     function withdraw() external onlyVaultController returns (uint256) {
-        validatorPool.unstakeClaimTokens();
+        validatorPool.unstakeClaimTokensPOL();
         uint256 amount = token.balanceOf(address(this));
         token.safeTransfer(msg.sender, amount);
         return amount;
@@ -81,16 +82,20 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Queues tokens for withdrawal in the validator pool
+     * @param _amount amount to unbond
      */
-    function unbond() external onlyVaultController {
-        validatorPool.sellVoucher(0);
+    function unbond(uint256 _amount) external onlyVaultController {
+        (uint256 shares, ) = validatorPool.unbonds(address(this));
+        if (shares != 0) revert UnbondingInProgress();
+
+        validatorPool.sellVoucherPOL(_amount, type(uint256).max);
     }
 
     /**
      * @notice Restakes rewards in the validator pool
      **/
     function restakeRewards() external {
-        validatorPool.restake();
+        validatorPool.restakePOL();
     }
 
     /**
@@ -127,7 +132,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return amount of queued withdrawals
      */
     function getQueuedWithdrawals() public view returns (uint256) {
-        (uint256 shares, ) = validatorPool.delegators(address(this));
+        (uint256 shares, ) = validatorPool.unbonds(address(this));
         return shares * validatorPool.withdrawExchangeRate();
     }
 
@@ -136,7 +141,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return whether deposits can be withdrawn
      */
     function isWithdrawable() external view returns (bool) {
-        (uint256 shares, uint256 withdrawEpoch) = validatorPool.delegators(address(this));
+        (uint256 shares, uint256 withdrawEpoch) = validatorPool.unbonds(address(this));
         return
             shares != 0 && stakeManager.epoch() >= (withdrawEpoch + stakeManager.withdrawalDelay());
     }
@@ -146,7 +151,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return whether vault is unbonding
      */
     function isUnbonding() external view returns (bool) {
-        (, uint256 withdrawEpoch) = validatorPool.delegators(address(this));
+        (, uint256 withdrawEpoch) = validatorPool.unbonds(address(this));
         return stakeManager.epoch() < (withdrawEpoch + stakeManager.withdrawalDelay());
     }
 
