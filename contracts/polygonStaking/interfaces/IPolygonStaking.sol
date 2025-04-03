@@ -2,15 +2,13 @@
 pragma solidity 0.8.15;
 
 interface IPolygonStaking {
-    function buyVoucher(uint256 _amount, uint256 _minSharesToMint) external;
+    function buyVoucherPOL(uint256 _amount, uint256 _minSharesToMint) external returns (uint256);
 
-    function sellVoucher(uint256 _minClaimAmount) external;
+    function sellVoucherPOL(uint256 _claimAmount, uint256 _maximumSharesToBurn) external;
 
-    function unstakeClaimTokens() external;
+    function unstakeClaimTokensPOL() external;
 
-    function restake() external;
-
-    function withdrawRewards() external;
+    function restakePOL() external returns (uint256, uint256);
 
     function getLiquidRewards(address _user) external view returns (uint256);
 
@@ -20,5 +18,5 @@ interface IPolygonStaking {
 
     function withdrawExchangeRate() external view returns (uint256);
 
-    function delegators(address _user) external view returns (uint256, uint256);
+    function unbonds(address _user) external view returns (uint256, uint256);
 }
