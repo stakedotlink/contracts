@@ -89,6 +89,9 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         if (shares != 0) revert UnbondingInProgress();
 
         validatorPool.sellVoucherPOL(_amount, type(uint256).max);
+
+        uint256 balance = token.balanceOf(address(this));
+        if (balance != 0) token.safeTransfer(msg.sender, balance);
     }
 
     /**
@@ -96,6 +99,16 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      **/
     function restakeRewards() external {
         validatorPool.restakePOL();
+    }
+
+    /**
+     * @notice Withdraws rewards from the validator pool
+     **/
+    function withdrawRewards() external onlyVaultController {
+        validatorPool.withdrawRewardsPOL();
+
+        uint256 balance = token.balanceOf(address(this));
+        token.safeTransfer(msg.sender, balance);
     }
 
     /**

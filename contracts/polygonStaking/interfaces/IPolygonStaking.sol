@@ -10,6 +10,8 @@ interface IPolygonStaking {
 
     function restakePOL() external returns (uint256, uint256);
 
+    function withdrawRewardsPOL() external;
+
     function getLiquidRewards(address _user) external view returns (uint256);
 
     function balanceOf(address _user) external view returns (uint256);
