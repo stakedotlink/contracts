@@ -105,7 +105,7 @@ describe('PolygonVault', () => {
   })
 
   it('unbond should work correctly', async () => {
-    const { vault, validatorShare, token } = await loadFixture(deployFixture)
+    const { vault, validatorShare, token, accounts } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
     await validatorShare.addReward(vault.target, toEther(50))
@@ -114,20 +114,17 @@ describe('PolygonVault', () => {
     assert.equal(await vault.isWithdrawable(), false)
     assert.equal(fromEther(await vault.getQueuedWithdrawals()), 0)
 
-    await vault.unbond(toEther(30))
+    let preBalance = await token.balanceOf(accounts[0])
 
-    await expect(vault.unbond(toEther(70))).to.be.revertedWithCustomError(
-      vault,
-      'UnbondingInProgress()'
-    )
+    await vault.unbond(toEther(30))
 
     assert.equal(await vault.isUnbonding(), true)
     assert.equal(await vault.isWithdrawable(), false)
     assert.equal(fromEther(await vault.getQueuedWithdrawals()), 30)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
     assert.equal(fromEther(await vault.getRewards()), 0)
-    assert.equal(fromEther(await vault.getTotalDeposits()), 150)
-    assert.equal(fromEther(await token.balanceOf(vault.target)), 50)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 100)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
 
     await time.increase(withdrawalDelay)
     await vault.withdraw()

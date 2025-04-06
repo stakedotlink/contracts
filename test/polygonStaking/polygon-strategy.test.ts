@@ -45,6 +45,10 @@ describe('PolygonStrategy', () => {
       stakeManager.target,
     ])) as PolygonValidatorShareMock
 
+    const validatorShare3 = (await deploy('PolygonValidatorShareMock', [
+      stakeManager.target,
+    ])) as PolygonValidatorShareMock
+
     const stakingPool = (await deployUpgradeable('StakingPool', [
       token.target,
       'Staking Polygon',
@@ -60,7 +64,6 @@ describe('PolygonStrategy', () => {
       stakingPool.target,
       stakeManager.target,
       vaultImp,
-      5,
       2500,
       [],
     ])) as PolygonStrategy
@@ -81,6 +84,7 @@ describe('PolygonStrategy', () => {
 
     await strategy.addValidator(validatorShare.target, accounts[1])
     await strategy.addValidator(validatorShare2.target, accounts[2])
+    await strategy.addValidator(validatorShare3.target, accounts[3])
 
     await token.approve(stakingPool.target, ethers.MaxUint256)
     await token.approve(stakeManager.target, ethers.MaxUint256)
@@ -88,11 +92,7 @@ describe('PolygonStrategy', () => {
     let vaultAddresses: any = await strategy.getVaults()
     let vaults = []
     for (let i = 0; i < vaultAddresses.length; i++) {
-      vaults.push(
-        await Promise.all(
-          vaultAddresses[i].map((v: string) => ethers.getContractAt('PolygonVault', v))
-        )
-      )
+      vaults.push(await ethers.getContractAt('PolygonVault', vaultAddresses[i]))
     }
 
     return {
@@ -102,6 +102,7 @@ describe('PolygonStrategy', () => {
       validatorShare,
       strategy,
       validatorShare2,
+      validatorShare3,
       stakingPool,
       vaults,
       mevRewardsPool,
@@ -109,50 +110,46 @@ describe('PolygonStrategy', () => {
   }
 
   it('addValidator should work correctly', async () => {
-    const { strategy, stakeManager, validatorShare, accounts, validatorShare2 } = await loadFixture(
-      deployFixture
-    )
-
-    assert.equal(await strategy.totalStaked(), 2n)
-    assert.equal(await strategy.staked(accounts[1]), 1n)
-    assert.equal(await strategy.staked(accounts[2]), 1n)
-
-    await expect(strategy.addValidator(validatorShare, accounts[5])).to.be.revertedWithCustomError(
-      strategy,
-      'ValidatorAlreadyAdded()'
-    )
-
-    const validatorShare3 = (await deploy('PolygonValidatorShareMock', [
-      stakeManager.target,
-    ])) as PolygonValidatorShareMock
-    await strategy.addValidator(validatorShare3.target, accounts[3])
+    const { strategy, stakeManager, validatorShare, accounts, validatorShare2, validatorShare3 } =
+      await loadFixture(deployFixture)
 
     assert.equal(await strategy.totalStaked(), 3n)
     assert.equal(await strategy.staked(accounts[1]), 1n)
     assert.equal(await strategy.staked(accounts[2]), 1n)
     assert.equal(await strategy.staked(accounts[3]), 1n)
 
+    await expect(strategy.addValidator(validatorShare, accounts[5])).to.be.revertedWithCustomError(
+      strategy,
+      'ValidatorAlreadyAdded()'
+    )
+
+    const validatorShare4 = (await deploy('PolygonValidatorShareMock', [
+      stakeManager.target,
+    ])) as PolygonValidatorShareMock
+    await strategy.addValidator(validatorShare4.target, accounts[4])
+
+    assert.equal(await strategy.totalStaked(), 4n)
+    assert.equal(await strategy.staked(accounts[1]), 1n)
+    assert.equal(await strategy.staked(accounts[2]), 1n)
+    assert.equal(await strategy.staked(accounts[3]), 1n)
+    assert.equal(await strategy.staked(accounts[4]), 1n)
+
     assert.deepEqual(await strategy.getValidators(), [
-      [validatorShare.target, accounts[1], 0n],
-      [validatorShare2.target, accounts[2], 0n],
-      [validatorShare3.target, accounts[3], 0n],
+      [validatorShare.target, accounts[1]],
+      [validatorShare2.target, accounts[2]],
+      [validatorShare3.target, accounts[3]],
+      [validatorShare4.target, accounts[4]],
     ])
 
     let vaults = await strategy.getVaults()
-    assert.equal(vaults.length, 3)
+    assert.equal(vaults.length, 4)
 
     let map: any = {}
-    for (let i = 0; i < 3; i++) {
-      assert.equal(vaults[i].length, 5)
-      for (let j = 0; j < 5; j++) {
-        let vault = vaults[i][j]
-        assert.isTrue(!map[vault])
-        assert.equal(
-          await (await ethers.getContractAt('PolygonVault', vault)).getTotalDeposits(),
-          0n
-        )
-        map[vault] = true
-      }
+    for (let i = 0; i < 4; i++) {
+      let vault = vaults[i]
+      assert.isTrue(!map[vault])
+      assert.equal(await (await ethers.getContractAt('PolygonVault', vault)).getTotalDeposits(), 0n)
+      map[vault] = true
     }
   })
 
@@ -182,154 +179,141 @@ describe('PolygonStrategy', () => {
   })
 
   it('depositQueuedTokens should work correctly', async () => {
-    const { stakingPool, token, accounts, strategy, vaults, stakeManager } = await loadFixture(
-      deployFixture
-    )
+    const { stakingPool, token, accounts, strategy, vaults, stakeManager, validatorShare } =
+      await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
 
     await expect(
-      strategy.depositQueuedTokens([[0, 1, 2]], [[toEther(10), toEther(20), toEther(30)]])
-    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
-    await expect(
-      strategy.depositQueuedTokens(
-        [
-          [0, 1, 3],
-          [0, 1, 2],
-        ],
-        [
-          [toEther(10), toEther(20), toEther(30)],
-          [toEther(40), toEther(50), toEther(60)],
-        ]
-      )
-    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
-    await expect(
-      strategy.depositQueuedTokens(
-        [
-          [0, 1, 2],
-          [0, 1, 2],
-        ],
-        [
-          [toEther(0), toEther(20), toEther(30)],
-          [toEther(40), toEther(50), toEther(60)],
-        ]
-      )
+      strategy.depositQueuedTokens([0, 2], [toEther(0), toEther(30)])
     ).to.be.revertedWithCustomError(strategy, 'InvalidAmount()')
 
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 2], [toEther(10), toEther(30)])
 
-    assert.deepEqual(
-      (await strategy.getValidators()).map((v) => Number(v[2])),
-      [3, 4]
-    )
-    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 280)
-    assert.equal(fromEther(await token.balanceOf(strategy.target)), 720)
-    assert.equal(fromEther(await strategy.totalQueued()), 720)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 40)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 960)
+    assert.equal(fromEther(await strategy.totalQueued()), 960)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await vaults[0][0].getPrincipalDeposits()), 10)
-    assert.equal(fromEther(await vaults[0][1].getPrincipalDeposits()), 20)
-    assert.equal(fromEther(await vaults[0][2].getPrincipalDeposits()), 30)
-    assert.equal(fromEther(await vaults[1][0].getPrincipalDeposits()), 40)
-    assert.equal(fromEther(await vaults[1][1].getPrincipalDeposits()), 50)
-    assert.equal(fromEther(await vaults[1][2].getPrincipalDeposits()), 60)
-    assert.equal(fromEther(await vaults[1][3].getPrincipalDeposits()), 70)
+    assert.equal(fromEther(await vaults[0].getPrincipalDeposits()), 10)
+    assert.equal(fromEther(await vaults[1].getPrincipalDeposits()), 0)
+    assert.equal(fromEther(await vaults[2].getPrincipalDeposits()), 30)
 
-    await strategy.depositQueuedTokens([[1], [2]], [[toEther(10)], [toEther(10)]])
-    await strategy.queueValidatorRemoval(1)
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
+
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 100)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 900)
+    assert.equal(fromEther(await strategy.totalQueued()), 900)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
+    assert.equal(fromEther(await vaults[0].getPrincipalDeposits()), 20)
+    assert.equal(fromEther(await vaults[1].getPrincipalDeposits()), 20)
+    assert.equal(fromEther(await vaults[2].getPrincipalDeposits()), 60)
+
+    await strategy.queueValidatorRemoval(2)
     await expect(
-      strategy.depositQueuedTokens([[1], [2]], [[toEther(10)], [toEther(10)]])
+      strategy.depositQueuedTokens([1, 2], [toEther(10), toEther(10)])
     ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+
+    await strategy.unbond(toEther(10))
+
+    await expect(strategy.depositQueuedTokens([1], [toEther(10)])).to.be.revertedWithCustomError(
+      strategy,
+      'UnbondingInProgress()'
+    )
+
+    await time.increase(withdrawalDelay)
+    await strategy.unstakeClaim([0])
+
+    await validatorShare.addReward(vaults[0].target, toEther(35))
+    await strategy.depositQueuedTokens([0], [toEther(5)])
+
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 95)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 940)
+    assert.equal(fromEther(await strategy.totalQueued()), 940)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
+    assert.equal(fromEther(await vaults[0].getPrincipalDeposits()), 15)
+    assert.equal(fromEther(await vaults[1].getPrincipalDeposits()), 20)
+    assert.equal(fromEther(await vaults[2].getPrincipalDeposits()), 0)
   })
 
   it('unbond should work correctly', async () => {
-    const { stakingPool, token, accounts, strategy, vaults, stakeManager } = await loadFixture(
-      deployFixture
-    )
+    const {
+      stakingPool,
+      token,
+      accounts,
+      strategy,
+      vaults,
+      stakeManager,
+      validatorShare2,
+      validatorShare3,
+    } = await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
 
     await expect(strategy.unbond(toEther(0))).to.be.revertedWithCustomError(
       strategy,
       'InvalidAmount()'
     )
 
-    await strategy.unbond(toEther(110))
+    await strategy.unbond(toEther(5))
 
-    await expect(strategy.unbond(toEther(100))).to.be.revertedWithCustomError(
+    await expect(strategy.unbond(toEther(5))).to.be.revertedWithCustomError(
       strategy,
       'UnbondingInProgress()'
     )
 
-    assert.deepEqual(
-      (await strategy.getValidators()).map((v) => Number(v[2])),
-      [1, 3]
-    )
     assert.equal(await strategy.validatorWithdrawalIndex(), 1n)
-    assert.equal(await strategy.numVaultsUnbonding(), 3n)
-    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 280)
-    assert.equal(fromEther(await token.balanceOf(strategy.target)), 720)
-    assert.equal(fromEther(await strategy.totalQueued()), 720)
+    assert.equal(await strategy.numVaultsUnbonding(), 1n)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 60)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 940)
+    assert.equal(fromEther(await strategy.totalQueued()), 940)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await vaults[0][0].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[0][1].getQueuedWithdrawals()), 20)
-    assert.equal(fromEther(await vaults[0][2].getQueuedWithdrawals()), 30)
-    assert.equal(fromEther(await vaults[1][0].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][1].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][2].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][3].getQueuedWithdrawals()), 70)
-    assert.equal(await vaults[0][0].isUnbonding(), false)
-    assert.equal(await vaults[0][1].isUnbonding(), true)
-    assert.equal(await vaults[0][2].isUnbonding(), true)
-    assert.equal(await vaults[1][0].isUnbonding(), false)
-    assert.equal(await vaults[1][1].isUnbonding(), false)
-    assert.equal(await vaults[1][2].isUnbonding(), false)
-    assert.equal(await vaults[1][3].isUnbonding(), true)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 5)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 0)
+
+    assert.equal(await vaults[0].isUnbonding(), true)
+    assert.equal(await vaults[1].isUnbonding(), false)
+    assert.equal(await vaults[2].isUnbonding(), false)
 
     await time.increase(withdrawalDelay)
-    await strategy.unstakeClaim([[1, 2], [3]])
-    await strategy.queueValidatorRemoval(0)
-    await strategy.unbond(toEther(100))
+    await strategy.unstakeClaim([0])
+    await validatorShare2.addReward(vaults[1].target, toEther(20))
+    await validatorShare3.addReward(vaults[2].target, toEther(30))
+    await strategy.unbond(toEther(50))
 
-    assert.deepEqual(
-      (await strategy.getValidators()).map((v) => Number(v[2])),
-      [1, 1]
-    )
     assert.equal(await strategy.validatorWithdrawalIndex(), 0n)
-    assert.equal(await strategy.numVaultsUnbonding(), 2n)
+    assert.equal(await strategy.numVaultsUnbonding(), 1n)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 55)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 995)
+    assert.equal(fromEther(await strategy.totalQueued()), 995)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await vaults[0][0].getQueuedWithdrawals()), 10)
-    assert.equal(fromEther(await vaults[0][1].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[0][2].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][0].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][1].getQueuedWithdrawals()), 50)
-    assert.equal(fromEther(await vaults[1][2].getQueuedWithdrawals()), 60)
-    assert.equal(fromEther(await vaults[1][3].getQueuedWithdrawals()), 0)
-    assert.equal(await vaults[0][0].isUnbonding(), true)
-    assert.equal(await vaults[0][1].isUnbonding(), false)
-    assert.equal(await vaults[0][2].isUnbonding(), false)
-    assert.equal(await vaults[1][0].isUnbonding(), false)
-    assert.equal(await vaults[1][1].isUnbonding(), true)
-    assert.equal(await vaults[1][2].isUnbonding(), true)
-    assert.equal(await vaults[1][3].isUnbonding(), false)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 20)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 0)
+
+    assert.equal(await vaults[0].isUnbonding(), false)
+    assert.equal(await vaults[1].isUnbonding(), true)
+    assert.equal(await vaults[2].isUnbonding(), false)
+
+    await time.increase(withdrawalDelay)
+    await strategy.unstakeClaim([1])
+    await strategy.queueValidatorRemoval(0)
+    await strategy.unbond(toEther(10))
+
+    assert.equal(await strategy.validatorWithdrawalIndex(), 0n)
+    assert.equal(await strategy.numVaultsUnbonding(), 1n)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 35)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 1015)
+    assert.equal(fromEther(await strategy.totalQueued()), 1015)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 5)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 10)
+
+    assert.equal(await vaults[0].isUnbonding(), true)
+    assert.equal(await vaults[1].isUnbonding(), false)
+    assert.equal(await vaults[2].isUnbonding(), true)
   })
 
   it('unstakeClaim should work correctly', async () => {
@@ -338,92 +322,91 @@ describe('PolygonStrategy', () => {
     )
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
 
-    await expect(strategy.unstakeClaim([[1]])).to.be.revertedWithCustomError(
+    await expect(strategy.unstakeClaim([1])).to.be.revertedWithCustomError(
       strategy,
       'NoVaultsUnbonding()'
     )
 
-    await strategy.unbond(toEther(110))
+    await strategy.unbond(toEther(15))
     await time.increase(withdrawalDelay)
 
-    await expect(strategy.unstakeClaim([[1], [3]])).to.be.revertedWithCustomError(
+    await expect(strategy.unstakeClaim([1])).to.be.revertedWithCustomError(
       strategy,
       'MustWithdrawAllVaults()'
     )
 
-    await strategy.unstakeClaim([[1, 2], [3]])
+    await strategy.unstakeClaim([0, 1])
 
-    assert.deepEqual(
-      (await strategy.getValidators()).map((v) => Number(v[2])),
-      [1, 3]
-    )
-    assert.equal(await strategy.validatorWithdrawalIndex(), 1n)
+    assert.equal(await strategy.validatorWithdrawalIndex(), 2n)
     assert.equal(await strategy.numVaultsUnbonding(), 0n)
-    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 160)
-    assert.equal(fromEther(await token.balanceOf(strategy.target)), 840)
-    assert.equal(fromEther(await strategy.totalQueued()), 840)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 45)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 955)
+    assert.equal(fromEther(await strategy.totalQueued()), 955)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await vaults[0][0].getTotalDeposits()), 10)
-    assert.equal(fromEther(await vaults[0][1].getTotalDeposits()), 0)
-    assert.equal(fromEther(await vaults[0][2].getTotalDeposits()), 0)
-    assert.equal(fromEther(await vaults[1][0].getTotalDeposits()), 40)
-    assert.equal(fromEther(await vaults[1][1].getTotalDeposits()), 50)
-    assert.equal(fromEther(await vaults[1][2].getTotalDeposits()), 60)
-    assert.equal(fromEther(await vaults[1][3].getTotalDeposits()), 0)
-    assert.equal(await vaults[0][0].isUnbonding(), false)
-    assert.equal(await vaults[0][1].isUnbonding(), false)
-    assert.equal(await vaults[0][2].isUnbonding(), false)
-    assert.equal(await vaults[1][0].isUnbonding(), false)
-    assert.equal(await vaults[1][1].isUnbonding(), false)
-    assert.equal(await vaults[1][2].isUnbonding(), false)
-    assert.equal(await vaults[1][3].isUnbonding(), false)
+    assert.equal(fromEther(await vaults[0].getTotalDeposits()), 0)
+    assert.equal(fromEther(await vaults[1].getTotalDeposits()), 15)
+    assert.equal(fromEther(await vaults[2].getTotalDeposits()), 30)
+    assert.equal(await vaults[0].isWithdrawable(), false)
+    assert.equal(await vaults[1].isWithdrawable(), false)
+    assert.equal(await vaults[2].isWithdrawable(), false)
+
+    await strategy.unbond(toEther(20))
+    await strategy.queueValidatorRemoval(1)
+    await time.increase(withdrawalDelay)
+
+    await expect(strategy.unstakeClaim([1, 2])).to.be.revertedWithCustomError(
+      strategy,
+      'InvalidVaultIds()'
+    )
+
+    await strategy.unstakeClaim([2])
+
+    assert.equal(await strategy.validatorWithdrawalIndex(), 0n)
+    assert.equal(await strategy.numVaultsUnbonding(), 0n)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 25)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 975)
+    assert.equal(fromEther(await strategy.totalQueued()), 975)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
+    assert.equal(fromEther(await vaults[0].getTotalDeposits()), 0)
+    assert.equal(fromEther(await vaults[1].getTotalDeposits()), 15)
+    assert.equal(fromEther(await vaults[2].getTotalDeposits()), 10)
+    assert.equal(await vaults[0].isWithdrawable(), false)
+    assert.equal(await vaults[1].isWithdrawable(), true)
+    assert.equal(await vaults[2].isWithdrawable(), false)
   })
 
   it('depositChange should work correctly', async () => {
-    const { strategy, token, vaults, accounts, stakingPool, validatorShare, validatorShare2 } =
-      await loadFixture(deployFixture)
+    const {
+      strategy,
+      token,
+      vaults,
+      accounts,
+      stakingPool,
+      validatorShare,
+      validatorShare2,
+      validatorShare3,
+    } = await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
-    await validatorShare.addReward(vaults[0][1].target, toEther(100))
+    await validatorShare.addReward(vaults[0].target, toEther(100))
     assert.equal(fromEther(await strategy.getDepositChange()), 100)
 
-    await validatorShare.addReward(vaults[0][2].target, toEther(50))
+    await validatorShare2.addReward(vaults[1].target, toEther(50))
     assert.equal(fromEther(await strategy.getDepositChange()), 150)
 
-    await validatorShare2.addReward(vaults[1][2].target, toEther(20))
+    await validatorShare3.addReward(vaults[2].target, toEther(20))
     assert.equal(fromEther(await strategy.getDepositChange()), 170)
 
-    await validatorShare2.addReward(vaults[1][3].target, toEther(40))
-    assert.equal(fromEther(await strategy.getDepositChange()), 210)
-
     await token.transfer(strategy.target, toEther(50))
-    assert.equal(fromEther(await strategy.getDepositChange()), 260)
+    assert.equal(fromEther(await strategy.getDepositChange()), 220)
 
     await stakingPool.updateStrategyRewards([0], '0x')
-    await validatorShare.removeReward(vaults[0][1], toEther(50))
+    await validatorShare.removeReward(vaults[0], toEther(50))
     assert.equal(fromEther(await strategy.getDepositChange()), -50)
   })
 
@@ -432,44 +415,35 @@ describe('PolygonStrategy', () => {
       await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
 
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await strategy.totalQueued()), 720)
+    assert.equal(fromEther(await strategy.totalQueued()), 940)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
-    await validatorShare.addReward(vaults[0][0].target, toEther(10))
+    await validatorShare.addReward(vaults[0].target, toEther(10))
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1010)
-    assert.equal(fromEther(await strategy.totalQueued()), 720)
+    assert.equal(fromEther(await strategy.totalQueued()), 940)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
-    await validatorShare2.addReward(vaults[1][0].target, toEther(5))
+    await validatorShare2.addReward(vaults[1].target, toEther(5))
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1015)
-    assert.equal(fromEther(await strategy.totalQueued()), 720)
+    assert.equal(fromEther(await strategy.totalQueued()), 940)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     await token.transfer(strategy.target, toEther(20))
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1035)
-    assert.equal(fromEther(await strategy.totalQueued()), 740)
+    assert.equal(fromEther(await strategy.totalQueued()), 960)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
-    await validatorShare2.removeReward(vaults[1][0].target, toEther(3))
+    await validatorShare2.removeReward(vaults[1].target, toEther(3))
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1032)
-    assert.equal(fromEther(await strategy.totalQueued()), 740)
+    assert.equal(fromEther(await strategy.totalQueued()), 960)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
   })
 
@@ -482,18 +456,9 @@ describe('PolygonStrategy', () => {
     await strategy.addFee(accounts[6], 400)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
 
-    await validatorShare.addReward(vaults[0][0].target, toEther(100))
+    await validatorShare.addReward(vaults[0].target, toEther(100))
     let data = await strategy.connect(impStakingPool).updateDeposits.staticCall('0x')
 
     assert.equal(fromEther(data.depositChange), 100)
@@ -514,7 +479,7 @@ describe('PolygonStrategy', () => {
     )
 
     await stakingPool.updateStrategyRewards([0], '0x')
-    await validatorShare.removeReward(vaults[0][0].target, toEther(50))
+    await validatorShare.removeReward(vaults[0].target, toEther(50))
     data = await strategy.connect(impStakingPool).updateDeposits.staticCall('0x')
 
     assert.equal(fromEther(data.depositChange), -50)
@@ -523,32 +488,28 @@ describe('PolygonStrategy', () => {
   })
 
   it('restakeRewards should work correctly', async () => {
-    const { strategy, vaults, accounts, stakingPool, validatorShare, validatorShare2 } =
-      await loadFixture(deployFixture)
+    const {
+      strategy,
+      vaults,
+      accounts,
+      stakingPool,
+      validatorShare,
+      validatorShare2,
+      validatorShare3,
+    } = await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
 
-    await validatorShare.addReward(vaults[0][0].target, toEther(10))
-    await validatorShare.addReward(vaults[0][2].target, toEther(20))
-    await validatorShare2.addReward(vaults[1][1].target, toEther(30))
-    await validatorShare2.addReward(vaults[1][3].target, toEther(40))
+    await validatorShare.addReward(vaults[0].target, toEther(20))
+    await validatorShare2.addReward(vaults[1].target, toEther(30))
+    await validatorShare3.addReward(vaults[2].target, toEther(40))
 
-    await strategy.restakeRewards([[0, 2], [3]])
+    await strategy.restakeRewards([0, 2])
 
-    assert.equal(fromEther(await vaults[0][0].getPrincipalDeposits()), 20)
-    assert.equal(fromEther(await vaults[0][2].getPrincipalDeposits()), 50)
-    assert.equal(fromEther(await vaults[1][1].getPrincipalDeposits()), 50)
-    assert.equal(fromEther(await vaults[1][3].getPrincipalDeposits()), 110)
+    assert.equal(fromEther(await vaults[0].getPrincipalDeposits()), 30)
+    assert.equal(fromEther(await vaults[1].getPrincipalDeposits()), 20)
+    assert.equal(fromEther(await vaults[2].getPrincipalDeposits()), 70)
   })
 
   it('getMinDeposits should work correctly', async () => {
@@ -560,26 +521,17 @@ describe('PolygonStrategy', () => {
 
     assert.equal(fromEther(await strategy.getMinDeposits()), 0)
 
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
 
-    assert.equal(fromEther(await strategy.getMinDeposits()), 280)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 60)
 
-    await validatorShare.addReward(vaults[0][0].target, toEther(50))
+    await validatorShare.addReward(vaults[0].target, toEther(50))
 
-    assert.equal(fromEther(await strategy.getMinDeposits()), 280)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 60)
 
     await stakingPool.updateStrategyRewards([0], '0x')
 
-    assert.equal(fromEther(await strategy.getMinDeposits()), 330)
+    assert.equal(fromEther(await strategy.getMinDeposits()), 110)
   })
 
   it('getMaxDeposits should work correctly', async () => {
@@ -594,17 +546,9 @@ describe('PolygonStrategy', () => {
     )
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
-    await validatorShare.addReward(vaults[0][0].target, toEther(15))
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
+
+    await validatorShare.addReward(vaults[0].target, toEther(15))
 
     await strategy.unbond(toEther(20))
     await strategy.queueValidatorRemoval(0)
@@ -613,43 +557,38 @@ describe('PolygonStrategy', () => {
       strategy,
       'RemovalAlreadyQueued()'
     )
-    assert.deepEqual(await strategy.validatorRemoval(), [true, 0n, toEther(75)])
-    assert.equal(await strategy.totalStaked(), 1n)
+    assert.deepEqual(await strategy.validatorRemoval(), [true, 0n, toEther(10)])
+    assert.equal(await strategy.totalStaked(), 2n)
     assert.equal(await strategy.staked(accounts[1]), 0n)
     assert.equal(await strategy.staked(accounts[2]), 1n)
+    assert.equal(await strategy.staked(accounts[3]), 1n)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await vaults[0][0].getQueuedWithdrawals()), 10)
-    assert.equal(fromEther(await vaults[0][1].getQueuedWithdrawals()), 20)
-    assert.equal(fromEther(await vaults[0][2].getQueuedWithdrawals()), 30)
-    assert.equal(fromEther(await vaults[1][0].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][1].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][2].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[1][3].getQueuedWithdrawals()), 0)
-    assert.equal(await vaults[0][0].isUnbonding(), true)
-    assert.equal(await vaults[0][1].isUnbonding(), true)
-    assert.equal(await vaults[0][2].isUnbonding(), true)
-    assert.equal(await vaults[1][0].isUnbonding(), false)
-    assert.equal(await vaults[1][1].isUnbonding(), false)
-    assert.equal(await vaults[1][2].isUnbonding(), false)
-    assert.equal(await vaults[1][3].isUnbonding(), false)
+    assert.equal(fromEther(await strategy.totalQueued()), 955)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 10)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 0)
+    assert.equal(await vaults[0].isUnbonding(), true)
+    assert.equal(await vaults[1].isUnbonding(), false)
+    assert.equal(await vaults[2].isUnbonding(), false)
   })
 
   it('finalizeValidatorRemoval should work correctly', async () => {
-    const { strategy, vaults, accounts, stakingPool, validatorShare, validatorShare2, token } =
-      await loadFixture(deployFixture)
+    const {
+      strategy,
+      vaults,
+      accounts,
+      stakingPool,
+      validatorShare,
+      validatorShare2,
+      validatorShare3,
+      token,
+      stakeManager,
+    } = await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
-    await strategy.depositQueuedTokens(
-      [
-        [0, 1, 2],
-        [0, 1, 2, 3],
-      ],
-      [
-        [toEther(10), toEther(20), toEther(30)],
-        [toEther(40), toEther(50), toEther(60), toEther(70)],
-      ]
-    )
-    await validatorShare.addReward(vaults[0][0].target, toEther(15))
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
+
+    await validatorShare.addReward(vaults[0].target, toEther(15))
 
     await expect(strategy.finalizeValidatorRemoval()).to.be.revertedWithCustomError(
       strategy,
@@ -663,51 +602,22 @@ describe('PolygonStrategy', () => {
 
     assert.deepEqual(await strategy.validatorRemoval(), [false, 0n, 0n])
     assert.deepEqual(await strategy.getValidators(), [
-      [validatorShare2.target.toString(), accounts[2], 4n],
+      [validatorShare3.target.toString(), accounts[3]],
+      [validatorShare2.target.toString(), accounts[2]],
     ])
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
-    assert.equal(fromEther(await strategy.totalQueued()), 795)
-    assert.equal(fromEther(await token.balanceOf(strategy.target)), 795)
-    assert.equal(fromEther(await vaults[0][0].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[0][1].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[0][2].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[0][3].getQueuedWithdrawals()), 0)
-    assert.equal(await vaults[0][0].isUnbonding(), false)
-    assert.equal(await vaults[0][1].isUnbonding(), false)
-    assert.equal(await vaults[0][2].isUnbonding(), false)
-    assert.equal(await vaults[0][3].isUnbonding(), false)
-  })
-
-  it('setVaultsPerValidator should work correctly', async () => {
-    const { strategy } = await loadFixture(deployFixture)
-
-    await expect(strategy.setVaultsPerValidator(5)).to.be.revertedWithCustomError(
-      strategy,
-      'InvalidVaultsPerValidator()'
-    )
-
-    await strategy.setVaultsPerValidator(7)
-
-    assert.equal(await strategy.vaultsPerValidator(), 7n)
-
-    let vaults = await strategy.getVaults()
-    assert.equal(vaults.length, 2)
-
-    let validators = await strategy.getValidators()
-
-    let map: any = {}
-    for (let i = 0; i < 2; i++) {
-      assert.equal(vaults[i].length, 7)
-      for (let j = 0; j < 7; j++) {
-        let vault = vaults[i][j]
-        assert.isTrue(!map[vault])
-        assert.equal(
-          await (await ethers.getContractAt('PolygonVault', vault)).validatorPool(),
-          validators[i].pool
-        )
-        map[vault] = true
-      }
-    }
+    assert.equal(fromEther(await strategy.totalQueued()), 965)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 965)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 50)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 0)
+    assert.equal(await vaults[0].isUnbonding(), false)
+    assert.equal(await vaults[1].isUnbonding(), false)
+    assert.equal(await vaults[2].isUnbonding(), false)
+    assert.equal(await vaults[0].isWithdrawable(), false)
+    assert.equal(await vaults[1].isWithdrawable(), false)
+    assert.equal(await vaults[2].isWithdrawable(), false)
   })
 
   it('upgradeVaults should work correctly', async () => {
@@ -720,18 +630,17 @@ describe('PolygonStrategy', () => {
     await strategy.setVaultImplementation(newVaultImplementation)
 
     await strategy.upgradeVaults([
-      ['0x', '0x', '0x', '0x', '0x'],
-      ['0x', '0x', '0x', '0x', vaultInterface.encodeFunctionData('initializeV2', [1])],
+      '0x',
+      '0x',
+      vaultInterface.encodeFunctionData('initializeV2', [1]),
     ])
-    for (let i = 0; i < 2; i++) {
-      for (let j = 0; j < 4; j++) {
-        let vault = await ethers.getContractAt('PolygonVaultV2Mock', vaults[i][j].target)
-        assert.equal(await vault.version(), 0n)
-      }
+    for (let i = 0; i < 1; i++) {
+      let vault = await ethers.getContractAt('PolygonVaultV2Mock', vaults[i].target)
+      assert.equal(await vault.version(), 0n)
     }
 
     assert.equal(
-      await (await ethers.getContractAt('PolygonVaultV2Mock', vaults[1][4].target)).version(),
+      await (await ethers.getContractAt('PolygonVaultV2Mock', vaults[2].target)).version(),
       1n
     )
   })
