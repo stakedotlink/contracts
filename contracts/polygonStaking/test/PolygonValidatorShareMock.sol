@@ -35,6 +35,13 @@ contract PolygonValidatorShareMock {
     function buyVoucherPOL(uint256 _amount, uint256) external returns (uint256) {
         stakeManager.deposit(msg.sender, _amount);
         staked[msg.sender] += _amount;
+
+        uint256 rewards = liquidRewards[msg.sender];
+        if (rewards != 0) {
+            delete liquidRewards[msg.sender];
+            stakeManager.withdraw(msg.sender, rewards);
+        }
+
         return _amount;
     }
 

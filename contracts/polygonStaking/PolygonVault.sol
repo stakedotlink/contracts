@@ -26,7 +26,6 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IPolygonStaking public validatorPool;
 
     error OnlyVaultController();
-    error UnbondingInProgress();
 
     /**
      * @notice Initializes contract
@@ -85,9 +84,6 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _amount amount to unbond
      */
     function unbond(uint256 _amount) external onlyVaultController {
-        (uint256 shares, ) = validatorPool.unbonds(address(this));
-        if (shares != 0) revert UnbondingInProgress();
-
         validatorPool.sellVoucherPOL(_amount, type(uint256).max);
 
         uint256 balance = token.balanceOf(address(this));
