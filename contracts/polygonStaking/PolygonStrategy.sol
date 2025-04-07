@@ -72,7 +72,7 @@ contract PolygonStrategy is Strategy {
     // index of validator to withdraw from on next withdrawal
     uint256 public validatorWithdrawalIndex;
 
-    event DepositQueuedTokens();
+    event DepositQueuedTokens(int256 balanceChange);
     event Unbond(uint256 amount);
     event UnstakeClaim(uint256 amount);
     event RestakeRewards();
@@ -202,7 +202,7 @@ contract PolygonStrategy is Strategy {
             totalQueued += uint256(balanceChange);
         }
 
-        emit DepositQueuedTokens();
+        emit DepositQueuedTokens(balanceChange);
     }
 
     /**

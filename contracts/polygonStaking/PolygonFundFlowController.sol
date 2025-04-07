@@ -79,8 +79,8 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _amounts list of amounts to deposit into each respective vault
      */
     function depositQueuedTokens(
-        uint256[][] calldata _vaultIds,
-        uint256[][] calldata _amounts
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _amounts
     ) external onlyDepositController {
         strategy.depositQueuedTokens(_vaultIds, _amounts);
     }
@@ -127,21 +127,16 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @return true if vaults are ready for withdrawal, false otherwise
      * @return list of withdrawable vaults
      */
-    function shouldWithdrawVaults() external view returns (bool, uint256[][] memory) {
-        uint256[][] memory vaults = getWithdrawableVaults();
-
-        for (uint256 i = 0; i < vaults.length; ++i) {
-            if (vaults[i].length != 0) return (true, vaults);
-        }
-
-        return (false, vaults);
+    function shouldWithdrawVaults() external view returns (bool, uint256[] memory) {
+        uint256[] memory vaults = getWithdrawableVaults();
+        return (vaults.length != 0, vaults);
     }
 
     /**
      * @notice Withdraws from vaults
      * @param _vaultIds list of vaults to withdraw from
      */
-    function withdrawVaults(uint256[][] calldata _vaultIds) external {
+    function withdrawVaults(uint256[] calldata _vaultIds) external {
         strategy.unstakeClaim(_vaultIds);
 
         (bool upkeepNeeded, ) = withdrawalPool.checkUpkeep("0x");
@@ -155,7 +150,7 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Restakes vault rewards
      * @param _vaultIds list of vaults to restake rewards for
      */
-    function restakeRewards(uint256[][] calldata _vaultIds) external {
+    function restakeRewards(uint256[] calldata _vaultIds) external {
         strategy.restakeRewards(_vaultIds);
     }
 
@@ -163,15 +158,12 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Returns a list of total deposits for all vaults
      * @return list of deposit amounts
      */
-    function getVaultDeposits() external view returns (uint256[][] memory) {
-        address[][] memory vaults = strategy.getVaults();
-        uint256[][] memory deposits = new uint256[][](vaults.length);
+    function getVaultDeposits() external view returns (uint256[] memory) {
+        address[] memory vaults = strategy.getVaults();
+        uint256[] memory deposits = new uint256[](vaults.length);
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            deposits[i] = new uint256[](vaults[i].length);
-            for (uint256 j = 0; j < vaults[i].length; ++j) {
-                deposits[i][j] = IPolygonVault(vaults[i][j]).getTotalDeposits();
-            }
+            deposits[i] = IPolygonVault(vaults[i]).getTotalDeposits();
         }
 
         return deposits;
@@ -181,15 +173,12 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Returns a list of unclaimed rewards for all vaults
      * @return list of reward amounts
      */
-    function getVaultRewards() external view returns (uint256[][] memory) {
-        address[][] memory vaults = strategy.getVaults();
-        uint256[][] memory rewards = new uint256[][](vaults.length);
+    function getVaultRewards() external view returns (uint256[] memory) {
+        address[] memory vaults = strategy.getVaults();
+        uint256[] memory rewards = new uint256[](vaults.length);
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            rewards[i] = new uint256[](vaults[i].length);
-            for (uint256 j = 0; j < vaults[i].length; ++j) {
-                rewards[i][j] = IPolygonVault(vaults[i][j]).getRewards();
-            }
+            rewards[i] = IPolygonVault(vaults[i]).getRewards();
         }
 
         return rewards;
@@ -200,39 +189,28 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @dev excludes vaults that are queued for removal
      * @return list of vaults
      */
-    function getUnbondingVaults() external view returns (uint256[][] memory) {
-        address[][] memory vaults = strategy.getVaults();
-        bool[][] memory vaultsUnbonding = new bool[][](vaults.length);
-        uint256[] memory numVaultsUnbonding = new uint256[](vaults.length);
+    function getUnbondingVaults() external view returns (uint256[] memory) {
+        address[] memory vaults = strategy.getVaults();
+        bool[] memory vaultsUnbonding = new bool[](vaults.length);
 
         (bool isActive, uint256 validatorId, ) = strategy.validatorRemoval();
         uint256 skipIndex = isActive ? validatorId : type(uint256).max;
+        uint256 numVaultsUnbonding;
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            vaultsUnbonding[i] = new bool[](vaults[i].length);
-            for (uint256 j = 0; j < vaults[i].length; ++j) {
-                if (IPolygonVault(vaults[i][j]).isUnbonding()) {
-                    vaultsUnbonding[i][j] = true;
-                    ++numVaultsUnbonding[i];
-                }
+            if (IPolygonVault(vaults[i]).isUnbonding() && i != skipIndex) {
+                vaultsUnbonding[i] = true;
+                ++numVaultsUnbonding;
             }
         }
 
-        uint256[][] memory ret = new uint256[][](vaults.length);
+        uint256[] memory ret = new uint256[](numVaultsUnbonding);
+        uint256 numAdded;
 
         for (uint256 i = 0; i < vaultsUnbonding.length; ++i) {
-            if (i == skipIndex) {
-                ret[i] = new uint256[](0);
-                continue;
-            }
-
-            ret[i] = new uint256[](numVaultsUnbonding[i]);
-            uint256 numAdded;
-            for (uint256 j = 0; j < vaultsUnbonding[i].length; ++j) {
-                if (vaultsUnbonding[i][j]) {
-                    ret[i][numAdded] = j;
-                    ++numAdded;
-                }
+            if (vaultsUnbonding[i]) {
+                ret[numAdded] = i;
+                ++numAdded;
             }
         }
 
@@ -244,40 +222,28 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @dev excludes vaults that are queued for removal
      * @return list of vaults
      */
-    function getWithdrawableVaults() public view returns (uint256[][] memory) {
-        address[][] memory vaults = strategy.getVaults();
-        bool[][] memory vaultsWithdrawable = new bool[][](vaults.length);
-        uint256[] memory numVaultsWithdrawable = new uint256[](vaults.length);
+    function getWithdrawableVaults() public view returns (uint256[] memory) {
+        address[] memory vaults = strategy.getVaults();
+        bool[] memory vaultsWithdrawable = new bool[](vaults.length);
 
         (bool isActive, uint256 validatorId, ) = strategy.validatorRemoval();
         uint256 skipIndex = isActive ? validatorId : type(uint256).max;
+        uint256 numVaultsWithdrawable;
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            vaultsWithdrawable[i] = new bool[](vaults[i].length);
-            for (uint256 j = 0; j < vaults[i].length; ++j) {
-                if (IPolygonVault(vaults[i][j]).isWithdrawable()) {
-                    vaultsWithdrawable[i][j] = true;
-                    ++numVaultsWithdrawable[i];
-                }
+            if (IPolygonVault(vaults[i]).isWithdrawable() && i != skipIndex) {
+                vaultsWithdrawable[i] = true;
+                ++numVaultsWithdrawable;
             }
         }
 
-        uint256[][] memory ret = new uint256[][](vaults.length);
+        uint256[] memory ret = new uint256[](numVaultsWithdrawable);
+        uint256 numAdded;
 
         for (uint256 i = 0; i < vaultsWithdrawable.length; ++i) {
-            if (i == skipIndex) {
-                ret[i] = new uint256[](0);
-                continue;
-            }
-
-            ret[i] = new uint256[](numVaultsWithdrawable[i]);
-
-            uint256 numAdded;
-            for (uint256 j = 0; j < vaultsWithdrawable[i].length; ++j) {
-                if (vaultsWithdrawable[i][j]) {
-                    ret[i][numAdded] = j;
-                    ++numAdded;
-                }
+            if (vaultsWithdrawable[i]) {
+                ret[numAdded] = i;
+                ++numAdded;
             }
         }
 
