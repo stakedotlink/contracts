@@ -7,13 +7,11 @@ import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 // Fork mainnet at block 22131113 to run test
 
-const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 const curveStableSwapNG = '0x7E13876B92F1a62C599C231f783f682E96B91761'
 const liquidityGaugeV6 = '0x985ca600257BFc1adC2b630B8A7E2110b834A20e'
 const minTimeBetweenDistributions = 86400n * 7n
 
 async function main() {
-  const { signers, accounts } = await getAccounts()
   const linkHolder = await ethers.getImpersonatedSigner(
     '0x4a470942dd7A44c6574666F8BDa47ce33c19A601'
   )
@@ -42,17 +40,17 @@ async function main() {
 
   await liquidityGauge.add_reward(stableSwap.target, gaugeDistributor.target)
 
-  await (await stableSwap.add_liquidity([toEther(1000), toEther(1000)], 0, linkHolder)).wait()
+  await stableSwap.add_liquidity([toEther(1000), toEther(1000)], 0, linkHolder)
 
   assert.equal((await gaugeDistributor.shouldDistributeRewards())[0], false)
 
-  await (
-    await stakingPool.connect(linkHolder).transfer(gaugeDistributor.target, toEther(1000))
-  ).wait()
+  await stakingPool
+    .connect(linkHolder)
+    .transferAndCall(gaugeDistributor.target, toEther(1000), '0x')
 
   let ret = await gaugeDistributor.shouldDistributeRewards()
   assert.equal(ret[0], true)
-  await (await gaugeDistributor.distributeRewards(ret[1])).wait()
+  await gaugeDistributor.distributeRewards(ret[1])
 
   assert.equal(fromEther(await linkToken.balanceOf(gaugeDistributor.target)), 0)
   assert.equal(fromEther(await stakingPool.balanceOf(gaugeDistributor.target)), 0)
@@ -66,9 +64,7 @@ async function main() {
   let rewardData = await liquidityGauge.reward_data(stableSwap.target)
   assert.equal(rewardData[3], ret[1] / minTimeBetweenDistributions)
 
-  await (
-    await stakingPool.connect(linkHolder).transfer(gaugeDistributor.target, toEther(500))
-  ).wait()
+  await stakingPool.connect(linkHolder).transfer(gaugeDistributor.target, toEther(500))
 
   assert.equal((await gaugeDistributor.shouldDistributeRewards())[0], false)
 
@@ -76,7 +72,7 @@ async function main() {
 
   let ret2 = await gaugeDistributor.shouldDistributeRewards()
   assert.equal(ret2[0], true)
-  await (await gaugeDistributor.distributeRewards(ret2[1] - 100n)).wait()
+  await gaugeDistributor.distributeRewards(ret2[1] - 100n)
 
   assert.equal(fromEther(await linkToken.balanceOf(gaugeDistributor.target)), 0)
   assert.equal(fromEther(await stakingPool.balanceOf(gaugeDistributor.target)), 0)
