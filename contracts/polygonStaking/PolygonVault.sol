@@ -16,6 +16,8 @@ import "./interfaces/IPolygonStaking.sol";
 contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    uint256 constant EXCHANGE_RATE_PRECISION = 10 ** 29;
+
     // address of staking token
     IERC20Upgradeable public token;
     // address of strategy that controls this vault
@@ -125,7 +127,9 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return principal balance
      */
     function getPrincipalDeposits() public view returns (uint256) {
-        return validatorPool.balanceOf(address(this)) * validatorPool.exchangeRate();
+        return
+            (validatorPool.balanceOf(address(this)) * validatorPool.exchangeRate()) /
+            EXCHANGE_RATE_PRECISION;
     }
 
     /**
@@ -142,7 +146,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function getQueuedWithdrawals() public view returns (uint256) {
         (uint256 shares, ) = validatorPool.unbonds(address(this));
-        return shares * validatorPool.withdrawExchangeRate();
+        return (shares * validatorPool.withdrawExchangeRate()) / EXCHANGE_RATE_PRECISION;
     }
 
     /**
