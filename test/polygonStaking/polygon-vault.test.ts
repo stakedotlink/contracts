@@ -82,6 +82,9 @@ describe('PolygonVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 150)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
+
+    await vault.restakeRewards()
+    await vault.restakeRewards()
   })
 
   it('withdrawRewards should work correctly', async () => {
