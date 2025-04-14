@@ -470,7 +470,7 @@ contract PolygonStrategy is Strategy {
      * @notice Finalizes a queued validator removal
      * @dev all vaults must be empty or unbonded
      */
-    function finalizeValidatorRemoval() external {
+    function finalizeValidatorRemoval() external onlyOwner {
         if (!validatorRemoval.isActive) revert NoRemovalQueued();
 
         uint256 validatorId = validatorRemoval.validatorId;
