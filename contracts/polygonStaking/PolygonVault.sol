@@ -96,7 +96,9 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Restakes rewards in the validator pool
      **/
     function restakeRewards() external {
-        validatorPool.restakePOL();
+        if (getRewards() != 0) {
+            validatorPool.restakePOL();
+        }
     }
 
     /**
