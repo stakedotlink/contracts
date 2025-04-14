@@ -14,6 +14,8 @@ interface IPolygonStakeManagerMock is IPolygonStakeManager {
  * @notice Mocks contract for testing
  */
 contract PolygonValidatorShareMock {
+    uint256 constant EXCHANGE_RATE_PRECISION = 10 ** 29;
+
     struct DelegatorUnbond {
         uint256 shares;
         uint256 withdrawEpoch;
@@ -98,11 +100,11 @@ contract PolygonValidatorShareMock {
     }
 
     function exchangeRate() external pure returns (uint256) {
-        return 1;
+        return EXCHANGE_RATE_PRECISION;
     }
 
     function withdrawExchangeRate() external pure returns (uint256) {
-        return 1;
+        return EXCHANGE_RATE_PRECISION;
     }
 
     function addReward(address _user, uint256 _amount) external {
