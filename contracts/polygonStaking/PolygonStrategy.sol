@@ -489,10 +489,20 @@ contract PolygonStrategy is Strategy {
             validators[validatorId].rewardsReceiver
         );
 
-        validators[validatorId] = validators[validators.length - 1];
+        if (validatorWithdrawalIndex == validators.length - 1) {
+            validatorWithdrawalIndex = 0;
+        } else if (validatorWithdrawalIndex > validatorId) {
+            --validatorWithdrawalIndex;
+        }
+
+        for (uint256 i = validatorId; i < validators.length - 1; ++i) {
+            validators[i] = validators[i + 1];
+            vaults[i] = vaults[i + 1];
+        }
+
         validators.pop();
-        vaults[validatorId] = vaults[vaults.length - 1];
         vaults.pop();
+
         delete validatorRemoval;
     }
 
