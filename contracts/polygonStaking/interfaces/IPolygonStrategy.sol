@@ -9,6 +9,8 @@ interface IPolygonStrategy {
 
     function unbond(uint256 _toUnbond) external;
 
+    function forceUnbond(uint256[] calldata _vaultIds, uint256[] calldata _amounts) external;
+
     function unstakeClaim(uint256[] calldata _vaultIds) external;
 
     function restakeRewards(uint256[] calldata _vaultIds) external;

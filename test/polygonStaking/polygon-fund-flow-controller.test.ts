@@ -191,6 +191,17 @@ describe('PolygonFundFlowController', () => {
     await fundFlowController.unbondVaults()
   })
 
+  it('forceUnbondVaults should work correctly', async () => {
+    const { strategy, vaults, fundFlowController } = await loadFixture(deployFixture)
+
+    await fundFlowController.forceUnbondVaults([0, 2], [toEther(5), toEther(10)])
+
+    assert.equal(await strategy.numVaultsUnbonding(), 2n)
+    assert.equal(await vaults[0].isUnbonding(), true)
+    assert.equal(await vaults[1].isUnbonding(), false)
+    assert.equal(await vaults[2].isUnbonding(), true)
+  })
+
   it('withdrawVaults should work correctly', async () => {
     const { token, strategy, stakeManager, vaults, fundFlowController, withdrawalPool } =
       await loadFixture(deployFixture)

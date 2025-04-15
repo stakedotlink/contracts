@@ -74,6 +74,7 @@ contract PolygonStrategy is Strategy {
 
     event DepositQueuedTokens(int256 balanceChange);
     event Unbond(uint256 amount);
+    event ForceUnbond(uint256 amount);
     event UnstakeClaim(uint256 amount);
     event RestakeRewards();
     event AddValidator(address indexed pool, address rewardsReceiver);
@@ -257,6 +258,40 @@ contract PolygonStrategy is Strategy {
         if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
 
         emit Unbond(_toUnbond);
+    }
+
+    /**
+     * @notice Unbonds token deposits in vaults
+     * @dev used to rebalance deposits between vaults if necessary
+     * @param _vaultIds list of vaults to unbond
+     * @param _amounts list of amounts to unbond
+     */
+    function forceUnbond(
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _amounts
+    ) external onlyFundFlowController {
+        if (numVaultsUnbonding != 0) revert UnbondingInProgress();
+
+        uint256 skipIndex = validatorRemoval.isActive
+            ? validatorRemoval.validatorId
+            : type(uint256).max;
+        uint256 totalUnbonded;
+        uint256 preBalance = token.balanceOf(address(this));
+
+        for (uint256 i = 0; i < _vaultIds.length; ++i) {
+            if (_vaultIds[i] == skipIndex) revert InvalidVaultIds();
+            if (_amounts[i] == 0) revert InvalidAmount();
+
+            vaults[_vaultIds[i]].unbond(_amounts[i]);
+            totalUnbonded += _amounts[i];
+        }
+
+        numVaultsUnbonding = _vaultIds.length;
+
+        uint256 rewardsClaimed = token.balanceOf(address(this)) - preBalance;
+        if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
+
+        emit ForceUnbond(totalUnbonded);
     }
 
     /**
