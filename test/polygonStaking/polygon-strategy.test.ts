@@ -316,6 +316,64 @@ describe('PolygonStrategy', () => {
     assert.equal(await vaults[2].isUnbonding(), true)
   })
 
+  it('forceUnbond should work correctly', async () => {
+    const { stakingPool, token, accounts, strategy, vaults, stakeManager, validatorShare3 } =
+      await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[1], toEther(1000), ['0x'])
+    await strategy.depositQueuedTokens([0, 1, 2], [toEther(10), toEther(20), toEther(30)])
+
+    await expect(strategy.forceUnbond([1], [0])).to.be.revertedWithCustomError(
+      strategy,
+      'InvalidAmount()'
+    )
+
+    await strategy.forceUnbond([1], [toEther(5)])
+
+    await expect(strategy.forceUnbond([1], [toEther(5)])).to.be.revertedWithCustomError(
+      strategy,
+      'UnbondingInProgress()'
+    )
+
+    assert.equal(await strategy.numVaultsUnbonding(), 1n)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 60)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 940)
+    assert.equal(fromEther(await strategy.totalQueued()), 940)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 5)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 0)
+
+    assert.equal(await vaults[0].isUnbonding(), false)
+    assert.equal(await vaults[1].isUnbonding(), true)
+    assert.equal(await vaults[2].isUnbonding(), false)
+
+    await time.increase(withdrawalDelay)
+    await strategy.unstakeClaim([1])
+    await validatorShare3.addReward(vaults[2].target, toEther(30))
+    await strategy.forceUnbond([0, 2], [toEther(6), toEther(15)])
+
+    assert.equal(await strategy.numVaultsUnbonding(), 2n)
+    assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 55)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 975)
+    assert.equal(fromEther(await strategy.totalQueued()), 975)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
+    assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 6)
+    assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 15)
+
+    assert.equal(await vaults[0].isUnbonding(), true)
+    assert.equal(await vaults[1].isUnbonding(), false)
+    assert.equal(await vaults[2].isUnbonding(), true)
+
+    await time.increase(withdrawalDelay)
+    await strategy.unstakeClaim([0, 2])
+    await strategy.queueValidatorRemoval(0)
+    await expect(
+      strategy.forceUnbond([0, 2], [toEther(1), toEther(1)])
+    ).to.be.revertedWithCustomError(strategy, 'InvalidVaultIds()')
+  })
+
   it('unstakeClaim should work correctly', async () => {
     const { stakingPool, token, accounts, strategy, vaults, stakeManager } = await loadFixture(
       deployFixture
