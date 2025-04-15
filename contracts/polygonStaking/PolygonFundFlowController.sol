@@ -123,6 +123,19 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Unbonds vaults
+     * @dev used to rebalance deposits between vaults if necessary
+     * @param _vaultIds list of vaults to unbond
+     * @param _amounts list of amounts to unbond
+     */
+    function forceUnbondVaults(
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _amounts
+    ) external onlyDepositController {
+        strategy.forceUnbond(_vaultIds, _amounts);
+    }
+
+    /**
      * @notice Returns whether vaults are unbonded and ready to be withdrawn from
      * @return true if vaults are ready for withdrawal, false otherwise
      * @return list of withdrawable vaults
