@@ -519,6 +519,8 @@ contract PolygonStrategy is Strategy {
         uint256 amountWithdrawn = token.balanceOf(address(this)) - preBalance;
         totalQueued += amountWithdrawn;
 
+        token.safeApprove(address(vault), 0);
+
         emit FinalizeValidatorRemoval(
             validators[validatorId].pool,
             validators[validatorId].rewardsReceiver
@@ -543,14 +545,15 @@ contract PolygonStrategy is Strategy {
 
     /**
      * @notice Upgrades vaults to a new implementation contract
+     * @param _vaults list of vauls to upgrade
      * @param _data list of encoded function calls to be executed for each vault after upgrade
      */
-    function upgradeVaults(bytes[] memory _data) external onlyOwner {
-        for (uint256 i = 0; i < vaults.length; ++i) {
+    function upgradeVaults(address[] calldata _vaults, bytes[] memory _data) external onlyOwner {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
             if (_data.length == 0 || _data[i].length == 0) {
-                vaults[i].upgradeTo(vaultImplementation);
+                IPolygonVault(_vaults[i]).upgradeTo(vaultImplementation);
             } else {
-                vaults[i].upgradeToAndCall(vaultImplementation, _data[i]);
+                IPolygonVault(_vaults[i]).upgradeToAndCall(vaultImplementation, _data[i]);
             }
         }
         emit UpgradedVaults();
