@@ -152,7 +152,7 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     function withdrawVaults(uint256[] calldata _vaultIds) external {
         strategy.unstakeClaim(_vaultIds);
 
-        (bool upkeepNeeded, ) = withdrawalPool.checkUpkeep("0x");
+        (bool upkeepNeeded, ) = withdrawalPool.checkUpkeep("");
 
         if (upkeepNeeded) {
             withdrawalPool.performUpkeep("");
