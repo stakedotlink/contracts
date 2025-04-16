@@ -740,11 +740,10 @@ describe('PolygonStrategy', () => {
     let newVaultImplementation = (await deployImplementation('PolygonVaultV2Mock')) as string
     await strategy.setVaultImplementation(newVaultImplementation)
 
-    await strategy.upgradeVaults([
-      '0x',
-      '0x',
-      vaultInterface.encodeFunctionData('initializeV2', [1]),
-    ])
+    await strategy.upgradeVaults(
+      [vaults[0].target, vaults[1].target, vaults[2].target],
+      ['0x', '0x', vaultInterface.encodeFunctionData('initializeV2', [1])]
+    )
     for (let i = 0; i < 1; i++) {
       let vault = await ethers.getContractAt('PolygonVaultV2Mock', vaults[i].target)
       assert.equal(await vault.version(), 0n)
