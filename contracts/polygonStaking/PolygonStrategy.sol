@@ -79,7 +79,7 @@ contract PolygonStrategy is Strategy {
     event RestakeRewards();
     event AddValidator(address indexed pool, address rewardsReceiver);
     event QueueValidatorRemoval(address indexed pool, address rewardsReceiver);
-    event FinalizeValidatorRemoval(address indexed pool, address rewardsReceiver);
+    event FinalizeValidatorRemoval(address indexed pool);
     event UpgradedVaults();
     event AddFee(address receiver, uint256 feeBasisPoints);
     event UpdateFee(uint256 index, address receiver, uint256 feeBasisPoints);
@@ -214,6 +214,8 @@ contract PolygonStrategy is Strategy {
         if (numVaultsUnbonding != 0) revert UnbondingInProgress();
         if (_toUnbond == 0) revert InvalidAmount();
 
+        uint256 toUnbondRemaining = _toUnbond;
+
         uint256 i = validatorWithdrawalIndex;
         uint256 skipIndex = validatorRemoval.isActive
             ? validatorRemoval.validatorId
@@ -221,7 +223,7 @@ contract PolygonStrategy is Strategy {
         uint256 numVaultsUnbonded;
         uint256 preBalance = token.balanceOf(address(this));
 
-        while (_toUnbond != 0) {
+        while (toUnbondRemaining != 0) {
             if (i != skipIndex) {
                 IPolygonVault vault = vaults[i];
                 uint256 deposits = vault.getTotalDeposits();
@@ -230,18 +232,18 @@ contract PolygonStrategy is Strategy {
                     uint256 principalDeposits = vault.getPrincipalDeposits();
                     uint256 rewards = deposits - principalDeposits;
 
-                    if (rewards >= _toUnbond) {
+                    if (rewards >= toUnbondRemaining) {
                         vault.withdrawRewards();
-                        _toUnbond = 0;
+                        toUnbondRemaining = 0;
                     } else {
-                        _toUnbond -= rewards;
-                        uint256 vaultToUnbond = principalDeposits >= _toUnbond
-                            ? _toUnbond
+                        toUnbondRemaining -= rewards;
+                        uint256 vaultToUnbond = principalDeposits >= toUnbondRemaining
+                            ? toUnbondRemaining
                             : principalDeposits;
 
                         vault.unbond(vaultToUnbond);
 
-                        _toUnbond -= vaultToUnbond;
+                        toUnbondRemaining -= vaultToUnbond;
                         ++numVaultsUnbonded;
                     }
                 }
@@ -490,7 +492,6 @@ contract PolygonStrategy is Strategy {
         }
 
         validatorMEVRewardsPool.updateReward(validators[_validatorId].rewardsReceiver);
-        delete validators[_validatorId].rewardsReceiver;
 
         uint256 queuedWithdrawals = vault.getQueuedWithdrawals();
         validatorRemoval = ValidatorRemoval(true, uint64(_validatorId), uint128(queuedWithdrawals));
@@ -499,6 +500,8 @@ contract PolygonStrategy is Strategy {
             validators[_validatorId].pool,
             validators[_validatorId].rewardsReceiver
         );
+
+        delete validators[_validatorId].rewardsReceiver;
     }
 
     /**
@@ -521,10 +524,7 @@ contract PolygonStrategy is Strategy {
 
         token.safeApprove(address(vault), 0);
 
-        emit FinalizeValidatorRemoval(
-            validators[validatorId].pool,
-            validators[validatorId].rewardsReceiver
-        );
+        emit FinalizeValidatorRemoval(validators[validatorId].pool);
 
         if (validatorWithdrawalIndex == validators.length - 1) {
             validatorWithdrawalIndex = 0;
