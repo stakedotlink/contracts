@@ -282,6 +282,7 @@ contract PolygonStrategy is Strategy {
 
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
             if (_vaultIds[i] == skipIndex) revert InvalidVaultIds();
+            if (i > 0 && _vaultIds[i] <= _vaultIds[i - 1]) revert InvalidVaultIds();
             if (_amounts[i] == 0) revert InvalidAmount();
 
             vaults[_vaultIds[i]].unbond(_amounts[i]);
@@ -526,7 +527,10 @@ contract PolygonStrategy is Strategy {
 
         emit FinalizeValidatorRemoval(validators[validatorId].pool);
 
-        if (validatorWithdrawalIndex == validators.length - 1) {
+        if (
+            validatorId == validators.length - 1 &&
+            validatorWithdrawalIndex == validators.length - 1
+        ) {
             validatorWithdrawalIndex = 0;
         } else if (validatorWithdrawalIndex > validatorId) {
             --validatorWithdrawalIndex;

@@ -16,7 +16,8 @@ import "./interfaces/IPolygonStaking.sol";
 contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint256 constant EXCHANGE_RATE_PRECISION = 10 ** 29;
+    uint256 constant EXCHANGE_RATE_PRECISION = 100;
+    uint256 constant EXCHANGE_RATE_HIGH_PRECISION = 10 ** 29;
 
     // address of staking token
     IERC20Upgradeable public token;
@@ -131,7 +132,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function getPrincipalDeposits() public view returns (uint256) {
         return
             (validatorPool.balanceOf(address(this)) * validatorPool.exchangeRate()) /
-            EXCHANGE_RATE_PRECISION;
+            _getRatePrecision();
     }
 
     /**
@@ -148,7 +149,7 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function getQueuedWithdrawals() public view returns (uint256) {
         (uint256 shares, ) = validatorPool.unbonds(address(this));
-        return (shares * validatorPool.withdrawExchangeRate()) / EXCHANGE_RATE_PRECISION;
+        return (shares * validatorPool.withdrawExchangeRate()) / _getRatePrecision();
     }
 
     /**
@@ -168,6 +169,17 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function isUnbonding() external view returns (bool) {
         (, uint256 withdrawEpoch) = validatorPool.unbonds(address(this));
         return stakeManager.epoch() < (withdrawEpoch + stakeManager.withdrawalDelay());
+    }
+
+    function _getRatePrecision() private view returns (uint256) {
+        uint256 validatorId = validatorPool.validatorId();
+
+        // if foundation validator, use old precision
+        if (validatorId < 8) {
+            return EXCHANGE_RATE_PRECISION;
+        }
+
+        return EXCHANGE_RATE_HIGH_PRECISION;
     }
 
     /**
