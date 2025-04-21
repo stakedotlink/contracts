@@ -21,4 +21,6 @@ interface IPolygonStaking {
     function withdrawExchangeRate() external view returns (uint256);
 
     function unbonds(address _user) external view returns (uint256, uint256);
+
+    function validatorId() external view returns (uint256);
 }

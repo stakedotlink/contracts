@@ -21,6 +21,8 @@ contract PolygonValidatorShareMock {
         uint256 withdrawEpoch;
     }
 
+    uint256 public validatorId = 8;
+
     IPolygonStakeManagerMock public stakeManager;
     mapping(address => uint256) private staked;
     mapping(address => uint256) private liquidRewards;
