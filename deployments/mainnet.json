@@ -206,5 +206,9 @@
   "GovernanceTimelock": {
     "address": "0xb72d8F5213b3E52FAf13Aa074b03C4788e78349F",
     "artifact": "GovernanceTimelock"
+  },
+  "POLToken": {
+    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   }
 }
