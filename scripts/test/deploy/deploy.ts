@@ -2,6 +2,7 @@ import fs from 'fs'
 import { deployCore } from './modules/deploy-core'
 import { deployLINKStaking } from './modules/deploy-link-staking'
 import { deployMETISStaking } from './modules/deploy-metis-staking'
+import { deployPOLStaking } from './modules/deploy-polygon-staking'
 import { deploySubgraphMockContracts } from './modules/deploy-subgraph-mocks'
 import { deployDeprecated } from './modules/deploy-deprecated'
 import { deployOther } from './modules/deploy-other'
@@ -17,6 +18,7 @@ async function main() {
   await deployCore()
   await deployLINKStaking()
   await deployMETISStaking()
+  await deployPOLStaking()
   await deploySubgraphMockContracts()
   await deployOther()
 }

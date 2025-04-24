@@ -210,5 +210,9 @@
   "LINK_CurveGaugeDistributor": {
     "address": "0x2cbFc4825a56109b72F1EfF0D72C93844404C5Ec",
     "artifact": "CurveGaugeDistributor"
+  },
+  "POLToken": {
+    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   }
 }
