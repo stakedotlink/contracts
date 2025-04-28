@@ -9,7 +9,7 @@ const blockNumber = 22131113
 
 const curveStableSwapNG = '0x7E13876B92F1a62C599C231f783f682E96B91761'
 const liquidityGaugeV6 = '0x985ca600257BFc1adC2b630B8A7E2110b834A20e'
-const minTimeBetweenDistributions = 86400n * 7n
+const epochDuration = 86400n * 7n
 
 describe('CurveGaugeDistributor stLINK/LINK integration', () => {
   async function deployFixture() {
@@ -30,7 +30,7 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
       curveStableSwapNG,
       liquidityGaugeV6,
       accounts[0],
-      minTimeBetweenDistributions,
+      epochDuration,
     ])) as CurveGaugeDistributor
 
     const stableSwap = new ethers.Contract(curveStableSwapNG, [
@@ -90,15 +90,12 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
       await liquidityGauge.connect(signers[i]).deposit(toEther(i * 100 + 10))
     }
 
-    assert.equal((await gaugeDistributor.shouldDistributeRewards())[0], false)
-
     await stakingPool
       .connect(linkHolder)
       .transferAndCall(gaugeDistributor.target, toEther(1000), '0x')
 
-    let ret = await gaugeDistributor.shouldDistributeRewards()
-    assert.equal(ret[0], true)
-    await gaugeDistributor.distributeRewards(ret[1] - 100n)
+    let mintAmount = await gaugeDistributor.getLPTokenAmount()
+    await gaugeDistributor.distributeRewards(mintAmount - 100n)
 
     assert.equal(fromEther(await linkToken.balanceOf(gaugeDistributor.target)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(gaugeDistributor.target)), 0)
@@ -108,28 +105,24 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
     assert.closeTo(fromEther(await stakingPool.balanceOf(stableSwap.target)), 1330, 1)
     assert.closeTo(
       await stableSwap.balanceOf(liquidityGauge.target),
-      (ret[1] + toEther(330)) as any,
+      (mintAmount + toEther(330)) as any,
       10
     )
 
     let rewardData = await liquidityGauge.reward_data(stableSwap.target)
-    assert.equal(rewardData[3], ret[1] / minTimeBetweenDistributions)
+    assert.equal(rewardData[3], mintAmount / epochDuration)
 
     await stakingPool.connect(linkHolder).transfer(gaugeDistributor.target, toEther(500))
-
-    assert.equal((await gaugeDistributor.shouldDistributeRewards())[0], false)
-
     await time.increase(86400)
 
     for (let i = 0; i < 3; i++) {
       assert.equal(await liquidityGauge.balanceOf(accounts[i]), toEther(i * 100 + 10))
     }
 
-    await time.increase(minTimeBetweenDistributions)
+    await time.increase(epochDuration)
 
-    let ret2 = await gaugeDistributor.shouldDistributeRewards()
-    assert.equal(ret2[0], true)
-    await gaugeDistributor.distributeRewards(ret2[1] - 100n)
+    let mintAmount2 = await gaugeDistributor.getLPTokenAmount()
+    await gaugeDistributor.distributeRewards(mintAmount2 - 100n)
 
     assert.equal(fromEther(await linkToken.balanceOf(gaugeDistributor.target)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(gaugeDistributor.target)), 0)
@@ -139,14 +132,14 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(stableSwap.target)), 1830)
     assert.closeTo(
       await stableSwap.balanceOf(liquidityGauge.target),
-      (ret[1] + ret2[1] + toEther(330)) as any,
+      (mintAmount + mintAmount2 + toEther(330)) as any,
       10
     )
 
     let rewardData2 = await liquidityGauge.reward_data(stableSwap.target)
-    assert.equal(rewardData2[3], ret2[1] / minTimeBetweenDistributions)
+    assert.equal(rewardData2[3], mintAmount2 / epochDuration)
 
-    await time.increase(minTimeBetweenDistributions)
+    await time.increase(epochDuration)
 
     for (let i = 0; i < 3; i++) {
       await liquidityGauge.connect(signers[i]).claim_rewards()
@@ -177,15 +170,12 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
       await liquidityGauge.connect(signers[i]).deposit(toEther(100))
     }
 
-    assert.equal((await gaugeDistributor.shouldDistributeRewards())[0], false)
-
     await stakingPool
       .connect(linkHolder)
       .transferAndCall(gaugeDistributor.target, toEther(1000), '0x')
 
-    let ret = await gaugeDistributor.shouldDistributeRewards()
-    assert.equal(ret[0], true)
-    await gaugeDistributor.distributeRewards(ret[1] - 100n)
+    let mintAmount = await gaugeDistributor.getLPTokenAmount()
+    await gaugeDistributor.distributeRewards(mintAmount - 100n)
 
     assert.equal(fromEther(await linkToken.balanceOf(gaugeDistributor.target)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(gaugeDistributor.target)), 0)
@@ -195,16 +185,14 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
     assert.closeTo(fromEther(await stakingPool.balanceOf(stableSwap.target)), 1300, 1)
     assert.closeTo(
       await stableSwap.balanceOf(liquidityGauge.target),
-      (ret[1] + toEther(300)) as any,
+      (mintAmount + toEther(300)) as any,
       10
     )
 
     let rewardData = await liquidityGauge.reward_data(stableSwap.target)
-    assert.equal(rewardData[3], ret[1] / minTimeBetweenDistributions)
+    assert.equal(rewardData[3], mintAmount / epochDuration)
 
     await stakingPool.connect(linkHolder).transfer(gaugeDistributor.target, toEther(500))
-
-    assert.equal((await gaugeDistributor.shouldDistributeRewards())[0], false)
 
     await time.increase(86400)
 
@@ -212,11 +200,10 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
       assert.equal(await liquidityGauge.balanceOf(accounts[i]), toEther(100))
     }
 
-    await time.increase(minTimeBetweenDistributions)
+    await time.increase(epochDuration)
 
-    let ret2 = await gaugeDistributor.shouldDistributeRewards()
-    assert.equal(ret2[0], true)
-    await gaugeDistributor.distributeRewards(ret2[1] - 100n)
+    let mintAmount2 = await gaugeDistributor.getLPTokenAmount()
+    await gaugeDistributor.distributeRewards(mintAmount2 - 100n)
 
     assert.equal(fromEther(await linkToken.balanceOf(gaugeDistributor.target)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(gaugeDistributor.target)), 0)
@@ -226,14 +213,14 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(stableSwap.target)), 1800)
     assert.closeTo(
       await stableSwap.balanceOf(liquidityGauge.target),
-      (ret[1] + ret2[1] + toEther(300)) as any,
+      (mintAmount + mintAmount2 + toEther(300)) as any,
       10
     )
 
     let rewardData2 = await liquidityGauge.reward_data(stableSwap.target)
-    assert.equal(rewardData2[3], ret2[1] / minTimeBetweenDistributions)
+    assert.equal(rewardData2[3], mintAmount2 / epochDuration)
 
-    await time.increase(minTimeBetweenDistributions)
+    await time.increase(epochDuration)
 
     for (let i = 0; i < 3; i++) {
       await liquidityGauge.connect(signers[i]).claim_rewards()
