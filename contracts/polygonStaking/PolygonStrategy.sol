@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../core/base/Strategy.sol";
@@ -23,8 +22,6 @@ contract PolygonStrategy is Strategy {
         address pool;
         // address to receive validator share of MEV rewards
         address rewardsReceiver;
-        // index of next empty vault
-        uint256 depositIndex;
     }
 
     struct ValidatorRemoval {
@@ -58,12 +55,10 @@ contract PolygonStrategy is Strategy {
 
     // list of validators
     Validator[] private validators;
-    // list of vaults grouped by validator
-    IPolygonVault[][] private vaults;
+    // list of vaults
+    IPolygonVault[] private vaults;
     // address of vault implementation contract to be used when deploying new vaults
     address public vaultImplementation;
-    // number of vaults to deploy per validator
-    uint256 public vaultsPerValidator;
 
     // queued validator removal state
     ValidatorRemoval public validatorRemoval;
@@ -77,13 +72,14 @@ contract PolygonStrategy is Strategy {
     // index of validator to withdraw from on next withdrawal
     uint256 public validatorWithdrawalIndex;
 
-    event DepositQueuedTokens();
+    event DepositQueuedTokens(int256 balanceChange);
     event Unbond(uint256 amount);
+    event ForceUnbond(uint256 amount);
     event UnstakeClaim(uint256 amount);
     event RestakeRewards();
     event AddValidator(address indexed pool, address rewardsReceiver);
     event QueueValidatorRemoval(address indexed pool, address rewardsReceiver);
-    event FinalizeValidatorRemoval(address indexed pool, address rewardsReceiver);
+    event FinalizeValidatorRemoval(address indexed pool);
     event UpgradedVaults();
     event AddFee(address receiver, uint256 feeBasisPoints);
     event UpdateFee(uint256 index, address receiver, uint256 feeBasisPoints);
@@ -100,7 +96,6 @@ contract PolygonStrategy is Strategy {
     error InvalidVaultIds();
     error InvalidAmount();
     error NoVaultsUnbonding();
-    error InvalidVaultsPerValidator();
 
     /**
      * @notice Initializes contract
@@ -108,7 +103,6 @@ contract PolygonStrategy is Strategy {
      * @param _stakingPool address of the staking pool that controls this strategy
      * @param _stakeManager address of the Polygon stake manager
      * @param _vaultImplementation address of the implementation contract to use when deploying new vaults
-     * @param _vaultsPerValidator number of vaults to deploy per validator
      * @param _validatorMEVRewardsPercentage basis point amount of MEV fees that validators will receive
      * @param _fees list of fees to be paid on rewards
      **/
@@ -117,7 +111,6 @@ contract PolygonStrategy is Strategy {
         address _stakingPool,
         address _stakeManager,
         address _vaultImplementation,
-        uint256 _vaultsPerValidator,
         uint256 _validatorMEVRewardsPercentage,
         Fee[] memory _fees
     ) public initializer {
@@ -125,7 +118,6 @@ contract PolygonStrategy is Strategy {
 
         stakeManager = _stakeManager;
         vaultImplementation = _vaultImplementation;
-        vaultsPerValidator = _vaultsPerValidator;
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
 
         for (uint256 i = 0; i < _fees.length; ++i) {
@@ -151,10 +143,10 @@ contract PolygonStrategy is Strategy {
     }
 
     /**
-     * @notice Returns a list of all vaults controlled by this contract grouped by validator
+     * @notice Returns a list of all vaults controlled by this contract
      * @return list of vault addresses
      */
-    function getVaults() external view returns (IPolygonVault[][] memory) {
+    function getVaults() external view returns (IPolygonVault[] memory) {
         return vaults;
     }
 
@@ -184,34 +176,23 @@ contract PolygonStrategy is Strategy {
      * @param _amounts list of amounts to deposit into each vault
      */
     function depositQueuedTokens(
-        uint256[][] calldata _vaultIds,
-        uint256[][] calldata _amounts
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _amounts
     ) external onlyFundFlowController {
-        if (_vaultIds.length != vaults.length) revert InvalidVaultIds();
-        if (
-            validatorRemoval.isActive &&
-            _vaultIds.length > validatorRemoval.validatorId &&
-            _vaultIds[validatorRemoval.validatorId].length != 0
-        ) revert InvalidVaultIds();
         if (numVaultsUnbonding != 0) revert UnbondingInProgress();
 
         uint256 preBalance = token.balanceOf(address(this));
+        uint256 skipIndex = validatorRemoval.isActive
+            ? validatorRemoval.validatorId
+            : type(uint256).max;
 
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
-            uint256 depositIndex = validators[i].depositIndex;
+            if (_vaultIds[i] == skipIndex) revert InvalidVaultIds();
 
-            for (uint256 j = 0; j < _vaultIds[i].length; ++j) {
-                uint256 index = _vaultIds[i][j];
-                uint256 amount = _amounts[i][j];
+            uint256 amount = _amounts[i];
+            if (amount == 0) revert InvalidAmount();
 
-                if (amount == 0) revert InvalidAmount();
-                if (index > depositIndex) revert InvalidVaultIds();
-
-                if (index == depositIndex) ++depositIndex;
-                vaults[i][index].deposit(amount);
-            }
-
-            validators[i].depositIndex = depositIndex;
+            vaults[_vaultIds[i]].deposit(amount);
         }
 
         // balance change could be positive if many rewards are claimed while depositing
@@ -222,7 +203,7 @@ contract PolygonStrategy is Strategy {
             totalQueued += uint256(balanceChange);
         }
 
-        emit DepositQueuedTokens();
+        emit DepositQueuedTokens(balanceChange);
     }
 
     /**
@@ -233,27 +214,37 @@ contract PolygonStrategy is Strategy {
         if (numVaultsUnbonding != 0) revert UnbondingInProgress();
         if (_toUnbond == 0) revert InvalidAmount();
 
-        uint256[] memory numVaultsUnbonded = new uint256[](validators.length);
+        uint256 toUnbondRemaining = _toUnbond;
+
         uint256 i = validatorWithdrawalIndex;
         uint256 skipIndex = validatorRemoval.isActive
             ? validatorRemoval.validatorId
             : type(uint256).max;
+        uint256 numVaultsUnbonded;
+        uint256 preBalance = token.balanceOf(address(this));
 
-        while (_toUnbond != 0) {
+        while (toUnbondRemaining != 0) {
             if (i != skipIndex) {
-                uint256 depositIndex = validators[i].depositIndex;
+                IPolygonVault vault = vaults[i];
+                uint256 deposits = vault.getTotalDeposits();
 
-                if (numVaultsUnbonded[i] < depositIndex) {
-                    uint256 vaultIndex = depositIndex - (1 + numVaultsUnbonded[i]);
+                if (deposits != 0) {
+                    uint256 principalDeposits = vault.getPrincipalDeposits();
+                    uint256 rewards = deposits - principalDeposits;
 
-                    IPolygonVault vault = vaults[i][vaultIndex];
+                    if (rewards >= toUnbondRemaining) {
+                        vault.withdrawRewards();
+                        toUnbondRemaining = 0;
+                    } else {
+                        toUnbondRemaining -= rewards;
+                        uint256 vaultToUnbond = principalDeposits >= toUnbondRemaining
+                            ? toUnbondRemaining
+                            : principalDeposits;
 
-                    if (vault.getPrincipalDeposits() != 0) {
-                        vault.unbond();
-                        ++numVaultsUnbonded[i];
+                        vault.unbond(vaultToUnbond);
 
-                        uint256 deposits = vault.getTotalDeposits();
-                        _toUnbond = deposits >= _toUnbond ? 0 : _toUnbond - deposits;
+                        toUnbondRemaining -= vaultToUnbond;
+                        ++numVaultsUnbonded;
                     }
                 }
             }
@@ -263,40 +254,67 @@ contract PolygonStrategy is Strategy {
         }
 
         validatorWithdrawalIndex = i;
+        numVaultsUnbonding = numVaultsUnbonded;
 
-        uint256 totalVaultsUnbonded;
-        for (uint256 j = 0; j < numVaultsUnbonded.length; ++j) {
-            if (numVaultsUnbonded[j] == 0) continue;
-
-            validators[j].depositIndex -= numVaultsUnbonded[j];
-            totalVaultsUnbonded += numVaultsUnbonded[j];
-        }
-
-        numVaultsUnbonding = totalVaultsUnbonded;
+        uint256 rewardsClaimed = token.balanceOf(address(this)) - preBalance;
+        if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
 
         emit Unbond(_toUnbond);
+    }
+
+    /**
+     * @notice Unbonds token deposits in vaults
+     * @dev used to rebalance deposits between vaults if necessary
+     * @param _vaultIds list of vaults to unbond
+     * @param _amounts list of amounts to unbond
+     */
+    function forceUnbond(
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _amounts
+    ) external onlyFundFlowController {
+        if (numVaultsUnbonding != 0) revert UnbondingInProgress();
+
+        uint256 skipIndex = validatorRemoval.isActive
+            ? validatorRemoval.validatorId
+            : type(uint256).max;
+        uint256 totalUnbonded;
+        uint256 preBalance = token.balanceOf(address(this));
+
+        for (uint256 i = 0; i < _vaultIds.length; ++i) {
+            if (_vaultIds[i] == skipIndex) revert InvalidVaultIds();
+            if (i > 0 && _vaultIds[i] <= _vaultIds[i - 1]) revert InvalidVaultIds();
+            if (_amounts[i] == 0) revert InvalidAmount();
+
+            vaults[_vaultIds[i]].unbond(_amounts[i]);
+            totalUnbonded += _amounts[i];
+        }
+
+        numVaultsUnbonding = _vaultIds.length;
+
+        uint256 rewardsClaimed = token.balanceOf(address(this)) - preBalance;
+        if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
+
+        emit ForceUnbond(totalUnbonded);
     }
 
     /**
      * @notice Claims and withdraws tokens from vaults that are unbonded
      * @param _vaultIds list of vaults to withdraw from
      */
-    function unstakeClaim(uint256[][] calldata _vaultIds) external onlyFundFlowController {
+    function unstakeClaim(uint256[] calldata _vaultIds) external onlyFundFlowController {
         if (numVaultsUnbonding == 0) revert NoVaultsUnbonding();
-        if (
-            validatorRemoval.isActive &&
-            _vaultIds.length > validatorRemoval.validatorId &&
-            _vaultIds[validatorRemoval.validatorId].length != 0
-        ) revert InvalidVaultIds();
 
         uint256 preBalance = token.balanceOf(address(this));
+        uint256 skipIndex = validatorRemoval.isActive
+            ? validatorRemoval.validatorId
+            : type(uint256).max;
         uint256 vaultsWithdrawn;
 
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
-            for (uint256 j = 0; j < _vaultIds[i].length; ++j) {
-                vaults[i][_vaultIds[i][j]].withdraw();
-                ++vaultsWithdrawn;
-            }
+            if (_vaultIds[i] == skipIndex) revert InvalidVaultIds();
+
+            vaults[_vaultIds[i]].withdraw();
+            ++vaultsWithdrawn;
         }
 
         if (vaultsWithdrawn != numVaultsUnbonding) revert MustWithdrawAllVaults();
@@ -318,9 +336,7 @@ contract PolygonStrategy is Strategy {
         uint256 totalBalance = token.balanceOf(address(this));
 
         for (uint256 i = 0; i < vaults.length; ++i) {
-            for (uint256 j = 0; j < vaults[i].length; ++j) {
-                totalBalance += vaults[i][j].getTotalDeposits();
-            }
+            totalBalance += vaults[i].getTotalDeposits();
         }
         return int(totalBalance) - int(totalDeposits);
     }
@@ -370,11 +386,9 @@ contract PolygonStrategy is Strategy {
      * @notice Restakes rewards in the polygon staking contract
      * @param _vaultIds list of vaults to restake rewards for
      */
-    function restakeRewards(uint256[][] calldata _vaultIds) external {
+    function restakeRewards(uint256[] calldata _vaultIds) external {
         for (uint256 i = 0; i < _vaultIds.length; ++i) {
-            for (uint256 j = 0; j < _vaultIds[i].length; ++j) {
-                vaults[i][_vaultIds[i][j]].restakeRewards();
-            }
+            vaults[_vaultIds[i]].restakeRewards();
         }
 
         emit RestakeRewards();
@@ -437,25 +451,22 @@ contract PolygonStrategy is Strategy {
             if (validators[i].pool == _pool) revert ValidatorAlreadyAdded();
         }
         validatorMEVRewardsPool.updateReward(_rewardsReceiver);
-        validators.push(Validator(_pool, _rewardsReceiver, 0));
-        vaults.push();
+        validators.push(Validator(_pool, _rewardsReceiver));
 
-        for (uint256 i = 0; i < vaultsPerValidator; ++i) {
-            address vault = address(
-                new ERC1967Proxy(
-                    vaultImplementation,
-                    abi.encodeWithSignature(
-                        "initialize(address,address,address,address)",
-                        address(token),
-                        address(this),
-                        stakeManager,
-                        _pool
-                    )
+        address vault = address(
+            new ERC1967Proxy(
+                vaultImplementation,
+                abi.encodeWithSignature(
+                    "initialize(address,address,address,address)",
+                    address(token),
+                    address(this),
+                    stakeManager,
+                    _pool
                 )
-            );
-            token.safeApprove(vault, type(uint256).max);
-            vaults[vaults.length - 1].push(IPolygonVault(vault));
-        }
+            )
+        );
+        token.safeApprove(vault, type(uint256).max);
+        vaults.push(IPolygonVault(vault));
 
         emit AddValidator(_pool, _rewardsReceiver);
     }
@@ -467,82 +478,86 @@ contract PolygonStrategy is Strategy {
     function queueValidatorRemoval(uint256 _validatorId) external onlyOwner {
         if (validatorRemoval.isActive) revert RemovalAlreadyQueued();
 
-        uint256 totalValidatorDeposits;
+        IPolygonVault vault = vaults[_validatorId];
+        uint256 principalDeposits = vault.getPrincipalDeposits();
 
-        for (uint256 i = 0; i < vaults[_validatorId].length; ++i) {
-            IPolygonVault vault = vaults[_validatorId][i];
+        if (vault.isUnbonding() || vault.isWithdrawable()) {
+            --numVaultsUnbonding;
+        }
 
-            uint256 deposits = vault.getTotalDeposits();
-            if (deposits == 0) continue;
-
-            if (vault.isUnbonding() || vault.isWithdrawable()) {
-                --numVaultsUnbonding;
-            } else {
-                vault.unbond();
-            }
-
-            totalValidatorDeposits += deposits;
+        if (principalDeposits != 0) {
+            uint256 preBalance = token.balanceOf(address(this));
+            vault.unbond(principalDeposits);
+            uint256 rewardsClaimed = token.balanceOf(address(this)) - preBalance;
+            if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
         }
 
         validatorMEVRewardsPool.updateReward(validators[_validatorId].rewardsReceiver);
-        delete validators[_validatorId].rewardsReceiver;
 
-        validatorRemoval = ValidatorRemoval(
-            true,
-            uint64(_validatorId),
-            uint128(totalValidatorDeposits)
-        );
+        uint256 queuedWithdrawals = vault.getQueuedWithdrawals();
+        validatorRemoval = ValidatorRemoval(true, uint64(_validatorId), uint128(queuedWithdrawals));
 
         emit QueueValidatorRemoval(
             validators[_validatorId].pool,
             validators[_validatorId].rewardsReceiver
         );
+
+        delete validators[_validatorId].rewardsReceiver;
     }
 
     /**
      * @notice Finalizes a queued validator removal
      * @dev all vaults must be empty or unbonded
      */
-    function finalizeValidatorRemoval() external {
+    function finalizeValidatorRemoval() external onlyOwner {
         if (!validatorRemoval.isActive) revert NoRemovalQueued();
 
         uint256 validatorId = validatorRemoval.validatorId;
-        uint256 balanceBefore = token.balanceOf(address(this));
+        uint256 preBalance = token.balanceOf(address(this));
 
-        for (uint256 i = 0; i < vaults[validatorId].length; ++i) {
-            IPolygonVault vault = vaults[validatorId][i];
-            if (vault.getTotalDeposits() != 0) {
-                vault.withdraw();
-            }
+        IPolygonVault vault = vaults[validatorId];
+        if (vault.getQueuedWithdrawals() != 0) {
+            vault.withdraw();
         }
 
-        uint256 amountWithdrawn = token.balanceOf(address(this)) - balanceBefore;
+        uint256 amountWithdrawn = token.balanceOf(address(this)) - preBalance;
         totalQueued += amountWithdrawn;
 
-        emit FinalizeValidatorRemoval(
-            validators[validatorId].pool,
-            validators[validatorId].rewardsReceiver
-        );
+        token.safeApprove(address(vault), 0);
 
-        validators[validatorId] = validators[validators.length - 1];
+        emit FinalizeValidatorRemoval(validators[validatorId].pool);
+
+        if (
+            validatorId == validators.length - 1 &&
+            validatorWithdrawalIndex == validators.length - 1
+        ) {
+            validatorWithdrawalIndex = 0;
+        } else if (validatorWithdrawalIndex > validatorId) {
+            --validatorWithdrawalIndex;
+        }
+
+        for (uint256 i = validatorId; i < validators.length - 1; ++i) {
+            validators[i] = validators[i + 1];
+            vaults[i] = vaults[i + 1];
+        }
+
         validators.pop();
-        vaults[validatorId] = vaults[vaults.length - 1];
         vaults.pop();
+
         delete validatorRemoval;
     }
 
     /**
      * @notice Upgrades vaults to a new implementation contract
+     * @param _vaults list of vauls to upgrade
      * @param _data list of encoded function calls to be executed for each vault after upgrade
      */
-    function upgradeVaults(bytes[][] memory _data) external onlyOwner {
-        for (uint256 i = 0; i < vaults.length; ++i) {
-            for (uint256 j = 0; j < vaults[i].length; ++j) {
-                if (_data.length == 0 || _data[i][j].length == 0) {
-                    vaults[i][j].upgradeTo(vaultImplementation);
-                } else {
-                    vaults[i][j].upgradeToAndCall(vaultImplementation, _data[i][j]);
-                }
+    function upgradeVaults(address[] calldata _vaults, bytes[] memory _data) external onlyOwner {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            if (_data.length == 0 || _data[i].length == 0) {
+                IPolygonVault(_vaults[i]).upgradeTo(vaultImplementation);
+            } else {
+                IPolygonVault(_vaults[i]).upgradeToAndCall(vaultImplementation, _data[i]);
             }
         }
         emit UpgradedVaults();
@@ -598,37 +613,6 @@ contract PolygonStrategy is Strategy {
     }
 
     /**
-     * @notice Sets the number of vaults to deploy per validator
-     * @dev will deploy new vaults for every validator equal to the difference between the new value and current
-     * @param _vaultsPerValidator number of vaults
-     */
-    function setVaultsPerValidator(uint256 _vaultsPerValidator) external onlyOwner {
-        if (_vaultsPerValidator <= vaultsPerValidator) revert InvalidVaultsPerValidator();
-
-        uint256 numVaultsToDeploy = _vaultsPerValidator - vaultsPerValidator;
-        vaultsPerValidator = _vaultsPerValidator;
-
-        for (uint256 i = 0; i < validators.length; ++i) {
-            for (uint256 j = 0; j < numVaultsToDeploy; ++j) {
-                address vault = address(
-                    new ERC1967Proxy(
-                        vaultImplementation,
-                        abi.encodeWithSignature(
-                            "initialize(address,address,address,address)",
-                            address(token),
-                            address(this),
-                            stakeManager,
-                            validators[i].pool
-                        )
-                    )
-                );
-                token.safeApprove(vault, type(uint256).max);
-                vaults[i].push(IPolygonVault(vault));
-            }
-        }
-    }
-
-    /**
      * @notice Sets the validator MEV rewards pool
      * @param _validatorMEVRewardsPool address of rewards pool
      */
@@ -643,6 +627,8 @@ contract PolygonStrategy is Strategy {
     function setValidatorMEVRewardsPercentage(
         uint256 _validatorMEVRewardsPercentage
     ) external onlyOwner {
+        if (_validatorMEVRewardsPercentage > 10000) revert FeesTooLarge();
+
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
         emit SetValidatorMEVRewardsPercentage(_validatorMEVRewardsPercentage);
     }
