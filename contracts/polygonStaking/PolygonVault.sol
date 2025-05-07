@@ -114,15 +114,11 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns the total balance of this contract
-     * @dev includes principal, rewards, queued withdrawals, and tokens sitting in this contract
+     * @dev includes principal, rewards, and queued withdrawals
      * @return total balance
      */
     function getTotalDeposits() public view returns (uint256) {
-        return
-            getPrincipalDeposits() +
-            getRewards() +
-            getQueuedWithdrawals() +
-            token.balanceOf(address(this));
+        return getPrincipalDeposits() + getRewards() + getQueuedWithdrawals();
     }
 
     /**
