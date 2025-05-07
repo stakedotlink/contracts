@@ -11001,7 +11001,7 @@
             "label": "token",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(IERC20Upgradeable)3938",
+            "type": "t_contract(IERC20Upgradeable)3982",
             "contract": "Strategy",
             "src": "contracts/core/base/Strategy.sol:17"
           },
@@ -11009,7 +11009,7 @@
             "label": "stakingPool",
             "offset": 0,
             "slot": "202",
-            "type": "t_contract(IStakingPool)13135",
+            "type": "t_contract(IStakingPool)21193",
             "contract": "Strategy",
             "src": "contracts/core/base/Strategy.sol:18"
           },
@@ -11017,7 +11017,7 @@
             "label": "stakeController",
             "offset": 0,
             "slot": "203",
-            "type": "t_contract(IStaking)24476",
+            "type": "t_contract(IStaking)48796",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:333"
           },
@@ -11025,7 +11025,7 @@
             "label": "fees",
             "offset": 0,
             "slot": "204",
-            "type": "t_array(t_struct(Fee)22380_storage)dyn_storage",
+            "type": "t_array(t_struct(Fee)46700_storage)dyn_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:335"
           },
@@ -11041,7 +11041,7 @@
             "label": "vaults",
             "offset": 0,
             "slot": "206",
-            "type": "t_array(t_contract(IVault)24547)dyn_storage",
+            "type": "t_array(t_contract(IVault)48878)dyn_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:341"
           },
@@ -11073,7 +11073,7 @@
             "label": "fundFlowController",
             "offset": 0,
             "slot": "210",
-            "type": "t_contract(IFundFlowController)24305",
+            "type": "t_contract(IFundFlowController)48625",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:351"
           },
@@ -11089,7 +11089,7 @@
             "label": "vaultGroups",
             "offset": 0,
             "slot": "212",
-            "type": "t_array(t_struct(VaultGroup)22385_storage)dyn_storage",
+            "type": "t_array(t_struct(VaultGroup)46705_storage)dyn_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:356"
           },
@@ -11097,7 +11097,7 @@
             "label": "globalVaultState",
             "offset": 0,
             "slot": "213",
-            "type": "t_struct(GlobalVaultState)22394_storage",
+            "type": "t_struct(GlobalVaultState)46714_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:358"
           },
@@ -11171,15 +11171,15 @@
             "label": "address",
             "numberOfBytes": "20"
           },
-          "t_array(t_contract(IVault)24547)dyn_storage": {
+          "t_array(t_contract(IVault)48878)dyn_storage": {
             "label": "contract IVault[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(Fee)22380_storage)dyn_storage": {
+          "t_array(t_struct(Fee)46700_storage)dyn_storage": {
             "label": "struct Fee[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(VaultGroup)22385_storage)dyn_storage": {
+          "t_array(t_struct(VaultGroup)46705_storage)dyn_storage": {
             "label": "struct VaultGroup[]",
             "numberOfBytes": "32"
           },
@@ -11203,23 +11203,23 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IERC20Upgradeable)3938": {
+          "t_contract(IERC20Upgradeable)3982": {
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
-          "t_contract(IFundFlowController)24305": {
+          "t_contract(IFundFlowController)48625": {
             "label": "contract IFundFlowController",
             "numberOfBytes": "20"
           },
-          "t_contract(IStaking)24476": {
+          "t_contract(IStaking)48796": {
             "label": "contract IStaking",
             "numberOfBytes": "20"
           },
-          "t_contract(IStakingPool)13135": {
+          "t_contract(IStakingPool)21193": {
             "label": "contract IStakingPool",
             "numberOfBytes": "20"
           },
-          "t_contract(IVault)24547": {
+          "t_contract(IVault)48878": {
             "label": "contract IVault",
             "numberOfBytes": "20"
           },
@@ -11227,7 +11227,7 @@
             "label": "mapping(address => bool)",
             "numberOfBytes": "32"
           },
-          "t_struct(Fee)22380_storage": {
+          "t_struct(Fee)46700_storage": {
             "label": "struct Fee",
             "members": [
               {
@@ -11245,7 +11245,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(GlobalVaultState)22394_storage": {
+          "t_struct(GlobalVaultState)46714_storage": {
             "label": "struct GlobalVaultState",
             "members": [
               {
@@ -11275,7 +11275,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(VaultGroup)22385_storage": {
+          "t_struct(VaultGroup)46705_storage": {
             "label": "struct VaultGroup",
             "members": [
               {
@@ -11380,7 +11380,7 @@
             "label": "token",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(IERC20Upgradeable)3938",
+            "type": "t_contract(IERC20Upgradeable)3982",
             "contract": "Strategy",
             "src": "contracts/core/base/Strategy.sol:17"
           },
@@ -11388,7 +11388,7 @@
             "label": "stakingPool",
             "offset": 0,
             "slot": "202",
-            "type": "t_contract(IStakingPool)13135",
+            "type": "t_contract(IStakingPool)21193",
             "contract": "Strategy",
             "src": "contracts/core/base/Strategy.sol:18"
           },
@@ -11396,7 +11396,7 @@
             "label": "stakeController",
             "offset": 0,
             "slot": "203",
-            "type": "t_contract(IStaking)24476",
+            "type": "t_contract(IStaking)48796",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:333"
           },
@@ -11404,7 +11404,7 @@
             "label": "fees",
             "offset": 0,
             "slot": "204",
-            "type": "t_array(t_struct(Fee)22380_storage)dyn_storage",
+            "type": "t_array(t_struct(Fee)46700_storage)dyn_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:335"
           },
@@ -11420,7 +11420,7 @@
             "label": "vaults",
             "offset": 0,
             "slot": "206",
-            "type": "t_array(t_contract(IVault)24547)dyn_storage",
+            "type": "t_array(t_contract(IVault)48878)dyn_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:341"
           },
@@ -11452,7 +11452,7 @@
             "label": "fundFlowController",
             "offset": 0,
             "slot": "210",
-            "type": "t_contract(IFundFlowController)24305",
+            "type": "t_contract(IFundFlowController)48625",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:351"
           },
@@ -11468,7 +11468,7 @@
             "label": "vaultGroups",
             "offset": 0,
             "slot": "212",
-            "type": "t_array(t_struct(VaultGroup)22385_storage)dyn_storage",
+            "type": "t_array(t_struct(VaultGroup)46705_storage)dyn_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:356"
           },
@@ -11476,7 +11476,7 @@
             "label": "globalVaultState",
             "offset": 0,
             "slot": "213",
-            "type": "t_struct(GlobalVaultState)22394_storage",
+            "type": "t_struct(GlobalVaultState)46714_storage",
             "contract": "VaultControllerStrategy",
             "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:358"
           },
@@ -11526,15 +11526,15 @@
             "label": "address",
             "numberOfBytes": "20"
           },
-          "t_array(t_contract(IVault)24547)dyn_storage": {
+          "t_array(t_contract(IVault)48878)dyn_storage": {
             "label": "contract IVault[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(Fee)22380_storage)dyn_storage": {
+          "t_array(t_struct(Fee)46700_storage)dyn_storage": {
             "label": "struct Fee[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(VaultGroup)22385_storage)dyn_storage": {
+          "t_array(t_struct(VaultGroup)46705_storage)dyn_storage": {
             "label": "struct VaultGroup[]",
             "numberOfBytes": "32"
           },
@@ -11554,27 +11554,27 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IERC20Upgradeable)3938": {
+          "t_contract(IERC20Upgradeable)3982": {
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
-          "t_contract(IFundFlowController)24305": {
+          "t_contract(IFundFlowController)48625": {
             "label": "contract IFundFlowController",
             "numberOfBytes": "20"
           },
-          "t_contract(IStaking)24476": {
+          "t_contract(IStaking)48796": {
             "label": "contract IStaking",
             "numberOfBytes": "20"
           },
-          "t_contract(IStakingPool)13135": {
+          "t_contract(IStakingPool)21193": {
             "label": "contract IStakingPool",
             "numberOfBytes": "20"
           },
-          "t_contract(IVault)24547": {
+          "t_contract(IVault)48878": {
             "label": "contract IVault",
             "numberOfBytes": "20"
           },
-          "t_struct(Fee)22380_storage": {
+          "t_struct(Fee)46700_storage": {
             "label": "struct Fee",
             "members": [
               {
@@ -11592,7 +11592,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(GlobalVaultState)22394_storage": {
+          "t_struct(GlobalVaultState)46714_storage": {
             "label": "struct GlobalVaultState",
             "members": [
               {
@@ -11622,7 +11622,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(VaultGroup)22385_storage": {
+          "t_struct(VaultGroup)46705_storage": {
             "label": "struct VaultGroup",
             "members": [
               {
@@ -12661,7 +12661,7 @@
             "label": "operatorVCS",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(IVaultControllerStrategy)24605",
+            "type": "t_contract(IVaultControllerStrategy)48936",
             "contract": "FundFlowController",
             "src": "contracts/linkStaking/FundFlowController.sol:18"
           },
@@ -12669,7 +12669,7 @@
             "label": "communityVCS",
             "offset": 0,
             "slot": "202",
-            "type": "t_contract(IVaultControllerStrategy)24605",
+            "type": "t_contract(IVaultControllerStrategy)48936",
             "contract": "FundFlowController",
             "src": "contracts/linkStaking/FundFlowController.sol:20"
           },
@@ -12735,7 +12735,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IVaultControllerStrategy)24605": {
+          "t_contract(IVaultControllerStrategy)48936": {
             "label": "contract IVaultControllerStrategy",
             "numberOfBytes": "20"
           },
@@ -13091,6 +13091,1295 @@
           },
           "t_contract(IWithdrawalPool)21376": {
             "label": "contract IWithdrawalPool",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "08771d089d0d86eec0cad58e7cb8d21fd320440bb1b1e10e45532a01537d018f": {
+      "address": "0xacbFC09A1C4966F11c969080374010536090A8E0",
+      "txHash": "0x27161d0120dfbd873cccfdbd469322941b7608aa55d94fad1ac26675d8ffe208",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "operatorVCS",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IVaultControllerStrategy)3705",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:22"
+          },
+          {
+            "label": "communityVCS",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IVaultControllerStrategy)3705",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:24"
+          },
+          {
+            "label": "unbondingPeriod",
+            "offset": 20,
+            "slot": "202",
+            "type": "t_uint64",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:27"
+          },
+          {
+            "label": "claimPeriod",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_uint64",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:29"
+          },
+          {
+            "label": "numVaultGroups",
+            "offset": 8,
+            "slot": "203",
+            "type": "t_uint64",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:32"
+          },
+          {
+            "label": "curUnbondedVaultGroup",
+            "offset": 16,
+            "slot": "203",
+            "type": "t_uint64",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:34"
+          },
+          {
+            "label": "timeOfLastUpdateByGroup",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:36"
+          },
+          {
+            "label": "linkToken",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_address",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:39"
+          },
+          {
+            "label": "nonLINKRewardReceiver",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_address",
+            "contract": "FundFlowController",
+            "src": "contracts/linkStaking/FundFlowController.sol:41"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IVaultControllerStrategy)3705": {
+            "label": "contract IVaultControllerStrategy",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "9cbbdd13b6657dab86c26c15f144aece9a946fc6918b916672128d6411b4a27c": {
+      "address": "0x25FB2B9030F8C0002d018Bb02B7D86b844bAAF57",
+      "txHash": "0x311a94b2d3a4fb861bf286d532c1101c5139021a359a799972bbeddfd5bb93ac",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)901",
+            "contract": "Strategy",
+            "src": "contracts/core/base/Strategy.sol:17"
+          },
+          {
+            "label": "stakingPool",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IStakingPool)6346",
+            "contract": "Strategy",
+            "src": "contracts/core/base/Strategy.sol:18"
+          },
+          {
+            "label": "stakeController",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IStaking)13633",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:333"
+          },
+          {
+            "label": "fees",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_array(t_struct(Fee)11474_storage)dyn_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:335"
+          },
+          {
+            "label": "vaultImplementation",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_address",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:338"
+          },
+          {
+            "label": "vaults",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_array(t_contract(IVault)13719)dyn_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:341"
+          },
+          {
+            "label": "totalDeposits",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:343"
+          },
+          {
+            "label": "totalPrincipalDeposits",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:345"
+          },
+          {
+            "label": "maxDepositSizeBP",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:348"
+          },
+          {
+            "label": "fundFlowController",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_contract(IFundFlowController)13462",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:351"
+          },
+          {
+            "label": "totalUnbonded",
+            "offset": 0,
+            "slot": "211",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:353"
+          },
+          {
+            "label": "vaultGroups",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_array(t_struct(VaultGroup)11479_storage)dyn_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:356"
+          },
+          {
+            "label": "globalVaultState",
+            "offset": 0,
+            "slot": "213",
+            "type": "t_struct(GlobalVaultState)11488_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:358"
+          },
+          {
+            "label": "vaultMaxDeposits",
+            "offset": 0,
+            "slot": "214",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:360"
+          },
+          {
+            "label": "vaultDepositController",
+            "offset": 0,
+            "slot": "215",
+            "type": "t_address",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:363"
+          },
+          {
+            "label": "delegateRegistry",
+            "offset": 0,
+            "slot": "216",
+            "type": "t_address",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:365"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "217",
+            "type": "t_array(t_uint256)3_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:368"
+          },
+          {
+            "label": "operatorRewardPercentage",
+            "offset": 0,
+            "slot": "220",
+            "type": "t_uint256",
+            "contract": "OperatorVCS",
+            "src": "contracts/linkStaking/OperatorVCS.sol:15"
+          },
+          {
+            "label": "unclaimedOperatorRewards",
+            "offset": 0,
+            "slot": "221",
+            "type": "t_uint256",
+            "contract": "OperatorVCS",
+            "src": "contracts/linkStaking/OperatorVCS.sol:17"
+          },
+          {
+            "label": "vaultMapping",
+            "offset": 0,
+            "slot": "222",
+            "type": "t_mapping(t_address,t_bool)",
+            "contract": "OperatorVCS",
+            "src": "contracts/linkStaking/OperatorVCS.sol:20"
+          },
+          {
+            "label": "vaultsToRemove",
+            "offset": 0,
+            "slot": "223",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "OperatorVCS",
+            "src": "contracts/linkStaking/OperatorVCS.sol:22"
+          },
+          {
+            "label": "removedVaults",
+            "offset": 0,
+            "slot": "224",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "OperatorVCS",
+            "src": "contracts/linkStaking/OperatorVCS.sol:24"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(IVault)13719)dyn_storage": {
+            "label": "contract IVault[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Fee)11474_storage)dyn_storage": {
+            "label": "struct Fee[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(VaultGroup)11479_storage)dyn_storage": {
+            "label": "struct VaultGroup[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)3_storage": {
+            "label": "uint256[3]",
+            "numberOfBytes": "96"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20Upgradeable)901": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IFundFlowController)13462": {
+            "label": "contract IFundFlowController",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStaking)13633": {
+            "label": "contract IStaking",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStakingPool)6346": {
+            "label": "contract IStakingPool",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IVault)13719": {
+            "label": "contract IVault",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Fee)11474_storage": {
+            "label": "struct Fee",
+            "members": [
+              {
+                "label": "receiver",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "basisPoints",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(GlobalVaultState)11488_storage": {
+            "label": "struct GlobalVaultState",
+            "members": [
+              {
+                "label": "numVaultGroups",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "curUnbondedVaultGroup",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "0"
+              },
+              {
+                "label": "groupDepositIndex",
+                "type": "t_uint64",
+                "offset": 16,
+                "slot": "0"
+              },
+              {
+                "label": "depositIndex",
+                "type": "t_uint64",
+                "offset": 24,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(VaultGroup)11479_storage": {
+            "label": "struct VaultGroup",
+            "members": [
+              {
+                "label": "withdrawalIndex",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "totalDepositRoom",
+                "type": "t_uint128",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "e0007cf376516917f1770ab9653a431058d012ee9125d5954a81e78f85b0ae08": {
+      "address": "0x2339aD1a674fB8BE412Df6CC1c80Fb2bA5c3F647",
+      "txHash": "0x3e08a4f439a13b80586f0d7e5fa4fae55fd695c960d7fa202bd8d56b0f44b060",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)901",
+            "contract": "Strategy",
+            "src": "contracts/core/base/Strategy.sol:17"
+          },
+          {
+            "label": "stakingPool",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IStakingPool)6346",
+            "contract": "Strategy",
+            "src": "contracts/core/base/Strategy.sol:18"
+          },
+          {
+            "label": "stakeController",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IStaking)13633",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:333"
+          },
+          {
+            "label": "fees",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_array(t_struct(Fee)11474_storage)dyn_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:335"
+          },
+          {
+            "label": "vaultImplementation",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_address",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:338"
+          },
+          {
+            "label": "vaults",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_array(t_contract(IVault)13719)dyn_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:341"
+          },
+          {
+            "label": "totalDeposits",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:343"
+          },
+          {
+            "label": "totalPrincipalDeposits",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:345"
+          },
+          {
+            "label": "maxDepositSizeBP",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:348"
+          },
+          {
+            "label": "fundFlowController",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_contract(IFundFlowController)13462",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:351"
+          },
+          {
+            "label": "totalUnbonded",
+            "offset": 0,
+            "slot": "211",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:353"
+          },
+          {
+            "label": "vaultGroups",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_array(t_struct(VaultGroup)11479_storage)dyn_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:356"
+          },
+          {
+            "label": "globalVaultState",
+            "offset": 0,
+            "slot": "213",
+            "type": "t_struct(GlobalVaultState)11488_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:358"
+          },
+          {
+            "label": "vaultMaxDeposits",
+            "offset": 0,
+            "slot": "214",
+            "type": "t_uint256",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:360"
+          },
+          {
+            "label": "vaultDepositController",
+            "offset": 0,
+            "slot": "215",
+            "type": "t_address",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:363"
+          },
+          {
+            "label": "delegateRegistry",
+            "offset": 0,
+            "slot": "216",
+            "type": "t_address",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:365"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "217",
+            "type": "t_array(t_uint256)3_storage",
+            "contract": "VaultControllerStrategy",
+            "src": "contracts/linkStaking/base/VaultControllerStrategy.sol:368"
+          },
+          {
+            "label": "vaultDeploymentThreshold",
+            "offset": 0,
+            "slot": "220",
+            "type": "t_uint128",
+            "contract": "CommunityVCS",
+            "src": "contracts/linkStaking/CommunityVCS.sol:13"
+          },
+          {
+            "label": "vaultDeploymentAmount",
+            "offset": 16,
+            "slot": "220",
+            "type": "t_uint128",
+            "contract": "CommunityVCS",
+            "src": "contracts/linkStaking/CommunityVCS.sol:15"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(IVault)13719)dyn_storage": {
+            "label": "contract IVault[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Fee)11474_storage)dyn_storage": {
+            "label": "struct Fee[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(VaultGroup)11479_storage)dyn_storage": {
+            "label": "struct VaultGroup[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)3_storage": {
+            "label": "uint256[3]",
+            "numberOfBytes": "96"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20Upgradeable)901": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IFundFlowController)13462": {
+            "label": "contract IFundFlowController",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStaking)13633": {
+            "label": "contract IStaking",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStakingPool)6346": {
+            "label": "contract IStakingPool",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IVault)13719": {
+            "label": "contract IVault",
+            "numberOfBytes": "20"
+          },
+          "t_struct(Fee)11474_storage": {
+            "label": "struct Fee",
+            "members": [
+              {
+                "label": "receiver",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "basisPoints",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(GlobalVaultState)11488_storage": {
+            "label": "struct GlobalVaultState",
+            "members": [
+              {
+                "label": "numVaultGroups",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "curUnbondedVaultGroup",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "0"
+              },
+              {
+                "label": "groupDepositIndex",
+                "type": "t_uint64",
+                "offset": 16,
+                "slot": "0"
+              },
+              {
+                "label": "depositIndex",
+                "type": "t_uint64",
+                "offset": 24,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(VaultGroup)11479_storage": {
+            "label": "struct VaultGroup",
+            "members": [
+              {
+                "label": "withdrawalIndex",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "totalDepositRoom",
+                "type": "t_uint128",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "fb96f6b60508dde0081799b74e4ca42f8e5d5f52948a04c33bf8231d126dfecb": {
+      "address": "0xaaBC1C74639B2479e79603cA43F0298E7AaBd392",
+      "txHash": "0xb80c7d166e3940c1cff13878f2b569b4e194ab3d5f26694ab11cb3fbb6051a09",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)901",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:23"
+          },
+          {
+            "label": "vaultController",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:25"
+          },
+          {
+            "label": "stakeController",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IStaking)13633",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:27"
+          },
+          {
+            "label": "rewardsController",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IStakingRewards)13646",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:29"
+          },
+          {
+            "label": "delegateRegistry",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_contract(IDelegateRegistry)13440",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:31"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_array(t_uint256)8_storage",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:34"
+          },
+          {
+            "label": "operator",
+            "offset": 0,
+            "slot": "214",
+            "type": "t_address",
+            "contract": "OperatorVault",
+            "src": "contracts/linkStaking/OperatorVault.sol:19"
+          },
+          {
+            "label": "rewardsReceiver",
+            "offset": 0,
+            "slot": "215",
+            "type": "t_address",
+            "contract": "OperatorVault",
+            "src": "contracts/linkStaking/OperatorVault.sol:20"
+          },
+          {
+            "label": "pfAlertsController",
+            "offset": 0,
+            "slot": "216",
+            "type": "t_contract(IPFAlertsController)13554",
+            "contract": "OperatorVault",
+            "src": "contracts/linkStaking/OperatorVault.sol:21"
+          },
+          {
+            "label": "trackedTotalDeposits",
+            "offset": 0,
+            "slot": "217",
+            "type": "t_uint128",
+            "contract": "OperatorVault",
+            "src": "contracts/linkStaking/OperatorVault.sol:23"
+          },
+          {
+            "label": "unclaimedRewards",
+            "offset": 16,
+            "slot": "217",
+            "type": "t_uint128",
+            "contract": "OperatorVault",
+            "src": "contracts/linkStaking/OperatorVault.sol:24"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)8_storage": {
+            "label": "uint256[8]",
+            "numberOfBytes": "256"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDelegateRegistry)13440": {
+            "label": "contract IDelegateRegistry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Upgradeable)901": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPFAlertsController)13554": {
+            "label": "contract IPFAlertsController",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStaking)13633": {
+            "label": "contract IStaking",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStakingRewards)13646": {
+            "label": "contract IStakingRewards",
+            "numberOfBytes": "20"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "22f17f4ad49950629dc4484dfa9b6a52fb040964a6169deb7a36cc102a2c4b75": {
+      "address": "0x94277A23095B27041bEf93EAF9df81E8D733791A",
+      "txHash": "0x7367ed92e6ba1ee35ea3b842c5c26b9a502ce37c0e740c1d5e8ef52354cb0eac",
+      "layout": {
+        "solcVersion": "0.8.15",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)901",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:23"
+          },
+          {
+            "label": "vaultController",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_address",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:25"
+          },
+          {
+            "label": "stakeController",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IStaking)13633",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:27"
+          },
+          {
+            "label": "rewardsController",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_contract(IStakingRewards)13646",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:29"
+          },
+          {
+            "label": "delegateRegistry",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_contract(IDelegateRegistry)13440",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:31"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_array(t_uint256)8_storage",
+            "contract": "Vault",
+            "src": "contracts/linkStaking/base/Vault.sol:34"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)8_storage": {
+            "label": "uint256[8]",
+            "numberOfBytes": "256"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IDelegateRegistry)13440": {
+            "label": "contract IDelegateRegistry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Upgradeable)901": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStaking)13633": {
+            "label": "contract IStaking",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IStakingRewards)13646": {
+            "label": "contract IStakingRewards",
             "numberOfBytes": "20"
           },
           "t_uint256": {
