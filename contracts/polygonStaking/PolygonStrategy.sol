@@ -235,6 +235,7 @@ contract PolygonStrategy is Strategy {
                     if (rewards >= toUnbondRemaining) {
                         vault.withdrawRewards();
                         toUnbondRemaining = 0;
+                        break;
                     } else {
                         toUnbondRemaining -= rewards;
                         uint256 vaultToUnbond = principalDeposits >= toUnbondRemaining
@@ -253,8 +254,10 @@ contract PolygonStrategy is Strategy {
             if (i >= vaults.length) i = 0;
         }
 
-        validatorWithdrawalIndex = i;
-        numVaultsUnbonding = numVaultsUnbonded;
+        if (numVaultsUnbonded != 0) {
+            validatorWithdrawalIndex = i;
+            numVaultsUnbonding = numVaultsUnbonded;
+        }
 
         uint256 rewardsClaimed = token.balanceOf(address(this)) - preBalance;
         if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
