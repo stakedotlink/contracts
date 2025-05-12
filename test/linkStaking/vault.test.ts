@@ -48,6 +48,7 @@ describe('Vault', () => {
       accounts[0],
       adrs.stakingController,
       adrs.rewardsController,
+      accounts[0],
     ])) as CommunityVault
     adrs.vault = await vault.getAddress()
 
@@ -155,5 +156,88 @@ describe('Vault', () => {
 
     await time.increase(claimPeriod)
     assert.equal(await vault.claimPeriodActive(), false)
+  })
+
+  it('delegation should work correctly', async () => {
+    const { accounts, token, stakingController, rewardsController } = await loadFixture(
+      deployFixture
+    )
+
+    const delegateRegistry = await deploy('DelegateRegistryMock')
+    const strategy = await deployUpgradeable(
+      'VCSMock',
+      [token.target, accounts[0], stakingController.target, accounts[0], [], 0, accounts[0]],
+      { unsafeAllow: ['delegatecall'] }
+    )
+    await strategy.setFundFlowController(accounts[0])
+    const vault = (await deployUpgradeable('CommunityVault', [
+      token.target,
+      strategy.target,
+      stakingController.target,
+      rewardsController.target,
+      delegateRegistry.target,
+    ])) as CommunityVault
+    await strategy.addVaults([vault.target])
+
+    await vault.delegate(accounts[1], ethers.encodeBytes32String('1'), true)
+    await vault.delegate(accounts[2], ethers.encodeBytes32String('2'), true)
+
+    assert.deepEqual(await vault.getDelegations(), [
+      [1n, accounts[1], vault.target, ethers.encodeBytes32String('1'), vault.target, 9n, 100n],
+      [1n, accounts[2], vault.target, ethers.encodeBytes32String('2'), vault.target, 9n, 100n],
+    ])
+  })
+
+  it('withdrawTokenRewards should work correctly', async () => {
+    const { accounts, token, stakingController, rewardsController } = await loadFixture(
+      deployFixture
+    )
+
+    const delegateRegistry = await deploy('DelegateRegistryMock')
+    const strategy = await deployUpgradeable(
+      'VCSMock',
+      [token.target, accounts[0], stakingController.target, accounts[0], [], 0, accounts[0]],
+      { unsafeAllow: ['delegatecall'] }
+    )
+    await strategy.setFundFlowController(accounts[0])
+    const vault = (await deployUpgradeable('CommunityVault', [
+      token.target,
+      strategy.target,
+      stakingController.target,
+      rewardsController.target,
+      delegateRegistry.target,
+    ])) as CommunityVault
+    await strategy.addVaults([vault.target])
+
+    const token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '',
+      '',
+      1000000000,
+    ])) as ERC677
+    const token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '',
+      '',
+      1000000000,
+    ])) as ERC677
+
+    const startingBalance = await token.balanceOf(accounts[0])
+    const startingBalance2 = await token2.balanceOf(accounts[0])
+    const startingBalance3 = await token3.balanceOf(accounts[0])
+
+    await token.transfer(vault.target, toEther(500))
+    await token2.transfer(vault.target, toEther(1000))
+    await token3.transfer(vault.target, toEther(2000))
+
+    await vault.withdrawTokenRewards([token.target])
+
+    assert.equal(await token.balanceOf(accounts[0]), startingBalance)
+    assert.equal(await token2.balanceOf(accounts[0]), startingBalance2 - toEther(1000))
+    assert.equal(await token3.balanceOf(accounts[0]), startingBalance3 - toEther(2000))
+
+    await vault.withdrawTokenRewards([token.target, token2.target, token3.target])
+
+    assert.equal(await token.balanceOf(accounts[0]), startingBalance)
+    assert.equal(await token2.balanceOf(accounts[0]), startingBalance2)
+    assert.equal(await token3.balanceOf(accounts[0]), startingBalance3)
   })
 })

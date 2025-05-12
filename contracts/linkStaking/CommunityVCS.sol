@@ -188,11 +188,12 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function _deployVaults(uint256 _numVaults) internal {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address)",
+            "initialize(address,address,address,address,address)",
             address(token),
             address(this),
             address(stakeController),
-            stakeController.getRewardVault()
+            stakeController.getRewardVault(),
+            delegateRegistry
         );
         for (uint256 i = 0; i < _numVaults; i++) {
             _deployVault(data);

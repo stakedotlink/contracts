@@ -105,6 +105,7 @@ describe('PPKeeper', () => {
         comStrategy.target,
         stakingController.target,
         rewardsController.target,
+        accounts[0],
       ])) as CommunityVault
       vaultContracts.push(vault)
       vaults.push(vault.target)
@@ -121,6 +122,8 @@ describe('PPKeeper', () => {
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
       opStrategy.target,
       comStrategy.target,
+      token.target,
+      accounts[0],
       unbondingPeriod,
       claimPeriod,
       5,

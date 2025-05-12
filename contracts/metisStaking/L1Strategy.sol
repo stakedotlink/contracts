@@ -142,10 +142,22 @@ contract L1Strategy is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns a list of all vaults controlled by this contract
-     * @return  list of vault addresses
+     * @return list of vault addresses
      */
     function getVaults() external view returns (ISequencerVault[] memory) {
         return vaults;
+    }
+
+    /**
+     * @notice Returns a list of principal deposits for all vaults
+     * @return list of deposit amounts
+     */
+    function getVaultDeposits() external view returns (uint256[] memory) {
+        uint256[] memory deposits = new uint256[](vaults.length);
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            deposits[i] = vaults[i].getPrincipalDeposits();
+        }
+        return deposits;
     }
 
     /**

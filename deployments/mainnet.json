@@ -202,5 +202,13 @@
   "LINK_FundFlowController": {
     "address": "0xd2e7381d8d3FcC97C1b4d88761bDBc8Dd26a0200",
     "artifact": "FundFlowController"
+  },
+  "GovernanceTimelock": {
+    "address": "0xb72d8F5213b3E52FAf13Aa074b03C4788e78349F",
+    "artifact": "GovernanceTimelock"
+  },
+  "LINK_CurveGaugeDistributor": {
+    "address": "0x2cbFc4825a56109b72F1EfF0D72C93844404C5Ec",
+    "artifact": "CurveGaugeDistributor"
   }
 }

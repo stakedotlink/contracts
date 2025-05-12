@@ -9,6 +9,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../../core/interfaces/IERC677.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IStakingRewards.sol";
+import "../interfaces/IVaultControllerStrategy.sol";
+import "../interfaces/IDelegateRegistry.sol";
 
 /**
  * @title Vault
@@ -25,11 +27,14 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IStaking public stakeController;
     // address of Chainlink staking rewards contract
     IStakingRewards public rewardsController;
+    // address of delegate registry
+    IDelegateRegistry public delegateRegistry;
 
     // storage gap for upgradeability
-    uint256[9] private __gap;
+    uint256[8] private __gap;
 
     error OnlyVaultController();
+    error OnlyFundFlowController();
 
     /**
      * @notice Initializes contract
@@ -37,12 +42,14 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _vaultController address of strategy that controls this vault
      * @param _stakeController address of Chainlink staking contract
      * @param _rewardsController address of Chainlink staking rewards contract
+     * @param _delegateRegistry address of delegate registry
      **/
     function __Vault_init(
         address _token,
         address _vaultController,
         address _stakeController,
-        address _rewardsController
+        address _rewardsController,
+        address _delegateRegistry
     ) public onlyInitializing {
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -50,6 +57,7 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         vaultController = _vaultController;
         stakeController = IStaking(_stakeController);
         rewardsController = IStakingRewards(_rewardsController);
+        delegateRegistry = IDelegateRegistry(_delegateRegistry);
     }
 
     /**
@@ -57,6 +65,15 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      **/
     modifier onlyVaultController() {
         if (msg.sender != vaultController) revert OnlyVaultController();
+        _;
+    }
+
+    /**
+     * @notice Reverts if sender is not fund flow controller
+     **/
+    modifier onlyFundFlowController() {
+        if (msg.sender != IVaultControllerStrategy(vaultController).fundFlowController())
+            revert OnlyFundFlowController();
         _;
     }
 
@@ -128,6 +145,44 @@ abstract contract Vault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function isRemoved() public view virtual returns (bool) {
         return false;
+    }
+
+    /**
+     * @notice Delegates to an address for this vault vaults
+     * @param _to address to delegate to
+     * @param _rights rights to grant
+     * @param _enable whether to enable or revoke delegation
+     */
+    function delegate(address _to, bytes32 _rights, bool _enable) external onlyFundFlowController {
+        delegateRegistry.delegateAll(_to, _rights, _enable);
+    }
+
+    /**
+     * @notice Returns all enabled delegations this vault has given out
+     * @return list of delegation structs
+     */
+    function getDelegations() external view returns (IDelegateRegistry.Delegation[] memory) {
+        return delegateRegistry.getOutgoingDelegations(address(this));
+    }
+
+    /**
+     * @notice Withdraws any non LINK token rewards sitting in this vault
+     * @param _tokens list of tokens to withdraw
+     */
+    function withdrawTokenRewards(address[] calldata _tokens) external onlyFundFlowController {
+        for (uint256 i = 0; i < _tokens.length; ++i) {
+            IERC20Upgradeable rewardToken = IERC20Upgradeable(_tokens[i]);
+            uint256 balance = rewardToken.balanceOf(address(this));
+            if (balance != 0) rewardToken.safeTransfer(msg.sender, balance);
+        }
+    }
+
+    /**
+     * @notice Sets the delegate registry
+     * @param _delegateRegistry address of delegate registry
+     */
+    function setDelegateRegistry(address _delegateRegistry) external onlyOwner {
+        delegateRegistry = IDelegateRegistry(_delegateRegistry);
     }
 
     /**

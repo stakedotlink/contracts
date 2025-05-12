@@ -100,6 +100,7 @@ describe('VaultControllerStrategy', () => {
         adrs.strategy,
         adrs.stakingController,
         adrs.rewardsController,
+        accounts[0],
       ])) as CommunityVault
       vaultContracts.push(vault)
       vaults.push(await vault.getAddress())
@@ -115,6 +116,8 @@ describe('VaultControllerStrategy', () => {
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
       adrs.strategy2,
       adrs.strategy,
+      token.target,
+      accounts[0],
       unbondingPeriod,
       claimPeriod,
       5,
@@ -536,6 +539,7 @@ describe('VaultControllerStrategy', () => {
           adrs.strategy,
           adrs.stakingController,
           adrs.rewardsController,
+          accounts[0],
           accounts[0],
           accounts[i],
           accounts[0],

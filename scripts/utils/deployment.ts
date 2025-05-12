@@ -1,8 +1,8 @@
-import { Contract } from 'ethers'
+import { Addressable, Contract } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
 
-export const deploy = async (contractName: string, args: any[] = [], useLedgerSigner = false) => {
+export const deploy = async (contractName: string, args: any[] = []) => {
   return ethers.deployContract(contractName, args) as any
 }
 
@@ -11,13 +11,13 @@ export const deployUpgradeable = async (contractName: string, args: any[] = [], 
   return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
 }
 
-export const deployImplementation = async (contractName: string, useLedgerSigner = false) => {
+export const deployImplementation = async (contractName: string) => {
   const Contract = await ethers.getContractFactory(contractName)
   return upgrades.deployImplementation(Contract, { kind: 'uups' })
 }
 
 export const upgradeProxy = async (
-  proxyAddress: string,
+  proxyAddress: string | Addressable,
   implementationContractName: string,
   useDeployedImplementation = false,
   call?: { fn: string; args?: unknown[] } | undefined
@@ -32,9 +32,11 @@ export const upgradeProxy = async (
   return contract
 }
 
-export const getDeployments = () => {
-  fse.ensureFileSync(`deployments/${network.name}.json`)
-  const deployments = fse.readJSONSync(`deployments/${network.name}.json`, { throws: false })
+export const getDeployments = (networkName?: string) => {
+  fse.ensureFileSync(`deployments/${networkName || network.name}.json`)
+  const deployments = fse.readJSONSync(`deployments/${networkName || network.name}.json`, {
+    throws: false,
+  })
 
   if (!deployments) {
     return {}
@@ -64,8 +66,8 @@ export const updateDeployments = (
   )
 }
 
-export const getContract = async (contractName: string, useLedgerSigner = false): Promise<any> => {
-  const deployments = getDeployments()
+export const getContract = async (contractName: string, networkName?: string): Promise<any> => {
+  const deployments = getDeployments(networkName)
   const contract = deployments[contractName]
 
   if (!contract) {
