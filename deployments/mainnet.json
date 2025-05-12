@@ -208,7 +208,7 @@
     "artifact": "GovernanceTimelock"
   },
   "LINK_CurveGaugeDistributor": {
-    "address": "0xB413204A73404cAB519a4609901AbDDd06629802",
+    "address": "0x2cbFc4825a56109b72F1EfF0D72C93844404C5Ec",
     "artifact": "CurveGaugeDistributor"
   }
 }

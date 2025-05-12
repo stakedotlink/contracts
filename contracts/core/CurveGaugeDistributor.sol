@@ -25,14 +25,11 @@ contract CurveGaugeDistributor is Ownable {
     // address authorized to distribute gauge rewards
     address public rewardsDistributor;
 
-    // min time in seconds between reward distributions
-    uint64 public minTimeBetweenDistributions;
-    // time of last reward distribution
-    uint64 public timeOfLastDistribution;
+    // duration of reward epoch in seconds
+    uint64 public epochDuration;
 
     error SenderNotAuthorized();
     error NoRewards();
-    error MinimumTimeNotElapsed();
 
     /**
      * @notice Initializes the contract
@@ -40,20 +37,20 @@ contract CurveGaugeDistributor is Ownable {
      * @param _curveStableSwapNG address of curve stable swap NG pool
      * @param _liquidityGaugeV6 address of curve gauge for stable swap pool
      * @param _rewardsDistributor address authorized to distribute gauge rewards
-     * @param _minTimeBetweenDistributions min time in seconds between reward distributions
+     * @param _epochDuration duration of reward epoch in seconds
      */
     constructor(
         address _stakingPool,
         address _curveStableSwapNG,
         address _liquidityGaugeV6,
         address _rewardsDistributor,
-        uint64 _minTimeBetweenDistributions
+        uint64 _epochDuration
     ) {
         stakingPool = _stakingPool;
         curveStableSwapNG = ICurveStableSwapNG(_curveStableSwapNG);
         liquidityGaugeV6 = ILiquidityGaugeV6(_liquidityGaugeV6);
         rewardsDistributor = _rewardsDistributor;
-        minTimeBetweenDistributions = _minTimeBetweenDistributions;
+        epochDuration = _epochDuration;
 
         IERC20(_stakingPool).safeApprove(_curveStableSwapNG, type(uint256).max);
         IERC20(_curveStableSwapNG).safeApprove(_liquidityGaugeV6, type(uint256).max);
@@ -73,23 +70,18 @@ contract CurveGaugeDistributor is Ownable {
     function onTokenTransfer(address, uint256, bytes calldata) external {}
 
     /**
-     * @notice Returns whether rewards should be distributed
-     * @return true if rewards should be distributed, false otherwise
-     * @return minimum LP tokens to be minted when rewards are distributed
+     * @notice Returns the expected amount of LP tokens to be minted when rewards are distributed
+     * @return expected LP tokens to be minted
      */
-    function shouldDistributeRewards() external view returns (bool, uint256) {
-        if (block.timestamp < (timeOfLastDistribution + minTimeBetweenDistributions)) {
-            return (false, 0);
-        }
-
+    function getLPTokenAmount() external view returns (uint256) {
         uint256 balance = IERC20(stakingPool).balanceOf(address(this));
-        if (balance == 0) return (false, 0);
+        if (balance == 0) return 0;
 
         uint256[] memory amounts = new uint256[](2);
         amounts[1] = balance;
 
         uint256 minMintAmount = curveStableSwapNG.calc_token_amount(amounts, true);
-        return (true, minMintAmount);
+        return minMintAmount;
     }
 
     /**
@@ -97,10 +89,6 @@ contract CurveGaugeDistributor is Ownable {
      * @param _minMintAmount minimum LP tokens to be minted when rewards are distributed
      */
     function distributeRewards(uint256 _minMintAmount) external onlyRewardsDistributor {
-        if (block.timestamp < (timeOfLastDistribution + minTimeBetweenDistributions)) {
-            revert MinimumTimeNotElapsed();
-        }
-
         uint256 balance = IERC20(stakingPool).balanceOf(address(this));
         if (balance == 0) revert NoRewards();
 
@@ -115,20 +103,16 @@ contract CurveGaugeDistributor is Ownable {
         liquidityGaugeV6.deposit_reward_token(
             address(curveStableSwapNG),
             mintAmount,
-            minTimeBetweenDistributions
+            epochDuration
         );
-
-        timeOfLastDistribution = uint64(block.timestamp);
     }
 
     /**
-     * @notice Sets the min time between reward distributions
-     * @param _minTimeBetweenDistributions min time in seconds
+     * @notice Sets the reward epoch duration
+     * @param _epochDuration reward epoch duration in seconds
      */
-    function setMinTimeBetweenDistributions(
-        uint64 _minTimeBetweenDistributions
-    ) external onlyOwner {
-        minTimeBetweenDistributions = _minTimeBetweenDistributions;
+    function setEpochDuration(uint64 _epochDuration) external onlyOwner {
+        epochDuration = _epochDuration;
     }
 
     /**
