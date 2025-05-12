@@ -80,7 +80,7 @@ contract PolygonStrategy is Strategy {
     event AddValidator(address indexed pool, address rewardsReceiver);
     event QueueValidatorRemoval(address indexed pool, address rewardsReceiver);
     event FinalizeValidatorRemoval(address indexed pool);
-    event UpgradedVaults();
+    event UpgradedVaults(address[] vaults);
     event AddFee(address receiver, uint256 feeBasisPoints);
     event UpdateFee(uint256 index, address receiver, uint256 feeBasisPoints);
     event SetValidatorMEVRewardsPercentage(uint256 validatorMEVRewardsPercentage);
@@ -563,7 +563,7 @@ contract PolygonStrategy is Strategy {
                 IPolygonVault(_vaults[i]).upgradeToAndCall(vaultImplementation, _data[i]);
             }
         }
-        emit UpgradedVaults();
+        emit UpgradedVaults(_vaults);
     }
 
     /**
