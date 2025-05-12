@@ -630,7 +630,7 @@ contract PolygonStrategy is Strategy {
     function setValidatorMEVRewardsPercentage(
         uint256 _validatorMEVRewardsPercentage
     ) external onlyOwner {
-        if (_validatorMEVRewardsPercentage > 10000) revert FeesTooLarge();
+        if (_validatorMEVRewardsPercentage > 5000) revert FeesTooLarge();
 
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
         emit SetValidatorMEVRewardsPercentage(_validatorMEVRewardsPercentage);
