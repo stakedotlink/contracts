@@ -339,11 +339,12 @@ contract OperatorVCS is VaultControllerStrategy {
         address _pfAlertsController
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address,address,address,address,address)",
+            "initialize(address,address,address,address,address,address,address,address)",
             address(token),
             address(this),
             address(stakeController),
             stakeController.getRewardVault(),
+            delegateRegistry,
             _pfAlertsController,
             _operator,
             _rewardsReceiver

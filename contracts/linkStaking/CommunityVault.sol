@@ -21,14 +21,22 @@ contract CommunityVault is Vault {
      * @param _vaultController address of the strategy that controls this vault
      * @param _stakeController address of Chainlink community staking contract
      * @param _rewardsController address of Chainlink staking rewards contract
+     * @param _delegateRegistry address of delegate registry
      **/
     function initialize(
         address _token,
         address _vaultController,
         address _stakeController,
-        address _rewardsController
+        address _rewardsController,
+        address _delegateRegistry
     ) public initializer {
-        __Vault_init(_token, _vaultController, _stakeController, _rewardsController);
+        __Vault_init(
+            _token,
+            _vaultController,
+            _stakeController,
+            _rewardsController,
+            _delegateRegistry
+        );
     }
 
     /**

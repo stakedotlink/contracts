@@ -63,6 +63,7 @@ describe('FundFlowController', () => {
     ])) as StakingMock
 
     const vaultDepositController = await deploy('VaultDepositController')
+    const delegateRegistry = await deploy('DelegateRegistryMock')
 
     let opVaultImplementation = await deployImplementation('OperatorVault')
 
@@ -104,7 +105,13 @@ describe('FundFlowController', () => {
     for (let i = 0; i < 15; i++) {
       let vault = (await deployUpgradeable(
         'CommunityVault',
-        [token.target, comStrategy.target, stakingController.target, rewardsController.target],
+        [
+          token.target,
+          comStrategy.target,
+          stakingController.target,
+          rewardsController.target,
+          delegateRegistry.target,
+        ],
         { unsafeAllow: ['delegatecall'] }
       )) as CommunityVault
       vaultContracts.push(vault)
@@ -122,12 +129,17 @@ describe('FundFlowController', () => {
     const fundFlowController = (await deployUpgradeable('FundFlowController', [
       opStrategy.target,
       comStrategy.target,
+      token.target,
+      accounts[5],
       unbondingPeriod,
       claimPeriod,
       5,
     ])) as FundFlowController
     await opStrategy.setFundFlowController(fundFlowController.target)
     await comStrategy.setFundFlowController(fundFlowController.target)
+
+    await opStrategy.setDelegateRegistry(delegateRegistry.target)
+    await comStrategy.setDelegateRegistry(delegateRegistry.target)
 
     return {
       accounts,
@@ -139,6 +151,7 @@ describe('FundFlowController', () => {
       vaultContracts,
       vaults,
       fundFlowController,
+      delegateRegistry,
     }
   }
 
@@ -437,5 +450,106 @@ describe('FundFlowController', () => {
     assert.equal(Number((await comStrategy.globalVaultState())[1]), 3)
     assert.equal(fromEther(await opStrategy.canWithdraw()), 100)
     assert.equal(Number((await opStrategy.globalVaultState())[1]), 3)
+  })
+
+  it('delegateVaults should work correctly', async () => {
+    const { accounts, opStrategy, vaults, fundFlowController, delegateRegistry } =
+      await loadFixture(deployFixture)
+
+    for (let i = 0; i < 10; i++) {
+      await opStrategy.addVault(accounts[0], accounts[0], accounts[0])
+    }
+    const opVaults = await opStrategy.getVaults()
+    const toDelegate = [...vaults.slice(0, 3), ...opVaults.slice(6, 9)]
+
+    await fundFlowController.delegateVaults(
+      toDelegate,
+      accounts[1],
+      ethers.encodeBytes32String('1'),
+      true
+    )
+
+    const combined = vaults.concat(opVaults)
+
+    for (let i = 0; i < combined.length; i++) {
+      if (toDelegate.includes(combined[i])) {
+        assert.deepEqual(await delegateRegistry.getOutgoingDelegations(combined[i]), [
+          [1n, accounts[1], combined[i], ethers.encodeBytes32String('1'), combined[i], 9n, 100n],
+        ])
+      } else {
+        assert.deepEqual(await delegateRegistry.getOutgoingDelegations(combined[i]), [])
+      }
+    }
+  })
+
+  it('withdrawTokenRewards should work correctly', async () => {
+    const { accounts, token, opStrategy, vaults, fundFlowController } = await loadFixture(
+      deployFixture
+    )
+
+    for (let i = 0; i < 10; i++) {
+      await opStrategy.addVault(accounts[0], accounts[0], accounts[0])
+    }
+    const opVaults = await opStrategy.getVaults()
+
+    const token1 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '',
+      '',
+      1000000000,
+    ])) as ERC677
+    const token2 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '',
+      '',
+      1000000000,
+    ])) as ERC677
+    const token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
+      '',
+      '',
+      1000000000,
+    ])) as ERC677
+    await fundFlowController.setNonLINKRewardReceiver(accounts[5])
+
+    await token.transfer(vaults[0], toEther(100))
+
+    await expect(
+      fundFlowController.withdrawTokenRewards([vaults[0]], [token.target])
+    ).to.be.revertedWithCustomError(fundFlowController, 'InvalidToken()')
+
+    await token1.transfer(vaults[0], toEther(500))
+    await token2.transfer(vaults[3], toEther(1000))
+    await token3.transfer(vaults[5], toEther(2000))
+
+    await token1.transfer(opVaults[1], toEther(500))
+    await token2.transfer(opVaults[4], toEther(1000))
+    await token3.transfer(opVaults[6], toEther(2000))
+
+    await fundFlowController.withdrawTokenRewards(
+      [vaults[0], opVaults[4]],
+      [token1.target, token2.target]
+    )
+
+    assert.equal(fromEther(await token1.balanceOf(accounts[5])), 500)
+    assert.equal(fromEther(await token2.balanceOf(accounts[5])), 1000)
+    assert.equal(fromEther(await token1.balanceOf(vaults[0])), 0)
+    assert.equal(fromEther(await token2.balanceOf(vaults[3])), 1000)
+    assert.equal(fromEther(await token3.balanceOf(vaults[5])), 2000)
+    assert.equal(fromEther(await token1.balanceOf(opVaults[1])), 500)
+    assert.equal(fromEther(await token2.balanceOf(opVaults[4])), 0)
+    assert.equal(fromEther(await token3.balanceOf(opVaults[6])), 2000)
+
+    await fundFlowController.withdrawTokenRewards(
+      [vaults[0], vaults[3], vaults[5], opVaults[1], opVaults[4], opVaults[6]],
+      [token1.target, token2.target, token3.target]
+    )
+
+    assert.equal(fromEther(await token1.balanceOf(accounts[5])), 1000)
+    assert.equal(fromEther(await token2.balanceOf(accounts[5])), 2000)
+    assert.equal(fromEther(await token3.balanceOf(accounts[5])), 4000)
+    assert.equal(fromEther(await token1.balanceOf(vaults[0])), 0)
+    assert.equal(fromEther(await token2.balanceOf(vaults[3])), 0)
+    assert.equal(fromEther(await token3.balanceOf(vaults[5])), 0)
+    assert.equal(fromEther(await token1.balanceOf(opVaults[1])), 0)
+    assert.equal(fromEther(await token2.balanceOf(opVaults[4])), 0)
+    assert.equal(fromEther(await token3.balanceOf(opVaults[6])), 0)
   })
 })

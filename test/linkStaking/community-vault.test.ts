@@ -37,6 +37,7 @@ describe('CommunityVault', () => {
       accounts[1],
       adrs.stakingController,
       adrs.rewardsController,
+      accounts[0],
     ])) as CommunityVault
     adrs.vault = await vault.getAddress()
 

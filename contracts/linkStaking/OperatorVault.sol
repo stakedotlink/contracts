@@ -44,6 +44,7 @@ contract OperatorVault is Vault {
      * @param _vaultController address of the strategy that controls this vault
      * @param _stakeController address of Chainlink operator staking contract
      * @param _rewardsController address of Chainlink staking rewards contract
+     * @param _delegateRegistry address of delegate registry
      * @param _pfAlertsController address of Chainlink price feed alrts controller
      * @param _operator address of operator represented by this vault
      * @param _rewardsReceiver address authorized to claim rewards from this vault
@@ -53,12 +54,19 @@ contract OperatorVault is Vault {
         address _vaultController,
         address _stakeController,
         address _rewardsController,
+        address _delegateRegistry,
         address _pfAlertsController,
         address _operator,
         address _rewardsReceiver
     ) public reinitializer(3) {
         if (vaultController == address(0)) {
-            __Vault_init(_token, _vaultController, _stakeController, _rewardsController);
+            __Vault_init(
+                _token,
+                _vaultController,
+                _stakeController,
+                _rewardsController,
+                _delegateRegistry
+            );
         } else {
             stakeController.migrate("");
             stakeController = IStaking(_stakeController);

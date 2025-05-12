@@ -3,6 +3,8 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "./interfaces/IVaultControllerStrategy.sol";
 import "./interfaces/IOperatorVCS.sol";
@@ -14,6 +16,8 @@ import "./interfaces/IOperatorVault.sol";
  * @notice Manages deposits and withdrawals for Chainlink staking vaults in the OperatorVCS and CommunityVCS
  */
 contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     // address of operator vcs
     IVaultControllerStrategy public operatorVCS;
     // address of community vcs
@@ -31,8 +35,14 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     // time that each vault group was last unbonded
     uint256[] public timeOfLastUpdateByGroup;
 
+    // address of LINK token
+    address public linkToken;
+    // address of reward receiver for non LINK vault rewards
+    address public nonLINKRewardReceiver;
+
     error SenderNotAuthorized();
     error NoUpdateNeeded();
+    error InvalidToken();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -43,6 +53,8 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @notice Initializes contract
      * @param _operatorVCS address of OperatorVCS
      * @param _communityVCS address of CommunityVCS
+     * @param _linkToken address of LINK token
+     * @param _nonLINKRewardReceiver address of reward receiver for non LINK vault rewards
      * @param _unbondingPeriod unbonding period as set in Chainlink staking contract
      * @param _claimPeriod claim period as set in Chainlink staking contract
      * @param _numVaultGroups total number of vault groups
@@ -50,20 +62,27 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     function initialize(
         address _operatorVCS,
         address _communityVCS,
+        address _linkToken,
+        address _nonLINKRewardReceiver,
         uint64 _unbondingPeriod,
         uint64 _claimPeriod,
         uint64 _numVaultGroups
-    ) public initializer {
-        __UUPSUpgradeable_init();
-        __Ownable_init();
-        operatorVCS = IVaultControllerStrategy(_operatorVCS);
-        communityVCS = IVaultControllerStrategy(_communityVCS);
-        unbondingPeriod = _unbondingPeriod;
-        claimPeriod = _claimPeriod;
-        numVaultGroups = _numVaultGroups;
-        for (uint256 i = 0; i < _numVaultGroups; ++i) {
-            timeOfLastUpdateByGroup.push(0);
+    ) public reinitializer(2) {
+        if (address(operatorVCS) == address(0)) {
+            __UUPSUpgradeable_init();
+            __Ownable_init();
+            operatorVCS = IVaultControllerStrategy(_operatorVCS);
+            communityVCS = IVaultControllerStrategy(_communityVCS);
+            unbondingPeriod = _unbondingPeriod;
+            claimPeriod = _claimPeriod;
+            numVaultGroups = _numVaultGroups;
+            for (uint256 i = 0; i < _numVaultGroups; ++i) {
+                timeOfLastUpdateByGroup.push(0);
+            }
         }
+
+        linkToken = _linkToken;
+        nonLINKRewardReceiver = _nonLINKRewardReceiver;
     }
 
     /**
@@ -265,6 +284,50 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             totalUnbonded,
             maxDeposits
         );
+    }
+
+    /**
+     * @notice Delegates to an address for a group of vaults
+     * @param _vaults list of vault addresses to delegate for
+     * @param _to address to delegate to
+     * @param _rights rights to grant
+     * @param _enable whether to enable to revoke delegation
+     */
+    function delegateVaults(
+        address[] calldata _vaults,
+        address _to,
+        bytes32 _rights,
+        bool _enable
+    ) external onlyOwner {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            IVault(_vaults[i]).delegate(_to, _rights, _enable);
+        }
+    }
+
+    /**
+     * @notice Withdraws non LINK token rewards from a group of vaults
+     * @param _vaults list of vault addresses to withdraw from
+     * @param _tokens list of tokens to withdraw
+     */
+    function withdrawTokenRewards(address[] calldata _vaults, address[] calldata _tokens) external {
+        for (uint256 i = 0; i < _vaults.length; ++i) {
+            IVault(_vaults[i]).withdrawTokenRewards(_tokens);
+        }
+
+        for (uint256 i = 0; i < _tokens.length; ++i) {
+            IERC20Upgradeable rewardToken = IERC20Upgradeable(_tokens[i]);
+            if (address(rewardToken) == linkToken) revert InvalidToken();
+            uint256 balance = rewardToken.balanceOf(address(this));
+            if (balance != 0) rewardToken.safeTransfer(nonLINKRewardReceiver, balance);
+        }
+    }
+
+    /**
+     * @notice Sets the address of reward receiver for non LINK vault rewards
+     * @param _nonLINKRewardReceiver address of reward receiver
+     */
+    function setNonLINKRewardReceiver(address _nonLINKRewardReceiver) external onlyOwner {
+        nonLINKRewardReceiver = _nonLINKRewardReceiver;
     }
 
     /**

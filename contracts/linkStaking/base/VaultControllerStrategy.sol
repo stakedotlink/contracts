@@ -361,9 +361,11 @@ abstract contract VaultControllerStrategy is Strategy {
 
     // address of vault deposit controller
     address public vaultDepositController;
+    // address of delegate registry
+    address public delegateRegistry;
 
     // storage gap for upgradeability
-    uint256[4] private __gap;
+    uint256[3] private __gap;
 
     event UpgradedVaults(uint256[] vaults);
     event SetMaxDepositSizeBP(uint256 maxDepositSizeBP);
@@ -701,6 +703,14 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function setVaultDepositController(address _vaultDepositController) external onlyOwner {
         vaultDepositController = _vaultDepositController;
+    }
+
+    /**
+     * @notice Sets the delegate registry
+     * @param _delegateRegistry address of delegate registry
+     */
+    function setDelegateRegistry(address _delegateRegistry) external onlyOwner {
+        delegateRegistry = _delegateRegistry;
     }
 
     /**
