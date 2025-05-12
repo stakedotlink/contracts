@@ -282,7 +282,7 @@ describe('PolygonStrategy', () => {
     await validatorShare3.addReward(vaults[2].target, toEther(30))
     await strategy.unbond(toEther(50))
 
-    assert.equal(await strategy.validatorWithdrawalIndex(), 0n)
+    assert.equal(await strategy.validatorWithdrawalIndex(), 2n)
     assert.equal(await strategy.numVaultsUnbonding(), 1n)
     assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 55)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 995)
@@ -298,10 +298,10 @@ describe('PolygonStrategy', () => {
 
     await time.increase(withdrawalDelay)
     await strategy.unstakeClaim([1])
-    await strategy.queueValidatorRemoval(0)
-    await strategy.unbond(toEther(10))
+    await strategy.queueValidatorRemoval(2)
+    await strategy.unbond(toEther(5))
 
-    assert.equal(await strategy.validatorWithdrawalIndex(), 0n)
+    assert.equal(await strategy.validatorWithdrawalIndex(), 1n)
     assert.equal(await strategy.numVaultsUnbonding(), 1n)
     assert.equal(fromEther(await token.balanceOf(stakeManager.target)), 35)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 1015)
@@ -309,7 +309,7 @@ describe('PolygonStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1000)
     assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 5)
     assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
-    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 10)
+    assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 30)
 
     assert.equal(await vaults[0].isUnbonding(), true)
     assert.equal(await vaults[1].isUnbonding(), false)
