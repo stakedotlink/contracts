@@ -28,6 +28,8 @@ contract PolygonValidatorShareMock {
     mapping(address => uint256) private liquidRewards;
     mapping(address => DelegatorUnbond) public unbonds;
 
+    uint256 public minAmount = 1 ether;
+
     error InsufficientBalance();
     error IncompleteWithdrawalPeriod();
     error NoRewards();
@@ -87,7 +89,7 @@ contract PolygonValidatorShareMock {
 
     function withdrawRewardsPOL() external {
         uint256 rewards = liquidRewards[msg.sender];
-        if (rewards == 0) revert NoRewards();
+        if (rewards < minAmount) revert NoRewards();
 
         delete liquidRewards[msg.sender];
         stakeManager.withdraw(msg.sender, rewards);
