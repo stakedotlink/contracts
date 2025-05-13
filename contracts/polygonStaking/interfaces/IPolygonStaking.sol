@@ -23,4 +23,6 @@ interface IPolygonStaking {
     function unbonds(address _user) external view returns (uint256, uint256);
 
     function validatorId() external view returns (uint256);
+
+    function minAmount() external view returns (uint256);
 }

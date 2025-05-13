@@ -232,12 +232,15 @@ contract PolygonStrategy is Strategy {
                     uint256 principalDeposits = vault.getPrincipalDeposits();
                     uint256 rewards = deposits - principalDeposits;
 
-                    if (rewards >= toUnbondRemaining) {
+                    if (rewards >= toUnbondRemaining && rewards >= vault.minRewardClaimAmount()) {
                         vault.withdrawRewards();
                         toUnbondRemaining = 0;
                         break;
                     } else {
-                        toUnbondRemaining -= rewards;
+                        if (toUnbondRemaining > rewards) {
+                            toUnbondRemaining -= rewards;
+                        }
+
                         uint256 vaultToUnbond = principalDeposits >= toUnbondRemaining
                             ? toUnbondRemaining
                             : principalDeposits;

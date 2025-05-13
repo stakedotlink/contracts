@@ -167,6 +167,18 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return stakeManager.epoch() < (withdrawEpoch + stakeManager.withdrawalDelay());
     }
 
+    /**
+     * @notice Returns the minimum amount of rewards that can be claimed/restaked
+     * @return min amount of rewards
+     */
+    function minRewardClaimAmount() external view returns (uint256) {
+        return validatorPool.minAmount();
+    }
+
+    /**
+     * @notice Returns the rate precision for share exchange rates in validator pool
+     * @return rate precision
+     */
     function _getRatePrecision() private view returns (uint256) {
         uint256 validatorId = validatorPool.validatorId();
 
