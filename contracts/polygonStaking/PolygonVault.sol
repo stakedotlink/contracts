@@ -30,6 +30,11 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     error OnlyVaultController();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initializes contract
      * @param _token address of POL token
