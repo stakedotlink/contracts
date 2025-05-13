@@ -97,6 +97,11 @@ contract PolygonStrategy is Strategy {
     error InvalidAmount();
     error NoVaultsUnbonding();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initializes contract
      * @param _token address of POL token
