@@ -30,6 +30,7 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
     error SenderNotAuthorized();
     error NoUnbondingNeeded();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -268,6 +269,7 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      * @param _depositController address of deposit controller
      */
     function setDepositController(address _depositController) external onlyOwner {
+        if (_depositController == address(0)) revert InvalidAddress();
         depositController = _depositController;
     }
 

@@ -96,6 +96,7 @@ contract PolygonStrategy is Strategy {
     error InvalidVaultIds();
     error InvalidAmount();
     error NoVaultsUnbonding();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -630,6 +631,7 @@ contract PolygonStrategy is Strategy {
      * @param _validatorMEVRewardsPool address of rewards pool
      */
     function setValidatorMEVRewardsPool(address _validatorMEVRewardsPool) external onlyOwner {
+        if (_validatorMEVRewardsPool == address(0)) revert InvalidAddress();
         validatorMEVRewardsPool = IRewardsPool(_validatorMEVRewardsPool);
     }
 
@@ -651,6 +653,7 @@ contract PolygonStrategy is Strategy {
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
+        if (_vaultImplementation == address(0)) revert InvalidAddress();
         vaultImplementation = _vaultImplementation;
         emit SetVaultImplementation(_vaultImplementation);
     }
@@ -660,6 +663,7 @@ contract PolygonStrategy is Strategy {
      * @param _fundFlowController address of fund flow controller
      */
     function setFundFlowController(address _fundFlowController) external onlyOwner {
+        if (_fundFlowController == address(0)) revert InvalidAddress();
         fundFlowController = _fundFlowController;
     }
 
