@@ -123,6 +123,8 @@ contract PolygonStrategy is Strategy {
 
         stakeManager = _stakeManager;
         vaultImplementation = _vaultImplementation;
+
+        if (_validatorMEVRewardsPercentage > 5000) revert FeesTooLarge();
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
 
         for (uint256 i = 0; i < _fees.length; ++i) {
