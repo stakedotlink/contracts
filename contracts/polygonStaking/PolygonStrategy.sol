@@ -264,6 +264,7 @@ contract PolygonStrategy is Strategy {
 
             ++i;
             if (i >= vaults.length) i = 0;
+            if (i == validatorWithdrawalIndex) break;
         }
 
         if (numVaultsUnbonded != 0) {
