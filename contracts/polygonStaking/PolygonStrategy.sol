@@ -83,6 +83,7 @@ contract PolygonStrategy is Strategy {
     event UpgradedVaults(address[] vaults);
     event AddFee(address receiver, uint256 feeBasisPoints);
     event UpdateFee(uint256 index, address receiver, uint256 feeBasisPoints);
+    event RemoveFee(uint256 index, address receiver, uint256 feeBasisPoints);
     event SetValidatorMEVRewardsPercentage(uint256 validatorMEVRewardsPercentage);
     event SetVaultImplementation(address vaultImplementation);
 
@@ -615,15 +616,17 @@ contract PolygonStrategy is Strategy {
         _updateStrategyRewards();
 
         if (_feeBasisPoints == 0) {
+            Fee memory toRemove = fees[_index];
             fees[_index] = fees[fees.length - 1];
             fees.pop();
+            emit RemoveFee(_index, toRemove.receiver, toRemove.basisPoints);
         } else {
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
+            emit UpdateFee(_index, _receiver, _feeBasisPoints);
         }
 
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
-        emit UpdateFee(_index, _receiver, _feeBasisPoints);
     }
 
     /**
