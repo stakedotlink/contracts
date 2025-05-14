@@ -624,10 +624,9 @@ contract PolygonStrategy is Strategy {
         } else {
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
+            if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
             emit UpdateFee(_index, _receiver, _feeBasisPoints);
         }
-
-        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }
 
     /**
