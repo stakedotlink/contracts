@@ -80,9 +80,10 @@ contract PolygonStrategy is Strategy {
     event AddValidator(address indexed pool, address rewardsReceiver);
     event QueueValidatorRemoval(address indexed pool, address rewardsReceiver);
     event FinalizeValidatorRemoval(address indexed pool);
-    event UpgradedVaults();
+    event UpgradedVaults(address[] vaults);
     event AddFee(address receiver, uint256 feeBasisPoints);
     event UpdateFee(uint256 index, address receiver, uint256 feeBasisPoints);
+    event RemoveFee(uint256 index, address receiver, uint256 feeBasisPoints);
     event SetValidatorMEVRewardsPercentage(uint256 validatorMEVRewardsPercentage);
     event SetVaultImplementation(address vaultImplementation);
 
@@ -96,6 +97,12 @@ contract PolygonStrategy is Strategy {
     error InvalidVaultIds();
     error InvalidAmount();
     error NoVaultsUnbonding();
+    error InvalidAddress();
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializes contract
@@ -118,6 +125,8 @@ contract PolygonStrategy is Strategy {
 
         stakeManager = _stakeManager;
         vaultImplementation = _vaultImplementation;
+
+        if (_validatorMEVRewardsPercentage > 5000) revert FeesTooLarge();
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
 
         for (uint256 i = 0; i < _fees.length; ++i) {
@@ -208,6 +217,8 @@ contract PolygonStrategy is Strategy {
 
     /**
      * @notice Unbonds token deposits in vaults
+     * @dev there are some edge cases caused by the reward claim mechanism where the
+     * amount unbonded will be slightly less than _toUnbond
      * @param _toUnbond amount to unbond
      */
     function unbond(uint256 _toUnbond) external onlyFundFlowController {
@@ -232,11 +243,15 @@ contract PolygonStrategy is Strategy {
                     uint256 principalDeposits = vault.getPrincipalDeposits();
                     uint256 rewards = deposits - principalDeposits;
 
-                    if (rewards >= toUnbondRemaining) {
+                    if (rewards >= toUnbondRemaining && rewards >= vault.minRewardClaimAmount()) {
                         vault.withdrawRewards();
                         toUnbondRemaining = 0;
-                    } else {
-                        toUnbondRemaining -= rewards;
+                        break;
+                    } else if (principalDeposits != 0) {
+                        if (toUnbondRemaining > rewards) {
+                            toUnbondRemaining -= rewards;
+                        }
+
                         uint256 vaultToUnbond = principalDeposits >= toUnbondRemaining
                             ? toUnbondRemaining
                             : principalDeposits;
@@ -251,10 +266,13 @@ contract PolygonStrategy is Strategy {
 
             ++i;
             if (i >= vaults.length) i = 0;
+            if (i == validatorWithdrawalIndex) break;
         }
 
-        validatorWithdrawalIndex = i;
-        numVaultsUnbonding = numVaultsUnbonded;
+        if (numVaultsUnbonded != 0) {
+            validatorWithdrawalIndex = i;
+            numVaultsUnbonding = numVaultsUnbonded;
+        }
 
         uint256 rewardsClaimed = token.balanceOf(address(this)) - preBalance;
         if (rewardsClaimed != 0) totalQueued += rewardsClaimed;
@@ -560,7 +578,7 @@ contract PolygonStrategy is Strategy {
                 IPolygonVault(_vaults[i]).upgradeToAndCall(vaultImplementation, _data[i]);
             }
         }
-        emit UpgradedVaults();
+        emit UpgradedVaults(_vaults);
     }
 
     /**
@@ -601,15 +619,16 @@ contract PolygonStrategy is Strategy {
         _updateStrategyRewards();
 
         if (_feeBasisPoints == 0) {
+            Fee memory toRemove = fees[_index];
             fees[_index] = fees[fees.length - 1];
             fees.pop();
+            emit RemoveFee(_index, toRemove.receiver, toRemove.basisPoints);
         } else {
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
+            if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
+            emit UpdateFee(_index, _receiver, _feeBasisPoints);
         }
-
-        if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
-        emit UpdateFee(_index, _receiver, _feeBasisPoints);
     }
 
     /**
@@ -617,6 +636,7 @@ contract PolygonStrategy is Strategy {
      * @param _validatorMEVRewardsPool address of rewards pool
      */
     function setValidatorMEVRewardsPool(address _validatorMEVRewardsPool) external onlyOwner {
+        if (_validatorMEVRewardsPool == address(0)) revert InvalidAddress();
         validatorMEVRewardsPool = IRewardsPool(_validatorMEVRewardsPool);
     }
 
@@ -627,7 +647,7 @@ contract PolygonStrategy is Strategy {
     function setValidatorMEVRewardsPercentage(
         uint256 _validatorMEVRewardsPercentage
     ) external onlyOwner {
-        if (_validatorMEVRewardsPercentage > 10000) revert FeesTooLarge();
+        if (_validatorMEVRewardsPercentage > 5000) revert FeesTooLarge();
 
         validatorMEVRewardsPercentage = _validatorMEVRewardsPercentage;
         emit SetValidatorMEVRewardsPercentage(_validatorMEVRewardsPercentage);
@@ -638,6 +658,7 @@ contract PolygonStrategy is Strategy {
      * @param _vaultImplementation address of implementation contract
      */
     function setVaultImplementation(address _vaultImplementation) external onlyOwner {
+        if (_vaultImplementation == address(0)) revert InvalidAddress();
         vaultImplementation = _vaultImplementation;
         emit SetVaultImplementation(_vaultImplementation);
     }
@@ -647,6 +668,7 @@ contract PolygonStrategy is Strategy {
      * @param _fundFlowController address of fund flow controller
      */
     function setFundFlowController(address _fundFlowController) external onlyOwner {
+        if (_fundFlowController == address(0)) revert InvalidAddress();
         fundFlowController = _fundFlowController;
     }
 
