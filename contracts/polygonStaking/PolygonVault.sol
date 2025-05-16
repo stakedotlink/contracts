@@ -111,7 +111,9 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Withdraws rewards from the validator pool
      **/
     function withdrawRewards() external onlyVaultController {
-        validatorPool.withdrawRewardsPOL();
+        if (getRewards() != 0) {
+            validatorPool.withdrawRewardsPOL();
+        }
 
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(msg.sender, balance);
@@ -119,11 +121,15 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns the total balance of this contract
-     * @dev includes principal, rewards, and queued withdrawals
+     * @dev includes principal, rewards, queued withdrawals, and tokens held by this contract
      * @return total balance
      */
     function getTotalDeposits() public view returns (uint256) {
-        return getPrincipalDeposits() + getRewards() + getQueuedWithdrawals();
+        return
+            getPrincipalDeposits() +
+            getRewards() +
+            getQueuedWithdrawals() +
+            token.balanceOf(address(this));
     }
 
     /**

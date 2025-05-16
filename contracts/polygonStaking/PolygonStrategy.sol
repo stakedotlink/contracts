@@ -217,6 +217,8 @@ contract PolygonStrategy is Strategy {
 
     /**
      * @notice Unbonds token deposits in vaults
+     * @dev there are some edge cases caused by the reward claim mechanism where the
+     * amount unbonded will be slightly less than _toUnbond
      * @param _toUnbond amount to unbond
      */
     function unbond(uint256 _toUnbond) external onlyFundFlowController {
@@ -245,7 +247,7 @@ contract PolygonStrategy is Strategy {
                         vault.withdrawRewards();
                         toUnbondRemaining = 0;
                         break;
-                    } else {
+                    } else if (principalDeposits != 0) {
                         if (toUnbondRemaining > rewards) {
                             toUnbondRemaining -= rewards;
                         }
