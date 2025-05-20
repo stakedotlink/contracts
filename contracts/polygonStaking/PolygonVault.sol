@@ -30,6 +30,11 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     error OnlyVaultController();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initializes contract
      * @param _token address of POL token
@@ -106,7 +111,9 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Withdraws rewards from the validator pool
      **/
     function withdrawRewards() external onlyVaultController {
-        validatorPool.withdrawRewardsPOL();
+        if (getRewards() != 0) {
+            validatorPool.withdrawRewardsPOL();
+        }
 
         uint256 balance = token.balanceOf(address(this));
         token.safeTransfer(msg.sender, balance);
@@ -114,11 +121,15 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns the total balance of this contract
-     * @dev includes principal, rewards, and queued withdrawals
+     * @dev includes principal, rewards, queued withdrawals, and tokens held by this contract
      * @return total balance
      */
     function getTotalDeposits() public view returns (uint256) {
-        return getPrincipalDeposits() + getRewards() + getQueuedWithdrawals();
+        return
+            getPrincipalDeposits() +
+            getRewards() +
+            getQueuedWithdrawals() +
+            token.balanceOf(address(this));
     }
 
     /**
@@ -167,6 +178,18 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return stakeManager.epoch() < (withdrawEpoch + stakeManager.withdrawalDelay());
     }
 
+    /**
+     * @notice Returns the minimum amount of rewards that can be claimed/restaked
+     * @return min amount of rewards
+     */
+    function minRewardClaimAmount() external view returns (uint256) {
+        return validatorPool.minAmount();
+    }
+
+    /**
+     * @notice Returns the rate precision for share exchange rates in validator pool
+     * @return rate precision
+     */
     function _getRatePrecision() private view returns (uint256) {
         uint256 validatorId = validatorPool.validatorId();
 
