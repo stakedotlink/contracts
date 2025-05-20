@@ -14,34 +14,49 @@ interface IPolygonStakeManagerMock is IPolygonStakeManager {
  * @notice Mocks contract for testing
  */
 contract PolygonValidatorShareMock {
-    struct Delegator {
+    uint256 constant EXCHANGE_RATE_PRECISION = 10 ** 29;
+
+    struct DelegatorUnbond {
         uint256 shares;
         uint256 withdrawEpoch;
     }
 
+    uint256 public validatorId = 8;
+
     IPolygonStakeManagerMock public stakeManager;
     mapping(address => uint256) private staked;
     mapping(address => uint256) private liquidRewards;
-    mapping(address => Delegator) public delegators;
+    mapping(address => DelegatorUnbond) public unbonds;
 
-    error ZeroBalance();
+    uint256 public minAmount = 1 ether;
+
+    error InsufficientBalance();
     error IncompleteWithdrawalPeriod();
+    error NoRewards();
 
     constructor(address _stakeManager) {
         stakeManager = IPolygonStakeManagerMock(_stakeManager);
     }
 
-    function buyVoucher(uint256 _amount, uint256) external {
+    function buyVoucherPOL(uint256 _amount, uint256) external returns (uint256) {
         stakeManager.deposit(msg.sender, _amount);
         staked[msg.sender] += _amount;
+
+        uint256 rewards = liquidRewards[msg.sender];
+        if (rewards != 0) {
+            delete liquidRewards[msg.sender];
+            stakeManager.withdraw(msg.sender, rewards);
+        }
+
+        return _amount;
     }
 
-    function sellVoucher(uint256) external {
-        uint256 amount = staked[msg.sender];
-        if (staked[msg.sender] == 0) revert ZeroBalance();
+    function sellVoucherPOL(uint256 _claimAmount, uint256) external {
+        if (staked[msg.sender] < _claimAmount) revert InsufficientBalance();
 
-        delete staked[msg.sender];
-        delegators[msg.sender] = Delegator(amount, block.timestamp);
+        staked[msg.sender] -= _claimAmount;
+        unbonds[msg.sender].shares += _claimAmount;
+        unbonds[msg.sender].withdrawEpoch = block.timestamp;
 
         uint256 rewards = liquidRewards[msg.sender];
         if (rewards != 0) {
@@ -50,30 +65,31 @@ contract PolygonValidatorShareMock {
         }
     }
 
-    function unstakeClaimTokens() external {
-        Delegator memory delegator = delegators[msg.sender];
+    function unstakeClaimTokensPOL() external {
+        DelegatorUnbond memory unbond = unbonds[msg.sender];
 
-        uint256 shares = delegator.shares;
+        uint256 shares = unbond.shares;
         if (
-            delegator.withdrawEpoch + stakeManager.withdrawalDelay() > stakeManager.epoch() ||
+            unbond.withdrawEpoch + stakeManager.withdrawalDelay() > stakeManager.epoch() ||
             shares == 0
         ) revert IncompleteWithdrawalPeriod();
 
-        delete delegators[msg.sender];
+        delete unbonds[msg.sender];
         stakeManager.withdraw(msg.sender, shares);
     }
 
-    function restake() external {
+    function restakePOL() external returns (uint256, uint256) {
         uint256 rewards = liquidRewards[msg.sender];
-        if (rewards == 0) revert ZeroBalance();
+        if (rewards == 0) revert NoRewards();
 
         delete liquidRewards[msg.sender];
         staked[msg.sender] += rewards;
+        return (rewards, rewards);
     }
 
-    function withdrawRewards() external {
+    function withdrawRewardsPOL() external {
         uint256 rewards = liquidRewards[msg.sender];
-        if (rewards == 0) revert ZeroBalance();
+        if (rewards < minAmount) revert NoRewards();
 
         delete liquidRewards[msg.sender];
         stakeManager.withdraw(msg.sender, rewards);
@@ -88,11 +104,11 @@ contract PolygonValidatorShareMock {
     }
 
     function exchangeRate() external pure returns (uint256) {
-        return 1;
+        return EXCHANGE_RATE_PRECISION;
     }
 
     function withdrawExchangeRate() external pure returns (uint256) {
-        return 1;
+        return EXCHANGE_RATE_PRECISION;
     }
 
     function addReward(address _user, uint256 _amount) external {

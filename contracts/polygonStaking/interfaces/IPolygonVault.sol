@@ -6,9 +6,11 @@ interface IPolygonVault {
 
     function withdraw() external;
 
-    function unbond() external;
+    function unbond(uint256 _amount) external;
 
     function restakeRewards() external;
+
+    function withdrawRewards() external;
 
     function getTotalDeposits() external view returns (uint256);
 
@@ -25,4 +27,6 @@ interface IPolygonVault {
     function upgradeToAndCall(address _newImplementation, bytes memory _data) external;
 
     function upgradeTo(address _newImplementation) external;
+
+    function minRewardClaimAmount() external view returns (uint256);
 }
