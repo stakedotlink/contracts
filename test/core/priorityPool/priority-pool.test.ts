@@ -838,4 +838,21 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await token.balanceOf(adrs.pp)), 0)
     assert.equal(fromEther(await stakingPool.totalStaked()), 200)
   })
+
+  it('bypassQueue should work correctly', async () => {
+    const { accounts, signers, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
+
+    await pp.setQueueBypassController(accounts[1])
+
+    await expect(
+      pp.connect(signers[1]).bypassQueue(accounts[2], toEther(3000), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'InsufficientDepositRoom()')
+
+    await strategy.setMaxDeposits(toEther(4000))
+    await pp.connect(signers[1]).bypassQueue(accounts[2], toEther(3000), ['0x'])
+
+    assert.equal(fromEther(await token.balanceOf(accounts[1])), 7000)
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 3000)
+    assert.equal(fromEther(await stakingPool.totalStaked()), 3000)
+  })
 })
