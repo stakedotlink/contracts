@@ -19,12 +19,12 @@ contract LINKMigrator is Ownable {
     using SafeERC20 for IERC20;
 
     // address of LINK token
-    address public linkToken;
+    address public immutable linkToken;
     // address of Chainlink community staking pool
-    IStaking public communityPool;
+    IStaking public immutable communityPool;
 
     // address of priority pool
-    IPriorityPool public priorityPool;
+    IPriorityPool public immutable priorityPool;
 
     struct Migration {
         // total amount of principal staked in Chainlink community pool
