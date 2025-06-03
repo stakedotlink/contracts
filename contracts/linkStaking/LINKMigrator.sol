@@ -27,7 +27,9 @@ contract LINKMigrator is Ownable {
     IPriorityPool public priorityPool;
 
     struct Migration {
-        // amount of principal staked in Chainlink community pool
+        // total amount of principal staked in Chainlink community pool
+        uint128 totalPrincipalAmount;
+        // amount of principal staked by account in Chainlink community pool
         uint128 principalAmount;
         // amount to migrate
         uint128 amount;
@@ -71,12 +73,14 @@ contract LINKMigrator is Ownable {
         (uint256 minStakeAmount, ) = communityPool.getStakerLimits();
         if (_amount < minStakeAmount) revert InvalidAmount();
 
+        uint256 totalPrincipal = communityPool.getTotalPrincipal();
         uint256 principal = communityPool.getStakerPrincipal(msg.sender);
 
         if (principal < _amount) revert InsufficientAmountStaked();
         if (!_isUnbonded(msg.sender)) revert TokensNotUnbonded();
 
         migrations[msg.sender] = Migration(
+            uint128(totalPrincipal),
             uint128(principal),
             uint128(_amount),
             uint64(block.timestamp)
@@ -96,9 +100,14 @@ contract LINKMigrator is Ownable {
         if (_value != migration.amount) revert InvalidValue();
         if (uint64(block.timestamp) != migration.timestamp) revert InvalidTimestamp();
 
-        uint256 amountWithdrawn = migration.principalAmount -
+        uint256 totalDepositChange = migration.totalPrincipalAmount -
+            communityPool.getTotalPrincipal();
+        uint256 accountDepositChange = migration.principalAmount -
             communityPool.getStakerPrincipal(_sender);
-        if (amountWithdrawn < _value) revert InsufficientTokensWithdrawn();
+
+        if (totalDepositChange < _value || accountDepositChange < _value) {
+            revert InsufficientTokensWithdrawn();
+        }
 
         bytes[] memory depositData = abi.decode(_calldata, (bytes[]));
         priorityPool.bypassQueue(_sender, _value, depositData);

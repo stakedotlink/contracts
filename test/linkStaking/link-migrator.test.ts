@@ -96,12 +96,7 @@ describe('LINKMigrator', () => {
       { unsafeAllow: ['delegatecall'] }
     )) as CommunityVCS
 
-    const migrator = await deploy('LINKMigrator', [
-      token.target,
-      communityPool.target,
-      pp.target,
-      toEther(100),
-    ])
+    const migrator = await deploy('LINKMigrator', [token.target, communityPool.target, pp.target])
 
     await pp.setWithdrawalPool(withdrawalPool.target)
     await pp.setQueueBypassController(migrator.target)
@@ -118,6 +113,7 @@ describe('LINKMigrator', () => {
       )
 
     return {
+      signers,
       accounts,
       token,
       pp,
@@ -157,13 +153,13 @@ describe('LINKMigrator', () => {
     assert.deepEqual(
       await migrator
         .migrations(accounts[0])
-        .then((d: any) => [fromEther(d[0]), fromEther(d[1]), Number(d[2])]),
-      [1000, 500, ((await ethers.provider.getBlock('latest')) as any).timestamp]
+        .then((d: any) => [fromEther(d[0]), fromEther(d[1]), fromEther(d[2]), Number(d[3])]),
+      [2000, 1000, 500, ((await ethers.provider.getBlock('latest')) as any).timestamp]
     )
   })
 
   it('onTokenTransfer should work correctly', async () => {
-    const { migrator, communityPool, accounts, token, stakingPool } = await loadFixture(
+    const { migrator, communityPool, accounts, signers, token, stakingPool } = await loadFixture(
       deployFixture
     )
 
@@ -204,12 +200,22 @@ describe('LINKMigrator', () => {
       ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [[encodeVaults([])]])
     )
     await ethers.provider.send('evm_mine')
-    await ethers.provider.send('evm_setAutomine', [true])
 
     assert.equal(fromEther(await communityPool.getStakerPrincipal(accounts[0])), 500)
     assert.equal(fromEther(await communityPool.getTotalPrincipal()), 1800)
     assert.equal(fromEther(await stakingPool.totalStaked()), 1300)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[0])), 300)
-    assert.deepEqual(await migrator.migrations(accounts[0]), [0n, 0n, 0n])
+    assert.deepEqual(await migrator.migrations(accounts[0]), [0n, 0n, 0n, 0n])
+
+    await migrator.initiateMigration(toEther(100))
+    await communityPool.unstake(toEther(100))
+    await token.connect(signers[1]).transferAndCall(communityPool.target, toEther(50), '0x')
+
+    await expect(
+      token.transferAndCall(migrator.target, toEther(100), '0x')
+    ).to.be.revertedWithCustomError(migrator, 'InsufficientTokensWithdrawn()')
+
+    await ethers.provider.send('evm_mine')
+    await ethers.provider.send('evm_setAutomine', [true])
   })
 })
