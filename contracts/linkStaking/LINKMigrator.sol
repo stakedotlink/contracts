@@ -76,7 +76,7 @@ contract LINKMigrator is Ownable {
         uint256 principal = communityPool.getStakerPrincipal(msg.sender);
 
         if (principal < _amount) revert InsufficientAmountStaked();
-        if (!_isUnbonded(msg.sender)) revert TokensNotUnbonded();
+        if (!_inClaimPeriod(msg.sender)) revert TokensNotUnbonded();
 
         migrations[msg.sender] = Migration(
             uint128(totalPrincipal),
@@ -117,11 +117,11 @@ contract LINKMigrator is Ownable {
     }
 
     /**
-     * @notice Returns whether an account is unbonded in the Chainlink community pool
+     * @notice Returns whether an account is within the claim period in the Chainlink community pool
      * @param _account address of account
-     * @return true if account is unbonded, false otherwise
+     * @return true if account is in claim period, false otherwise
      **/
-    function _isUnbonded(address _account) private view returns (bool) {
+    function _inClaimPeriod(address _account) private view returns (bool) {
         uint256 unbondingPeriodEndsAt = communityPool.getUnbondingEndsAt(_account);
         if (unbondingPeriodEndsAt == 0 || block.timestamp < unbondingPeriodEndsAt) return false;
 
