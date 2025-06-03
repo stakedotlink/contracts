@@ -25,8 +25,6 @@ contract LINKMigrator is Ownable {
 
     // address of priority pool
     IPriorityPool public priorityPool;
-    // min amount of tokens the priority will deposit in a single tx
-    uint256 public queueDepositMin;
 
     struct Migration {
         // amount of principal staked in Chainlink community pool
@@ -56,18 +54,11 @@ contract LINKMigrator is Ownable {
      * @param _linkToken address of LINK token
      * @param _communityPool address of Chainlink community staking pool
      * @param _priorityPool address of priorityPool
-     * @param _queueDepositMin min amount of tokens the priority will deposit in a single tx
      **/
-    constructor(
-        address _linkToken,
-        address _communityPool,
-        address _priorityPool,
-        uint256 _queueDepositMin
-    ) {
+    constructor(address _linkToken, address _communityPool, address _priorityPool) {
         linkToken = _linkToken;
         communityPool = IStaking(_communityPool);
         priorityPool = IPriorityPool(_priorityPool);
-        queueDepositMin = _queueDepositMin;
 
         IERC20(linkToken).safeApprove(_priorityPool, type(uint256).max);
     }
@@ -77,7 +68,8 @@ contract LINKMigrator is Ownable {
      * @param _amount amount of tokens to migrate
      **/
     function initiateMigration(uint256 _amount) external {
-        if (_amount == 0) revert InvalidAmount();
+        (uint256 minStakeAmount, ) = communityPool.getStakerLimits();
+        if (_amount < minStakeAmount) revert InvalidAmount();
 
         uint256 principal = communityPool.getStakerPrincipal(msg.sender);
 
@@ -114,14 +106,6 @@ contract LINKMigrator is Ownable {
         delete migrations[_sender];
 
         emit Migrate(_sender, _value);
-    }
-
-    /**
-     * @notice Sets the min amount of tokens the priority will deposit in a single tx
-     * @param _queueDepositMin queue deposit min
-     **/
-    function setQueueDepositMin(uint256 _queueDepositMin) external onlyOwner {
-        queueDepositMin = _queueDepositMin;
     }
 
     /**
