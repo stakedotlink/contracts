@@ -44,7 +44,6 @@ contract LINKMigrator is Ownable {
 
     error InsufficientAmountStaked();
     error TokensNotUnbonded();
-    error InvalidPPState();
     error InvalidToken();
     error InvalidAmount();
     error InvalidValue();
