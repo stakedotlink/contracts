@@ -599,6 +599,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint256 _amount,
         bytes[] calldata _data
     ) external onlyQueueBypassController {
+        if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
+
         token.safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 canDeposit = stakingPool.canDeposit();
