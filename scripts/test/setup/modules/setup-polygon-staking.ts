@@ -43,11 +43,19 @@ export async function setupPOLStaking() {
   await (await priorityPool.deposit(toEther(200000), false, ['0x'])).wait()
   await (await polToken.transfer(strategy.target, toEther(150000))).wait()
   await (await stakingPool.updateStrategyRewards([0], '0x')).wait()
+  await (await stakingPool.approve(priorityPool.target, toEther(500))).wait()
+  await (
+    await stakingPool.transferAndCall(
+      priorityPool.target,
+      toEther(500),
+      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
+    )
+  ).wait()
 
   // Account 3
 
   await (await polToken.connect(signers[3]).approve(priorityPool.target, ethers.MaxUint256)).wait()
-  await (await priorityPool.connect(signers[3]).deposit(toEther(3000), false, ['0x'])).wait()
+  await (await priorityPool.connect(signers[3]).deposit(toEther(3500), false, ['0x'])).wait()
 
   // Account 4
 
