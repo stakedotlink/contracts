@@ -41,11 +41,7 @@ export async function deployPOLStaking() {
   const { accounts } = await getAccounts()
   const sdlPool = (await getContract('SDLPool')) as SDLPool
 
-  const polToken = await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
-    'Polygon',
-    'POL',
-    10000000,
-  ])
+  const polToken = await deploy('ERC20Mintable', ['Polygon', 'POL', 10000000])
   console.log('POLToken deployed: ', polToken.target)
 
   const stakingPool = (await deployUpgradeable('StakingPool', [
@@ -130,7 +126,7 @@ export async function deployPOLStaking() {
       POL_MEVRewardsPool: mevRewardsPool.target,
     },
     {
-      POLToken: '@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20',
+      POLToken: 'ERC20Mintable',
       POL_StakingPool: 'StakingPool',
       POL_PriorityPool: 'PriorityPool',
       POL_WithdrawalPool: 'WithdrawalPool',
