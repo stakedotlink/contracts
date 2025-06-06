@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.15;
+pragma solidity 0.8.22;
 
 interface IDelegateRegistry {
     /// @notice Delegation type, NONE is used when a delegation does not exist or is revoked

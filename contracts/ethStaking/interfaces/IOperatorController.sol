@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.15;
+pragma solidity 0.8.22;
 
 interface IOperatorController {
     function initiateKeyPairValidation(address _sender, uint256 _operatorId) external;
