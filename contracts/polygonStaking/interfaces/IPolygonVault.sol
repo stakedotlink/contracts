@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.15;
+pragma solidity 0.8.22;
 
 interface IPolygonVault {
     function deposit(uint256 _amount) external;

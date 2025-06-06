@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.15;
+pragma solidity 0.8.22;
 
 interface IPolygonStaking {
     function buyVoucherPOL(uint256 _amount, uint256 _minSharesToMint) external returns (uint256);
