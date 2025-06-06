@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.15;
+pragma solidity 0.8.22;
 
 interface IDepositContract {
     /// @notice Submit a Phase 0 DepositData object.
