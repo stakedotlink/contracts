@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.15;
+pragma solidity 0.8.22;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
