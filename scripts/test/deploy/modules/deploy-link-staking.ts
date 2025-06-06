@@ -263,6 +263,8 @@ export async function deployLINKStaking() {
   const fundFlowController = await deployUpgradeable('FundFlowController', [
     operatorVCS,
     communityVCS,
+    linkToken.target,
+    accounts[1],
     28 * 86400,
     7 * 86400,
     5,
