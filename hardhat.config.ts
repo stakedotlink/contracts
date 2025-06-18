@@ -45,6 +45,7 @@ const config: HardhatUserConfig = {
         auto: true,
         interval: 5000,
       },
+      gas: 'auto',
       // forking: {
       //   url: '',
       //   blockNumber: 21888413,

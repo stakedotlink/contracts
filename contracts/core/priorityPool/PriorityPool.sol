@@ -76,6 +76,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     // whether instant withdrawals are enabled
     bool public allowInstantWithdrawals;
 
+    // address of queue bypass controller
+    address public queueBypassController;
+
     event UnqueueTokens(address indexed account, uint256 amount);
     event ClaimLSDTokens(address indexed account, uint256 amount, uint256 amountWithYield);
     event Deposit(address indexed account, uint256 instantAmount, uint256 queueAmount);
@@ -154,6 +157,14 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      **/
     modifier onlyWithdrawalPool() {
         if (msg.sender != address(withdrawalPool)) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
+     * @notice Reverts if sender is not queue bypass controller
+     **/
+    modifier onlyQueueBypassController() {
+        if (msg.sender != address(queueBypassController)) revert SenderNotAuthorized();
         _;
     }
 
@@ -578,6 +589,27 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     /**
+     * @notice Deposits tokens directly into the staking pool bypassing the queue
+     * @param _account account to deposit for
+     * @param _amount amount to stake
+     * @param _data deposit data passed to staking pool strategies
+     */
+    function bypassQueue(
+        address _account,
+        uint256 _amount,
+        bytes[] calldata _data
+    ) external onlyQueueBypassController {
+        if (poolStatus != PoolStatus.OPEN) revert DepositsDisabled();
+
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+
+        uint256 canDeposit = stakingPool.canDeposit();
+        if (canDeposit < _amount) revert InsufficientDepositRoom();
+
+        stakingPool.deposit(_account, _amount, _data);
+    }
+
+    /**
      * @notice Sets the pool's status
      * @param _status pool status
      */
@@ -643,6 +675,15 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         token.safeApprove(_withdrawalPool, type(uint256).max);
 
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
+    }
+
+    /**
+     * @notice Sets the address of the queue bypass controller
+     * @dev this address has authorization to stake LINK while bypassing the queue
+     * @param _queueBypassController address of queue bypass controller
+     */
+    function setQueueBypassController(address _queueBypassController) external onlyOwner {
+        queueBypassController = _queueBypassController;
     }
 
     /**
