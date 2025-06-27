@@ -136,6 +136,10 @@ contract StakingMock is IERC677Receiver {
         return stakers[_staker].claimPeriodEndsAt;
     }
 
+    function getUnbondingParams() external view returns (uint256, uint256) {
+        return (unbondingPeriod, claimPeriod);
+    }
+
     function getRewardVault() external view returns (address) {
         return rewardVault;
     }
