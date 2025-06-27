@@ -105,9 +105,7 @@ async function deployCommunityVCS(vaultDepositController: string) {
   const vaultImpAddress = await deployImplementation('CommunityVault')
   console.log('CommunityVault implementation deployed: ', vaultImpAddress)
 
-  updateDeployments(
-    { LINK_Community_Pool_V02: stakingMock.target }
-  )
+  updateDeployments({ LINK_Community_Pool_V02: stakingMock.target })
 
   const communityVCS = await deployUpgradeable(
     'CommunityVCS',
