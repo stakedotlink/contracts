@@ -273,12 +273,21 @@ export async function deployLINKStaking() {
   ])
   console.log('LINK_FundFlowController deployed at', fundFlowController.target)
 
+  const migrator = await deploy('LINKMigrator', [
+    linkToken.target,
+    communityVCS,
+    priorityPool.target,
+  ])
+  console.log('LINKMigrator deployed at', migrator.target)
+
   updateDeployments(
     {
       LINK_FundFlowController: fundFlowController.target,
+      LINK_Migrator: migrator.target,
     },
     {
       LINK_FundFlowController: 'FundFlowController',
+      LINK_Migrator: 'LINKMigrator',
     }
   )
 }
