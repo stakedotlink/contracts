@@ -32,7 +32,7 @@ async function deployOperatorVCS(vaultDepositController: string) {
   const stakingMock = await deploy('StakingMock', [
     linkToken.target,
     stakingRewardsMock.target,
-    toEther(1000),
+    toEther(1),
     toEther(75000),
     toEther(1000000),
     28 * 86400,
@@ -95,7 +95,7 @@ async function deployCommunityVCS(vaultDepositController: string) {
   const stakingMock = await deploy('StakingMock', [
     linkToken.target,
     stakingRewardsMock.target,
-    toEther(1000),
+    toEther(1),
     toEther(15000),
     toEther(1000000),
     28 * 86400,
@@ -133,7 +133,7 @@ async function deployCommunityVCS(vaultDepositController: string) {
     { LINK_CommunityVCS: 'CommunityVCS' }
   )
 
-  return communityVCS.target
+  return { communityVCS: communityVCS.target, communityPool: stakingMock.target }
 }
 
 // Wrapped stLINK
@@ -260,7 +260,7 @@ export async function deployLINKStaking() {
   const vaultDepositController = await deploy('VaultDepositController')
 
   const operatorVCS = await deployOperatorVCS(vaultDepositController.target)
-  const communityVCS = await deployCommunityVCS(vaultDepositController.target)
+  const { communityVCS, communityPool } = await deployCommunityVCS(vaultDepositController.target)
 
   const fundFlowController = await deployUpgradeable('FundFlowController', [
     operatorVCS,
@@ -275,10 +275,12 @@ export async function deployLINKStaking() {
 
   const migrator = await deploy('LINKMigrator', [
     linkToken.target,
-    communityVCS,
+    communityPool,
     priorityPool.target,
   ])
   console.log('LINKMigrator deployed at', migrator.target)
+
+  await priorityPool.setQueueBypassController(migrator.target)
 
   updateDeployments(
     {
