@@ -7,10 +7,12 @@ import {
   DelegatorPool,
   CommunityVCS,
   OperatorVCS,
+  StakingMock,
 } from '../../../../typechain-types'
 import base58 from 'bs58'
 import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 /*
 Accounts:
@@ -19,6 +21,9 @@ Accounts:
 2 - holds LINK + stLINK + has withdrawable LINK + has unclaimed stLINK rewards
 3 - holds LINK + stLINK + has queued LINK + has claimable stLINK + has unclaimed stLINK rewards
 4 - holds LINK + has queued LINK + has claimable stLINK + has unclaimed stLINK rewards
+5 - has LINK staked in Community Pool
+6 - has unbonded LINK staked in Community Pool 
+7 - has unbonding LINK staked in Community Pool
 */
 
 /*
@@ -60,6 +65,10 @@ export async function setupLINKStaking() {
   const wsdToken = await getContract('LINK_WrappedSDToken')
   const sdlPool = await getContract('SDLPool')
   const stLINKSDLRewardsPool = await getContract('stLINK_SDLRewardsPool')
+  const communityPool = (await ethers.getContractAt(
+    'StakingMock',
+    await communityVCS.stakeController()
+  )) as any as StakingMock
 
   // Staking Setup
 
@@ -135,6 +144,27 @@ export async function setupLINKStaking() {
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, depositData])
       )
   ).wait()
+
+  // Account 5
+
+  await (
+    await linkToken.connect(signers[5]).transferAndCall(communityPool.target, toEther(5000), '0x')
+  ).wait()
+
+  // Account 6
+
+  await (
+    await linkToken.connect(signers[6]).transferAndCall(communityPool.target, toEther(6000), '0x')
+  ).wait()
+  await (await communityPool.connect(signers[6]).unbond()).wait()
+  await time.increase(86400 * 28)
+
+  // Account 7
+
+  await (
+    await linkToken.connect(signers[7]).transferAndCall(communityPool.target, toEther(7000), '0x')
+  ).wait()
+  await (await communityPool.connect(signers[7]).unbond()).wait()
 
   // Priority Pool Distribution
 
