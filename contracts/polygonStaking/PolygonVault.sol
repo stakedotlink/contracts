@@ -137,9 +137,8 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return principal balance
      */
     function getPrincipalDeposits() public view returns (uint256) {
-        return
-            (validatorPool.balanceOf(address(this)) * validatorPool.exchangeRate()) /
-            _getRatePrecision();
+        (uint256 staked, ) = validatorPool.getTotalStake(address(this));
+        return staked;
     }
 
     /**

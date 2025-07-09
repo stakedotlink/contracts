@@ -25,4 +25,6 @@ interface IPolygonStaking {
     function validatorId() external view returns (uint256);
 
     function minAmount() external view returns (uint256);
+
+    function getTotalStake(address _user) external view returns (uint256, uint256);
 }

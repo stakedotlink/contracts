@@ -99,11 +99,21 @@ contract PolygonValidatorShareMock {
         return liquidRewards[_user];
     }
 
-    function balanceOf(address _user) external view returns (uint256) {
+    function balanceOf(address _user) public view returns (uint256) {
         return staked[_user];
     }
 
-    function exchangeRate() external pure returns (uint256) {
+    function getTotalStake(address _user) external view returns (uint256, uint256) {
+        uint256 shares = balanceOf(_user);
+        uint256 rate = exchangeRate();
+        if (shares == 0) {
+            return (0, rate);
+        }
+
+        return ((rate * shares) / EXCHANGE_RATE_PRECISION, rate);
+    }
+
+    function exchangeRate() public pure returns (uint256) {
         return EXCHANGE_RATE_PRECISION;
     }
 
