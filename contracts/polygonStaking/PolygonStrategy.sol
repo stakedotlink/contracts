@@ -98,6 +98,7 @@ contract PolygonStrategy is Strategy {
     error InvalidAmount();
     error NoVaultsUnbonding();
     error InvalidAddress();
+    error InvalidParamLengths();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -188,6 +189,7 @@ contract PolygonStrategy is Strategy {
         uint256[] calldata _vaultIds,
         uint256[] calldata _amounts
     ) external onlyFundFlowController {
+        if (_vaultIds.length != _amounts.length) revert InvalidParamLengths();
         if (numVaultsUnbonding != 0) revert UnbondingInProgress();
 
         uint256 preBalance = token.balanceOf(address(this));
@@ -304,6 +306,7 @@ contract PolygonStrategy is Strategy {
         uint256[] calldata _vaultIds,
         uint256[] calldata _amounts
     ) external onlyFundFlowController {
+        if (_vaultIds.length != _amounts.length) revert InvalidParamLengths();
         if (numVaultsUnbonding != 0) revert UnbondingInProgress();
 
         uint256 skipIndex = validatorRemoval.isActive
