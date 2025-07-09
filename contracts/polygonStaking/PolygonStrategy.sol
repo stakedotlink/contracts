@@ -552,6 +552,10 @@ contract PolygonStrategy is Strategy {
             vault.withdraw();
         }
 
+        if (token.balanceOf(address(vault)) != 0) {
+            vault.withdrawRewards(false);
+        }
+
         uint256 amountWithdrawn = token.balanceOf(address(this)) - preBalance;
         totalQueued += amountWithdrawn;
 
