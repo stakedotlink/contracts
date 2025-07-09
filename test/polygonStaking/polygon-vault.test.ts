@@ -92,16 +92,28 @@ describe('PolygonVault', () => {
 
     await vault.deposit(toEther(100))
     await validatorShare.addReward(vault.target, toEther(50))
+    await token.transfer(vault.target, toEther(50))
+
+    assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
+    assert.equal(fromEther(await vault.getRewards()), 50)
+    assert.equal(fromEther(await vault.getTotalDeposits()), 200)
+
+    let preBalance = await token.balanceOf(accounts[0])
+
+    await vault.withdrawRewards(false)
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
-
-    const preBalance = await token.balanceOf(accounts[0])
-
-    await vault.withdrawRewards()
-
     assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
+
+    await token.transfer(vault.target, toEther(50))
+
+    preBalance = await token.balanceOf(accounts[0])
+
+    await vault.withdrawRewards(true)
+
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 100)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)

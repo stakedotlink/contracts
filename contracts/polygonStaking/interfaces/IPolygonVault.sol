@@ -10,7 +10,7 @@ interface IPolygonVault {
 
     function restakeRewards() external;
 
-    function withdrawRewards() external;
+    function withdrawRewards(bool _shouldClaimRewards) external;
 
     function getTotalDeposits() external view returns (uint256);
 

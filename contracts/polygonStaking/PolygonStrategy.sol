@@ -238,20 +238,34 @@ contract PolygonStrategy is Strategy {
             if (i != skipIndex) {
                 IPolygonVault vault = vaults[i];
                 uint256 deposits = vault.getTotalDeposits();
+                uint256 principalDeposits = vault.getPrincipalDeposits();
 
                 if (deposits != 0) {
-                    uint256 principalDeposits = vault.getPrincipalDeposits();
-                    uint256 rewards = deposits - principalDeposits;
-
-                    if (rewards >= toUnbondRemaining && rewards >= vault.minRewardClaimAmount()) {
-                        vault.withdrawRewards();
+                    uint256 claimedRewards = token.balanceOf(address(vault));
+                    if (claimedRewards >= toUnbondRemaining) {
+                        vault.withdrawRewards(false);
                         toUnbondRemaining = 0;
                         break;
-                    } else if (principalDeposits != 0) {
-                        if (toUnbondRemaining > rewards) {
-                            toUnbondRemaining -= rewards;
-                        }
+                    } else if (claimedRewards != 0 && principalDeposits == 0) {
+                        vault.withdrawRewards(false);
+                    }
+                    toUnbondRemaining -= claimedRewards;
 
+                    uint256 unclaimedRewards = vault.getRewards();
+                    if (
+                        unclaimedRewards >= toUnbondRemaining &&
+                        unclaimedRewards >= vault.minRewardClaimAmount()
+                    ) {
+                        vault.withdrawRewards(true);
+                        toUnbondRemaining = 0;
+                        break;
+                    } else if (unclaimedRewards >= toUnbondRemaining) {
+                        toUnbondRemaining = 0;
+                    } else {
+                        toUnbondRemaining -= unclaimedRewards;
+                    }
+
+                    if (principalDeposits != 0) {
                         uint256 vaultToUnbond = principalDeposits >= toUnbondRemaining
                             ? toUnbondRemaining
                             : principalDeposits;

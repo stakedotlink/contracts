@@ -108,10 +108,10 @@ contract PolygonVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Withdraws rewards from the validator pool
+     * @notice Optionally claims rewards from the validator pool and then transfers all rewards held by this contract to the vault controller
      **/
-    function withdrawRewards() external onlyVaultController {
-        if (getRewards() != 0) {
+    function withdrawRewards(bool _shouldClaimRewards) external onlyVaultController {
+        if (_shouldClaimRewards) {
             validatorPool.withdrawRewardsPOL();
         }
 
