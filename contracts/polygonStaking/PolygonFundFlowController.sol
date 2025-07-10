@@ -67,11 +67,15 @@ contract PolygonFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Returns whether tokens can be deposited
-     * @return true if tokens can be deposited, false otherwise
+     * @notice Returns whether tokens should be deposited
+     * @return true if tokens should be deposited, false otherwise
+     * @return amount of tokens to deposit
      */
-    function canDepositQueuedTokens() external view returns (bool) {
-        return strategy.numVaultsUnbonding() == 0;
+    function shouldDepositQueuedTokens() external view returns (bool, uint256) {
+        uint256 queuedTokens = strategy.totalQueued();
+        uint256 numVaultsUnbonding = strategy.numVaultsUnbonding();
+
+        return (queuedTokens > 0 && numVaultsUnbonding == 0, queuedTokens);
     }
 
     /**
