@@ -32,6 +32,10 @@ const config: HardhatUserConfig = {
       url: '',
       accounts,
     },
+    polygon: {
+      url: '',
+      accounts,
+    },
     hardhat: {
       chainId: 1337,
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
