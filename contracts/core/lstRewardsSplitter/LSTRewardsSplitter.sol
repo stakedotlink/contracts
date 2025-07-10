@@ -53,6 +53,7 @@ contract LSTRewardsSplitter is Ownable {
         for (uint256 i = 0; i < _fees.length; ++i) {
             fees.push(_fees[i]);
         }
+        if (_totalFeesBasisPoints() > 10000) revert FeesExceedLimit();
         _transferOwnership(_owner);
     }
 
