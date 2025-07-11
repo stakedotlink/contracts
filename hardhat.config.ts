@@ -21,16 +21,24 @@ const accounts = [
   '35b197ee507093ce2329d53f76679a0cdf7030dda8c88b46d9a1e3f5d8e3d469', //0x1304C485F54541d86854F2aF061AA05EECd14d6D
 ]
 
+const ledgerConfig = {
+  ledgerAccounts: [],
+  ledgerOptions: {
+    derivationFunction: (x: number) => `m/44'/60'/0'/29`, // legacy derivation path
+  },
+}
+
 const config: HardhatUserConfig = {
   defaultNetwork: 'localhost',
   networks: {
     localhost: {
       url: 'http://127.0.0.1:8545',
       gas: 'auto',
+      ...ledgerConfig,
     },
     mainnet: {
       url: '',
-      accounts,
+      ...ledgerConfig,
     },
     polygon: {
       url: '',

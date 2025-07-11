@@ -1,18 +1,22 @@
-import { Addressable, Contract } from 'ethers'
+import { Addressable } from 'ethers'
 import fse from 'fs-extra'
 import { ethers, upgrades, network } from 'hardhat'
+import { getLedgerSigner } from './helpers'
 
-export const deploy = async (contractName: string, args: any[] = []) => {
-  return ethers.deployContract(contractName, args) as any
+export const deploy = async (contractName: string, args: any[] = []): Promise<any> => {
+  const ledgerSigner = await getLedgerSigner()
+  return (await ethers.deployContract(contractName, args, ledgerSigner)).waitForDeployment()
 }
 
 export const deployUpgradeable = async (contractName: string, args: any[] = [], options = {}) => {
-  const Contract = await ethers.getContractFactory(contractName)
+  const ledgerSigner = await getLedgerSigner()
+  const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
   return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
 }
 
 export const deployImplementation = async (contractName: string) => {
-  const Contract = await ethers.getContractFactory(contractName)
+  const ledgerSigner = await getLedgerSigner()
+  const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
   return upgrades.deployImplementation(Contract, { kind: 'uups' })
 }
 
@@ -22,7 +26,8 @@ export const upgradeProxy = async (
   useDeployedImplementation = false,
   call?: { fn: string; args?: unknown[] } | undefined
 ) => {
-  const Contract = await ethers.getContractFactory(implementationContractName)
+  const ledgerSigner = await getLedgerSigner()
+  const Contract = await ethers.getContractFactory(implementationContractName, ledgerSigner)
   const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
     useDeployedImplementation,
     call,
@@ -74,7 +79,10 @@ export const getContract = async (contractName: string, networkName?: string): P
     throw Error('Deployed contract does not exist')
   }
 
-  return ethers.getContractAt(contract.artifact, contract.address) as any
+  const ledgerSigner = await getLedgerSigner()
+  return (await ethers.getContractAt(contract.artifact, contract.address)).connect(
+    ledgerSigner
+  ) as any
 }
 
 export const printDeployments = () => {
