@@ -214,5 +214,41 @@
   "POLToken": {
     "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
     "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "POL_StakingPool": {
+    "address": "0x2ff4390dB61F282Ef4E6D4612c776b809a541753",
+    "artifact": "StakingPool"
+  },
+  "POL_PriorityPool": {
+    "address": "0xCfa197495CF8E82D7B5df858F55B73208B8B9d67",
+    "artifact": "PriorityPool"
+  },
+  "POL_RebaseController": {
+    "address": "0xDa669F2Ea3A54150242965238392D351235b1C1f",
+    "artifact": "RebaseController"
+  },
+  "POL_WithdrawalPool": {
+    "address": "0xbfbF47b2a3B9e54A44257bf57d4b078170096458",
+    "artifact": "WithdrawalPool"
+  },
+  "POL_WrappedSDToken": {
+    "address": "0x2091d83592D79B4De5fD2ce3D98679c32A9555e6",
+    "artifact": "WrappedSDToken"
+  },
+  "POL_PolygonStrategy": {
+    "address": "0x7D145AD7860d0A9C7Bb824D5B2f85F575D0300AA",
+    "artifact": "PolygonStrategy"
+  },
+  "POL_PolygonFundFlowController": {
+    "address": "0x70F7DaBA7F2D0866088ecB1e3b29401a97f65951",
+    "artifact": "PolygonFundFlowController"
+  },
+  "POL_MEVRewardsPool": {
+    "address": "0xD6Dbdda416C10ae2B7aCBe2d141c0E52b1802C59",
+    "artifact": "RewardsPoolWSD"
+  },
+  "stPOL_SDLRewardsPool": {
+    "address": "0x77F555A6B9Ec1fBFf5f545128046338a566b5a56",
+    "artifact": "RewardsPoolWSD"
   }
 }
