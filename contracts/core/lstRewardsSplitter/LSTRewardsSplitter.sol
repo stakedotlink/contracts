@@ -177,11 +177,26 @@ contract LSTRewardsSplitter is Ownable {
             uint256 amount = (_rewardsAmount * fee.basisPoints) / 10000;
 
             if (fee.receiver == address(lst)) {
-                IStakingPool(address(lst)).burn(amount);
+                uint256 totalDeposits = IStakingPool(address(lst)).totalSupply();
+                uint256 totalShares = IStakingPool(address(lst)).totalShares();
+                uint256 sharesOwned = IStakingPool(address(lst)).sharesOf(address(this));
+
+                // add buffer to account for rounding errors
+                amount = (amount * 9990) / 10000;
+
+                // calculate the amount of shares to burn such that the rewards distributed will not be redistributed to this contract
+                uint256 sharesToBurn = (amount * totalShares) /
+                    (amount + ((totalShares - sharesOwned) * totalDeposits) / totalShares);
+                uint256 tokensToBurn = IStakingPool(address(lst)).getStakeByShares(sharesToBurn);
+
+                IStakingPool(address(lst)).burn(tokensToBurn);
             } else {
                 lst.safeTransfer(fee.receiver, amount);
             }
         }
+
+        // ensure no principal deposits were lost
+        assert(lst.balanceOf(address(this)) >= principalDeposits);
 
         principalDeposits = lst.balanceOf(address(this));
         emit RewardsSplit(_rewardsAmount);
