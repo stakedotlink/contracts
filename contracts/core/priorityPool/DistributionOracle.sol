@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.22;
 
-import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+import "@chainlink/contracts/src/v0.8/operatorforwarder/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../interfaces/IPriorityPool.sol";
@@ -82,8 +82,8 @@ contract DistributionOracle is ChainlinkClient, Ownable {
         uint64 _minBlockConfirmations,
         address _priorityPool
     ) {
-        setChainlinkToken(_chainlinkToken);
-        setChainlinkOracle(_chainlinkOracle);
+        _setChainlinkToken(_chainlinkToken);
+        _setChainlinkOracle(_chainlinkOracle);
         jobId = _jobId;
         fee = _fee;
         minTimeBetweenUpdates = _minTimeBetweenUpdates;
@@ -221,7 +221,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @param _expiration time of the expiration for the request
      */
     function cancelRequest(bytes32 _requestId, uint256 _expiration) external onlyOwner {
-        cancelChainlinkRequest(_requestId, fee, this.fulfillRequest.selector, _expiration);
+        _cancelChainlinkRequest(_requestId, fee, this.fulfillRequest.selector, _expiration);
         updateStatus.requestInProgress = 0;
     }
 
@@ -230,7 +230,7 @@ contract DistributionOracle is ChainlinkClient, Ownable {
      * @param _amount amount to withdraw
      */
     function withdrawLink(uint256 _amount) external onlyOwner {
-        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
+        LinkTokenInterface link = LinkTokenInterface(_chainlinkTokenAddress());
         if (link.transfer(msg.sender, _amount) != true) revert InsufficientBalance();
     }
 
@@ -303,12 +303,12 @@ contract DistributionOracle is ChainlinkClient, Ownable {
 
         updateStatus.requestInProgress = 1;
 
-        Chainlink.Request memory req = buildChainlinkRequest(
+        Chainlink.Request memory req = _buildChainlinkRequest(
             jobId,
             address(this),
             this.fulfillRequest.selector
         );
-        req.addUint("blockNumber", status.pausedAtBlockNumber);
-        sendChainlinkRequest(req, fee);
+        req._addUint("blockNumber", status.pausedAtBlockNumber);
+        _sendChainlinkRequest(req, fee);
     }
 }

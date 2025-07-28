@@ -50,7 +50,7 @@
     "typescript": ">=4.5.0"
   },
   "dependencies": {
-    "@chainlink/contracts": "0.8.0",
+    "@chainlink/contracts": "^1.4.0",
     "@chainlink/contracts-ccip": "^1.6.0",
     "@openzeppelin/contracts": "^4.7.0",
     "@openzeppelin/contracts-upgradeable": "^4.9.2",

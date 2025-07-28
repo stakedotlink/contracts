@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+import "@chainlink/contracts/src/v0.8/operatorforwarder/ChainlinkClient.sol";
 
 import "./interfaces/IOperatorController.sol";
 
@@ -32,8 +32,8 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
     ) {
         nwlOperatorController = IOperatorController(_nwlOperatorController);
         wlOperatorController = IOperatorController(_wlOperatorController);
-        setChainlinkToken(_chainlinkToken);
-        setChainlinkOracle(_chainlinkOracle);
+        _setChainlinkToken(_chainlinkToken);
+        _setChainlinkOracle(_chainlinkOracle);
         jobId = _jobId;
         fee = _fee;
     }
@@ -46,7 +46,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
      * isWhitelisted - whether or not operator is whitelisted) ABI encoded
      */
     function onTokenTransfer(address _sender, uint256 _value, bytes calldata _calldata) external {
-        require(msg.sender == chainlinkTokenAddress(), "Sender is not chainlink token");
+        require(msg.sender == _chainlinkTokenAddress(), "Sender is not chainlink token");
         require(_value == fee, "Value is not equal to fee");
 
         (uint256 operatorId, bool isWhitelisted) = abi.decode(_calldata, (uint256, bool));
@@ -85,7 +85,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
         bytes32 _jobId,
         uint256 _fee
     ) external onlyOwner {
-        setChainlinkOracle(_oracleAddress);
+        _setChainlinkOracle(_oracleAddress);
         jobId = _jobId;
         fee = _fee;
         emit SetOracleConfig(_oracleAddress, _jobId, _fee);
@@ -96,7 +96,7 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
      * @return oracleAddress oracle address
      */
     function oracleAddress() external view returns (address) {
-        return chainlinkOracleAddress();
+        return _chainlinkOracleAddress();
     }
 
     /**
@@ -116,15 +116,15 @@ contract KeyValidationOracle is Ownable, ChainlinkClient {
             nwlOperatorController.initiateKeyPairValidation(_sender, _operatorId);
         }
 
-        Chainlink.Request memory req = buildChainlinkRequest(
+        Chainlink.Request memory req = _buildChainlinkRequest(
             jobId,
             address(this),
             this.reportKeyPairValidation.selector
         );
 
-        req.add("operatorId", Strings.toString(_operatorId));
-        req.add("isWhitelisted", _isWhitelisted ? "true" : "false");
+        req._add("operatorId", Strings.toString(_operatorId));
+        req._add("isWhitelisted", _isWhitelisted ? "true" : "false");
 
-        sendChainlinkRequest(req, fee);
+        _sendChainlinkRequest(req, fee);
     }
 }
