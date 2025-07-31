@@ -32,13 +32,6 @@ const config: HardhatUserConfig = {
       url: '',
       accounts,
     },
-    // mainnet: {
-    //   url: 'http://127.0.0.1:8545',
-    // },
-    metis: {
-      url: '',
-      accounts,
-    },
     hardhat: {
       chainId: 1337,
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
@@ -47,26 +40,10 @@ const config: HardhatUserConfig = {
         interval: 5000,
       },
       gas: 'auto',
-      // forking: {
-      //   url: '',
-      //   blockNumber: 21888413,
-      // },
     },
   },
   etherscan: {
-    apiKey: {
-      metis: 'metis',
-    },
-    customChains: [
-      {
-        network: 'metis',
-        chainId: 1088,
-        urls: {
-          apiURL: 'https://api.routescan.io/v2/network/mainnet/evm/1088/etherscan',
-          browserURL: 'https://andromeda-explorer.metis.io',
-        },
-      },
-    ],
+    apiKey: '',
   },
   sourcify: {
     enabled: false,
@@ -110,28 +87,6 @@ const config: HardhatUserConfig = {
         },
       },
     ],
-    overrides: {
-      'contracts/metisStaking/SequencerVault.sol': {
-        version: '0.8.22',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 115,
-          },
-          viaIR: true,
-        },
-      },
-      'contracts/metisStaking/test/SequencerVaultV2Mock.sol': {
-        version: '0.8.22',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 115,
-          },
-          viaIR: true,
-        },
-      },
-    },
   },
 }
 
