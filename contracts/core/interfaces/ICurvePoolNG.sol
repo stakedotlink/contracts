@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.22;
 
-interface ICurveStableSwapNG {
+interface ICurvePoolNG {
     function add_liquidity(
         uint256[] calldata _amounts,
         uint256 _minMintAmount,
