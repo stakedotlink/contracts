@@ -41,6 +41,9 @@ contract SDLVesting is Ownable {
     // list of reSDL token ids for each lock time
     uint256[] private reSDLTokenIds;
 
+    // address authorized to stake releasable tokens
+    address public staker;
+
     event VestingTerminated();
     event Released(uint256 amount);
     event Staked(uint256 amount);
@@ -60,6 +63,7 @@ contract SDLVesting is Ownable {
      * @param _start start time of vesting in seconds
      * @param _duration duration of vesting in seconds
      * @param _lockTime lock time in years to use for staking vested SDL
+     * @param _staker address authorized to stake releasable tokens
      */
     constructor(
         address _sdlToken,
@@ -68,7 +72,8 @@ contract SDLVesting is Ownable {
         address _beneficiary,
         uint64 _start,
         uint64 _duration,
-        uint64 _lockTime
+        uint64 _lockTime,
+        address _staker
     ) {
         _transferOwnership(_owner);
 
@@ -81,16 +86,26 @@ contract SDLVesting is Ownable {
         duration = _duration;
         lockTime = _lockTime;
 
+        staker = _staker;
+
         for (uint256 i = 0; i <= MAX_LOCK_TIME; ++i) {
             reSDLTokenIds.push(0);
         }
     }
 
     /**
-     * @notice Reverts if sender is not  beneficiary
+     * @notice Reverts if sender is not beneficiary
      */
     modifier onlyBeneficiary() {
         if (msg.sender != beneficiary) revert SenderNotAuthorized();
+        _;
+    }
+
+    /**
+     * @notice Reverts if sender is not beneficiary and not staker
+     */
+    modifier onlyBeneficiaryOrStaker() {
+        if (msg.sender != beneficiary && msg.sender != staker) revert SenderNotAuthorized();
         _;
     }
 
@@ -105,7 +120,7 @@ contract SDLVesting is Ownable {
     /**
      * @notice Stakes all releasable tokens into the SDL pool using the current stored lock time
      */
-    function stakeReleasableTokens() external {
+    function stakeReleasableTokens() external onlyBeneficiaryOrStaker {
         uint256 amount = releasable();
         if (amount == 0) revert NoTokensReleasable();
 
@@ -221,5 +236,13 @@ contract SDLVesting is Ownable {
 
         vestingTerminated = true;
         emit VestingTerminated();
+    }
+
+    /**
+     * @notice Sets the address authorized to stake releasable tokens
+     * @param _staker address authorized to stake
+     */
+    function setStaker(address _staker) external onlyOwner {
+        staker = _staker;
     }
 }
