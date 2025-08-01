@@ -39,7 +39,7 @@ contract SDLVesting is Ownable {
     // lock time in years to use for staking vested SDL
     uint64 public lockTime;
     // list of reSDL token ids for each lock time
-    uint256[] private reSDLTokenIds;
+    uint256[MAX_LOCK_TIME + 1] private reSDLTokenIds;
 
     // address authorized to stake releasable tokens
     address public staker;
@@ -89,10 +89,6 @@ contract SDLVesting is Ownable {
         lockTime = _lockTime;
 
         staker = _staker;
-
-        for (uint256 i = 0; i <= MAX_LOCK_TIME; ++i) {
-            reSDLTokenIds.push(0);
-        }
     }
 
     /**
@@ -126,14 +122,16 @@ contract SDLVesting is Ownable {
         uint256 amount = releasable();
         if (amount == 0) revert NoTokensReleasable();
 
+        uint256 tokenId = reSDLTokenIds[lockTime];
+
         released += amount;
         sdlToken.transferAndCall(
             address(sdlPool),
             amount,
-            abi.encode(reSDLTokenIds[lockTime], lockTime * (365 days))
+            abi.encode(tokenId, lockTime * (365 days))
         );
 
-        if (reSDLTokenIds[lockTime] == 0) {
+        if (tokenId == 0) {
             reSDLTokenIds[lockTime] = sdlPool.lastLockId();
         }
 
