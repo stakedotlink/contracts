@@ -63,6 +63,7 @@ describe('SDLVesting', () => {
       start,
       10 * DAY,
       1,
+      accounts[0],
     ])) as SDLVesting
 
     await sdlPool.addToken(token.target, rewardsPool.target)

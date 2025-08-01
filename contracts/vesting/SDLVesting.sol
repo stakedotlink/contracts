@@ -8,7 +8,7 @@ import "../core/interfaces/ISDLPool.sol";
 
 /**
  * @title SDL Vesting
- * @notice Releases SDL to a beneficary on a defined vesting schedule and stakes it into
+ * @notice Releases SDL to a beneficiary on a defined vesting schedule and stakes it into
  * the SDL pool periodically. The beneficiary must select a lock time between 0 and 4 years
  * for their staked SDL.
  */
@@ -84,6 +84,8 @@ contract SDLVesting is Ownable {
 
         start = _start;
         duration = _duration;
+
+        if (_lockTime > MAX_LOCK_TIME) revert InvalidLockTime();
         lockTime = _lockTime;
 
         staker = _staker;
@@ -159,6 +161,8 @@ contract SDLVesting is Ownable {
         sdlPool.withdrawRewards(_tokens);
 
         for (uint256 i = 0; i < _tokens.length; ++i) {
+            if (_tokens[i] == address(sdlToken)) continue; // Skip SDL token
+
             IERC20 token = IERC20(_tokens[i]);
             uint256 balance = token.balanceOf(address(this));
             if (balance != 0) {
@@ -192,14 +196,18 @@ contract SDLVesting is Ownable {
      */
     function withdrawRESDLPositions(uint256[] calldata _lockTimes) external onlyBeneficiary {
         for (uint256 i = 0; i < _lockTimes.length; ++i) {
-            sdlPool.safeTransferFrom(address(this), beneficiary, reSDLTokenIds[_lockTimes[i]]);
+            if (_lockTimes[i] > MAX_LOCK_TIME) revert InvalidLockTime();
+
+            uint256 tokenId = reSDLTokenIds[_lockTimes[i]];
             delete reSDLTokenIds[_lockTimes[i]];
+
+            sdlPool.safeTransferFrom(address(this), beneficiary, tokenId);
         }
     }
 
     /**
      * @notice Sets the lock time for staking releasable tokens
-     * @param _lockTime lock time in seconds
+     * @param _lockTime lock time in years
      */
     function setLockTime(uint64 _lockTime) external onlyBeneficiary {
         if (_lockTime > MAX_LOCK_TIME) revert InvalidLockTime();
@@ -210,13 +218,14 @@ contract SDLVesting is Ownable {
     /**
      * @notice Returns the total number of vested tokens at a certain timestamp
      * @param _timestamp timestamp in seconds
+     * @return amount of tokens vested at the given timestamp (returns full allocation if terminated)
      */
     function vestedAmount(uint64 _timestamp) public view returns (uint256) {
         uint256 totalAllocation = sdlToken.balanceOf(address(this)) + released;
 
         if (_timestamp < start) {
             return 0;
-        } else if (_timestamp > start + duration) {
+        } else if (_timestamp >= start + duration) {
             return totalAllocation;
         } else if (vestingTerminated) {
             return totalAllocation;
