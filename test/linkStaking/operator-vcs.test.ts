@@ -253,7 +253,7 @@ describe('OperatorVCS', () => {
       await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
-    await stakingPool.withdraw(accounts[0], accounts[0], 1000, [encodeVaults([])])
+    await stakingPool.withdraw(accounts[0], accounts[0], 1000, [encodeVaults([]), encodeVaults([])])
     await rewardsController.setReward(vaults[1], toEther(5))
     await rewardsController.setReward(vaults[3], toEther(7))
     await rewardsController.setReward(vaults[5], toEther(8))
@@ -329,7 +329,10 @@ describe('OperatorVCS', () => {
     await time.increase(claimPeriod)
     await fundFlowController.updateVaultGroups()
 
-    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [encodeVaults([0, 5])])
+    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [
+      encodeVaults([0, 5]),
+      encodeVaults([]),
+    ])
     await time.increase(claimPeriod)
     await fundFlowController.updateVaultGroups()
 
@@ -389,7 +392,10 @@ describe('OperatorVCS', () => {
     await time.increase(claimPeriod)
     await fundFlowController.updateVaultGroups()
 
-    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [encodeVaults([0, 5])])
+    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [
+      encodeVaults([0, 5]),
+      encodeVaults([]),
+    ])
     await time.increase(claimPeriod)
     await fundFlowController.updateVaultGroups()
 

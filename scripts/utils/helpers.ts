@@ -15,6 +15,11 @@ export const getAccounts = async (): Promise<any> => {
   return { signers, accounts }
 }
 
+export const getLedgerSigner = async () => {
+  const signers = await ethers.getSigners()
+  return signers[14]
+}
+
 export const setupToken = async (token: any, accounts: string[]) => {
   return Promise.all(accounts.map((account) => token.transfer(account, toEther(10000))))
 }

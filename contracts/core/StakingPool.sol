@@ -478,11 +478,13 @@ contract StakingPool is StakingRewardsPool {
             for (uint256 i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
                 uint256 strategyCanDeposit = strategy.canDeposit();
+                bytes memory strategyData = _data.length > 0 ? _data[i] : bytes("");
+
                 if (strategyCanDeposit >= toDeposit) {
-                    strategy.deposit(toDeposit, _data[i]);
+                    strategy.deposit(toDeposit, strategyData);
                     break;
                 } else if (strategyCanDeposit > 0) {
-                    strategy.deposit(strategyCanDeposit, _data[i]);
+                    strategy.deposit(strategyCanDeposit, strategyData);
                     toDeposit = token.balanceOf(address(this));
                 }
             }
@@ -502,12 +504,13 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = strategies.length; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
             uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
+            bytes memory strategyData = _data.length > 0 ? _data[i - 1] : bytes("");
 
             if (strategyCanWithdrawdraw >= toWithdraw) {
-                strategy.withdraw(toWithdraw, _data[i - 1]);
+                strategy.withdraw(toWithdraw, strategyData);
                 break;
             } else if (strategyCanWithdrawdraw > 0) {
-                strategy.withdraw(strategyCanWithdrawdraw, _data[i - 1]);
+                strategy.withdraw(strategyCanWithdrawdraw, strategyData);
                 uint256 withdrawn = token.balanceOf(address(this)) - balance;
                 balance += withdrawn;
                 toWithdraw -= withdrawn;

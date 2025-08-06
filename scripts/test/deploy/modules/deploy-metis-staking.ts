@@ -51,11 +51,7 @@ export async function deployMETISStaking() {
   const { accounts } = await getAccounts()
   const sdlPool = (await getContract('SDLPool')) as SDLPool
 
-  const metisToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
-    'Metis',
-    'METIS',
-    1000000,
-  ])) as ERC677
+  const metisToken = (await deploy('ERC20Mintable', ['Metis', 'METIS', 1000000])) as ERC677
   console.log('METISToken deployed: ', metisToken.target)
 
   const stakingPool = (await deployUpgradeable('StakingPool', [
@@ -116,7 +112,7 @@ export async function deployMETISStaking() {
       stMETIS_SDLRewardsPool: stMetisSDLRewardsPool.target,
     },
     {
-      METISToken: 'contracts/core/tokens/base/ERC677.sol:ERC677',
+      METISToken: 'ERC20Mintable',
       METIS_StakingPool: 'StakingPool',
       METIS_PriorityPool: 'PriorityPool',
       METIS_WithdrawalPool: 'WithdrawalPool',

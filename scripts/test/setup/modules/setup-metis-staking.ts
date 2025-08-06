@@ -49,39 +49,19 @@ export async function setupMETISStaking() {
 
   await setupToken(metisToken, accounts)
 
-  await (
-    await metisToken.transferAndCall(
-      priorityPool.target,
-      toEther(47000),
-      ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
-    )
-  ).wait()
+  await (await metisToken.approve(priorityPool.target, toEther(47000))).wait()
+  await (await priorityPool.deposit(toEther(47000), false, ['0x'])).wait()
   await (await metisToken.transfer(l2Strategy.target, toEther(47000))).wait()
   await (await stakingPool.updateStrategyRewards([0], '0x')).wait()
 
   // Account 1
-
-  await (
-    await metisToken
-      .connect(signers[1])
-      .transferAndCall(
-        priorityPool.target,
-        toEther(1000),
-        ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
-      )
-  ).wait()
+  await (await metisToken.connect(signers[1]).approve(priorityPool.target, toEther(1000))).wait()
+  await (await priorityPool.connect(signers[1]).deposit(toEther(1000), false, ['0x'])).wait()
 
   // Account 2
 
-  await (
-    await metisToken
-      .connect(signers[2])
-      .transferAndCall(
-        priorityPool.target,
-        toEther(2000),
-        ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
-      )
-  ).wait()
+  await (await metisToken.connect(signers[2]).approve(priorityPool.target, toEther(2000))).wait()
+  await (await priorityPool.connect(signers[2]).deposit(toEther(2000), false, ['0x'])).wait()
   await (await l2Strategy.setMinDeposits(toEther(100000))).wait()
   await (await stakingPool.approve(priorityPool.target, toEther(500))).wait()
   await (await priorityPool.withdraw(toEther(500), 0, 0, [], false, true, ['0x'])).wait()
@@ -89,37 +69,14 @@ export async function setupMETISStaking() {
 
   // Account 3
 
-  await (
-    await metisToken
-      .connect(signers[3])
-      .transferAndCall(
-        priorityPool.target,
-        toEther(3500),
-        ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
-      )
-  ).wait()
-
-  await (
-    await metisToken
-      .connect(signers[3])
-      .transferAndCall(
-        priorityPool.target,
-        toEther(3700),
-        ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
-      )
-  ).wait()
+  await (await metisToken.connect(signers[3]).approve(priorityPool.target, toEther(7200))).wait()
+  await (await priorityPool.connect(signers[3]).deposit(toEther(3500), false, ['0x'])).wait()
+  await (await priorityPool.connect(signers[3]).deposit(toEther(3700), true, ['0x'])).wait()
 
   // Account 4
 
-  await (
-    await metisToken
-      .connect(signers[4])
-      .transferAndCall(
-        priorityPool.target,
-        toEther(4000),
-        ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
-      )
-  ).wait()
+  await (await metisToken.connect(signers[4]).approve(priorityPool.target, toEther(4000))).wait()
+  await (await priorityPool.connect(signers[4]).deposit(toEther(4000), true, ['0x'])).wait()
 
   // Priority Pool Distribution
 
