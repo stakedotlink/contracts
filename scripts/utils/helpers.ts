@@ -17,7 +17,7 @@ export const getAccounts = async (): Promise<any> => {
 
 export const getLedgerSigner = async () => {
   const signers = await ethers.getSigners()
-  return signers[14]
+  return signers[14] || signers[0]
 }
 
 export const setupToken = async (token: any, accounts: string[]) => {
