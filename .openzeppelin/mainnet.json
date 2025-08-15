@@ -15075,7 +15075,7 @@
             "label": "token",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(IERC20Upgradeable)3308",
+            "type": "t_contract(IERC20Upgradeable)882",
             "contract": "WithdrawalPool",
             "src": "contracts/core/priorityPool/WithdrawalPool.sol:37"
           },
@@ -15083,7 +15083,7 @@
             "label": "lst",
             "offset": 0,
             "slot": "202",
-            "type": "t_contract(IERC20Upgradeable)3308",
+            "type": "t_contract(IERC20Upgradeable)882",
             "contract": "WithdrawalPool",
             "src": "contracts/core/priorityPool/WithdrawalPool.sol:39"
           },
@@ -15091,7 +15091,7 @@
             "label": "priorityPool",
             "offset": 0,
             "slot": "203",
-            "type": "t_contract(IPriorityPool)9406",
+            "type": "t_contract(IPriorityPool)2026",
             "contract": "WithdrawalPool",
             "src": "contracts/core/priorityPool/WithdrawalPool.sol:41"
           },
@@ -15099,7 +15099,7 @@
             "label": "queuedWithdrawals",
             "offset": 0,
             "slot": "204",
-            "type": "t_array(t_struct(Withdrawal)12521_storage)dyn_storage",
+            "type": "t_array(t_struct(Withdrawal)2218_storage)dyn_storage",
             "contract": "WithdrawalPool",
             "src": "contracts/core/priorityPool/WithdrawalPool.sol:44"
           },
@@ -15139,7 +15139,7 @@
             "label": "withdrawalBatches",
             "offset": 0,
             "slot": "209",
-            "type": "t_array(t_struct(WithdrawalBatch)12526_storage)dyn_storage",
+            "type": "t_array(t_struct(WithdrawalBatch)2223_storage)dyn_storage",
             "contract": "WithdrawalPool",
             "src": "contracts/core/priorityPool/WithdrawalPool.sol:56"
           },
@@ -15189,11 +15189,11 @@
             "label": "address",
             "numberOfBytes": "20"
           },
-          "t_array(t_struct(Withdrawal)12521_storage)dyn_storage": {
+          "t_array(t_struct(Withdrawal)2218_storage)dyn_storage": {
             "label": "struct WithdrawalPool.Withdrawal[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(WithdrawalBatch)12526_storage)dyn_storage": {
+          "t_array(t_struct(WithdrawalBatch)2223_storage)dyn_storage": {
             "label": "struct WithdrawalPool.WithdrawalBatch[]",
             "numberOfBytes": "32"
           },
@@ -15213,11 +15213,11 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(IERC20Upgradeable)3308": {
+          "t_contract(IERC20Upgradeable)882": {
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
-          "t_contract(IPriorityPool)9406": {
+          "t_contract(IPriorityPool)2026": {
             "label": "contract IPriorityPool",
             "numberOfBytes": "20"
           },
@@ -15229,7 +15229,7 @@
             "label": "mapping(uint256 => address)",
             "numberOfBytes": "32"
           },
-          "t_struct(Withdrawal)12521_storage": {
+          "t_struct(Withdrawal)2218_storage": {
             "label": "struct WithdrawalPool.Withdrawal",
             "members": [
               {
@@ -15247,7 +15247,7 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_struct(WithdrawalBatch)12526_storage": {
+          "t_struct(WithdrawalBatch)2223_storage": {
             "label": "struct WithdrawalPool.WithdrawalBatch",
             "members": [
               {
@@ -16138,6 +16138,283 @@
           "t_uint256": {
             "label": "uint256",
             "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "46aa48860e3c9294e6e1a17a923f8c8f80b92a07b212c8e84b878c8a940e9b94": {
+      "address": "0xF3683Dc79a1447068e17d0d6Fe64dd2824b897aA",
+      "txHash": "0x0862eeef780e196638366a6c7e22b728845c8d7acb5388c15e18317cba6c5f5a",
+      "layout": {
+        "solcVersion": "0.8.22",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "token",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_contract(IERC20Upgradeable)882",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:37"
+          },
+          {
+            "label": "lst",
+            "offset": 0,
+            "slot": "202",
+            "type": "t_contract(IERC20Upgradeable)882",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:39"
+          },
+          {
+            "label": "priorityPool",
+            "offset": 0,
+            "slot": "203",
+            "type": "t_contract(IPriorityPool)2026",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:41"
+          },
+          {
+            "label": "queuedWithdrawals",
+            "offset": 0,
+            "slot": "204",
+            "type": "t_array(t_struct(Withdrawal)2218_storage)dyn_storage",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:44"
+          },
+          {
+            "label": "queuedWithdrawalsByAccount",
+            "offset": 0,
+            "slot": "205",
+            "type": "t_mapping(t_address,t_array(t_uint256)dyn_storage)",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:46"
+          },
+          {
+            "label": "withdrawalOwners",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_mapping(t_uint256,t_address)",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:48"
+          },
+          {
+            "label": "totalQueuedShareWithdrawals",
+            "offset": 0,
+            "slot": "207",
+            "type": "t_uint256",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:51"
+          },
+          {
+            "label": "indexOfNextWithdrawal",
+            "offset": 0,
+            "slot": "208",
+            "type": "t_uint256",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:53"
+          },
+          {
+            "label": "withdrawalBatches",
+            "offset": 0,
+            "slot": "209",
+            "type": "t_array(t_struct(WithdrawalBatch)2223_storage)dyn_storage",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:56"
+          },
+          {
+            "label": "withdrawalBatchIdCutoff",
+            "offset": 0,
+            "slot": "210",
+            "type": "t_uint128",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:58"
+          },
+          {
+            "label": "withdrawalIdCutoff",
+            "offset": 16,
+            "slot": "210",
+            "type": "t_uint128",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:60"
+          },
+          {
+            "label": "minWithdrawalAmount",
+            "offset": 0,
+            "slot": "211",
+            "type": "t_uint256",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:63"
+          },
+          {
+            "label": "minTimeBetweenWithdrawals",
+            "offset": 0,
+            "slot": "212",
+            "type": "t_uint64",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:66"
+          },
+          {
+            "label": "timeOfLastWithdrawal",
+            "offset": 8,
+            "slot": "212",
+            "type": "t_uint64",
+            "contract": "WithdrawalPool",
+            "src": "contracts/core/priorityPool/WithdrawalPool.sol:68"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_struct(Withdrawal)2218_storage)dyn_storage": {
+            "label": "struct WithdrawalPool.Withdrawal[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(WithdrawalBatch)2223_storage)dyn_storage": {
+            "label": "struct WithdrawalPool.WithdrawalBatch[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20Upgradeable)882": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IPriorityPool)2026": {
+            "label": "contract IPriorityPool",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_array(t_uint256)dyn_storage)": {
+            "label": "mapping(address => uint256[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_address)": {
+            "label": "mapping(uint256 => address)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Withdrawal)2218_storage": {
+            "label": "struct WithdrawalPool.Withdrawal",
+            "members": [
+              {
+                "label": "sharesRemaining",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "partiallyWithdrawableAmount",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(WithdrawalBatch)2223_storage": {
+            "label": "struct WithdrawalPool.WithdrawalBatch",
+            "members": [
+              {
+                "label": "indexOfLastWithdrawal",
+                "type": "t_uint128",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "stakePerShares",
+                "type": "t_uint128",
+                "offset": 16,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint128": {
+            "label": "uint128",
+            "numberOfBytes": "16"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
           },
           "t_uint8": {
             "label": "uint8",
