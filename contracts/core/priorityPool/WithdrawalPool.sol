@@ -411,7 +411,9 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         timeOfLastWithdrawal = uint64(block.timestamp);
 
         uint256 toWithdraw = totalQueued > canWithdraw ? canWithdraw : totalQueued;
-        bytes[] memory data = abi.decode(_performData, (bytes[]));
+        bytes[] memory data = _performData.length > 0
+            ? abi.decode(_performData, (bytes[]))
+            : new bytes[](0);
 
         priorityPool.executeQueuedWithdrawals(toWithdraw, data);
         _finalizeWithdrawals(toWithdraw);

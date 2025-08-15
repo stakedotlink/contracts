@@ -20,5 +20,7 @@ contract WithdrawalPoolMock {
         return (totalQueuedWithdrawals != 0, "0x");
     }
 
-    function performUpkeep(bytes calldata) external {}
+    function performUpkeep(bytes calldata _performData) external {
+        if (_performData.length > 0) abi.decode(_performData, (bytes[]));
+    }
 }

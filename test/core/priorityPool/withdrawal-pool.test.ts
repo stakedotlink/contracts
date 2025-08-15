@@ -483,9 +483,7 @@ describe('WithdrawalPool', () => {
 
     await strategy.setMinDeposits(toEther(0))
     assert.deepEqual(await withdrawalPool.checkUpkeep('0x'), [true, '0x'])
-    await withdrawalPool.performUpkeep(
-      ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']])
-    )
+    await withdrawalPool.performUpkeep('0x')
     assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 199000)
     assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 0)
     assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 0)
