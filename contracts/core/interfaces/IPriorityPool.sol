@@ -62,6 +62,8 @@ interface IPriorityPool {
 
     function executeQueuedWithdrawals(uint256 _amount, bytes[] calldata _data) external;
 
+    function bypassQueue(address _account, uint256 _amount, bytes[] calldata _data) external;
+
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory);
 
     function performUpkeep(bytes calldata _performData) external;

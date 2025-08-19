@@ -1,5 +1,12 @@
-import { toEther, deploy, getAccounts, setupToken, fromEther } from '../utils/helpers'
-import { LSTMock, LSTRewardsSplitterController } from '../../typechain-types'
+import {
+  toEther,
+  deploy,
+  getAccounts,
+  setupToken,
+  fromEther,
+  deployUpgradeable,
+} from '../utils/helpers'
+import { LSTMock, LSTRewardsSplitterController, StakingPool } from '../../typechain-types'
 import { assert, expect } from 'chai'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { ethers } from 'hardhat'
@@ -212,6 +219,62 @@ describe('LSTRewardsSplitter', () => {
     assert.equal(fromEther(await token.balanceOf(splitter0.target)), 34)
     assert.equal(fromEther(await token.balanceOf(accounts[5])), 2)
     assert.equal(fromEther(await token.balanceOf(accounts[6])), 4)
+  })
+
+  it('sending rewards to staking pool should work correctly', async () => {
+    const { accounts, token } = await loadFixture(deployFixture)
+
+    const stakingPool = (await deployUpgradeable('StakingPool', [
+      token.target,
+      'Staking',
+      'STK',
+      [],
+      ethers.MaxUint256,
+    ])) as StakingPool
+    const strategy = await deployUpgradeable('StrategyMock', [
+      token.target,
+      stakingPool.target,
+      ethers.MaxUint256,
+      0,
+    ])
+    const controller = (await deploy('LSTRewardsSplitterController', [
+      stakingPool.target,
+      0,
+    ])) as LSTRewardsSplitterController
+
+    await stakingPool.setPriorityPool(accounts[0])
+    await stakingPool.setRebaseController(accounts[0])
+    await stakingPool.addStrategy(strategy.target)
+    await controller.addSplitter(accounts[0], [
+      { receiver: stakingPool.target, basisPoints: 9000 },
+      { receiver: accounts[5], basisPoints: 1000 },
+    ])
+    await token.approve(stakingPool.target, ethers.MaxUint256)
+
+    const splitter = await ethers.getContractAt(
+      'LSTRewardsSplitter',
+      await controller.splitters(accounts[0])
+    )
+
+    await stakingPool.deposit(accounts[1], toEther(500), ['0x'])
+    await stakingPool.deposit(accounts[0], toEther(5000000), ['0x'])
+    await stakingPool.transferAndCall(controller.target, toEther(5000000), '0x')
+
+    let rewards = 0.1
+    for (let i = 0; i < 25; i++) {
+      let startingBalance = await stakingPool.balanceOf(splitter.target)
+
+      await token.transfer(strategy.target, toEther(rewards))
+      await stakingPool.updateStrategyRewards([0], '0x')
+      await splitter.splitRewards()
+
+      assert.isBelow(
+        fromEther((await stakingPool.balanceOf(splitter.target)) - startingBalance),
+        rewards * 0.001
+      )
+
+      rewards = 2 * rewards
+    }
   })
 
   it('should be able to add splitter', async () => {
