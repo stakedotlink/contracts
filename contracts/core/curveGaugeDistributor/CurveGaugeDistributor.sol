@@ -27,6 +27,8 @@ contract CurveGaugeDistributor is Ownable {
 
     // duration of reward epoch in seconds
     uint64 public epochDuration;
+    // index of lst in curve pool
+    uint64 public poolTokenIndex;
 
     error SenderNotAuthorized();
     error NoRewards();
@@ -38,19 +40,22 @@ contract CurveGaugeDistributor is Ownable {
      * @param _liquidityGaugeV6 address of curve gauge for pool
      * @param _rewardsDistributor address authorized to distribute gauge rewards
      * @param _epochDuration duration of reward epoch in seconds
+     * @param _poolTokenIndex index of lst in curve pool
      */
     constructor(
         address _lst,
         address _curvePoolNG,
         address _liquidityGaugeV6,
         address _rewardsDistributor,
-        uint64 _epochDuration
+        uint64 _epochDuration,
+        uint64 _poolTokenIndex
     ) {
         lst = _lst;
         curvePoolNG = ICurvePoolNG(_curvePoolNG);
         liquidityGaugeV6 = ILiquidityGaugeV6(_liquidityGaugeV6);
         rewardsDistributor = _rewardsDistributor;
         epochDuration = _epochDuration;
+        poolTokenIndex = _poolTokenIndex;
 
         IERC20(_lst).safeApprove(_curvePoolNG, type(uint256).max);
         IERC20(_curvePoolNG).safeApprove(_liquidityGaugeV6, type(uint256).max);
@@ -78,7 +83,7 @@ contract CurveGaugeDistributor is Ownable {
         if (balance == 0) return 0;
 
         uint256[] memory amounts = new uint256[](2);
-        amounts[1] = balance;
+        amounts[poolTokenIndex] = balance;
 
         uint256 minMintAmount = curvePoolNG.calc_token_amount(amounts, true);
         return minMintAmount;
@@ -93,7 +98,7 @@ contract CurveGaugeDistributor is Ownable {
         if (balance == 0) revert NoRewards();
 
         uint256[] memory amounts = new uint256[](2);
-        amounts[1] = balance;
+        amounts[poolTokenIndex] = balance;
 
         uint256 mintAmount = curvePoolNG.add_liquidity(amounts, _minMintAmount, address(this));
         liquidityGaugeV6.deposit_reward_token(address(curvePoolNG), mintAmount, epochDuration);
