@@ -254,5 +254,9 @@
   "POL_LSTRewardsSplitterController": {
     "address": "0x5e1bfbb052c3f7Bfe0e7386f435343982b1F78c8",
     "artifact": "LSTRewardsSplitterController"
+  },
+  "POL_CCIPCurveGaugeSender": {
+    "address": "0x949545A9d400cDc177C2fEc7f896F2Eb35Ed640D",
+    "artifact": "CCIPCurveGaugeSender"
   }
 }

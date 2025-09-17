@@ -2,5 +2,17 @@
   "POLToken": {
     "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
     "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "POL_WrappedSDToken": {
+    "address": "0x1d0347c535c88cf6bb72df75aed34363edb4b2ae",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "POL_CurveGaugeDistributor": {
+    "address": "0x4E23aeb47227b8B7Dadef576A9bBB987C240a494",
+    "artifact": "CurveGaugeDistributor"
+  },
+  "POL_CCIPCurveGaugeReceiver": {
+    "address": "0x280516F160cC4f54C48bfD6B06033593B8EE5B35",
+    "artifact": "CCIPCurveGaugeReceiver"
   }
 }
