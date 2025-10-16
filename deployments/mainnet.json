@@ -258,5 +258,9 @@
   "POL_CCIPCurveGaugeSender": {
     "address": "0x949545A9d400cDc177C2fEc7f896F2Eb35Ed640D",
     "artifact": "CCIPCurveGaugeSender"
+  },
+  "LINKMigrator": {
+    "address": "0xdA77b1a19850606D1F4FAA0E200E035faa85FB15",
+    "artifact": "LINKMigrator"
   }
 }
