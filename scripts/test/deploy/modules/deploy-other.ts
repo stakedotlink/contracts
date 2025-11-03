@@ -2,8 +2,12 @@ import { ERC677 } from '../../../../typechain-types'
 import { updateDeployments, deploy, getContract } from '../../../utils/deployment'
 import { getAccounts } from '../../../utils/helpers'
 
-const vestingStart = 1695312000 // Sep 21 2023 12pm EDT
-const vestingDuration = 4 * 365 * 86400 // 4 years
+// SDL Vesting
+const vestingEnd = 1821456000
+const vestingStart = 1760464265
+const vestingDuration = vestingEnd - vestingStart
+const lockTime = 0
+const staker = '0xf5c08D55a77063ac4E5E18F1a470804088BE1ad4'
 
 export async function deployOther() {
   const { accounts } = await getAccounts()
@@ -22,10 +26,31 @@ export async function deployOther() {
 
   // Node Operator SDL Vesting
 
-  let vesting0 = await deploy('Vesting', [accounts[0], accounts[12], vestingStart, vestingDuration])
+  const sdlToken = await getContract('SDLToken')
+  const sdlPool = await getContract('SDLPool')
+
+  let vesting0 = await deploy('SDLVesting', [
+    sdlToken.target,
+    sdlPool.target,
+    accounts[0],
+    accounts[12],
+    vestingStart,
+    vestingDuration,
+    lockTime,
+    staker,
+  ])
   console.log('SDL_Vesting_NOP_0 deployed: ', vesting0.target)
 
-  let vesting1 = await deploy('Vesting', [accounts[0], accounts[13], vestingStart, vestingDuration])
+  let vesting1 = await deploy('SDLVesting', [
+    sdlToken.target,
+    sdlPool.target,
+    accounts[0],
+    accounts[13],
+    vestingStart,
+    vestingDuration,
+    lockTime,
+    staker,
+  ])
   console.log('SDL_Vesting_NOP_1 deployed: ', vesting1.target)
 
   updateDeployments(
@@ -36,8 +61,8 @@ export async function deployOther() {
       Multicall3: multicall.target,
     },
     {
-      SDL_Vesting_NOP_0: 'Vesting',
-      SDL_Vesting_NOP_1: 'Vesting',
+      SDL_Vesting_NOP_0: 'SDLVesting',
+      SDL_Vesting_NOP_1: 'SDLVesting',
       LINK_CurvePool: 'CurveMock',
     }
   )
