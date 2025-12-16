@@ -1353,47 +1353,47 @@
     evm-bn "^1.1.1"
     mathjs "^10.4.0"
 
-"@safe-global/api-kit@^3.0.1":
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/@safe-global/api-kit/-/api-kit-3.0.1.tgz#cea6eb27b33a34568b29ac0507e62714445e35e5"
-  integrity sha512-ks7vFMU3l/xl1TWKL2c+a8l5aQRCtOtSMMpxfJIMsJvtvPSTAUx/WDFKqtVlMhVP/QrqaL7YiTw8hM2vhkTdDQ==
+"@safe-global/api-kit@^4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@safe-global/api-kit/-/api-kit-4.0.1.tgz#91414e19377f985ac30f03fd0508a11e70d867b3"
+  integrity sha512-pNtDLgMHlCSr4Hwwe6jsnvMheAu2SZCTqjYlnNe4cKH2pSKINVRTiILoeJ0wOpixrMCH4NlgJ+9N3QruRNcCpQ==
   dependencies:
-    "@safe-global/protocol-kit" "^6.0.1"
-    "@safe-global/types-kit" "^2.0.0"
+    "@safe-global/protocol-kit" "^6.1.2"
+    "@safe-global/types-kit" "^3.0.0"
     node-fetch "^2.7.0"
     viem "^2.21.8"
 
-"@safe-global/protocol-kit@^6.0.1", "@safe-global/protocol-kit@^6.0.3":
-  version "6.0.3"
-  resolved "https://registry.yarnpkg.com/@safe-global/protocol-kit/-/protocol-kit-6.0.3.tgz#7f84531bbfa9a1e2ea7bee859927a64666dee242"
-  integrity sha512-2FLDWgbKSxq1hZAY9qj7hqyPQLxPq7sWn9+uuJz0tkZZLccvcCvxA/sHagBj+6GAZR4qhrnHIJPahyFRA9cZug==
+"@safe-global/protocol-kit@^6.1.2":
+  version "6.1.2"
+  resolved "https://registry.yarnpkg.com/@safe-global/protocol-kit/-/protocol-kit-6.1.2.tgz#6cafd55aaf119998b794ff3a0cdaa2556ba2374c"
+  integrity sha512-cTpPdUAS2AMfGCkD1T601rQNjT0rtMQLA2TH7L/C+iFPAC6WrrDFop2B9lzeHjczlnVzrRpfFe4cL1bLrJ9NZw==
   dependencies:
-    "@safe-global/safe-deployments" "^1.37.32"
-    "@safe-global/safe-modules-deployments" "^2.2.7"
-    "@safe-global/types-kit" "^2.0.1"
+    "@safe-global/safe-deployments" "^1.37.49"
+    "@safe-global/safe-modules-deployments" "^2.2.21"
+    "@safe-global/types-kit" "^3.0.0"
     abitype "^1.0.2"
-    semver "^7.7.1"
+    semver "^7.7.2"
     viem "^2.21.8"
   optionalDependencies:
     "@noble/curves" "^1.6.0"
     "@peculiar/asn1-schema" "^2.3.13"
 
-"@safe-global/safe-deployments@^1.37.32":
-  version "1.37.32"
-  resolved "https://registry.yarnpkg.com/@safe-global/safe-deployments/-/safe-deployments-1.37.32.tgz#7a1dcd6358aa0f4917004426d7e2428e7eef0391"
-  integrity sha512-3XRy6TnVz0uymPxMNo7WkaK88sL12ZpIMKOfrNHkODUZCxCO4GFA0FFfjByAPS1LAXfmV7Mulk9Zx1n9vqR8Cg==
+"@safe-global/safe-deployments@^1.37.49":
+  version "1.37.49"
+  resolved "https://registry.yarnpkg.com/@safe-global/safe-deployments/-/safe-deployments-1.37.49.tgz#d01b70ec9178e3c7ad03aa0504977d1b4d001307"
+  integrity sha512-132QgqMY1/HktXqmda/uPp5b+73UXTgKRB00Xgc1kduFqceSw/ZyF1Q9jJjbND9q91hhapnXhYKWN2/HiWkRcg==
   dependencies:
     semver "^7.6.2"
 
-"@safe-global/safe-modules-deployments@^2.2.7":
-  version "2.2.7"
-  resolved "https://registry.yarnpkg.com/@safe-global/safe-modules-deployments/-/safe-modules-deployments-2.2.7.tgz#8d9cabea778767776de2dc62258dcc458f2f2c14"
-  integrity sha512-xlnAW7d0394EwlRgWJ+nuQNQmGkL0qBE54pN+1IBbUEFvWW8q0SbhDsTmlGgeDM+9F8q2KM06Ip1JMmddppA/Q==
+"@safe-global/safe-modules-deployments@^2.2.21":
+  version "2.2.21"
+  resolved "https://registry.yarnpkg.com/@safe-global/safe-modules-deployments/-/safe-modules-deployments-2.2.21.tgz#0a0ad8ab8fcd474137fc2c84d414e1a19db9da5d"
+  integrity sha512-fveOlRv0ccwsuaZjP1u7ZbXrwCyqMTYYiqETOGo8NdzTaceRUyR9TNzagSWovOSuHPVyUGJ9lnsxizikt/+PiQ==
 
-"@safe-global/types-kit@^2.0.0", "@safe-global/types-kit@^2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@safe-global/types-kit/-/types-kit-2.0.1.tgz#f2334a33fa430beceba017bd7dbb112269f61f30"
-  integrity sha512-4xKjTBlyFSIKziqvjrGMBAgs7Z2+s/5A2wjAXg2gBA1BuvV6w1THk1Y/WMZg8+6/PlRaVMVo4LoSNMRSsZZhjw==
+"@safe-global/types-kit@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@safe-global/types-kit/-/types-kit-3.0.0.tgz#b35826af0e417fa02a540b874c109b5ddb5ed086"
+  integrity sha512-AZWIlR5MguDPdGiOj7BB4JQPY2afqmWQww1mu8m8Oi16HHBW99G01kFOu4NEHBwEU1cgwWOMY19hsI5KyL4W2w==
   dependencies:
     abitype "^1.0.2"
 
@@ -5497,6 +5497,11 @@ semver@^7.7.1:
   version "7.7.1"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.1.tgz#abd5098d82b18c6c81f6074ff2647fd3e7220c9f"
   integrity sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==
+
+semver@^7.7.2:
+  version "7.7.3"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.3.tgz#4b5f4143d007633a8dc671cd0a6ef9147b8bb946"
+  integrity sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==
 
 serialize-javascript@6.0.0:
   version "6.0.0"
