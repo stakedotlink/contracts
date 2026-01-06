@@ -24,7 +24,7 @@
     "@nomicfoundation/hardhat-ledger": "^1.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/hardhat-verify": "2.1.1",
     "@openzeppelin/hardhat-upgrades": "^3.2.0",
     "@openzeppelin/merkle-tree": "^1.0.6",
     "@safe-global/api-kit": "^4.0.1",
