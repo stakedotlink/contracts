@@ -43,7 +43,7 @@ export async function deployDeprecated() {
   )
   await tx.wait()
 
-  const vestingStart = 1695312000 // Sep 21 2023 12pm EDT
+  const vestingStart = Math.floor(Date.now() / 1000) - 365 * 86400 // 1 year ago
   const vestingDuration = 4 * 365 * 86400 // 4 years
 
   let vesting0 = await deploy('Vesting', [accounts[0], accounts[12], vestingStart, vestingDuration])
