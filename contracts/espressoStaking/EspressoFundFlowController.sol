@@ -27,6 +27,7 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     uint64 public timeOfLastUnbond;
 
     event SetMinTimeBetweenUnbonding(uint64 minTimeBetweenUnbonding);
+    event SetDepositController(address depositController);
 
     error SenderNotAuthorized();
     error NoUnbondingNeeded();
@@ -164,6 +165,8 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     /**
      * @notice Restakes vault rewards
      * @param _vaultIds list of vaults to restake rewards for
+     * @param _lifetimeRewards list of lifetime rewards values for each vault
+     * @param _authData list of authorization data for each vault
      */
     function restakeRewards(
         uint256[] calldata _vaultIds,
@@ -171,6 +174,20 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         bytes[] calldata _authData
     ) external {
         strategy.restakeRewards(_vaultIds, _lifetimeRewards, _authData);
+    }
+
+    /**
+     * @notice Withdraws vault rewards
+     * @param _vaultIds list of vaults to withdraw rewards for
+     * @param _lifetimeRewards list of lifetime rewards values for each vault
+     * @param _authData list of authorization data for each vault
+     */
+    function withdrawRewards(
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _lifetimeRewards,
+        bytes[] calldata _authData
+    ) external {
+        strategy.withdrawRewards(_vaultIds, _lifetimeRewards, _authData);
     }
 
     /**
@@ -236,7 +253,6 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns a list of currently withdrawable vaults
-     * @dev excludes vaults that are queued for removal
      * @return list of vaults
      */
     function getWithdrawableVaults() public view returns (uint256[] memory) {
@@ -265,6 +281,10 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         return ret;
     }
 
+    /**
+     * @notice Returns a list of inactive vaults (validators that have exited)
+     * @return list of vault indices
+     */
     function getInactiveVaults() public view returns (uint256[] memory) {
         address[] memory vaults = strategy.getVaults();
         bool[] memory inactiveVaults = new bool[](vaults.length);
@@ -292,12 +312,43 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Returns a list of inactive and currently withdrawable vaults
+     * @return list of vaults
+     */
+    function getInactiveWithdrawableVaults() public view returns (uint256[] memory) {
+        address[] memory vaults = strategy.getVaults();
+        bool[] memory vaultsWithdrawable = new bool[](vaults.length);
+
+        uint256 numVaultsWithdrawable;
+
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            if (IEspressoVault(vaults[i]).exitIsWithdrawable()) {
+                vaultsWithdrawable[i] = true;
+                ++numVaultsWithdrawable;
+            }
+        }
+
+        uint256[] memory ret = new uint256[](numVaultsWithdrawable);
+        uint256 numAdded;
+
+        for (uint256 i = 0; i < vaultsWithdrawable.length; ++i) {
+            if (vaultsWithdrawable[i]) {
+                ret[numAdded] = i;
+                ++numAdded;
+            }
+        }
+
+        return ret;
+    }
+
+    /**
      * @notice Sets the address authorized to deposit queued tokens
      * @param _depositController address of deposit controller
      */
     function setDepositController(address _depositController) external onlyOwner {
         if (_depositController == address(0)) revert InvalidAddress();
         depositController = _depositController;
+        emit SetDepositController(_depositController);
     }
 
     /**
