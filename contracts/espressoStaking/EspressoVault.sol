@@ -223,8 +223,19 @@ contract EspressoVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @return whether validator is active
      */
     function isActive() external view returns (bool) {
-        (, IEspressoStaking.ValidatorStatus status) = espressoStaking.validators(validator);
-        return status == IEspressoStaking.ValidatorStatus.Active;
+        uint256 unlocksAt = espressoStaking.validatorExits(validator);
+
+        return unlocksAt == 0;
+    }
+
+    /**
+     * @notice Returns whether deposits can be withdrawn from the pool for an inactive validator
+     * @return whether deposits can be withdrawn
+     */
+    function exitIsWithdrawable() external view returns (bool) {
+        uint256 unlocksAt = espressoStaking.validatorExits(validator);
+
+        return unlocksAt != 0 && block.timestamp >= unlocksAt;
     }
 
     /**

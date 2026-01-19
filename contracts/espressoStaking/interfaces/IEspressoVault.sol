@@ -30,6 +30,8 @@ interface IEspressoVault {
 
     function isActive() external view returns (bool);
 
+    function exitIsWithdrawable() external view returns (bool);
+
     function upgradeTo(address newImplementation) external;
 
     function upgradeToAndCall(address newImplementation, bytes memory data) external;

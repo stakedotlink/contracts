@@ -14,6 +14,11 @@ import "../interfaces/IEspressoStaking.sol";
 contract EspressoStakingMock is IEspressoStaking {
     using SafeERC20 for IERC20;
 
+    enum ValidatorStatus {
+        Active,
+        Exited
+    }
+
     struct Undelegation {
         uint256 amount;
         uint256 unlocksAt;
@@ -33,6 +38,8 @@ contract EspressoStakingMock is IEspressoStaking {
     mapping(address => mapping(address => Undelegation)) private _undelegations;
     // validator => validator info
     mapping(address => Validator) private _validators;
+    // validator => exit unlock timestamp (0 if not exiting)
+    mapping(address => uint256) public validatorExits;
 
     event Delegated(address indexed delegator, address indexed validator, uint256 amount);
     event Undelegated(address indexed delegator, address indexed validator, uint256 amount, uint256 unlocksAt);
@@ -73,6 +80,7 @@ contract EspressoStakingMock is IEspressoStaking {
      */
     function exitValidator(address _validator) external {
         _validators[_validator].status = ValidatorStatus.Exited;
+        validatorExits[_validator] = block.timestamp + exitEscrowPeriod;
 
         emit ValidatorExited(_validator);
     }
@@ -167,7 +175,7 @@ contract EspressoStakingMock is IEspressoStaking {
      */
     function validators(
         address _validator
-    ) external view override returns (uint256 totalDelegated, ValidatorStatus status) {
+    ) external view returns (uint256 totalDelegated, ValidatorStatus status) {
         Validator storage validator = _validators[_validator];
         return (validator.totalDelegated, validator.status);
     }
