@@ -68,6 +68,9 @@ contract EspressoStrategy is Strategy {
     event RemoveFee(uint256 index, address receiver, uint256 feeBasisPoints);
     event SetVaultImplementation(address vaultImplementation);
     event SetMaxRewardChangeBPS(uint256 maxRewardChangeBPS);
+    event SetFundFlowController(address fundFlowController);
+    event SetRewardsOracle(address rewardsOracle);
+    event UpdateLifetimeRewards();
 
     error FeesTooLarge();
     error SenderNotAuthorized();
@@ -402,6 +405,8 @@ contract EspressoStrategy is Strategy {
         int256 rewards = getDepositChange();
         if (rewards > 0 && uint256(rewards) > (totalDeposits * maxRewardChangeBPS) / BASIS_POINTS)
             revert RewardsTooHigh();
+
+        emit UpdateLifetimeRewards();
     }
 
     /**
@@ -606,6 +611,7 @@ contract EspressoStrategy is Strategy {
     function setFundFlowController(address _fundFlowController) external onlyOwner {
         if (_fundFlowController == address(0)) revert InvalidAddress();
         fundFlowController = _fundFlowController;
+        emit SetFundFlowController(_fundFlowController);
     }
 
     /**
@@ -615,6 +621,7 @@ contract EspressoStrategy is Strategy {
     function setRewardsOracle(address _rewardsOracle) external onlyOwner {
         if (_rewardsOracle == address(0)) revert InvalidAddress();
         rewardsOracle = _rewardsOracle;
+        emit SetRewardsOracle(_rewardsOracle);
     }
 
     /**
