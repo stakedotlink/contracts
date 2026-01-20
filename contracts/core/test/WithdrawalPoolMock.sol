@@ -7,6 +7,7 @@ pragma solidity 0.8.22;
  */
 contract WithdrawalPoolMock {
     uint256 private totalQueuedWithdrawals;
+    uint256 public performUpkeepCalls;
 
     function getTotalQueuedWithdrawals() external view returns (uint256) {
         return totalQueuedWithdrawals;
@@ -20,5 +21,7 @@ contract WithdrawalPoolMock {
         return (totalQueuedWithdrawals != 0, "0x");
     }
 
-    function performUpkeep(bytes calldata) external {}
+    function performUpkeep(bytes calldata) external {
+        ++performUpkeepCalls;
+    }
 }
