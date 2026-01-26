@@ -262,5 +262,13 @@
   "LINKMigrator": {
     "address": "0xdA77b1a19850606D1F4FAA0E200E035faa85FB15",
     "artifact": "LINKMigrator"
+  },
+  "LINK_WLSTUnderlyingChainlinkPriceAdapter": {
+    "address": "0xf534813F0e94De9718c75c6FE3bbd6583c46BB0A",
+    "artifact": "WLSTUnderlyingChainlinkPriceAdapter"
+  },
+  "LINK_WLSTUSDCChainlinkPriceAdapter": {
+    "address": "0xBA2A4765934Ad29f27631fcF3117360FE28217a5",
+    "artifact": "WLSTUSDCChainlinkPriceAdapter"
   }
 }
