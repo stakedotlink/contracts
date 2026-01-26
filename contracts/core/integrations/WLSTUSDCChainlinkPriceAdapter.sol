@@ -24,11 +24,11 @@ interface EACAggregatorProxy {
  * @dev Combines underlying/USD price feed, USDC/USD price feed, and wrapped-to-underlying ratio
  */
 contract WLSTUSDCChainlinkPriceAdapter {
+    uint8 constant DECIMALS = 8;
+
     IWrappedLST public immutable wrappedLST;
     EACAggregatorProxy public immutable underlyingUSDFeed;
     EACAggregatorProxy public immutable usdcUSDFeed;
-
-    uint8 public constant DECIMALS = 8;
 
     constructor(address _wrappedLST, address _underlyingUSDFeed, address _usdcUSDFeed) {
         wrappedLST = IWrappedLST(_wrappedLST);
