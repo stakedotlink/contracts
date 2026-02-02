@@ -477,8 +477,7 @@ contract EspressoStrategy is Strategy {
      * @notice Removes vaults
      * @dev Withdraws any remaining principal deposits so vault must be empty or any
      * unbonding periods must have elapsed for remaining deposits, otherwise call will revert.
-     * Will not check for unclaimed rewards so rewards must be claimed before removing a vault,
-     * otherwise they will be lost.
+     * Will not claim rewards so rewards must be claimed before removing a vault.
      * @param _vaultIdxs list of vault indices to remove (must be in ascending order)
      */
     function removeVaults(uint256[] calldata _vaultIdxs) external onlyOwner {
@@ -503,7 +502,7 @@ contract EspressoStrategy is Strategy {
             if (!vault.isActive() && vault.getPrincipalDeposits() > 0) vault.claimValidatorExit();
 
             // Ensure vault is empty
-            if (vault.getPrincipalDeposits() > 0) revert VaultNotEmpty();
+            if (vault.getPrincipalDeposits() > 0 || vault.getRewards() > 0) revert VaultNotEmpty();
 
             // Remove token approval
             token.safeApprove(address(vault), 0);
