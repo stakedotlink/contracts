@@ -560,6 +560,7 @@ contract EspressoStrategy is Strategy {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
+        if (_receiver == address(0)) revert InvalidAddress();
         _updateStrategyRewards();
         fees.push(Fee(_receiver, _feeBasisPoints));
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
@@ -587,6 +588,7 @@ contract EspressoStrategy is Strategy {
             fees.pop();
             emit RemoveFee(_index, toRemove.receiver, toRemove.basisPoints);
         } else {
+            if (_receiver == address(0)) revert InvalidAddress();
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
             if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
