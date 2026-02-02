@@ -112,7 +112,9 @@ describe('EspressoFundFlowController', () => {
   }
 
   it('shouldDepositQueuedTokens should work correctly', async () => {
-    const { stakingPool, fundFlowController, accounts } = await loadFixture(deployFixture)
+    const { stakingPool, fundFlowController, withdrawalPool, accounts } = await loadFixture(
+      deployFixture
+    )
 
     // Initially no queued tokens
     let [shouldDeposit, amount] = await fundFlowController.shouldDepositQueuedTokens()
@@ -147,6 +149,32 @@ describe('EspressoFundFlowController', () => {
     ;[shouldDeposit, amount] = await fundFlowController.shouldDepositQueuedTokens()
     assert.equal(shouldDeposit, true)
     assert.equal(fromEther(amount), 20)
+
+    // Test reserving tokens for pending withdrawals
+    await fundFlowController.depositQueuedTokens([0], [toEther(20)])
+
+    // Add queued withdrawals - should reserve tokens for them
+    await withdrawalPool.setTotalQueuedWithdrawals(toEther(50))
+
+    // Deposit more tokens to have something in queue
+    await stakingPool.deposit(accounts[0], toEther(100), ['0x'])
+
+    // Should only deposit excess beyond withdrawal needs (100 queued - 50 withdrawals = 50)
+    ;[shouldDeposit, amount] = await fundFlowController.shouldDepositQueuedTokens()
+    assert.equal(shouldDeposit, true)
+    assert.equal(fromEther(amount), 50)
+
+    // When queued tokens <= queued withdrawals, should not deposit
+    await withdrawalPool.setTotalQueuedWithdrawals(toEther(150))
+    ;[shouldDeposit, amount] = await fundFlowController.shouldDepositQueuedTokens()
+    assert.equal(shouldDeposit, false)
+    assert.equal(fromEther(amount), 0)
+
+    // Exact match should also return false
+    await withdrawalPool.setTotalQueuedWithdrawals(toEther(100))
+    ;[shouldDeposit, amount] = await fundFlowController.shouldDepositQueuedTokens()
+    assert.equal(shouldDeposit, false)
+    assert.equal(fromEther(amount), 0)
   })
 
   it('depositQueuedTokens should work correctly', async () => {

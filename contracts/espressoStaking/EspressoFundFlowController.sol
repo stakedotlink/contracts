@@ -74,8 +74,14 @@ contract EspressoFundFlowController is UUPSUpgradeable, OwnableUpgradeable {
      */
     function shouldDepositQueuedTokens() external view returns (bool, uint256) {
         uint256 queuedTokens = strategy.totalQueued();
+        uint256 queuedWithdrawals = withdrawalPool.getTotalQueuedWithdrawals();
 
-        return (queuedTokens > 0, queuedTokens);
+        // Reserve tokens for pending withdrawals
+        if (queuedTokens <= queuedWithdrawals) return (false, 0);
+
+        // Only deposit excess beyond withdrawal needs
+        uint256 excessTokens = queuedTokens - queuedWithdrawals;
+        return (excessTokens > 0, excessTokens);
     }
 
     /**
