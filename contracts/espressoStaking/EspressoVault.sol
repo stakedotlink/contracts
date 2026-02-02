@@ -234,8 +234,9 @@ contract EspressoVault is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      */
     function exitIsWithdrawable() external view returns (bool) {
         uint256 unlocksAt = espressoStaking.validatorExits(validator);
+        uint256 amount = espressoStaking.delegations(validator, address(this));
 
-        return unlocksAt != 0 && block.timestamp >= unlocksAt;
+        return unlocksAt != 0 && block.timestamp >= unlocksAt && amount > 0;
     }
 
     /**
