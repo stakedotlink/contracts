@@ -3,6 +3,7 @@ import { deployCore } from './modules/deploy-core'
 import { deployLINKStaking } from './modules/deploy-link-staking'
 import { deployMETISStaking } from './modules/deploy-metis-staking'
 import { deployPOLStaking } from './modules/deploy-polygon-staking'
+import { deployESPStaking } from './modules/deploy-espresso-staking'
 import { deploySubgraphMockContracts } from './modules/deploy-subgraph-mocks'
 import { deployDeprecated } from './modules/deploy-deprecated'
 import { deployOther } from './modules/deploy-other'
@@ -19,6 +20,7 @@ async function main() {
   await deployLINKStaking()
   await deployMETISStaking()
   await deployPOLStaking()
+  await deployESPStaking()
   await deploySubgraphMockContracts()
   await deployOther()
 }
