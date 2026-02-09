@@ -15,6 +15,14 @@
     "address": "0x9E32b13ce7f2E80A01932B42553652E053D6ed8e",
     "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   },
+  "POLToken": {
+    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "ESPToken": {
+    "address": "0x031De51F3E8016514Bd0963d0B2AB825A591Db9A",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
   "LPLMigration": {
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
     "artifact": "LPLMigration"
@@ -210,10 +218,6 @@
   "LINK_CurveGaugeDistributor": {
     "address": "0x2cbFc4825a56109b72F1EfF0D72C93844404C5Ec",
     "artifact": "CurveGaugeDistributor"
-  },
-  "POLToken": {
-    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
-    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   },
   "POL_StakingPool": {
     "address": "0x2ff4390dB61F282Ef4E6D4612c776b809a541753",
