@@ -42,9 +42,18 @@ contract EspressoStakingMock is IEspressoStaking {
     mapping(address => uint256) public validatorExits;
 
     event Delegated(address indexed delegator, address indexed validator, uint256 amount);
-    event Undelegated(address indexed delegator, address indexed validator, uint256 amount, uint256 unlocksAt);
+    event Undelegated(
+        address indexed delegator,
+        address indexed validator,
+        uint256 amount,
+        uint256 unlocksAt
+    );
     event WithdrawalClaimed(address indexed delegator, address indexed validator, uint256 amount);
-    event ValidatorExitClaimed(address indexed delegator, address indexed validator, uint256 amount);
+    event ValidatorExitClaimed(
+        address indexed delegator,
+        address indexed validator,
+        uint256 amount
+    );
     event ValidatorRegistered(address indexed validator);
     event ValidatorExited(address indexed validator);
 
@@ -111,7 +120,10 @@ contract EspressoStakingMock is IEspressoStaking {
         _validators[_validator].totalDelegated -= _amount;
 
         uint256 unlocksAt = block.timestamp + exitEscrowPeriod;
-        _undelegations[_validator][msg.sender] = Undelegation({amount: _amount, unlocksAt: unlocksAt});
+        _undelegations[_validator][msg.sender] = Undelegation({
+            amount: _amount,
+            unlocksAt: unlocksAt
+        });
 
         emit Undelegated(msg.sender, _validator, _amount, unlocksAt);
     }
