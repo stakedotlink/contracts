@@ -543,9 +543,8 @@ describe('EspressoVault', () => {
     // Claim validator exit
     await vault.claimValidatorExit()
 
-    // exitIsWithdrawable should still be true (exit timestamp is still set)
-    // but there are no more deposits to claim
-    assert.equal(await vault.exitIsWithdrawable(), true)
+    // exitIsWithdrawable should be false after claiming (no more delegations to withdraw)
+    assert.equal(await vault.exitIsWithdrawable(), false)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
   })
 })
