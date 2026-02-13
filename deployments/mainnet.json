@@ -15,6 +15,14 @@
     "address": "0x9E32b13ce7f2E80A01932B42553652E053D6ed8e",
     "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   },
+  "POLToken": {
+    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "ESPToken": {
+    "address": "0x031De51F3E8016514Bd0963d0B2AB825A591Db9A",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
   "LPLMigration": {
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
     "artifact": "LPLMigration"
@@ -211,10 +219,6 @@
     "address": "0x2cbFc4825a56109b72F1EfF0D72C93844404C5Ec",
     "artifact": "CurveGaugeDistributor"
   },
-  "POLToken": {
-    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
-    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
-  },
   "POL_StakingPool": {
     "address": "0x2ff4390dB61F282Ef4E6D4612c776b809a541753",
     "artifact": "StakingPool"
@@ -270,5 +274,37 @@
   "LINK_WLSTUSDCChainlinkPriceAdapter": {
     "address": "0xBA2A4765934Ad29f27631fcF3117360FE28217a5",
     "artifact": "WLSTUSDCChainlinkPriceAdapter"
+  },
+  "ESP_StakingPool": {
+    "address": "0x5273a75694311A6c4F2AcF5C5B8566D965cb6e50",
+    "artifact": "StakingPool"
+  },
+  "ESP_PriorityPool": {
+    "address": "0xdC26867B7d0F599BD2DeF704468a8cF073375FD3",
+    "artifact": "PriorityPool"
+  },
+  "ESP_RebaseController": {
+    "address": "0x5537F6762c181125De36b3a6884e9726e35DdB90",
+    "artifact": "RebaseController"
+  },
+  "ESP_WithdrawalPool": {
+    "address": "0x908B892276fb70fB6FD362FF97D58E7abF6d3690",
+    "artifact": "WithdrawalPool"
+  },
+  "ESP_WrappedSDToken": {
+    "address": "0x43ff5fFaB0973815EF8672F71c49ee5e53f30a48",
+    "artifact": "WrappedSDToken"
+  },
+  "ESP_EspressoStrategy": {
+    "address": "0xF0fb3Aa0f6a4B84494B78f81103a789e81540344",
+    "artifact": "EspressoStrategy"
+  },
+  "ESP_EspressoFundFlowController": {
+    "address": "0xF36BDBc45219f9fbAc0741a92a546F95C97104bd",
+    "artifact": "EspressoFundFlowController"
+  },
+  "stESP_SDLRewardsPool": {
+    "address": "0x4A18AEA755bD2Ec7c0b7dD6f065bBB3725490342",
+    "artifact": "RewardsPoolWSD"
   }
 }
