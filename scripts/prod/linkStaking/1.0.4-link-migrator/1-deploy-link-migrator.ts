@@ -1,13 +1,14 @@
 import { updateDeployments, getContract, deploy } from '../../../utils/deployment'
 
+const chainlinkCommunityPool = '0xBc10f2E862ED4502144c7d632a3459F49DFCDB5e'
+
 async function main() {
   const linkToken = await getContract('LINKToken')
-  const communityPool = await getContract('LINK_CommunityVCS')
   const priorityPool = await getContract('LINK_PriorityPool')
 
   const migrator = await deploy('LINKMigrator', [
     linkToken.target,
-    communityPool.target,
+    chainlinkCommunityPool,
     priorityPool.target,
   ])
   console.log('LINK_Migrator deployed: ', migrator.target)

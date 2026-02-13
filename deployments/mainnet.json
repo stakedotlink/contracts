@@ -264,7 +264,7 @@
     "artifact": "CCIPCurveGaugeSender"
   },
   "LINKMigrator": {
-    "address": "0xdA77b1a19850606D1F4FAA0E200E035faa85FB15",
+    "address": "0x08E11a9A74E7aCc51aCe382b6D02aBE8B7cF7786",
     "artifact": "LINKMigrator"
   },
   "LINK_WLSTUnderlyingChainlinkPriceAdapter": {
