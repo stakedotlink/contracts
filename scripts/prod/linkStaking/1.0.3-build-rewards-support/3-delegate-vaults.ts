@@ -8,7 +8,7 @@ import { GovernanceTimelock } from '../../../../typechain-types'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 
-const nonLINKRewardReceiver = '0x43975fe745cB4171E15ceEd5d8D05A3502e0e87B'
+const claimerAddress = '0x43975fe745cB4171E15ceEd5d8D05A3502e0e87B'
 const rights = ethers.ZeroHash
 const enable = true
 
@@ -17,6 +17,7 @@ async function main() {
 
   const apiKit = new SafeApiKit({
     chainId: 1n,
+    apiKey: process.env.SAFE_API_KEY,
   })
   const protocolKit = await Safe.init({
     provider: hre.network.provider,
@@ -39,7 +40,7 @@ async function main() {
       (
         await fundFlowController.delegateVaults.populateTransaction(
           [...opVaults, ...comVaults.slice(0, 65)],
-          nonLINKRewardReceiver,
+          claimerAddress,
           rights,
           enable
         )
@@ -54,7 +55,7 @@ async function main() {
       (
         await fundFlowController.delegateVaults.populateTransaction(
           [...comVaults.slice(65, 145)],
-          nonLINKRewardReceiver,
+          claimerAddress,
           rights,
           enable
         )
@@ -68,8 +69,23 @@ async function main() {
       0,
       (
         await fundFlowController.delegateVaults.populateTransaction(
-          [...comVaults.slice(145)],
-          nonLINKRewardReceiver,
+          [...comVaults.slice(145, 225)],
+          claimerAddress,
+          rights,
+          enable
+        )
+      ).data,
+      ethers.ZeroHash,
+      ethers.ZeroHash,
+      86400,
+    ],
+    [
+      fundFlowController.target,
+      0,
+      (
+        await fundFlowController.delegateVaults.populateTransaction(
+          [...comVaults.slice(225)],
+          claimerAddress,
           rights,
           enable
         )

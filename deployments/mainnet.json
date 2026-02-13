@@ -15,6 +15,14 @@
     "address": "0x9E32b13ce7f2E80A01932B42553652E053D6ed8e",
     "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
   },
+  "POLToken": {
+    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
+  "ESPToken": {
+    "address": "0x031De51F3E8016514Bd0963d0B2AB825A591Db9A",
+    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
+  },
   "LPLMigration": {
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
     "artifact": "LPLMigration"
@@ -104,60 +112,60 @@
     "artifact": "PriorityPool"
   },
   "SDL_Vesting_NOP0": {
-    "address": "0xCc8f8F89ef7Ba61e6a649b48221B0Cf2544171cb",
-    "artifact": "Vesting"
+    "address": "0xe22Ee628E3aA38133BDd01159057767e1A93081A",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP1": {
-    "address": "0x4e930b7D9E366b8b270aC0FC56f040A8746566C6",
-    "artifact": "Vesting"
+    "address": "0x506c02763131F044B1c08AB9D4Dd5Dc5505ee9c7",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP2": {
-    "address": "0x576FC58B247963D8De9AA4018ABB0240D0465A31",
-    "artifact": "Vesting"
+    "address": "0x02A0f6242c43A3cB59e58D5fa7ACd9e79BBa3abA",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP3": {
-    "address": "0xd9d1b5132Ef63fC0e9056d063880e7b943ea2C6B",
-    "artifact": "Vesting"
+    "address": "0x8Aaf17a93eecE176de3e1BEec7C775c9d4C9f7d5",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP4": {
-    "address": "0x7287d90ed89d586d0d4B09f683C7f06A3e9a0997",
-    "artifact": "Vesting"
+    "address": "0x5eb140f59E59dAd692e13B8480C2F91758c341e5",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP5": {
-    "address": "0x80B9d842081972D641375420D256ad1EdCB47E40",
-    "artifact": "Vesting"
+    "address": "0x8b5256ae4A572b6ceDbee9F93b60D2171aBecfE3",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP6": {
-    "address": "0x8d0422D9859B2CB98761428B4518059e1cB3e8D9",
-    "artifact": "Vesting"
+    "address": "0x6185a7f5344Ff0C320E25CA1ED6526c4692FcB3D",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP7": {
-    "address": "0xFbfEf8aC9d267c463c2280bf35c9FffEBaEc983e",
-    "artifact": "Vesting"
+    "address": "0x4cCB44bF85adE035C5B57e38eDd385788c119c86",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP8": {
-    "address": "0xCd682dd9EcD4991d04787727FE669947d67849c2",
-    "artifact": "Vesting"
+    "address": "0xe05EDf1d3e73dDb87ebaa1fa9363eFdDbb0252a6",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP9": {
-    "address": "0x8Dbc8027EBeE31BAB05ADE462B43A579575aEfad",
-    "artifact": "Vesting"
+    "address": "0xf509c90Fbb166EdBc06BCd3Caa75F926842e3032",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP10": {
-    "address": "0x6E368C33B98dFB0a376534429bE8a065b47918E7",
-    "artifact": "Vesting"
+    "address": "0x8B5194fE64A2eE36f34089566B23DF357f61024f",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP11": {
-    "address": "0x39f9F3d7203C5b13e3C2682362B608e20dF02194",
-    "artifact": "Vesting"
+    "address": "0x03c1C19adB2009895422Ead742A5E96A08b1fF94",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP12": {
-    "address": "0xf69F5c5F788Fae16eD8950e634E8280925D4cCEB",
-    "artifact": "Vesting"
+    "address": "0x08c1d70FF981FE2ff78194c973191Bbc8226A8b9",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_NOP13": {
-    "address": "0x3Cb7B3Fe89cAD7Fcf7fcbbEf1933eAD13CDA5c6c",
-    "artifact": "Vesting"
+    "address": "0xb03697a0C4c86AEf1A2F73D157dCe101bFcfd1d4",
+    "artifact": "SDLVesting"
   },
   "SDL_Vesting_LinkPool": {
     "address": "0x2861382Ef967E5B539b5BDF9fFCC52Fa4056eaE6",
@@ -211,10 +219,6 @@
     "address": "0x2cbFc4825a56109b72F1EfF0D72C93844404C5Ec",
     "artifact": "CurveGaugeDistributor"
   },
-  "POLToken": {
-    "address": "0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6",
-    "artifact": "@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20"
-  },
   "POL_StakingPool": {
     "address": "0x2ff4390dB61F282Ef4E6D4612c776b809a541753",
     "artifact": "StakingPool"
@@ -254,5 +258,53 @@
   "POL_LSTRewardsSplitterController": {
     "address": "0x5e1bfbb052c3f7Bfe0e7386f435343982b1F78c8",
     "artifact": "LSTRewardsSplitterController"
+  },
+  "POL_CCIPCurveGaugeSender": {
+    "address": "0x949545A9d400cDc177C2fEc7f896F2Eb35Ed640D",
+    "artifact": "CCIPCurveGaugeSender"
+  },
+  "LINKMigrator": {
+    "address": "0xdA77b1a19850606D1F4FAA0E200E035faa85FB15",
+    "artifact": "LINKMigrator"
+  },
+  "LINK_WLSTUnderlyingChainlinkPriceAdapter": {
+    "address": "0xf534813F0e94De9718c75c6FE3bbd6583c46BB0A",
+    "artifact": "WLSTUnderlyingChainlinkPriceAdapter"
+  },
+  "LINK_WLSTUSDCChainlinkPriceAdapter": {
+    "address": "0xBA2A4765934Ad29f27631fcF3117360FE28217a5",
+    "artifact": "WLSTUSDCChainlinkPriceAdapter"
+  },
+  "ESP_StakingPool": {
+    "address": "0x5273a75694311A6c4F2AcF5C5B8566D965cb6e50",
+    "artifact": "StakingPool"
+  },
+  "ESP_PriorityPool": {
+    "address": "0xdC26867B7d0F599BD2DeF704468a8cF073375FD3",
+    "artifact": "PriorityPool"
+  },
+  "ESP_RebaseController": {
+    "address": "0x5537F6762c181125De36b3a6884e9726e35DdB90",
+    "artifact": "RebaseController"
+  },
+  "ESP_WithdrawalPool": {
+    "address": "0x908B892276fb70fB6FD362FF97D58E7abF6d3690",
+    "artifact": "WithdrawalPool"
+  },
+  "ESP_WrappedSDToken": {
+    "address": "0x43ff5fFaB0973815EF8672F71c49ee5e53f30a48",
+    "artifact": "WrappedSDToken"
+  },
+  "ESP_EspressoStrategy": {
+    "address": "0xF0fb3Aa0f6a4B84494B78f81103a789e81540344",
+    "artifact": "EspressoStrategy"
+  },
+  "ESP_EspressoFundFlowController": {
+    "address": "0xF36BDBc45219f9fbAc0741a92a546F95C97104bd",
+    "artifact": "EspressoFundFlowController"
+  },
+  "stESP_SDLRewardsPool": {
+    "address": "0x4A18AEA755bD2Ec7c0b7dD6f065bBB3725490342",
+    "artifact": "RewardsPoolWSD"
   }
 }
