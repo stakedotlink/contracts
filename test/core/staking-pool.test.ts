@@ -802,4 +802,45 @@ describe('StakingPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 3375)
     assert.equal(fromEther(await stakingPool.totalStaked()), 4500)
   })
+
+  it('should revert transfer and burn when amount rounds to zero shares', async () => {
+    const { signers, accounts, adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
+    await stake(1, 1000)
+
+    // accrue rewards so totalStaked > totalShares
+    await token.transfer(adrs.strategy1, toEther(500))
+    await stakingPool.updateStrategyRewards([0], '0x')
+
+    assert.equal(await stakingPool.getSharesByStake(1), 0n)
+
+    await expect(stakingPool.connect(signers[1]).transfer(accounts[2], 1)).to.be.revertedWith(
+      'Transfer amount too small'
+    )
+    await expect(stakingPool.connect(signers[1]).burn(1)).to.be.revertedWith(
+      'Burn amount too small'
+    )
+
+    // find the max amount that still rounds to zero shares
+    const totalStaked = await stakingPool.totalStaked()
+    const totalShares = await stakingPool.totalShares()
+    const maxZeroShareAmount = totalStaked / totalShares // integer division
+
+    // every amount from 1 to maxZeroShareAmount should revert on transfer
+    for (let i = 1n; i <= maxZeroShareAmount && i <= 5n; i++) {
+      assert.equal(await stakingPool.getSharesByStake(i), 0n)
+      await expect(stakingPool.connect(signers[1]).transfer(accounts[2], i)).to.be.revertedWith(
+        'Transfer amount too small'
+      )
+    }
+
+    // amount just above the threshold should succeed and move shares
+    const firstValidAmount = maxZeroShareAmount + 1n
+    assert.notEqual(await stakingPool.getSharesByStake(firstValidAmount), 0n)
+
+    const sharesBefore = await stakingPool.sharesOf(accounts[1])
+    await stakingPool.connect(signers[1]).transfer(accounts[2], firstValidAmount)
+    const sharesAfter = await stakingPool.sharesOf(accounts[1])
+    assert.notEqual(sharesBefore, sharesAfter, 'shares must change for valid transfer')
+  })
 })

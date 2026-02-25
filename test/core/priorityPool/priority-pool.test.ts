@@ -855,4 +855,47 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 3000)
     assert.equal(fromEther(await stakingPool.totalStaked()), 3000)
   })
+
+  it('withdraw should revert when transfer amount rounds to zero shares', async () => {
+    const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
+      deployFixture
+    )
+
+    await stakingPool.connect(signers[1]).approve(adrs.pp, ethers.MaxUint256)
+
+    // deposit and accrue rewards so totalStaked > totalShares
+    await pp.connect(signers[1]).deposit(toEther(1000), false, ['0x'])
+    await token.transfer(adrs.strategy, toEther(100))
+    await stakingPool.updateStrategyRewards([0], '0x')
+
+    assert.equal(await stakingPool.getSharesByStake(1), 0n)
+
+    // queue tokens so totalQueued > 0
+    await strategy.setMaxDeposits(toEther(1100))
+    await pp.connect(signers[2]).deposit(toEther(500), true, ['0x'])
+    assert.notEqual(await pp.totalQueued(), 0n)
+
+    const totalQueuedBefore = await pp.totalQueued()
+    const attackerSharesBefore = await stakingPool.sharesOf(accounts[1])
+    const attackerLINKBefore = await token.balanceOf(accounts[1])
+
+    // attempt to withdraw 1 wei (rounds to 0 shares) - should revert
+    await expect(
+      pp.connect(signers[1]).withdraw(1, 0, 0, [], false, false, ['0x'])
+    ).to.be.revertedWith('Transfer amount too small')
+
+    // verify nothing changed
+    assert.equal(await pp.totalQueued(), totalQueuedBefore)
+    assert.equal(await stakingPool.sharesOf(accounts[1]), attackerSharesBefore)
+    assert.equal(await token.balanceOf(accounts[1]), attackerLINKBefore)
+
+    // attempt ERC677 withdraw path with 1 wei - should also revert
+    await expect(
+      stakingPool.transferAndCall(
+        adrs.pp,
+        1,
+        ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
+      )
+    ).to.be.revertedWith('Transfer amount too small')
+  })
 })
