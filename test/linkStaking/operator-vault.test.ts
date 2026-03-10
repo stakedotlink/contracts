@@ -1,6 +1,5 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { toEther, deploy, deployUpgradeable, getAccounts, fromEther } from '../utils/helpers'
+import { toEther, deploy, deployUpgradeable, getAccounts, fromEther, getConnection } from '../utils/helpers'
 import {
   ERC677,
   OperatorVCSMock,
@@ -8,8 +7,10 @@ import {
   PFAlertsControllerMock,
   StakingMock,
   StakingRewardsMock,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -17,61 +18,53 @@ const claimPeriod = 7 * 86400
 describe('OperatorVault', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
 
     const rewardsController = (await deploy('StakingRewardsMock', [
-      adrs.token,
+      token.target,
     ])) as StakingRewardsMock
-    adrs.rewardsController = await rewardsController.getAddress()
 
     const stakingController = (await deploy('StakingMock', [
-      adrs.token,
-      adrs.rewardsController,
+      token.target,
+      rewardsController.target,
       toEther(10),
       toEther(100),
       toEther(10000),
       unbondingPeriod,
       claimPeriod,
     ])) as StakingMock
-    adrs.stakingController = await stakingController.getAddress()
 
     const pfAlertsController = (await deploy('PFAlertsControllerMock', [
-      adrs.token,
+      token.target,
     ])) as PFAlertsControllerMock
-    adrs.pfAlertsController = await pfAlertsController.getAddress()
 
-    const strategy = (await deploy('OperatorVCSMock', [adrs.token, 1000, 5000])) as OperatorVCSMock
-    adrs.strategy = await strategy.getAddress()
+    const strategy = (await deploy('OperatorVCSMock', [token.target, 1000, 5000])) as OperatorVCSMock
 
     const vault = (await deployUpgradeable('OperatorVault', [
-      adrs.token,
-      adrs.strategy,
-      adrs.stakingController,
-      adrs.rewardsController,
+      token.target,
+      strategy.target,
+      stakingController.target,
+      rewardsController.target,
       accounts[0],
-      adrs.pfAlertsController,
+      pfAlertsController.target,
       accounts[1],
       accounts[2],
-    ])) as OperatorVault
-    adrs.vault = await vault.getAddress()
+    ], { unsafeAllow: ['missing-initializer-call'] })) as OperatorVault
 
-    await strategy.addVault(adrs.vault)
-    await token.approve(adrs.strategy, toEther(100000000))
+    await strategy.addVault(vault.target)
+    await token.approve(strategy.target, toEther(100000000))
     await strategy.deposit(toEther(100))
-    await token.transfer(adrs.rewardsController, toEther(1000))
-    await token.transfer(adrs.pfAlertsController, toEther(1000))
+    await token.transfer(rewardsController.target, toEther(1000))
+    await token.transfer(pfAlertsController.target, toEther(1000))
 
     return {
       signers,
       accounts,
-      adrs,
       token,
       rewardsController,
       stakingController,
@@ -82,18 +75,18 @@ describe('OperatorVault', () => {
   }
 
   it('deposit should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vault } = await loadFixture(deployFixture)
+    const { strategy, token, stakingController, vault } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(100))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 200)
-    assert.equal(fromEther(await stakingController.getStakerPrincipal(adrs.vault)), 200)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 200)
+    assert.equal(fromEther(await stakingController.getStakerPrincipal(vault.target)), 200)
     assert.equal(fromEther(await vault.getTotalDeposits()), 200)
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 200)
   })
 
   it('withdraw should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vault } = await loadFixture(deployFixture)
+    const { strategy, token, stakingController, vault } = await loadFixture(deployFixture)
 
     await strategy.unbond()
 
@@ -105,19 +98,19 @@ describe('OperatorVault', () => {
     await time.increase(unbondingPeriod + 1)
 
     await strategy.withdraw(toEther(30))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 70)
-    assert.equal(fromEther(await stakingController.getStakerPrincipal(adrs.vault)), 70)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 70)
+    assert.equal(fromEther(await stakingController.getStakerPrincipal(vault.target)), 70)
     assert.equal(fromEther(await vault.getTotalDeposits()), 70)
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 70)
   })
 
   it('raiseAlert should work correctly', async () => {
-    const { signers, accounts, adrs, token, vault } = await loadFixture(deployFixture)
+    const { signers, accounts, token, strategy, vault } = await loadFixture(deployFixture)
 
     await vault.connect(signers[1]).raiseAlert(accounts[5])
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 11.7)
-    assert.equal(fromEther(await token.balanceOf(adrs.vault)), 1.3)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 11.7)
+    assert.equal(fromEther(await token.balanceOf(vault.target)), 1.3)
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 1.3)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 100)
     await expect(vault.raiseAlert(accounts[5])).to.be.revertedWithCustomError(
@@ -127,39 +120,39 @@ describe('OperatorVault', () => {
   })
 
   it('getPrincipalDeposits should work correctly', async () => {
-    const { adrs, stakingController, vault } = await loadFixture(deployFixture)
+    const { stakingController, vault } = await loadFixture(deployFixture)
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
-    await stakingController.removeOperator(adrs.vault)
+    await stakingController.removeOperator(vault.target)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
   })
 
   it('getPendingRewards should work correctly', async () => {
-    const { accounts, adrs, strategy, vault, rewardsController } = await loadFixture(deployFixture)
+    const { accounts, strategy, vault, rewardsController } = await loadFixture(deployFixture)
 
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     assert.equal(fromEther(await vault.getPendingRewards()), 1)
-    await rewardsController.setReward(adrs.vault, toEther(15))
+    await rewardsController.setReward(vault.target, toEther(15))
     assert.equal(fromEther(await vault.getPendingRewards()), 1.5)
     await strategy.deposit(toEther(100))
     assert.equal(fromEther(await vault.getPendingRewards()), 1.5)
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     assert.equal(fromEther(await vault.getPendingRewards()), 1)
 
     await strategy.updateDeposits(0, accounts[3])
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
-    await rewardsController.setReward(adrs.vault, toEther(11))
+    await rewardsController.setReward(vault.target, toEther(11))
     assert.equal(fromEther(await vault.getPendingRewards()), 0.1)
-    await rewardsController.setReward(adrs.vault, toEther(6))
+    await rewardsController.setReward(vault.target, toEther(6))
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
   })
 
   it('updateDeposits should work correctly', async () => {
-    const { accounts, adrs, strategy, vault, rewardsController, stakingController } =
+    const { accounts, strategy, vault, rewardsController, stakingController } =
       await loadFixture(deployFixture)
 
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
       [110, 100, 1]
@@ -169,7 +162,7 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 110)
 
-    await rewardsController.setReward(adrs.vault, toEther(5))
+    await rewardsController.setReward(vault.target, toEther(5))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
       [105, 100, 0]
@@ -179,7 +172,7 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 110)
 
-    await rewardsController.setReward(adrs.vault, toEther(8))
+    await rewardsController.setReward(vault.target, toEther(8))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
       [108, 100, 0]
@@ -189,7 +182,7 @@ describe('OperatorVault', () => {
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
     assert.equal(fromEther(await vault.trackedTotalDeposits()), 110)
 
-    await rewardsController.setReward(adrs.vault, toEther(11))
+    await rewardsController.setReward(vault.target, toEther(11))
     assert.deepEqual(
       (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
       [111, 100, 0.1]
@@ -216,10 +209,10 @@ describe('OperatorVault', () => {
   })
 
   it('withdrawRewards should work correctly', async () => {
-    const { signers, accounts, adrs, strategy, token, vault, rewardsController } =
+    const { signers, accounts, strategy, token, vault, rewardsController } =
       await loadFixture(deployFixture)
 
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     await strategy.updateDeposits(0, accounts[3])
 
     await expect(vault.withdrawRewards()).to.be.revertedWithCustomError(
@@ -243,10 +236,10 @@ describe('OperatorVault', () => {
   })
 
   it('exitVault should work correctly', async () => {
-    const { accounts, adrs, strategy, token, vault, rewardsController, stakingController } =
+    const { accounts, strategy, token, vault, rewardsController, stakingController } =
       await loadFixture(deployFixture)
 
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     await strategy.updateDeposits(0, accounts[3])
     assert.equal(fromEther(await vault.getPendingRewards()), 0)
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 1)
@@ -257,7 +250,7 @@ describe('OperatorVault', () => {
       'OperatorNotRemoved()'
     )
 
-    await stakingController.removeOperator(adrs.vault)
+    await stakingController.removeOperator(vault.target)
     assert.deepEqual(
       (await strategy.removeVault.staticCall()).map((v) => fromEther(v)),
       [100, 10]
@@ -270,18 +263,18 @@ describe('OperatorVault', () => {
   })
 
   it('setRewardsReceiver should work correctly', async () => {
-    const { signers, accounts, adrs } = await loadFixture(deployFixture)
+    const { signers, accounts, token, strategy, stakingController, rewardsController, pfAlertsController } = await loadFixture(deployFixture)
 
     let newVault = (await deployUpgradeable('OperatorVault', [
-      adrs.token,
-      adrs.strategy,
-      adrs.stakingController,
-      adrs.rewardsController,
+      token.target,
+      strategy.target,
+      stakingController.target,
+      rewardsController.target,
       accounts[0],
-      adrs.pfAlertsController,
+      pfAlertsController.target,
       accounts[1],
       ethers.ZeroAddress,
-    ])) as OperatorVault
+    ], { unsafeAllow: ['missing-initializer-call'] })) as OperatorVault
 
     await expect(
       newVault.connect(signers[1]).setRewardsReceiver(accounts[1])

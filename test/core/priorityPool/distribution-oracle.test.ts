@@ -1,9 +1,11 @@
-import { toEther, deploy, fromEther, getAccounts } from '../../utils/helpers'
+import { toEther, deploy, fromEther, getAccounts, getConnection } from '../../utils/helpers'
 import { assert, expect } from 'chai'
-import { ERC677, DistributionOracle, PriorityPoolMock, Operator } from '../../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture, mineUpTo, time } from '@nomicfoundation/hardhat-network-helpers'
+import { ERC677, DistributionOracle, PriorityPoolMock, Operator } from '../../../types/ethers-contracts'
 import cbor from 'cbor'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
+const mineUpTo = networkHelpers.mineUpTo
 
 describe('DistributionOracle', () => {
   async function deployFixture() {

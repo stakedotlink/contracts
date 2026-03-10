@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,9 +7,11 @@ import {
   setupToken,
   fromEther,
   deployImplementation,
+  getConnection,
 } from '../utils/helpers'
-import { ERC677, CommunityVCS, StakingMock, StakingRewardsMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { ERC677, CommunityVCS, StakingMock, StakingRewardsMock } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -22,31 +23,27 @@ const encodeVaults = (vaults: number[]) => {
 describe('CommunityVCS', () => {
   async function deployFixture() {
     const { accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
     await setupToken(token, accounts)
 
     const rewardsController = (await deploy('StakingRewardsMock', [
-      adrs.token,
+      token.target,
     ])) as StakingRewardsMock
-    adrs.rewardsController = await rewardsController.getAddress()
 
     const stakingController = (await deploy('StakingMock', [
-      adrs.token,
-      adrs.rewardsController,
+      token.target,
+      rewardsController.target,
       toEther(10),
       toEther(100),
       toEther(10000),
       unbondingPeriod,
       claimPeriod,
     ])) as StakingMock
-    adrs.stakingController = await stakingController.getAddress()
 
     let vaultImplementation = await deployImplementation('CommunityVault')
 
@@ -55,9 +52,9 @@ describe('CommunityVCS', () => {
     const strategy = (await deployUpgradeable(
       'CommunityVCS',
       [
-        adrs.token,
+        token.target,
         accounts[0],
-        adrs.stakingController,
+        stakingController.target,
         vaultImplementation,
         [[accounts[4], 500]],
         9000,
@@ -68,28 +65,27 @@ describe('CommunityVCS', () => {
       ],
       { unsafeAllow: ['delegatecall'] }
     )) as CommunityVCS
-    adrs.strategy = await strategy.getAddress()
 
-    await token.approve(adrs.strategy, ethers.MaxUint256)
-    await token.transfer(adrs.rewardsController, toEther(10000))
+    await token.approve(strategy.target, ethers.MaxUint256)
+    await token.transfer(rewardsController.target, toEther(10000))
 
     const vaults = await strategy.getVaults()
 
-    return { accounts, adrs, token, rewardsController, stakingController, strategy, vaults }
+    return { accounts, token, rewardsController, stakingController, strategy, vaults }
   }
 
   it('addVaults should work correctly', async () => {
-    const { adrs, strategy } = await loadFixture(deployFixture)
+    const { strategy, stakingController, rewardsController } = await loadFixture(deployFixture)
 
     await strategy.addVaults(10)
     let vaults = await strategy.getVaults()
     assert.equal(vaults.length, 30)
     for (let i = 0; i < vaults.length; i += 5) {
       let vault = await ethers.getContractAt('CommunityVault', vaults[i])
-      assert.equal(await vault.token(), adrs.token)
-      assert.equal(await vault.vaultController(), adrs.strategy)
-      assert.equal(await vault.stakeController(), adrs.stakingController)
-      assert.equal(await vault.rewardsController(), adrs.rewardsController)
+      assert.equal(await vault.token(), await strategy.token())
+      assert.equal(await vault.vaultController(), strategy.target)
+      assert.equal(await vault.stakeController(), stakingController.target)
+      assert.equal(await vault.rewardsController(), rewardsController.target)
     }
   })
 
@@ -110,10 +106,10 @@ describe('CommunityVCS', () => {
     const { strategy } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(1000), encodeVaults([]))
-    expect(strategy.performUpkeep('0x')).to.be.revertedWith('VaultsAboveThreshold()')
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(strategy, 'VaultsAboveThreshold')
 
     await strategy.deposit(toEther(90), encodeVaults([]))
-    expect(strategy.performUpkeep('0x')).to.be.revertedWith('VaultsAboveThreshold()')
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(strategy, 'VaultsAboveThreshold')
 
     await strategy.deposit(toEther(10), encodeVaults([]))
     await strategy.performUpkeep('0x')
@@ -122,7 +118,7 @@ describe('CommunityVCS', () => {
   })
 
   it('claimRewards should work correctly', async () => {
-    const { adrs, strategy, rewardsController, token } = await loadFixture(deployFixture)
+    const { strategy, rewardsController, token } = await loadFixture(deployFixture)
 
     let vaults = await strategy.getVaults()
     await strategy.deposit(toEther(1000), encodeVaults([]))
@@ -131,48 +127,48 @@ describe('CommunityVCS', () => {
     await rewardsController.setReward(vaults[5], toEther(8))
 
     await strategy.claimRewards([1, 3, 5], toEther(10))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 0)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 0)
 
     await rewardsController.setReward(vaults[6], toEther(10))
     await rewardsController.setReward(vaults[7], toEther(7))
     await rewardsController.setReward(vaults[8], toEther(15))
 
     await strategy.claimRewards([6, 7, 8], toEther(10))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 25)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 25)
 
     await rewardsController.setReward(vaults[9], toEther(15))
     await rewardsController.setReward(vaults[10], toEther(15))
     await rewardsController.setReward(vaults[11], toEther(15))
 
     await strategy.claimRewards([9, 10, 11], toEther(10))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 70)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 70)
 
-    await expect(strategy.claimRewards([100], 0)).to.be.reverted
+    await expect(strategy.claimRewards([100], 0)).to.revert(ethers)
   })
 
   it('deposit should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vaults } = await loadFixture(deployFixture)
+    const { strategy, token, stakingController, vaults } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(50), encodeVaults([]))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 50)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 50)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[0])), 50)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 50)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 50)
 
     await strategy.deposit(toEther(150), encodeVaults([]))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 200)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 200)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 200)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 200)
 
-    await token.transfer(adrs.strategy, toEther(300))
+    await token.transfer(strategy.target, toEther(300))
     await strategy.deposit(toEther(520), encodeVaults([]))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 720)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 720)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 720)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 720)
 
     await stakingController.setDepositLimits(toEther(10), toEther(120))
     await strategy.deposit(toEther(80), encodeVaults([0, 1, 2, 3, 4, 5, 6]))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 800)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 800)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[5])), 120)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[6])), 120)
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[7])), 60)

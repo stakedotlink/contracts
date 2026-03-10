@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert } from 'chai'
 import {
   toEther,
@@ -7,6 +6,7 @@ import {
   deployImplementation,
   getAccounts,
   setupToken,
+  getConnection,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -17,8 +17,10 @@ import {
   FundFlowController,
   PPKeeper,
   PriorityPoolMock,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400

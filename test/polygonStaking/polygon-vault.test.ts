@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,14 +6,17 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
 import {
   ERC20,
   PolygonStakeManagerMock,
   PolygonValidatorShareMock,
   PolygonVault,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const withdrawalDelay = 86400
 

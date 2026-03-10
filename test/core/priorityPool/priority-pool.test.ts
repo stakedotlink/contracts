@@ -6,6 +6,7 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  getConnection,
 } from '../../utils/helpers'
 import {
   ERC677,
@@ -14,80 +15,73 @@ import {
   PriorityPool,
   StrategyMock,
   WithdrawalPool,
-} from '../../../typechain-types'
-import { ethers } from 'hardhat'
+} from '../../../types/ethers-contracts'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('PriorityPool', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
     await setupToken(token, accounts, true)
 
     const stakingPool = (await deployUpgradeable('StakingPool', [
-      adrs.token,
+      token.target,
       'Staked LINK',
       'stLINK',
       [],
       toEther(10000),
     ])) as StakingPool
-    adrs.stakingPool = await stakingPool.getAddress()
 
     const strategy = (await deployUpgradeable('StrategyMock', [
-      adrs.token,
-      adrs.stakingPool,
+      token.target,
+      stakingPool.target,
       toEther(1000),
       toEther(100),
     ])) as StrategyMock
-    adrs.strategy = await strategy.getAddress()
 
     const sdlPool = (await deploy('SDLPoolMock')) as SDLPoolMock
-    adrs.sdlPool = await sdlPool.getAddress()
 
     const pp = (await deployUpgradeable('PriorityPool', [
-      adrs.token,
-      adrs.stakingPool,
-      adrs.sdlPool,
+      token.target,
+      stakingPool.target,
+      sdlPool.target,
       toEther(100),
       toEther(1000),
       false,
     ])) as PriorityPool
-    adrs.pp = await pp.getAddress()
 
     const withdrawalPool = (await deployUpgradeable('WithdrawalPool', [
-      adrs.token,
-      adrs.stakingPool,
-      adrs.pp,
+      token.target,
+      stakingPool.target,
+      pp.target,
       toEther(10),
       0,
     ])) as WithdrawalPool
-    adrs.withdrawalPool = await withdrawalPool.getAddress()
 
-    await stakingPool.addStrategy(adrs.strategy)
-    await stakingPool.setPriorityPool(adrs.pp)
+    await stakingPool.addStrategy(strategy.target)
+    await stakingPool.setPriorityPool(pp.target)
     await stakingPool.setRebaseController(accounts[0])
     await pp.setDistributionOracle(accounts[0])
-    await pp.setWithdrawalPool(adrs.withdrawalPool)
+    await pp.setWithdrawalPool(withdrawalPool.target)
 
     for (let i = 0; i < signers.length; i++) {
-      await token.connect(signers[i]).approve(adrs.pp, ethers.MaxUint256)
+      await token.connect(signers[i]).approve(pp.target, ethers.MaxUint256)
     }
 
     await pp.deposit(1000, false, ['0x'])
 
-    return { signers, accounts, adrs, token, stakingPool, strategy, sdlPool, pp, withdrawalPool }
+    return { signers, accounts, token, stakingPool, strategy, sdlPool, pp, withdrawalPool }
   }
 
   it('deposit should work correctly', async () => {
-    const { signers, accounts, adrs, pp, token, strategy, stakingPool } = await loadFixture(
+    const { signers, accounts, pp, token, strategy, stakingPool } = await loadFixture(
       deployFixture
     )
 
@@ -99,7 +93,7 @@ describe('PriorityPool', () => {
 
     await pp.connect(signers[2]).deposit(toEther(1000), true, ['0x'])
     assert.equal(fromEther(await pp.totalQueued()), 500)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 500)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 500)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 500)
     assert.equal(fromEther(await pp.getQueuedTokens(accounts[2], 0)), 500)
     assert.equal(fromEther(await token.balanceOf(accounts[2])), 9000)
@@ -108,14 +102,14 @@ describe('PriorityPool', () => {
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
     await pp.connect(signers[3]).deposit(toEther(1000), false, ['0x'])
     assert.equal(fromEther(await pp.totalQueued()), 0)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 0)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 0)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[3])), 100)
     assert.equal(fromEther(await pp.getQueuedTokens(accounts[3], 0)), 0)
     assert.equal(fromEther(await token.balanceOf(accounts[3])), 9900)
 
     await pp.connect(signers[4]).deposit(toEther(1000), true, ['0x'])
     assert.equal(fromEther(await pp.totalQueued()), 1000)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 1000)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[4])), 0)
     assert.equal(fromEther(await pp.getQueuedTokens(accounts[4], 0)), 1000)
     assert.equal(fromEther(await token.balanceOf(accounts[4])), 9000)
@@ -158,48 +152,48 @@ describe('PriorityPool', () => {
   })
 
   it('deposit should work correctly with queued withdrawals', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool } = await loadFixture(deployFixture)
+    const { signers, accounts, pp, token, stakingPool, withdrawalPool } = await loadFixture(deployFixture)
 
-    await stakingPool.approve(adrs.pp, ethers.MaxUint256)
+    await stakingPool.approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(99), true, ['0x'])
     await pp.withdraw(toEther(20), 0, 0, [], false, true, ['0x'])
     await pp.connect(signers[1]).deposit(toEther(15), true, ['0x'])
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 15)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.withdrawalPool)), 5)
-    assert.equal(fromEther(await token.balanceOf(adrs.withdrawalPool)), 15)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 5)
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 15)
 
     await pp.connect(signers[1]).deposit(toEther(30), true, ['0x'])
     assert.equal(fromEther(await stakingPool.balanceOf(accounts[1])), 45)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.withdrawalPool)), 0)
-    assert.equal(fromEther(await token.balanceOf(adrs.withdrawalPool)), 20)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 0)
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 20)
   })
 
   it('depositQueuedTokens should work correctly', async () => {
-    const { signers, adrs, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
+    const { signers, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await pp.deposit(toEther(2000), true, ['0x'])
     await pp.withdraw(1000, 0, 0, [], true, false, ['0x'])
-    await token.transfer(adrs.strategy, toEther(1000))
+    await token.transfer(strategy.target, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
     await pp.connect(signers[2]).deposit(toEther(500), true, ['0x'])
     await strategy.setMaxDeposits(toEther(3500))
 
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 3000)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 1000)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 1000)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 3000)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
       [1000, 500]
     )
 
-    await token.transfer(adrs.stakingPool, toEther(500))
+    await token.transfer(stakingPool.target, toEther(500))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 3500)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 1000)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 1000)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 3500)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
@@ -207,11 +201,11 @@ describe('PriorityPool', () => {
     )
 
     await strategy.setMaxDeposits(toEther(4000))
-    await token.transfer(adrs.stakingPool, toEther(200))
+    await token.transfer(stakingPool.target, toEther(200))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 4000)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 700)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 1300)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 4000)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 700)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1300)
     assert.equal(fromEther(await pp.totalQueued()), 700)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
@@ -219,11 +213,11 @@ describe('PriorityPool', () => {
     )
 
     await strategy.setMaxDeposits(toEther(4850))
-    await token.transfer(adrs.stakingPool, toEther(100))
+    await token.transfer(stakingPool.target, toEther(100))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 4800)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 0)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 2000)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 4800)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 2000)
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
@@ -242,7 +236,7 @@ describe('PriorityPool', () => {
     await expect(
       pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
     ).to.be.revertedWithCustomError(pp, 'InsufficientQueuedTokens()')
-    await token.transfer(adrs.stakingPool, toEther(1))
+    await token.transfer(stakingPool.target, toEther(1))
     await pp.depositQueuedTokens(toEther(100), toEther(1000), ['0x'])
 
     await pp.setPoolStatus(2)
@@ -256,7 +250,7 @@ describe('PriorityPool', () => {
   })
 
   it('checkUpkeep should work correctly', async () => {
-    const { adrs, pp, token, strategy } = await loadFixture(deployFixture)
+    const { pp, token, strategy, stakingPool } = await loadFixture(deployFixture)
 
     await strategy.setMaxDeposits(0)
     await pp.deposit(toEther(1000), true, ['0x'])
@@ -267,7 +261,7 @@ describe('PriorityPool', () => {
     await pp.setQueueDepositParams(toEther(1001), toEther(2000))
     assert.deepEqual(await pp.checkUpkeep('0x'), [false, '0x'])
 
-    await token.transfer(adrs.stakingPool, toEther(1))
+    await token.transfer(stakingPool.target, toEther(1))
     await pp.setPoolStatus(2)
     assert.deepEqual(await pp.checkUpkeep('0x'), [false, '0x'])
 
@@ -282,31 +276,31 @@ describe('PriorityPool', () => {
   })
 
   it('performUpkeep should work corectly', async () => {
-    const { signers, adrs, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
+    const { signers, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await pp.deposit(toEther(2000), true, ['0x'])
     await pp.withdraw(1000, 0, 0, [], true, false, ['0x'])
-    await token.transfer(adrs.strategy, toEther(1000))
+    await token.transfer(strategy.target, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
     await pp.connect(signers[2]).deposit(toEther(500), true, ['0x'])
     await strategy.setMaxDeposits(toEther(3500))
 
     await pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 3000)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 1000)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 1000)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 3000)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
       [1000, 500]
     )
 
-    await token.transfer(adrs.stakingPool, toEther(500))
+    await token.transfer(stakingPool.target, toEther(500))
     await pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 3500)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 1000)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 1000)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 3500)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 1000)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
@@ -314,11 +308,11 @@ describe('PriorityPool', () => {
     )
 
     await strategy.setMaxDeposits(toEther(4000))
-    await token.transfer(adrs.stakingPool, toEther(200))
+    await token.transfer(stakingPool.target, toEther(200))
     await pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 4000)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 700)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 1300)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 4000)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 700)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1300)
     assert.equal(fromEther(await pp.totalQueued()), 700)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
@@ -326,11 +320,11 @@ describe('PriorityPool', () => {
     )
 
     await strategy.setMaxDeposits(toEther(4850))
-    await token.transfer(adrs.stakingPool, toEther(100))
+    await token.transfer(stakingPool.target, toEther(100))
     await pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
-    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 4800)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 0)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 2000)
+    assert.equal(fromEther(await token.balanceOf(strategy.target)), 4800)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 2000)
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.deepEqual(
       (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
@@ -349,7 +343,7 @@ describe('PriorityPool', () => {
     await expect(
       pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
     ).to.be.revertedWithCustomError(pp, 'InsufficientQueuedTokens()')
-    await token.transfer(adrs.stakingPool, toEther(1))
+    await token.transfer(stakingPool.target, toEther(1))
     await pp.performUpkeep(ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']]))
 
     await pp.setPoolStatus(2)
@@ -405,10 +399,10 @@ describe('PriorityPool', () => {
   })
 
   it('updateDistribution should work correctly', async () => {
-    const { signers, adrs, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
+    const { signers, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await pp.deposit(toEther(2000), true, ['0x'])
-    await token.transfer(adrs.strategy, toEther(1000))
+    await token.transfer(strategy.target, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
     await pp.connect(signers[2]).deposit(toEther(500), true, ['0x'])
@@ -455,7 +449,7 @@ describe('PriorityPool', () => {
   })
 
   it('claimLSDTokens should work correctly', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
       deployFixture
     )
 
@@ -502,7 +496,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await pp.getLSDTokens(accounts[0], data[1][2])), 0)
     assert.equal(fromEther(await pp.getQueuedTokens(accounts[0], data[1][1])), 700)
 
-    await token.transfer(adrs.strategy, toEther(1500))
+    await token.transfer(strategy.target, toEther(1500))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     await pp.connect(signers[1]).claimLSDTokens(toEther(150), toEther(150), tree.getProof(2))
@@ -516,7 +510,7 @@ describe('PriorityPool', () => {
   })
 
   it('unqueueTokens should work correctly', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
       deployFixture
     )
 
@@ -591,7 +585,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await pp.getLSDTokens(accounts[2], data[3][2])), 50)
     assert.equal(fromEther(await pp.getQueuedTokens(accounts[2], data[3][1])), 0)
 
-    await token.transfer(adrs.strategy, toEther(1500))
+    await token.transfer(strategy.target, toEther(1500))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     await pp
@@ -610,14 +604,14 @@ describe('PriorityPool', () => {
   })
 
   it('withdraw should work correctly', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
       deployFixture
     )
 
-    await stakingPool.connect(signers[1]).approve(adrs.pp, ethers.MaxUint256)
-    await stakingPool.connect(signers[2]).approve(adrs.pp, ethers.MaxUint256)
+    await stakingPool.connect(signers[1]).approve(pp.target, ethers.MaxUint256)
+    await stakingPool.connect(signers[2]).approve(pp.target, ethers.MaxUint256)
     await pp.connect(signers[1]).deposit(toEther(2000), true, ['0x'])
-    await token.transfer(adrs.strategy, toEther(1000))
+    await token.transfer(strategy.target, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await pp.deposit(toEther(100), true, ['0x'])
     await pp.connect(signers[2]).deposit(toEther(100), true, ['0x'])
@@ -657,31 +651,31 @@ describe('PriorityPool', () => {
   })
 
   it('withdraw should work correctly with queued withdrawals', async () => {
-    const { adrs, pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(
+    const { pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(
       deployFixture
     )
 
-    await stakingPool.approve(adrs.pp, ethers.MaxUint256)
+    await stakingPool.approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(100), true, ['0x'])
     await pp.withdraw(toEther(50), 0, 0, [], true, true, ['0x'])
     await strategy.setMinDeposits(0)
     await pp.withdraw(toEther(10), 0, 0, [], true, true, ['0x'])
 
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.withdrawalPool)), 60)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 60)
     assert.equal(fromEther(await withdrawalPool.getTotalQueuedWithdrawals()), 60)
-    assert.equal(fromEther(await token.balanceOf(adrs.withdrawalPool)), 0)
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 0)
   })
 
   it('withdraw should work correctly with queued tokens', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
       deployFixture
     )
 
-    await stakingPool.connect(signers[1]).approve(adrs.pp, ethers.MaxUint256)
-    await stakingPool.connect(signers[2]).approve(adrs.pp, ethers.MaxUint256)
+    await stakingPool.connect(signers[1]).approve(pp.target, ethers.MaxUint256)
+    await stakingPool.connect(signers[2]).approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(1000), true, ['0x'])
     await pp.withdraw(1000, 0, 0, [], true, false, ['0x'])
-    await token.transfer(adrs.strategy, toEther(1000))
+    await token.transfer(strategy.target, toEther(1000))
     await stakingPool.updateStrategyRewards([0], '0x')
     await pp.connect(signers[1]).deposit(toEther(100), true, ['0x'])
     await pp.connect(signers[2]).deposit(toEther(200), true, ['0x'])
@@ -760,7 +754,7 @@ describe('PriorityPool', () => {
   })
 
   it('onTokenTransfer should work correctly', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool } = await loadFixture(deployFixture)
+    const { signers, accounts, pp, token, stakingPool } = await loadFixture(deployFixture)
 
     await expect(
       pp.onTokenTransfer(
@@ -771,7 +765,7 @@ describe('PriorityPool', () => {
     ).to.be.revertedWithCustomError(pp, 'UnauthorizedToken()')
     await expect(
       token.transferAndCall(
-        adrs.pp,
+        pp.target,
         0,
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
       )
@@ -780,14 +774,14 @@ describe('PriorityPool', () => {
     await token
       .connect(signers[1])
       .transferAndCall(
-        adrs.pp,
+        pp.target,
         toEther(2000),
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
       )
     await token
       .connect(signers[1])
       .transferAndCall(
-        adrs.pp,
+        pp.target,
         toEther(2000),
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
       )
@@ -798,7 +792,7 @@ describe('PriorityPool', () => {
     await token
       .connect(signers[1])
       .transferAndCall(
-        adrs.pp,
+        pp.target,
         toEther(2000),
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [true, ['0x']])
       )
@@ -809,7 +803,7 @@ describe('PriorityPool', () => {
     await stakingPool
       .connect(signers[1])
       .transferAndCall(
-        adrs.pp,
+        pp.target,
         toEther(100),
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
       )
@@ -819,11 +813,11 @@ describe('PriorityPool', () => {
   })
 
   it('executeQueuedWithdrawals should work correctly', async () => {
-    const { adrs, pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(
+    const { pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(
       deployFixture
     )
 
-    await stakingPool.approve(adrs.pp, ethers.MaxUint256)
+    await stakingPool.approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(1100), true, ['0x'])
     await pp.withdraw(toEther(950), 0, 0, [], false, true, ['0x'])
     await strategy.setMinDeposits(toEther(200))
@@ -832,10 +826,10 @@ describe('PriorityPool', () => {
       ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [['0x']])
     )
 
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.withdrawalPool)), 50)
-    assert.equal(fromEther(await token.balanceOf(adrs.withdrawalPool)), 800)
-    assert.equal(fromEther(await stakingPool.balanceOf(adrs.pp)), 100)
-    assert.equal(fromEther(await token.balanceOf(adrs.pp)), 0)
+    assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 50)
+    assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 800)
+    assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 100)
+    assert.equal(fromEther(await token.balanceOf(pp.target)), 0)
     assert.equal(fromEther(await stakingPool.totalStaked()), 200)
   })
 

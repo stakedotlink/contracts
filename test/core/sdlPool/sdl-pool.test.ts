@@ -6,6 +6,7 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  getConnection,
 } from '../../utils/helpers'
 import {
   DelegatorPool,
@@ -14,9 +15,10 @@ import {
   RewardsPool,
   SDLPool,
   StakingAllowance,
-} from '../../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const DAY = 86400
 
@@ -703,7 +705,7 @@ describe('SDLPool', () => {
     )
 
     await time.increase(200 * DAY)
-    sdlPool.withdraw(1, toEther(1))
+    await sdlPool.withdraw(1, toEther(1))
   })
 
   it('only the lock owner should be able to withdraw, lock id must be valid', async () => {
@@ -728,7 +730,7 @@ describe('SDLPool', () => {
       'InvalidLockId()'
     )
 
-    sdlPool.withdraw(1, toEther(1))
+    await sdlPool.withdraw(1, toEther(1))
   })
 
   it('should be able to transfer ownership of locks using transferFrom', async () => {

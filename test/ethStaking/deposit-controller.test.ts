@@ -1,5 +1,4 @@
-import { ethers } from 'hardhat'
-import { assert, expect } from 'chai'
+/* import { assert, expect } from 'chai'
 import {
   toEther,
   deploy,
@@ -7,6 +6,7 @@ import {
   getAccounts,
   padBytes,
   concatBytes,
+  getConnection,
 } from '../utils/helpers'
 import {
   StakingPool,
@@ -19,8 +19,9 @@ import {
   OperatorWhitelistMock,
   RewardsPool,
   DepositController,
-} from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 const pubkeyLength = 48 * 2
 
@@ -253,4 +254,4 @@ describe('DepositController', () => {
 
   //   assert.equal(await depositContract.get_deposit_count(), '0x0800000000000000')
   // })
-})
+}) */

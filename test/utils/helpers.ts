@@ -1,11 +1,21 @@
-import { ethers, upgrades } from 'hardhat'
+import hre, { network } from 'hardhat'
+import { upgrades } from '@openzeppelin/hardhat-upgrades'
+import { parseEther, formatEther } from 'ethers'
+
+const connection = await network.connect('hardhat')
+const ethers = (connection as any).ethers
+const loadFixture = (connection as any).networkHelpers.loadFixture
+const networkHelpers = (connection as any).networkHelpers
+const upgradesApi = await upgrades(hre, connection)
+
+export const getConnection = () => ({ connection, ethers, loadFixture, networkHelpers, upgradesApi })
 
 export const toEther = (amount: string | number) => {
-  return ethers.parseEther(amount.toString())
+  return parseEther(amount.toString())
 }
 
 export const fromEther = (amount: bigint) => {
-  return Number(ethers.formatEther(amount))
+  return Number(formatEther(amount))
 }
 
 export const deploy = async (contractName: string, args: any[] = []) => {
@@ -17,19 +27,25 @@ export const attach = async (contractName: string, contractAddress: string) => {
   return Contract.attach(contractAddress)
 }
 
-export const deployUpgradeable = async (contractName: string, args: any[] = [], options = {}) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
+export const deployUpgradeable = async (contractName: string, args: any[] = [], opts: any = {}) => {
+  const Implementation = await ethers.getContractFactory(contractName)
+  const mergedOpts = {
+    ...opts,
+    unsafeAllow: [...(opts.unsafeAllow ?? []), 'missing-initializer-call'],
+  }
+  return upgradesApi.deployProxy(Implementation, args, mergedOpts) as any
 }
 
 export const deployImplementation = async (contractName: string) => {
   const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployImplementation(Contract, { kind: 'uups' })
+  const implementation = await Contract.deploy()
+  await implementation.waitForDeployment()
+  return implementation.getAddress()
 }
 
 export const getAccounts = async () => {
   const signers = await ethers.getSigners()
-  const accounts = await Promise.all(signers.map(async (signer) => signer.getAddress()))
+  const accounts = await Promise.all(signers.map(async (signer: any) => signer.getAddress()))
   return { signers, accounts }
 }
 

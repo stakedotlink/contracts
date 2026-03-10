@@ -6,6 +6,7 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  getConnection,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -17,10 +18,10 @@ import {
   StakingAllowance,
   RewardsPoolWSD,
   StakingProxy,
-} from '../../typechain-types'
-import { ethers } from 'hardhat'
+} from '../../types/ethers-contracts'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('StakingProxy', () => {
   async function deployFixture() {

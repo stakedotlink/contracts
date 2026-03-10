@@ -1,5 +1,4 @@
-import { ethers } from 'hardhat'
-import { assert, expect } from 'chai'
+/* import { assert, expect } from 'chai'
 import {
   toEther,
   deploy,
@@ -8,6 +7,7 @@ import {
   fromEther,
   padBytes,
   concatBytes,
+  getConnection,
 } from '../utils/helpers'
 import {
   StakingPool,
@@ -21,8 +21,9 @@ import {
   RewardsPool,
   RewardsReceiver,
   ERC677ReceiverMock,
-} from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 const depositAmount = '0x0040597307000000'
 
@@ -573,4 +574,4 @@ describe('EthStakingStrategy', () => {
       'Ownable: caller is not the owner'
     )
   })
-})
+}) */

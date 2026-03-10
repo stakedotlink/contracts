@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,7 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
 import {
   ERC20,
@@ -16,8 +16,10 @@ import {
   EspressoVault,
   EspressoStrategy,
   StakingPool,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const exitEscrowPeriod = 86400 // 1 day
 
@@ -538,13 +540,13 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 50)
 
     // Should revert if escrow period hasn't passed
-    await expect(strategy.claimUnbond([0])).to.be.reverted
+    await expect(strategy.claimUnbond([0])).to.revert(ethers)
 
     // Advance time past escrow period
     await time.increase(exitEscrowPeriod)
 
     // Should revert if wrong number of vaults provided
-    await expect(strategy.claimUnbond([0, 1])).to.be.reverted
+    await expect(strategy.claimUnbond([0, 1])).to.revert(ethers)
 
     await expect(strategy.claimUnbond([])).to.be.revertedWithCustomError(
       strategy,
@@ -653,8 +655,8 @@ describe('EspressoStrategy', () => {
     // Verify fee receivers got their fees (10% of 60 = 6, 5% of 60 = 3)
     const postBalanceFee1 = await stakingPool.balanceOf(accounts[1])
     const postBalanceFee2 = await stakingPool.balanceOf(accounts[2])
-    assert.closeTo(fromEther(postBalanceFee1 - preBalanceFee1), 6, 0.01)
-    assert.closeTo(fromEther(postBalanceFee2 - preBalanceFee2), 3, 0.01)
+    assert.equal(fromEther(postBalanceFee1 - preBalanceFee1), 6)
+    assert.equal(fromEther(postBalanceFee2 - preBalanceFee2), 3)
 
     // Add more rewards and verify accumulation
     await strategy.updateLifetimeRewards([0, 1, 2], [toEther(25), toEther(35), toEther(40)])

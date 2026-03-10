@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,7 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -16,9 +16,11 @@ import {
   StakingPool,
   PriorityPool,
   CommunityVCS,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
-import { WithdrawalPool } from '../../typechain-types/contracts/core/test/WithdrawalPoolMock.sol'
+} from '../../types/ethers-contracts'
+import { WithdrawalPool } from '../../types/ethers-contracts/contracts/core/test/WithdrawalPoolMock.sol'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400

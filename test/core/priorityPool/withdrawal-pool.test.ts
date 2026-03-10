@@ -6,6 +6,7 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  getConnection,
 } from '../../utils/helpers'
 import {
   ERC677,
@@ -13,9 +14,10 @@ import {
   StakingPool,
   StrategyMock,
   WithdrawalPool,
-} from '../../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 describe('WithdrawalPool', () => {
   async function deployFixture() {
@@ -105,7 +107,7 @@ describe('WithdrawalPool', () => {
     await withdrawalPool.queueWithdrawal(accounts[0], toEther(500))
     await withdrawalPool.deposit(toEther(400))
 
-    await expect(withdrawalPool.deposit(toEther(1751))).to.be.reverted
+    await expect(withdrawalPool.deposit(toEther(1751))).to.revert(ethers)
 
     assert.equal(fromEther(await token.balanceOf(withdrawalPool.target)), 400)
     assert.equal(fromEther(await stakingPool.balanceOf(withdrawalPool.target)), 1350)

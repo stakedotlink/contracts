@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert } from 'chai'
 import {
   toEther,
@@ -7,9 +6,11 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('WrappedSDToken', () => {
   async function deployFixture() {

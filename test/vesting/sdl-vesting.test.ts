@@ -1,4 +1,4 @@
-import { toEther, deploy, getAccounts, fromEther, deployUpgradeable } from '../utils/helpers'
+import { toEther, deploy, getAccounts, fromEther, deployUpgradeable, getConnection } from '../utils/helpers'
 import {
   LinearBoostController,
   RewardsPool,
@@ -6,10 +6,11 @@ import {
   SDLVesting,
   StakingAllowance,
   ERC677,
-} from '../../typechain-types'
+} from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
-import { ethers } from 'hardhat'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const DAY = 86400
 

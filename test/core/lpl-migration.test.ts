@@ -1,39 +1,36 @@
-import { toEther, deploy, getAccounts, setupToken, fromEther } from '../utils/helpers'
-import { ERC677, StakingAllowance, LPLMigration } from '../../typechain-types'
+import { toEther, deploy, getAccounts, setupToken, fromEther, getConnection } from '../utils/helpers'
+import { ERC677, StakingAllowance, LPLMigration } from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
-import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
+
+const { loadFixture } = getConnection()
 
 describe('LPLMigration', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const lplToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'LinkPool',
       'LPL',
       100000000,
     ])) as ERC677
-    adrs.lplToken = await lplToken.getAddress()
     await setupToken(lplToken, accounts)
 
     const sdlToken = (await deploy('StakingAllowance', [
       'Stake Dot Link',
       'SDL',
     ])) as StakingAllowance
-    adrs.sdlToken = await sdlToken.getAddress()
 
     const lplMigration = (await deploy('LPLMigration', [
-      adrs.lplToken,
-      adrs.sdlToken,
+      lplToken.target,
+      sdlToken.target,
     ])) as LPLMigration
-    adrs.lplMigration = await lplMigration.getAddress()
 
     await sdlToken.mint(accounts[0], toEther(50000000))
-    await sdlToken.transfer(adrs.lplMigration, toEther(50000000))
-    await lplToken.connect(signers[1]).transferAndCall(adrs.lplMigration, toEther(10000), '0x')
-    await lplToken.connect(signers[2]).transferAndCall(adrs.lplMigration, toEther(100), '0x')
+    await sdlToken.transfer(lplMigration.target, toEther(50000000))
+    await lplToken.connect(signers[1]).transferAndCall(lplMigration.target, toEther(10000), '0x')
+    await lplToken.connect(signers[2]).transferAndCall(lplMigration.target, toEther(100), '0x')
 
-    return { signers, accounts, adrs, lplToken, sdlToken, lplMigration }
+    return { signers, accounts, lplToken, sdlToken, lplMigration }
   }
 
   it('should be able to swap LPL for SDL', async () => {
@@ -62,25 +59,25 @@ describe('LPLMigration', () => {
   })
 
   it('should be correct amount of LPL and SDL in contract', async () => {
-    const { adrs, lplToken, sdlToken } = await loadFixture(deployFixture)
+    const { lplToken, sdlToken, lplMigration } = await loadFixture(deployFixture)
 
     assert.equal(
-      fromEther(await lplToken.balanceOf(adrs.lplMigration)),
+      fromEther(await lplToken.balanceOf(lplMigration.target)),
       10100,
       'Should be 10100 LPL locked in migration contract'
     )
     assert.equal(
-      fromEther(await sdlToken.balanceOf(adrs.lplMigration)),
+      fromEther(await sdlToken.balanceOf(lplMigration.target)),
       49994950,
       'Should be 4994950 SDL left in migration contract'
     )
   })
 
   it('should not be able to swap more than LPL balance', async () => {
-    const { adrs, signers, lplToken } = await loadFixture(deployFixture)
+    const { signers, lplToken, lplMigration } = await loadFixture(deployFixture)
 
     await expect(
-      lplToken.connect(signers[2]).transferAndCall(adrs.lplMigration, toEther(10000), '0x')
+      lplToken.connect(signers[2]).transferAndCall(lplMigration.target, toEther(10000), '0x')
     ).to.be.revertedWith('ERC20: transfer amount exceeds balance')
   })
 

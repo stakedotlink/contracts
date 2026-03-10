@@ -5,11 +5,12 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  getConnection,
 } from '../utils/helpers'
-import { LSTMock, LSTRewardsSplitterController, StakingPool } from '../../typechain-types'
+import { LSTMock, LSTRewardsSplitterController, StakingPool } from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
-import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
-import { ethers } from 'hardhat'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('LSTRewardsSplitter', () => {
   async function deployFixture() {
@@ -77,7 +78,7 @@ describe('LSTRewardsSplitter', () => {
     await expect(
       controller.connect(signers[2]).withdraw(toEther(100))
     ).to.be.revertedWithCustomError(controller, 'SenderNotAuthorized()')
-    await expect(controller.withdraw(toEther(101))).to.be.reverted
+    await expect(controller.withdraw(toEther(101))).to.revert(ethers)
 
     let acc0Balance = await token.balanceOf(accounts[0])
     let acc1Balance = await token.balanceOf(accounts[1])

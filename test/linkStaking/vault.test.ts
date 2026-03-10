@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,9 +6,12 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -17,80 +19,75 @@ const claimPeriod = 7 * 86400
 describe('Vault', () => {
   async function deployFixture() {
     const { accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
     await setupToken(token, accounts)
 
     const rewardsController = (await deploy('StakingRewardsMock', [
-      adrs.token,
+      token.target,
     ])) as StakingRewardsMock
-    adrs.rewardsController = await rewardsController.getAddress()
 
     const stakingController = (await deploy('StakingMock', [
-      adrs.token,
-      adrs.rewardsController,
+      token.target,
+      rewardsController.target,
       toEther(10),
       toEther(100),
       toEther(10000),
       unbondingPeriod,
       claimPeriod,
     ])) as StakingMock
-    adrs.stakingController = await stakingController.getAddress()
 
     const vault = (await deployUpgradeable('CommunityVault', [
-      adrs.token,
+      token.target,
       accounts[0],
-      adrs.stakingController,
-      adrs.rewardsController,
+      stakingController.target,
+      rewardsController.target,
       accounts[0],
     ])) as CommunityVault
-    adrs.vault = await vault.getAddress()
 
-    await token.approve(adrs.vault, ethers.MaxUint256)
+    await token.approve(vault.target, ethers.MaxUint256)
 
-    return { accounts, adrs, token, rewardsController, stakingController, vault }
+    return { accounts, token, rewardsController, stakingController, vault }
   }
 
   it('should be able to deposit', async () => {
-    const { adrs, vault, token, stakingController } = await loadFixture(deployFixture)
+    const { vault, token, stakingController } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 100)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 100)
     assert.equal(
-      fromEther(await stakingController.getStakerPrincipal(adrs.vault)),
+      fromEther(await stakingController.getStakerPrincipal(vault.target)),
       100,
       'balance does not match'
     )
 
     await vault.deposit(toEther(200))
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 300)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 300)
     assert.equal(
-      fromEther(await stakingController.getStakerPrincipal(adrs.vault)),
+      fromEther(await stakingController.getStakerPrincipal(vault.target)),
       300,
       'balance does not match'
     )
   })
 
   it('should be able to unbond', async () => {
-    const { adrs, vault, stakingController } = await loadFixture(deployFixture)
+    const { vault, stakingController } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
     await vault.unbond()
     let ts: any = (await ethers.provider.getBlock('latest'))?.timestamp
     assert.equal(
-      Number(await stakingController.getClaimPeriodEndsAt(adrs.vault)),
+      Number(await stakingController.getClaimPeriodEndsAt(vault.target)),
       ts + unbondingPeriod + claimPeriod
     )
   })
 
   it('should be able to withdraw', async () => {
-    const { adrs, vault, token, stakingController } = await loadFixture(deployFixture)
+    const { vault, token, stakingController } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
     await vault.unbond()
@@ -104,7 +101,7 @@ describe('Vault', () => {
 
     await vault.withdraw(toEther(30))
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
-    assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 70)
+    assert.equal(fromEther(await token.balanceOf(stakingController.target)), 70)
   })
 
   it('getPrincipalDeposits should work correctly', async () => {
@@ -118,25 +115,25 @@ describe('Vault', () => {
   })
 
   it('getRewards should work correctly', async () => {
-    const { adrs, vault, rewardsController } = await loadFixture(deployFixture)
+    const { vault, rewardsController } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     assert.equal(fromEther(await vault.getRewards()), 10)
 
-    await rewardsController.setReward(adrs.vault, toEther(40))
+    await rewardsController.setReward(vault.target, toEther(40))
     assert.equal(fromEther(await vault.getRewards()), 40)
   })
 
   it('getTotalDeposits should work correctly', async () => {
-    const { adrs, vault, rewardsController } = await loadFixture(deployFixture)
+    const { vault, rewardsController } = await loadFixture(deployFixture)
 
     await vault.deposit(toEther(100))
-    await rewardsController.setReward(adrs.vault, toEther(10))
+    await rewardsController.setReward(vault.target, toEther(10))
     assert.equal(fromEther(await vault.getTotalDeposits()), 110)
 
     await vault.deposit(toEther(150))
-    await rewardsController.setReward(adrs.vault, toEther(40))
+    await rewardsController.setReward(vault.target, toEther(40))
     assert.equal(fromEther(await vault.getTotalDeposits()), 290)
   })
 

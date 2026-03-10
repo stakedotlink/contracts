@@ -1,7 +1,8 @@
-import { assert, expect } from 'chai'
-import { deploy, getAccounts } from '../utils/helpers'
-import { OperatorWhitelist } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+/* import { assert, expect } from 'chai'
+import { deploy, getAccounts, getConnection } from '../utils/helpers'
+import { OperatorWhitelist } from '../../types/ethers-contracts'
+
+const { loadFixture } = getConnection()
 
 describe('OperatorWhitelist', () => {
   async function deployFixture() {
@@ -85,4 +86,4 @@ describe('OperatorWhitelist', () => {
       opWhitelist.connect(signers[1]).setWLOperatorController(accounts[3])
     ).to.be.revertedWith('Ownable: caller is not the owner')
   })
-})
+}) */

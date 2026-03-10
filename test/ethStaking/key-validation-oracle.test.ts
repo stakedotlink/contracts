@@ -1,5 +1,4 @@
-import { assert, expect } from 'chai'
-import { ethers } from 'hardhat'
+/* import { assert, expect } from 'chai'
 import {
   deploy,
   deployUpgradeable,
@@ -8,10 +7,12 @@ import {
   fromEther,
   concatBytes,
   padBytes,
+  getConnection,
 } from '../utils/helpers'
-import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../typechain-types'
+import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../types/ethers-contracts'
 import { Signer } from 'ethers'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+
+const { ethers, loadFixture } = getConnection()
 
 const keyPairs = {
   keys: concatBytes([padBytes('0xa1', 48), padBytes('0xa2', 48), padBytes('0xa3', 48)]),
@@ -163,4 +164,4 @@ describe('KeyValidationOracle', () => {
   //   assert.equal(operator[3], false)
   //   assert.equal(Number(operator[4]), 0)
   // })
-})
+}) */

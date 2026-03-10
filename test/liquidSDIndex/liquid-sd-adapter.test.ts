@@ -1,30 +1,28 @@
 import { assert, expect } from 'chai'
-import { deploy, deployUpgradeable, fromEther, getAccounts, toEther } from '../utils/helpers'
-import { ERC677, LSDIndexAdapterMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { deploy, deployUpgradeable, fromEther, getAccounts, toEther, getConnection } from '../utils/helpers'
+import { ERC677, LSDIndexAdapterMock } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('LSDIndexAdapter', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const lsd = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Liquid SD Token',
       'LSD',
       100000000,
     ])) as ERC677
-    adrs.lsd = await lsd.getAddress()
 
     const adapter = (await deployUpgradeable('LSDIndexAdapterMock', [
-      adrs.lsd,
+      lsd.target,
       accounts[0],
       toEther(2),
     ])) as LSDIndexAdapterMock
-    adrs.adapter = await adapter.getAddress()
 
-    await lsd.transfer(adrs.adapter, toEther(1000))
+    await lsd.transfer(adapter.target, toEther(1000))
 
-    return { signers, accounts, adrs, lsd, adapter }
+    return { signers, accounts, lsd, adapter }
   }
 
   it('getExchangeRate should work correctly', async () => {
@@ -58,13 +56,13 @@ describe('LSDIndexAdapter', () => {
   })
 
   it('index pool should be able to withdraw', async () => {
-    const { signers, accounts, adrs, adapter, lsd } = await loadFixture(deployFixture)
+    const { signers, accounts, adapter, lsd } = await loadFixture(deployFixture)
 
-    await lsd.transferFrom(adrs.adapter, accounts[1], toEther(500))
+    await lsd.transferFrom(adapter.target, accounts[1], toEther(500))
     assert.equal(fromEther(await adapter.getTotalDepositsLSD()), 500)
     assert.equal(fromEther(await adapter.getTotalDeposits()), 1000)
 
-    await expect(lsd.connect(signers[1]).transferFrom(adrs.adapter, accounts[1], toEther(500))).to
-      .be.reverted
+    await expect(lsd.connect(signers[1]).transferFrom(adapter.target, accounts[1], toEther(500))).to
+      .revert(ethers)
   })
 })

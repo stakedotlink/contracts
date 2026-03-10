@@ -1,6 +1,12 @@
-import { ethers } from 'hardhat'
 import { assert } from 'chai'
-import { toEther, deploy, deployUpgradeable, getAccounts, setupToken } from '../../utils/helpers'
+import {
+  toEther,
+  deploy,
+  deployUpgradeable,
+  getAccounts,
+  setupToken,
+  getConnection,
+} from '../../utils/helpers'
 import {
   ERC677,
   StrategyMock,
@@ -8,8 +14,9 @@ import {
   WrappedSDToken,
   WLSTUSDCChainlinkPriceAdapter,
   ChainlinkAggregatorMock,
-} from '../../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('WLSTUSDCChainlinkPriceAdapter', () => {
   async function deployFixture() {
@@ -110,7 +117,7 @@ describe('WLSTUSDCChainlinkPriceAdapter', () => {
     await stakingPool.updateStrategyRewards([0], '0x')
 
     const [, answer, , ,] = await adapter.latestRoundData()
-    assert.closeTo(Number(answer) / 1e8, 25, 0.01)
+    assert.isTrue(Math.abs(Number(answer) / 1e8 - 25) < 0.01, `Expected ~25, got ${Number(answer) / 1e8}`)
   })
 
   it('should return correct price when USDC depegs to $0.99', async () => {
@@ -119,7 +126,7 @@ describe('WLSTUSDCChainlinkPriceAdapter', () => {
     await usdcUSDFeed.updateAnswer(99000000)
 
     const [, answer, , ,] = await adapter.latestRoundData()
-    assert.closeTo(Number(answer) / 1e8, 20.2, 0.01)
+    assert.isTrue(Math.abs(Number(answer) / 1e8 - 20.2) < 0.01, `Expected ~20.2, got ${Number(answer) / 1e8}`)
   })
 
   it('should return correct price when LINK drops to $15', async () => {
@@ -152,6 +159,6 @@ describe('WLSTUSDCChainlinkPriceAdapter', () => {
     await underlyingUSDFeed.updateAnswer(3000000000)
 
     const [, answer, , ,] = await adapter.latestRoundData()
-    assert.closeTo(Number(answer) / 1e8, 60, 0.01)
+    assert.isTrue(Math.abs(Number(answer) / 1e8 - 60) < 0.01, `Expected ~60, got ${Number(answer) / 1e8}`)
   })
 })
