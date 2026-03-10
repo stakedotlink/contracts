@@ -154,7 +154,7 @@ describe('OperatorVault', () => {
 
     await rewardsController.setReward(vault.target, toEther(10))
     assert.deepEqual(
-      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v: bigint) => fromEther(v)),
       [110, 100, 1]
     )
     await strategy.updateDeposits(0, accounts[3])
@@ -164,7 +164,7 @@ describe('OperatorVault', () => {
 
     await rewardsController.setReward(vault.target, toEther(5))
     assert.deepEqual(
-      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v: bigint) => fromEther(v)),
       [105, 100, 0]
     )
     await strategy.updateDeposits(0, accounts[3])
@@ -174,7 +174,7 @@ describe('OperatorVault', () => {
 
     await rewardsController.setReward(vault.target, toEther(8))
     assert.deepEqual(
-      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v: bigint) => fromEther(v)),
       [108, 100, 0]
     )
     await strategy.updateDeposits(0, accounts[3])
@@ -184,7 +184,7 @@ describe('OperatorVault', () => {
 
     await rewardsController.setReward(vault.target, toEther(11))
     assert.deepEqual(
-      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v) => fromEther(v)),
+      (await strategy.updateDeposits.staticCall(0, accounts[3])).map((v: bigint) => fromEther(v)),
       [111, 100, 0.1]
     )
     await strategy.updateDeposits(0, accounts[3])
@@ -252,7 +252,7 @@ describe('OperatorVault', () => {
 
     await stakingController.removeOperator(vault.target)
     assert.deepEqual(
-      (await strategy.removeVault.staticCall()).map((v) => fromEther(v)),
+      (await strategy.removeVault.staticCall()).map((v: bigint) => fromEther(v)),
       [100, 10]
     )
     await strategy.removeVault()

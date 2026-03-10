@@ -16,8 +16,8 @@ import {
   StakingPool,
   PriorityPool,
   CommunityVCS,
+  WithdrawalPool,
 } from '../../types/ethers-contracts'
-import { WithdrawalPool } from '../../types/ethers-contracts/contracts/core/test/WithdrawalPoolMock.sol'
 
 const { ethers, loadFixture, networkHelpers } = getConnection()
 const time = networkHelpers.time

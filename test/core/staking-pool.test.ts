@@ -106,7 +106,7 @@ describe('StakingPool', () => {
 
     await stakingPool.addFee(accounts[1], 500)
     assert.deepEqual(
-      (await stakingPool.getFees()).map((fee) => [fee[0], fee[1]]),
+      (await stakingPool.getFees()).map((fee: any) => [fee[0], fee[1]]),
       [
         [accounts[4], 1000n],
         [erc677Receiver.target, 2000n],
@@ -121,7 +121,7 @@ describe('StakingPool', () => {
 
     await stakingPool.updateFee(0, accounts[1], 100)
     assert.deepEqual(
-      (await stakingPool.getFees()).map((fee) => [fee[0], fee[1]]),
+      (await stakingPool.getFees()).map((fee: any) => [fee[0], fee[1]]),
       [
         [accounts[1], 100n],
         [erc677Receiver.target, 2000n],

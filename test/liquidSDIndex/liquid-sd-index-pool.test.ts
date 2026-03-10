@@ -95,7 +95,7 @@ describe('LiquidSDIndexPool', () => {
     await pool.addLSDToken(lsd3.target, adapter3.target, [5000, 3000, 2000])
     assert.deepEqual(await pool.getLSDTokens(), [lsd1.target, lsd2.target, lsd3.target])
     assert.deepEqual(
-      (await pool.getCompositionTargets()).map((t) => Number(t)),
+      (await pool.getCompositionTargets()).map((t: bigint) => Number(t)),
       [5000, 3000, 2000]
     )
     assert.equal(await pool.lsdAdapters(lsd1.target), adapter1.target)
@@ -134,7 +134,7 @@ describe('LiquidSDIndexPool', () => {
 
     assert.deepEqual(await pool.getLSDTokens(), [lsd1.target, lsd3.target])
     assert.deepEqual(
-      (await pool.getCompositionTargets()).map((t) => Number(t)),
+      (await pool.getCompositionTargets()).map((t: bigint) => Number(t)),
       [2000, 8000]
     )
     assert.equal(await pool.lsdAdapters(lsd1.target), adapter1.target)
@@ -216,12 +216,12 @@ describe('LiquidSDIndexPool', () => {
     const { pool } = await loadFixture(deployFixture)
 
     assert.deepEqual(
-      (await pool.getCompositionTargets()).map((t) => Number(t)),
+      (await pool.getCompositionTargets()).map((t: bigint) => Number(t)),
       [7000, 3000]
     )
     await pool.setCompositionTargets([1000, 9000])
     assert.deepEqual(
-      (await pool.getCompositionTargets()).map((t) => Number(t)),
+      (await pool.getCompositionTargets()).map((t: bigint) => Number(t)),
       [1000, 9000]
     )
 
@@ -243,27 +243,27 @@ describe('LiquidSDIndexPool', () => {
     const { signers, pool, lsd1, lsd2 } = await loadFixture(deployFixture)
 
     assert.deepEqual(
-      (await pool.getComposition()).map((c) => Number(c)),
+      (await pool.getComposition()).map((c: bigint) => Number(c)),
       [6666, 3333]
     )
     await pool.deposit(lsd1.target, toEther(1000))
     assert.deepEqual(
-      (await pool.getComposition()).map((c) => Number(c)),
+      (await pool.getComposition()).map((c: bigint) => Number(c)),
       [7500, 2500]
     )
     await pool.deposit(lsd2.target, toEther(500))
     assert.deepEqual(
-      (await pool.getComposition()).map((c) => Number(c)),
+      (await pool.getComposition()).map((c: bigint) => Number(c)),
       [6000, 4000]
     )
     await pool.withdraw(toEther(100))
     assert.deepEqual(
-      (await pool.getComposition()).map((c) => Number(c)),
+      (await pool.getComposition()).map((c: bigint) => Number(c)),
       [6122, 3877]
     )
     await pool.connect(signers[1]).withdraw(toEther(700))
     assert.deepEqual(
-      (await pool.getComposition()).map((c) => Number(c)),
+      (await pool.getComposition()).map((c: bigint) => Number(c)),
       [6999, 3000]
     )
   })
@@ -316,7 +316,7 @@ describe('LiquidSDIndexPool', () => {
     const { pool, adapter1, adapter2 } = await loadFixture(deployFixture)
 
     assert.deepEqual(
-      (await pool.getRewards()).map((e) => fromEther(e)),
+      (await pool.getRewards()).map((e: bigint) => fromEther(e)),
       [0, 0]
     )
 
@@ -324,20 +324,20 @@ describe('LiquidSDIndexPool', () => {
     await adapter2.setExchangeRate(toEther(1))
 
     assert.deepEqual(
-      (await pool.getRewards()).map((e) => fromEther(e)),
+      (await pool.getRewards()).map((e: bigint) => fromEther(e)),
       [500, 75]
     )
 
     await pool.updateRewards()
     assert.deepEqual(
-      (await pool.getRewards()).map((e) => fromEther(e)),
+      (await pool.getRewards()).map((e: bigint) => fromEther(e)),
       [0, 0]
     )
 
     await adapter1.setExchangeRate(toEther(1))
 
     assert.deepEqual(
-      (await pool.getRewards()).map((e) => fromEther(e)),
+      (await pool.getRewards()).map((e: bigint) => fromEther(e)),
       [-1000, 0]
     )
   })
@@ -377,7 +377,7 @@ describe('LiquidSDIndexPool', () => {
     assert.equal(Number(await pool.withdrawalFee()), 50)
 
     assert.deepEqual(
-      (await pool.getWithdrawalAmounts(toEther(500))).map((e) => fromEther(e)),
+      (await pool.getWithdrawalAmounts(toEther(500))).map((e: bigint) => fromEther(e)),
       [398, 99.5]
     )
 
@@ -392,7 +392,7 @@ describe('LiquidSDIndexPool', () => {
     await pool.setWithdrawalFee(200)
 
     assert.deepEqual(
-      (await pool.getWithdrawalAmounts(toEther(100))).map((e) => fromEther(e)),
+      (await pool.getWithdrawalAmounts(toEther(100))).map((e: bigint) => fromEther(e)),
       [0, 98]
     )
 

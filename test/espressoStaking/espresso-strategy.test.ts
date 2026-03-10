@@ -10,7 +10,7 @@ import {
   getConnection,
 } from '../utils/helpers'
 import {
-  ERC20,
+  ERC20Mintable,
   EspressoStakingMock,
   EspressoRewardsMock,
   EspressoVault,
@@ -31,7 +31,7 @@ describe('EspressoStrategy', () => {
       'Espresso',
       'ESP',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const espressoStaking = (await deploy('EspressoStakingMock', [
@@ -170,31 +170,31 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await strategy.totalQueued()), 300)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 300)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     // Withdraw some tokens (only queued tokens can be withdrawn directly)
     await stakingPool.withdraw(accounts[0], accounts[0], toEther(100), ['0x'])
 
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 100)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 100)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 200)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 200)
     assert.equal(fromEther(await strategy.totalQueued()), 200)
     assert.equal(fromEther(await strategy.getMinDeposits()), 0)
 
     // Withdraw more tokens
-    const preBalance2 = await token.balanceOf(accounts[0])
+    const preBalance2: bigint = await token.balanceOf(accounts[0])
     await stakingPool.withdraw(accounts[0], accounts[0], toEther(150), ['0x'])
 
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance2), 150)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance2)), 150)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 50)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 50)
     assert.equal(fromEther(await strategy.totalQueued()), 50)
 
     // Withdraw remaining tokens (leave 10 to avoid dead shares edge case)
-    const preBalance3 = await token.balanceOf(accounts[0])
+    const preBalance3: bigint = await token.balanceOf(accounts[0])
     await stakingPool.withdraw(accounts[0], accounts[0], toEther(40), ['0x'])
 
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance3), 40)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance3)), 40)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 10)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 10)
     assert.equal(fromEther(await strategy.totalQueued()), 10)
@@ -210,10 +210,10 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await strategy.getMinDeposits()), 200)
 
     // Withdraw queued tokens (leave 10 remaining)
-    const preBalance4 = await token.balanceOf(accounts[0])
+    const preBalance4: bigint = await token.balanceOf(accounts[0])
     await stakingPool.withdraw(accounts[0], accounts[0], toEther(100), ['0x'])
 
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance4), 100)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance4)), 100)
     assert.equal(fromEther(await token.balanceOf(strategy.target)), 10)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 210)
     assert.equal(fromEther(await strategy.totalQueued()), 10)
@@ -553,7 +553,7 @@ describe('EspressoStrategy', () => {
       'MustWithdrawAllVaults'
     )
 
-    const preBalance = await token.balanceOf(strategy.target)
+    const preBalance: bigint = await token.balanceOf(strategy.target)
 
     // Successfully claim unbond
     await strategy.claimUnbond([0])
@@ -561,7 +561,7 @@ describe('EspressoStrategy', () => {
     assert.equal(Number(await strategy.numVaultsUnbonding()), 0)
     assert.equal(fromEther(await vaults[0].getQueuedWithdrawals()), 0)
     assert.equal(fromEther(await strategy.totalQueued()), 50)
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance), 50)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance)), 50)
 
     // Test claiming multiple vaults at once
     await strategy.forceUnbond([0, 1, 2], [toEther(30), toEther(40), toEther(50)])
@@ -581,7 +581,7 @@ describe('EspressoStrategy', () => {
       'MustWithdrawAllVaults'
     )
 
-    const preBalance2 = await token.balanceOf(strategy.target)
+    const preBalance2: bigint = await token.balanceOf(strategy.target)
 
     // Successfully claim all unbonding vaults
     await strategy.claimUnbond([0, 1, 2])
@@ -591,7 +591,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[1].getQueuedWithdrawals()), 0)
     assert.equal(fromEther(await vaults[2].getQueuedWithdrawals()), 0)
     assert.equal(fromEther(await strategy.totalQueued()), 170)
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance2), 120)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance2)), 120)
 
     // Verify totalDeposits unchanged (tokens just moved from vaults to strategy)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 300)
@@ -634,8 +634,8 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     // Record pre-balance of fee receivers
-    const preBalanceFee1 = await stakingPool.balanceOf(accounts[1])
-    const preBalanceFee2 = await stakingPool.balanceOf(accounts[2])
+    const preBalanceFee1: bigint = await stakingPool.balanceOf(accounts[1])
+    const preBalanceFee2: bigint = await stakingPool.balanceOf(accounts[2])
 
     // Simulate rewards by updating lifetime rewards on vaults
     await strategy.setRewardsOracle(accounts[0])
@@ -653,10 +653,10 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
     // Verify fee receivers got their fees (10% of 60 = 6, 5% of 60 = 3)
-    const postBalanceFee1 = await stakingPool.balanceOf(accounts[1])
-    const postBalanceFee2 = await stakingPool.balanceOf(accounts[2])
-    assert.equal(fromEther(postBalanceFee1 - preBalanceFee1), 6)
-    assert.equal(fromEther(postBalanceFee2 - preBalanceFee2), 3)
+    const postBalanceFee1: bigint = await stakingPool.balanceOf(accounts[1])
+    const postBalanceFee2: bigint = await stakingPool.balanceOf(accounts[2])
+    assert.equal(fromEther((postBalanceFee1 - preBalanceFee1)), 6)
+    assert.equal(fromEther((postBalanceFee2 - preBalanceFee2)), 3)
 
     // Add more rewards and verify accumulation
     await strategy.updateLifetimeRewards([0, 1, 2], [toEther(25), toEther(35), toEther(40)])
@@ -833,7 +833,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[0].getRewards()), 50)
     assert.equal(fromEther(await vaults[0].getTotalDeposits()), 150)
 
-    const preBalance = await token.balanceOf(strategy.target)
+    const preBalance: bigint = await token.balanceOf(strategy.target)
 
     // Withdraw rewards for single vault
     await strategy.withdrawRewards([0], [toEther(50)], ['0x'])
@@ -843,7 +843,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[0].getTotalDeposits()), 100) // back to principal only
     assert.equal(fromEther(await vaults[0].getPrincipalDeposits()), 100) // unchanged
     assert.equal(fromEther(await strategy.totalQueued()), 50)
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance), 50)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance)), 50)
 
     // Verify rewards were claimed from espresso rewards contract
     assert.equal(fromEther(await espressoRewards.claimedRewards(vaults[0].target)), 50)
@@ -855,7 +855,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[1].getRewards()), 30)
     assert.equal(fromEther(await vaults[2].getRewards()), 40)
 
-    const preBalance2 = await token.balanceOf(strategy.target)
+    const preBalance2: bigint = await token.balanceOf(strategy.target)
 
     // Withdraw rewards for multiple vaults at once
     await strategy.withdrawRewards(
@@ -868,7 +868,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[1].getRewards()), 0)
     assert.equal(fromEther(await vaults[2].getRewards()), 0)
     assert.equal(fromEther(await strategy.totalQueued()), 140) // 50 + 20 + 30 + 40
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance2), 90) // 20 + 30 + 40
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance2)), 90) // 20 + 30 + 40
 
     // Verify claimed rewards tracking
     assert.equal(fromEther(await espressoRewards.claimedRewards(vaults[0].target)), 70)
@@ -876,10 +876,10 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await espressoRewards.claimedRewards(vaults[2].target)), 40)
 
     // Calling withdraw with no new rewards should be a no-op
-    const preBalance3 = await token.balanceOf(strategy.target)
+    const preBalance3: bigint = await token.balanceOf(strategy.target)
     await strategy.withdrawRewards([0], [toEther(70)], ['0x'])
 
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance3), 0)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance3)), 0)
     assert.equal(fromEther(await strategy.totalQueued()), 140) // unchanged
 
     // Test withdrawing with higher lifetime rewards than vault currently knows
@@ -887,14 +887,14 @@ describe('EspressoStrategy', () => {
 
     assert.equal(fromEther(await vaults[0].getRewards()), 30) // 100 - 70
 
-    const preBalance4 = await token.balanceOf(strategy.target)
+    const preBalance4: bigint = await token.balanceOf(strategy.target)
 
     // Withdraw with updated lifetime rewards
     await strategy.withdrawRewards([0], [toEther(110)], ['0x'])
 
     // Should withdraw 40 (110 - 70 already claimed)
     assert.equal(fromEther(await vaults[0].getRewards()), 0)
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance4), 40)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance4)), 40)
     assert.equal(fromEther(await strategy.totalQueued()), 180) // 140 + 40
 
     // Verify principal deposits unchanged throughout
@@ -933,7 +933,7 @@ describe('EspressoStrategy', () => {
 
     assert.equal(await vaults[0].exitIsWithdrawable(), true) // Now withdrawable
 
-    const preBalance = await token.balanceOf(strategy.target)
+    const preBalance: bigint = await token.balanceOf(strategy.target)
 
     // Claim validator exit for single vault
     await strategy.claimValidatorExits([0])
@@ -942,7 +942,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[0].getPrincipalDeposits()), 0)
     assert.equal(fromEther(await vaults[0].getTotalDeposits()), 0)
     assert.equal(fromEther(await strategy.totalQueued()), 100)
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance), 100)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance)), 100)
 
     // Exit multiple validators
     await espressoStaking.exitValidator(validators[1])
@@ -951,7 +951,7 @@ describe('EspressoStrategy', () => {
     assert.equal(await vaults[1].isActive(), false)
     assert.equal(await vaults[2].isActive(), false)
 
-    const preBalance2 = await token.balanceOf(strategy.target)
+    const preBalance2: bigint = await token.balanceOf(strategy.target)
 
     // Claim validator exits for multiple vaults at once
     await strategy.claimValidatorExits([1, 2])
@@ -961,7 +961,7 @@ describe('EspressoStrategy', () => {
     assert.equal(fromEther(await vaults[1].getTotalDeposits()), 0)
     assert.equal(fromEther(await vaults[2].getTotalDeposits()), 0)
     assert.equal(fromEther(await strategy.totalQueued()), 300) // 100 + 100 + 100
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance2), 200)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance2)), 200)
 
     // Verify totalDeposits unchanged (tokens moved from vaults to strategy)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 300)
@@ -1336,11 +1336,11 @@ describe('EspressoStrategy', () => {
     await time.increase(exitEscrowPeriod)
 
     // Removing vault with queued withdrawals should auto-withdraw
-    const preBalance = await token.balanceOf(strategy.target)
+    const preBalance: bigint = await token.balanceOf(strategy.target)
     await strategy.removeVaults([0])
 
     // Tokens should have been withdrawn
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance), 100)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance)), 100)
     assert.equal((await strategy.getVaults()).length, 1)
 
     // Test removing vault after validator exit
@@ -1350,10 +1350,10 @@ describe('EspressoStrategy', () => {
     assert.equal(await vault1.isActive(), false)
 
     // Should auto-claim validator exit when removing
-    const preBalance2 = await token.balanceOf(strategy.target)
+    const preBalance2: bigint = await token.balanceOf(strategy.target)
     await strategy.removeVaults([0])
 
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance2), 100)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance2)), 100)
     assert.equal((await strategy.getVaults()).length, 0)
 
     // Verify vaultWithdrawalIndex is adjusted correctly

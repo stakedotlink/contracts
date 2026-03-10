@@ -10,7 +10,7 @@ import {
   getConnection,
 } from '../utils/helpers'
 import {
-  ERC20,
+  ERC20Mintable,
   EspressoStakingMock,
   EspressoRewardsMock,
   EspressoStrategy,
@@ -34,7 +34,7 @@ describe('EspressoFundFlowController', () => {
       'Espresso',
       'ESP',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const espressoStaking = (await deploy('EspressoStakingMock', [
@@ -481,7 +481,7 @@ describe('EspressoFundFlowController', () => {
     assert.equal(fromEther(await vaults[0].getRewards()), 20)
     assert.equal(fromEther(await vaults[1].getRewards()), 30)
 
-    const preBalance = await token.balanceOf(strategy.target)
+    const preBalance: bigint = await token.balanceOf(strategy.target)
 
     // Withdraw rewards
     await fundFlowController.withdrawRewards([0, 1], [toEther(20), toEther(30)], ['0x', '0x'])
@@ -489,7 +489,7 @@ describe('EspressoFundFlowController', () => {
     // Rewards should be withdrawn to strategy
     assert.equal(fromEther(await vaults[0].getRewards()), 0)
     assert.equal(fromEther(await vaults[1].getRewards()), 0)
-    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance), 50)
+    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance)), 50)
     assert.equal(fromEther(await strategy.totalQueued()), 50)
 
     // Principal should remain unchanged

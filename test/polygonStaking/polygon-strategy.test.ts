@@ -10,7 +10,7 @@ import {
   getConnection,
 } from '../utils/helpers'
 import {
-  ERC20,
+  ERC20Mintable,
   PolygonStakeManagerMock,
   PolygonStrategy,
   PolygonValidatorShareMock,
@@ -31,7 +31,7 @@ describe('PolygonStrategy', () => {
       'Polygon',
       'POL',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const stakeManager = (await deploy('PolygonStakeManagerMock', [
@@ -543,7 +543,7 @@ describe('PolygonStrategy', () => {
     assert.equal(fromEther(data.depositChange), 100)
     assert.deepEqual(data.receivers, [accounts[5], accounts[6]])
     assert.deepEqual(
-      data.amounts.map((v) => fromEther(v)),
+      data.amounts.map((v: bigint) => fromEther(v)),
       [1, 4]
     )
 
@@ -553,7 +553,7 @@ describe('PolygonStrategy', () => {
     assert.equal(fromEther(data.depositChange), 200)
     assert.deepEqual(data.receivers, [accounts[5], accounts[6], mevRewardsPool.target])
     assert.deepEqual(
-      data.amounts.map((v) => fromEther(v)),
+      data.amounts.map((v: bigint) => fromEther(v)),
       [2, 8, 25]
     )
 

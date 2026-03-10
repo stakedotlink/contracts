@@ -185,7 +185,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [1000, 500]
     )
 
@@ -196,7 +196,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [1000, 500]
     )
 
@@ -208,7 +208,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1300)
     assert.equal(fromEther(await pp.totalQueued()), 700)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [1300, 650]
     )
 
@@ -220,7 +220,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 2000)
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [2000, 1000]
     )
 
@@ -292,7 +292,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [1000, 500]
     )
 
@@ -303,7 +303,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1000)
     assert.equal(fromEther(await pp.totalQueued()), 1000)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [1000, 500]
     )
 
@@ -315,7 +315,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 1300)
     assert.equal(fromEther(await pp.totalQueued()), 700)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [1300, 650]
     )
 
@@ -327,7 +327,7 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.balanceOf(pp.target)), 2000)
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [2000, 1000]
     )
 
@@ -422,7 +422,7 @@ describe('PriorityPool', () => {
     )
 
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [100, 50]
     )
     assert.equal(await pp.merkleRoot(), ethers.encodeBytes32String('root'))
@@ -440,7 +440,7 @@ describe('PriorityPool', () => {
     )
 
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [0, 0]
     )
     assert.equal(await pp.merkleRoot(), ethers.encodeBytes32String('root2'))
@@ -623,7 +623,7 @@ describe('PriorityPool', () => {
 
     assert.equal(fromEther(await pp.totalQueued()), 490)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [710, 355]
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2700)
@@ -643,7 +643,7 @@ describe('PriorityPool', () => {
 
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [500, 250]
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2700)
@@ -707,7 +707,7 @@ describe('PriorityPool', () => {
 
     assert.equal(fromEther(await pp.totalQueued()), 100)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [0, 0]
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2150)
@@ -729,7 +729,7 @@ describe('PriorityPool', () => {
 
     assert.equal(fromEther(await pp.totalQueued()), 0)
     assert.deepEqual(
-      (await pp.getDepositsSinceLastUpdate()).map((v) => fromEther(v)),
+      (await pp.getDepositsSinceLastUpdate()).map((v: bigint) => fromEther(v)),
       [0, 0]
     )
     assert.equal(fromEther(await stakingPool.totalStaked()), 2150)

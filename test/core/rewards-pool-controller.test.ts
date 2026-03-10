@@ -148,14 +148,14 @@ describe('RewardsPoolController', () => {
 
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([600, 200]),
         'account-1 withdrawableRewards incorrect'
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([300, 100]),
         'account-2 withdrawableRewards incorrect'
@@ -194,14 +194,14 @@ describe('RewardsPoolController', () => {
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0]),
         'account-1 withdrawableRewards incorrect'
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([300, 0]),
         'account-2 withdrawableRewards incorrect'
@@ -279,14 +279,14 @@ describe('RewardsPoolController', () => {
       await controller.distributeTokens([token1.target, token2.target])
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([600, 200]),
         'account-1 withdrawableRewards incorrect'
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([300, 100]),
         'account-2 withdrawableRewards incorrect'
@@ -346,14 +346,14 @@ describe('RewardsPoolController', () => {
 
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 300, 400]),
         'account-1 withdrawableRewards incorrect'
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 150, 200]),
         'account-2 withdrawableRewards incorrect'
@@ -390,14 +390,14 @@ describe('RewardsPoolController', () => {
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 0, 0]),
         'account-1 withdrawableRewards incorrect'
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 150, 0]),
         'account-2 withdrawableRewards incorrect'
@@ -473,14 +473,14 @@ describe('RewardsPoolController', () => {
       await controller.distributeTokens([token3.target, token4.target])
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 400, 600]),
         'account-1 withdrawableRewards incorrect'
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 200, 300]),
         'account-2 withdrawableRewards incorrect'
@@ -626,11 +626,11 @@ describe('RewardsPoolController', () => {
       const { accounts, controller, tbRewardsPool } = await loadFixture(deployFixture3)
 
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r)),
         [0, 0, 0]
       )
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r)),
         [0, 0, 0]
       )
 
@@ -640,21 +640,21 @@ describe('RewardsPoolController', () => {
       await tbRewardsPool.depositRewards(ts + 1000, toEther(600))
 
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r)),
         [0, 0, 0]
       )
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r)),
         [0, 0, 0]
       )
       await time.increase(500)
 
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r)),
         [0, 0, 200]
       )
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r)),
         [0, 0, 100]
       )
       ts =
@@ -663,23 +663,23 @@ describe('RewardsPoolController', () => {
       await tbRewardsPool.depositRewards(ts + 500, toEther(200))
 
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r)),
         [0, 0, 200.4]
       )
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r)),
+        (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r)),
         [0, 0, 100.2]
       )
       await time.increase(10000)
 
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[1])).map((r) =>
+        (await controller.withdrawableRewards(accounts[1])).map((r: bigint) =>
           Number(fromEther(r).toFixed(2))
         ),
         [0, 0, 533.33]
       )
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[2])).map((r) =>
+        (await controller.withdrawableRewards(accounts[2])).map((r: bigint) =>
           Number(fromEther(r).toFixed(2))
         ),
         [0, 0, 266.67]
@@ -692,13 +692,13 @@ describe('RewardsPoolController', () => {
       await time.increase(100)
 
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[1])).map((r) =>
+        (await controller.withdrawableRewards(accounts[1])).map((r: bigint) =>
           Number(fromEther(r).toFixed(2))
         ),
         [0, 0, 566.67]
       )
       assert.deepEqual(
-        (await controller.withdrawableRewards(accounts[2])).map((r) =>
+        (await controller.withdrawableRewards(accounts[2])).map((r: bigint) =>
           Number(fromEther(r).toFixed(2))
         ),
         [0, 0, 283.33]
@@ -723,13 +723,13 @@ describe('RewardsPoolController', () => {
       assert.equal(fromEther(await token3.balanceOf(accounts[2])), 10200)
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 0])
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 0])
       )
@@ -764,13 +764,13 @@ describe('RewardsPoolController', () => {
       await controller.distributeTokens([token3.target])
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[1])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[1])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 100])
       )
       assert.equal(
         JSON.stringify(
-          (await controller.withdrawableRewards(accounts[2])).map((r) => fromEther(r))
+          (await controller.withdrawableRewards(accounts[2])).map((r: bigint) => fromEther(r))
         ),
         JSON.stringify([0, 0, 50])
       )

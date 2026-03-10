@@ -131,7 +131,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 500)
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 2)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       [1, 4]
     )
 
@@ -139,7 +139,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[1])), 200)
     assert.equal(Number(await sdlPool.balanceOf(accounts[1])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v: bigint) => Number(v)),
       [2]
     )
 
@@ -147,7 +147,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[2])), 300)
     assert.equal(Number(await sdlPool.balanceOf(accounts[2])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v: bigint) => Number(v)),
       [3]
     )
   })
@@ -203,7 +203,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 600)
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 2)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       [1, 4]
     )
 
@@ -211,7 +211,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[1])), 1000)
     assert.equal(Number(await sdlPool.balanceOf(accounts[1])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v: bigint) => Number(v)),
       [2]
     )
 
@@ -222,7 +222,7 @@ describe('SDLPool', () => {
     assert.equal(Number(fromEther(await sdlPool.staked(accounts[2])).toFixed(4)), 382.1918)
     assert.equal(Number(await sdlPool.balanceOf(accounts[2])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v: bigint) => Number(v)),
       [3]
     )
   })
@@ -601,7 +601,7 @@ describe('SDLPool', () => {
     let ts2 = (await ethers.provider.getBlock('latest'))?.timestamp || 0
     await time.increase(200 * DAY)
 
-    let startingBalance = await sdlToken.balanceOf(accounts[0])
+    let startingBalance: bigint = await sdlToken.balanceOf(accounts[0])
     await sdlPool.withdraw(1, toEther(20))
 
     assert.equal(fromEther((await sdlToken.balanceOf(accounts[0])) - startingBalance), 20)
@@ -630,7 +630,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 0)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 0)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       []
     )
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 0)
@@ -646,7 +646,7 @@ describe('SDLPool', () => {
       ethers.AbiCoder.defaultAbiCoder().encode(['uint256', 'uint64'], [0, 0])
     )
 
-    let startingBalance = await sdlToken.balanceOf(accounts[0])
+    let startingBalance: bigint = await sdlToken.balanceOf(accounts[0])
     await sdlPool.withdraw(1, toEther(20))
 
     assert.equal(fromEther((await sdlToken.balanceOf(accounts[0])) - startingBalance), 20)
@@ -675,7 +675,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(accounts[0])), 0)
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 0)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       []
     )
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 0)
@@ -785,7 +785,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 1600)
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       [4]
     )
 
@@ -793,7 +793,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[1])), 500)
     assert.equal(Number(await sdlPool.balanceOf(accounts[1])), 2)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v: bigint) => Number(v)),
       [1, 2]
     )
 
@@ -801,7 +801,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[2])), 0)
     assert.equal(Number(await sdlPool.balanceOf(accounts[2])), 0)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v: bigint) => Number(v)),
       []
     )
 
@@ -809,7 +809,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[3])), 900)
     assert.equal(Number(await sdlPool.balanceOf(accounts[3])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[3])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[3])).map((v: bigint) => Number(v)),
       [3]
     )
   })
@@ -870,7 +870,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 1600)
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       [4]
     )
 
@@ -878,7 +878,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[1])), 500)
     assert.equal(Number(await sdlPool.balanceOf(accounts[1])), 2)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v: bigint) => Number(v)),
       [1, 2]
     )
 
@@ -886,7 +886,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[2])), 0)
     assert.equal(Number(await sdlPool.balanceOf(accounts[2])), 0)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v: bigint) => Number(v)),
       []
     )
 
@@ -894,7 +894,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(receiver.target)), 900)
     assert.equal(Number(await sdlPool.balanceOf(receiver.target)), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(receiver.target)).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(receiver.target)).map((v: bigint) => Number(v)),
       [3]
     )
     assert.deepEqual(
@@ -974,7 +974,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[0])), 1600)
     assert.equal(Number(await sdlPool.balanceOf(accounts[0])), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[0])).map((v: bigint) => Number(v)),
       [4]
     )
 
@@ -982,7 +982,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[1])), 500)
     assert.equal(Number(await sdlPool.balanceOf(accounts[1])), 2)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[1])).map((v: bigint) => Number(v)),
       [1, 2]
     )
 
@@ -990,7 +990,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(accounts[2])), 0)
     assert.equal(Number(await sdlPool.balanceOf(accounts[2])), 0)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(accounts[2])).map((v: bigint) => Number(v)),
       []
     )
 
@@ -998,7 +998,7 @@ describe('SDLPool', () => {
     assert.equal(fromEther(await sdlPool.staked(receiver.target)), 900)
     assert.equal(Number(await sdlPool.balanceOf(receiver.target)), 1)
     assert.deepEqual(
-      (await sdlPool.getLockIdsByOwner(receiver.target)).map((v) => Number(v)),
+      (await sdlPool.getLockIdsByOwner(receiver.target)).map((v: bigint) => Number(v)),
       [3]
     )
     assert.deepEqual(

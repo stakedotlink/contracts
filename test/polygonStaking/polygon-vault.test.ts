@@ -9,7 +9,7 @@ import {
   getConnection,
 } from '../utils/helpers'
 import {
-  ERC20,
+  ERC20Mintable,
   PolygonStakeManagerMock,
   PolygonValidatorShareMock,
   PolygonVault,
@@ -28,7 +28,7 @@ describe('PolygonVault', () => {
       'Polygon',
       'POL',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const stakeManager = (await deploy('PolygonStakeManagerMock', [
@@ -100,14 +100,14 @@ describe('PolygonVault', () => {
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 200)
 
-    let preBalance = await token.balanceOf(accounts[0])
+    let preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(false)
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 50)
 
     await token.transfer(vault.target, toEther(50))
 
@@ -115,7 +115,7 @@ describe('PolygonVault', () => {
 
     await vault.withdrawRewards(true)
 
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 100)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 100)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
@@ -131,7 +131,7 @@ describe('PolygonVault', () => {
     assert.equal(await vault.isWithdrawable(), false)
     assert.equal(fromEther(await vault.getQueuedWithdrawals()), 0)
 
-    let preBalance = await token.balanceOf(accounts[0])
+    let preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.unbond(toEther(30))
 
@@ -141,7 +141,7 @@ describe('PolygonVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 50)
 
     await time.increase(withdrawalDelay)
     await vault.withdraw()
@@ -165,7 +165,7 @@ describe('PolygonVault', () => {
   it('withdraw should work correctly', async () => {
     const { vault, validatorShare, token, accounts } = await loadFixture(deployFixture)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.deposit(toEther(100))
     await validatorShare.addReward(vault.target, toEther(50))

@@ -53,7 +53,7 @@ describe('DistributionOracle', () => {
     let ts = (await ethers.provider.getBlock(blockNumber))?.timestamp
 
     assert.deepEqual(
-      (await oracle.updateStatus()).map((v) => Number(v)),
+      (await oracle.updateStatus()).map((v: bigint) => Number(v)),
       [ts, blockNumber, 0]
     )
 
@@ -78,7 +78,7 @@ describe('DistributionOracle', () => {
     await oracle.requestUpdate()
 
     assert.deepEqual(
-      (await oracle.updateStatus()).map((v) => Number(v)),
+      (await oracle.updateStatus()).map((v: bigint) => Number(v)),
       [ts, blockNumber, 1]
     )
 
@@ -132,7 +132,7 @@ describe('DistributionOracle', () => {
     )
 
     assert.deepEqual(
-      (await oracle.updateStatus()).map((v) => Number(v)),
+      (await oracle.updateStatus()).map((v: bigint) => Number(v)),
       [ts, blockNumber, 0]
     )
     assert.equal(await pp.merkleRoot(), ethers.encodeBytes32String('merkle'))
@@ -192,12 +192,12 @@ describe('DistributionOracle', () => {
     )
 
     assert.deepEqual(
-      (await oracle.updateStatus()).map((v) => Number(v)),
+      (await oracle.updateStatus()).map((v: bigint) => Number(v)),
       [ts, blockNumber, 0]
     )
     assert.equal(Number(await oracle.awaitingManualVerification()), 1)
     assert.deepEqual(
-      await oracle.updateData().then((d) => [d[0], d[1], fromEther(d[2]), fromEther(d[3])]),
+      await oracle.updateData().then((d: any) => [d[0], d[1], fromEther(d[2]), fromEther(d[3])]),
       [ethers.encodeBytes32String('merkle'), ethers.encodeBytes32String('ipfs'), 1000, 500]
     )
     assert.equal(await pp.merkleRoot(), ethers.encodeBytes32String(''))
@@ -234,7 +234,7 @@ describe('DistributionOracle', () => {
     await oracle.cancelRequest(event[2], event[6])
 
     assert.deepEqual(
-      (await oracle.updateStatus()).map((v) => Number(v)),
+      (await oracle.updateStatus()).map((v: bigint) => Number(v)),
       [ts, blockNumber, 0]
     )
     assert.equal(await pp.merkleRoot(), ethers.encodeBytes32String(''))

@@ -9,7 +9,7 @@ import {
   getConnection,
 } from '../utils/helpers'
 import {
-  ERC20,
+  ERC20Mintable,
   EspressoStakingMock,
   EspressoRewardsMock,
   EspressoVault,
@@ -28,7 +28,7 @@ describe('EspressoVault', () => {
       'Espresso',
       'ESP',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const espressoStaking = (await deploy('EspressoStakingMock', [
@@ -128,7 +128,7 @@ describe('EspressoVault', () => {
       deployFixture
     )
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.deposit(toEther(100))
     await vault.unbond(toEther(30))
@@ -241,34 +241,34 @@ describe('EspressoVault', () => {
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(toEther(50), '0x')
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 50)
 
     // Add more rewards and withdraw again
     await vault.updateLifetimeRewards(toEther(80))
 
     assert.equal(fromEther(await vault.getRewards()), 30)
 
-    const preBalance2 = await token.balanceOf(accounts[0])
+    const preBalance2: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(toEther(80), '0x')
 
     assert.equal(fromEther(await vault.getRewards()), 0)
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance2), 30)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance2)), 30)
 
     // Withdraw with outdated lifetime rewards in vault (new rewards accrued)
-    const preBalance3 = await token.balanceOf(accounts[0])
+    const preBalance3: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(toEther(100), '0x')
 
     assert.equal(fromEther(await vault.getRewards()), 0)
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance3), 20)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance3)), 20)
   })
 
   it('updateLifetimeRewards should work correctly', async () => {
@@ -311,7 +311,7 @@ describe('EspressoVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(await vault.isActive(), true)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     // Exit the validator in the mock
     await espressoStaking.exitValidator(validator)
@@ -329,7 +329,7 @@ describe('EspressoVault', () => {
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 0)
-    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 100)
+    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 100)
   })
 
   it('getTotalDeposits should work correctly', async () => {

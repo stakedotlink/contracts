@@ -286,7 +286,7 @@ describe('OperatorVCS', () => {
     await vault.connect(signers[1]).withdrawRewards()
     assert.equal(fromEther(await vault.getUnclaimedRewards()), 0)
     assert.deepEqual(
-      (await strategy.getOperatorRewards()).map((v) => fromEther(v)),
+      (await strategy.getOperatorRewards()).map((v: bigint) => fromEther(v)),
       [1, 1]
     )
     assert.equal(fromEther(await stakingPool.balanceOf(strategy.target)), 1)
@@ -300,7 +300,7 @@ describe('OperatorVCS', () => {
     await vault.connect(signers[1]).withdrawRewards()
     assert.equal(Number(fromEther(await vault.getUnclaimedRewards()).toFixed(2)), 0.33)
     assert.deepEqual(
-      (await strategy.getOperatorRewards()).map((v) => Number(fromEther(v).toFixed(2))),
+      (await strategy.getOperatorRewards()).map((v: bigint) => Number(fromEther(v).toFixed(2))),
       [0.33, 0]
     )
     assert.equal(Number(fromEther(await stakingPool.balanceOf(strategy.target)).toFixed(2)), 0)

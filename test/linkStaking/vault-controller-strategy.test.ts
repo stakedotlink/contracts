@@ -145,7 +145,7 @@ describe('VaultControllerStrategy', () => {
     const { strategy } = await loadFixture(deployFixture)
 
     assert.deepEqual(
-      (await strategy.getVaultDepositLimits()).map((v) => fromEther(v)),
+      (await strategy.getVaultDepositLimits()).map((v: bigint) => fromEther(v)),
       [10, 100]
     )
   })
@@ -204,7 +204,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[1])), 50)
     assert.equal(fromEther(await strategy.canWithdraw()), 0)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [11, 220]
     )
 
@@ -227,11 +227,11 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[4])), 50)
     assert.equal(fromEther(await strategy.canWithdraw()), 30)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [11, 70]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(4).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(4).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [9, 150]
     )
 
@@ -241,7 +241,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[9])), 50)
     assert.equal(fromEther(await strategy.canWithdraw()), 30)
     assert.deepEqual(
-      await strategy.vaultGroups(4).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(4).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [4, 50]
     )
 
@@ -250,23 +250,23 @@ describe('VaultControllerStrategy', () => {
     await strategy.deposit(toEther(600), encodeVaults([9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11]))
     assert.equal(fromEther(await token.balanceOf(stakingController.target)), 1360)
     assert.deepEqual(
-      await strategy.vaultGroups(0).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(0).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [0, 50]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [11, 70]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(2).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(2).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [7, 0]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(3).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(3).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [8, 20]
     )
     assert.deepEqual(
-      await strategy.vaultGroups(4).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(4).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [4, 0]
     )
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[12])), 100)
@@ -338,7 +338,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 1050)
     assert.equal(fromEther(await strategy.canWithdraw()), 150)
     assert.deepEqual(
-      await strategy.vaultGroups(0).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(0).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [5, 150]
     )
 
@@ -352,7 +352,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 975)
     assert.equal(fromEther(await strategy.canWithdraw()), 225)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [1, 75]
     )
 
@@ -365,7 +365,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 850)
     assert.equal(fromEther(await strategy.canWithdraw()), 100)
     assert.deepEqual(
-      await strategy.vaultGroups(1).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(1).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [6, 200]
     )
 
@@ -390,7 +390,7 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 650)
     assert.equal(fromEther(await strategy.canWithdraw()), 0)
     assert.deepEqual(
-      await strategy.vaultGroups(2).then((d) => [Number(d[0]), fromEther(d[1])]),
+      await strategy.vaultGroups(2).then((d: any) => [Number(d[0]), fromEther(d[1])]),
       [7, 200]
     )
   })
@@ -440,12 +440,12 @@ describe('VaultControllerStrategy', () => {
     assert.equal(fromEther(await strategy.getTotalDeposits()), 315)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
 
-    let initialBalance = await token.balanceOf(accounts[0])
+    let initialBalance: bigint = await token.balanceOf(accounts[0])
     await token.transfer(strategy.target, toEther(20))
     await strategy.updateDeposits('0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 315)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
-    assert.equal(fromEther(initialBalance - (await token.balanceOf(accounts[0]))), 0)
+    assert.equal(fromEther((initialBalance - (await token.balanceOf(accounts[0])))), 0)
 
     await rewardsController.setReward(vaults[1], toEther(0))
     await strategy.updateDeposits('0x')
