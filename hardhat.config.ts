@@ -1,7 +1,12 @@
-import { HardhatUserConfig } from 'hardhat/config'
-import '@nomicfoundation/hardhat-toolbox'
-import '@nomicfoundation/hardhat-ledger'
-import '@openzeppelin/hardhat-upgrades'
+import { defineConfig } from 'hardhat/config'
+import hardhatLedger from '@nomicfoundation/hardhat-ledger'
+import hardhatVerify from '@nomicfoundation/hardhat-verify'
+import hardhatTypechain from '@nomicfoundation/hardhat-typechain'
+import hardhatNetworkHelpers from '@nomicfoundation/hardhat-network-helpers'
+import hardhatEthers from '@nomicfoundation/hardhat-ethers'
+import hardhatChaiMatchers from '@nomicfoundation/hardhat-ethers-chai-matchers'
+import hardhatMocha from '@nomicfoundation/hardhat-mocha'
+import hardhatUpgrades from '@openzeppelin/hardhat-upgrades'
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -28,24 +33,30 @@ const ledgerConfig = {
   },
 }
 
-const config: HardhatUserConfig = {
-  defaultNetwork: 'localhost',
+export default defineConfig({
   networks: {
     localhost: {
+      type: 'http',
       url: 'http://127.0.0.1:8545',
       gas: 'auto',
       ...ledgerConfig,
     },
     mainnet: {
+      type: 'http',
       url: '',
+      gasMultiplier: 1.3,
       ...ledgerConfig,
     },
     polygon: {
+      type: 'http',
       url: '',
-      accounts,
+      gasMultiplier: 1.3,
+      ...ledgerConfig,
     },
     hardhat: {
+      type: 'edr-simulated',
       chainId: 1337,
+      hardfork: 'cancun', // required to bypass EIP-7825 when running pre EIP-7825 contract tests (new contracts should adhere to the gas limit)
       accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
       mining: {
         auto: true,
@@ -54,13 +65,23 @@ const config: HardhatUserConfig = {
       gas: 'auto',
     },
   },
-  etherscan: {
-    apiKey: '',
+  verify: {
+    etherscan: {
+      apiKey: '',
+    },
   },
-  sourcify: {
-    enabled: false,
-  },
+  plugins: [
+    hardhatLedger,
+    hardhatVerify,
+    hardhatTypechain,
+    hardhatNetworkHelpers,
+    hardhatEthers,
+    hardhatChaiMatchers,
+    hardhatMocha,
+    hardhatUpgrades,
+  ],
   solidity: {
+    npmFilesToBuild: ['@chainlink/contracts/src/v0.8/operatorforwarder/Operator.sol'],
     compilers: [
       {
         version: '0.8.22',
@@ -100,6 +121,4 @@ const config: HardhatUserConfig = {
       },
     ],
   },
-}
-
-export default config
+})
