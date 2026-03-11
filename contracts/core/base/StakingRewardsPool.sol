@@ -142,6 +142,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
         require(_sender != address(0), "Transfer from the zero address");
         require(_recipient != address(0), "Transfer to the zero address");
+        require(sharesToTransfer != 0, "Transfer amount too small");
         require(shares[_sender] >= sharesToTransfer, "Transfer amount exceeds balance");
 
         shares[_sender] -= sharesToTransfer;
@@ -208,6 +209,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         uint256 sharesToBurn = getSharesByStake(_amount);
 
         require(_account != address(0), "Burn from the zero address");
+        require(sharesToBurn != 0, "Burn amount too small");
         require(shares[_account] >= sharesToBurn, "Burn amount exceeds balance");
 
         totalShares -= sharesToBurn;
