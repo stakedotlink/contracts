@@ -1,4 +1,4 @@
-import { defineConfig } from 'hardhat/config'
+import { defineConfig, configVariable } from 'hardhat/config'
 import hardhatLedger from '@nomicfoundation/hardhat-ledger'
 import hardhatVerify from '@nomicfoundation/hardhat-verify'
 import hardhatTypechain from '@nomicfoundation/hardhat-typechain'
@@ -43,13 +43,13 @@ export default defineConfig({
     },
     mainnet: {
       type: 'http',
-      url: '',
+      url: configVariable('MAINNET_RPC_URL'),
       gasMultiplier: 1.3,
       ...ledgerConfig,
     },
     polygon: {
       type: 'http',
-      url: '',
+      url: configVariable('POLYGON_RPC_URL'),
       gasMultiplier: 1.3,
       ...ledgerConfig,
     },
