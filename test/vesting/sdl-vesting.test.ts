@@ -1,4 +1,11 @@
-import { toEther, deploy, getAccounts, fromEther, deployUpgradeable, getConnection } from '../utils/helpers'
+import {
+  toEther,
+  deploy,
+  getAccounts,
+  fromEther,
+  deployUpgradeable,
+  getConnection,
+} from '../utils/helpers'
 import {
   LinearBoostController,
   RewardsPool,

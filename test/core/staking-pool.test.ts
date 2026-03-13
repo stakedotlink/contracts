@@ -346,7 +346,8 @@ describe('StakingPool', () => {
   })
 
   it('withdrawing should correctly withdraw from strategies', async () => {
-    const { stakingPool, token, strategy1, strategy2, strategy3, stake, withdraw } = await loadFixture(deployFixture)
+    const { stakingPool, token, strategy1, strategy2, strategy3, stake, withdraw } =
+      await loadFixture(deployFixture)
 
     await stake(1, 2000)
     await stake(2, 1000)
@@ -633,7 +634,9 @@ describe('StakingPool', () => {
   })
 
   it('should be able to transfer derivative tokens', async () => {
-    const { signers, accounts, stakingPool, token, strategy1, stake } = await loadFixture(deployFixture)
+    const { signers, accounts, stakingPool, token, strategy1, stake } = await loadFixture(
+      deployFixture
+    )
 
     await stake(1, 1000)
     await stake(2, 1000)
@@ -667,7 +670,9 @@ describe('StakingPool', () => {
   })
 
   it('should be able to transfer shares', async () => {
-    const { signers, accounts, stakingPool, token, strategy1, stake } = await loadFixture(deployFixture)
+    const { signers, accounts, stakingPool, token, strategy1, stake } = await loadFixture(
+      deployFixture
+    )
 
     await stakingPool.updateFee(0, accounts[0], 0)
     await stakingPool.updateFee(0, accounts[0], 0)
@@ -743,9 +748,7 @@ describe('StakingPool', () => {
   })
 
   it('getStrategyDepositRoom should work correctly', async () => {
-    const { stakingPool, token, strategy1, strategy2, stake } = await loadFixture(
-      deployFixture
-    )
+    const { stakingPool, token, strategy1, strategy2, stake } = await loadFixture(deployFixture)
 
     assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 13000)
 

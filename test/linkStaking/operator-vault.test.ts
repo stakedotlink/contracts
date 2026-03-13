@@ -1,5 +1,12 @@
 import { assert, expect } from 'chai'
-import { toEther, deploy, deployUpgradeable, getAccounts, fromEther, getConnection } from '../utils/helpers'
+import {
+  toEther,
+  deploy,
+  deployUpgradeable,
+  getAccounts,
+  fromEther,
+  getConnection,
+} from '../utils/helpers'
 import {
   ERC677,
   OperatorVCSMock,
@@ -43,18 +50,26 @@ describe('OperatorVault', () => {
       token.target,
     ])) as PFAlertsControllerMock
 
-    const strategy = (await deploy('OperatorVCSMock', [token.target, 1000, 5000])) as OperatorVCSMock
-
-    const vault = (await deployUpgradeable('OperatorVault', [
+    const strategy = (await deploy('OperatorVCSMock', [
       token.target,
-      strategy.target,
-      stakingController.target,
-      rewardsController.target,
-      accounts[0],
-      pfAlertsController.target,
-      accounts[1],
-      accounts[2],
-    ], { unsafeAllow: ['missing-initializer-call'] })) as OperatorVault
+      1000,
+      5000,
+    ])) as OperatorVCSMock
+
+    const vault = (await deployUpgradeable(
+      'OperatorVault',
+      [
+        token.target,
+        strategy.target,
+        stakingController.target,
+        rewardsController.target,
+        accounts[0],
+        pfAlertsController.target,
+        accounts[1],
+        accounts[2],
+      ],
+      { unsafeAllow: ['missing-initializer-call'] }
+    )) as OperatorVault
 
     await strategy.addVault(vault.target)
     await token.approve(strategy.target, toEther(100000000))
@@ -149,8 +164,9 @@ describe('OperatorVault', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
-    const { accounts, strategy, vault, rewardsController, stakingController } =
-      await loadFixture(deployFixture)
+    const { accounts, strategy, vault, rewardsController, stakingController } = await loadFixture(
+      deployFixture
+    )
 
     await rewardsController.setReward(vault.target, toEther(10))
     assert.deepEqual(
@@ -209,8 +225,9 @@ describe('OperatorVault', () => {
   })
 
   it('withdrawRewards should work correctly', async () => {
-    const { signers, accounts, strategy, token, vault, rewardsController } =
-      await loadFixture(deployFixture)
+    const { signers, accounts, strategy, token, vault, rewardsController } = await loadFixture(
+      deployFixture
+    )
 
     await rewardsController.setReward(vault.target, toEther(10))
     await strategy.updateDeposits(0, accounts[3])
@@ -263,18 +280,30 @@ describe('OperatorVault', () => {
   })
 
   it('setRewardsReceiver should work correctly', async () => {
-    const { signers, accounts, token, strategy, stakingController, rewardsController, pfAlertsController } = await loadFixture(deployFixture)
+    const {
+      signers,
+      accounts,
+      token,
+      strategy,
+      stakingController,
+      rewardsController,
+      pfAlertsController,
+    } = await loadFixture(deployFixture)
 
-    let newVault = (await deployUpgradeable('OperatorVault', [
-      token.target,
-      strategy.target,
-      stakingController.target,
-      rewardsController.target,
-      accounts[0],
-      pfAlertsController.target,
-      accounts[1],
-      ethers.ZeroAddress,
-    ], { unsafeAllow: ['missing-initializer-call'] })) as OperatorVault
+    let newVault = (await deployUpgradeable(
+      'OperatorVault',
+      [
+        token.target,
+        strategy.target,
+        stakingController.target,
+        rewardsController.target,
+        accounts[0],
+        pfAlertsController.target,
+        accounts[1],
+        ethers.ZeroAddress,
+      ],
+      { unsafeAllow: ['missing-initializer-call'] }
+    )) as OperatorVault
 
     await expect(
       newVault.connect(signers[1]).setRewardsReceiver(accounts[1])

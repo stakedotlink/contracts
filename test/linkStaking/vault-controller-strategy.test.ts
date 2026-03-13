@@ -151,8 +151,9 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('depositToVaults should work correctly', async () => {
-    const { strategy, token, stakingController, vaults, fundFlowController } =
-      await loadFixture(deployFixture)
+    const { strategy, token, stakingController, vaults, fundFlowController } = await loadFixture(
+      deployFixture
+    )
 
     // Deposit into vaults that don't yet belong to a group
 
@@ -309,8 +310,9 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('withdraw should work correctly', async () => {
-    const { strategy, token, stakingController, vaults, fundFlowController } =
-      await loadFixture(deployFixture)
+    const { strategy, token, stakingController, vaults, fundFlowController } = await loadFixture(
+      deployFixture
+    )
 
     await strategy.deposit(toEther(1200), encodeVaults([]))
     await fundFlowController.updateVaultGroups()
@@ -445,7 +447,7 @@ describe('VaultControllerStrategy', () => {
     await strategy.updateDeposits('0x')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 315)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
-    assert.equal(fromEther((initialBalance - (await token.balanceOf(accounts[0])))), 0)
+    assert.equal(fromEther(initialBalance - (await token.balanceOf(accounts[0]))), 0)
 
     await rewardsController.setReward(vaults[1], toEther(0))
     await strategy.updateDeposits('0x')
@@ -520,7 +522,9 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('deployVault should work correctly', async () => {
-    const { accounts, strategy, stakingController, rewardsController } = await loadFixture(deployFixture)
+    const { accounts, strategy, stakingController, rewardsController } = await loadFixture(
+      deployFixture
+    )
 
     let newVaultImplementation = (await deployImplementation('OperatorVault')) as string
     await strategy.setVaultImplementation(newVaultImplementation)

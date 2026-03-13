@@ -88,9 +88,9 @@ describe('LiquidSDIndexPool', () => {
     await expect(pool.addLSDToken(lsd3.target, adapter3.target, [2000, 8000])).to.be.revertedWith(
       'Invalid composition targets length'
     )
-    await expect(pool.addLSDToken(lsd3.target, adapter3.target, [1000, 8000, 2000])).to.be.revertedWith(
-      'Composition targets must sum to 100%'
-    )
+    await expect(
+      pool.addLSDToken(lsd3.target, adapter3.target, [1000, 8000, 2000])
+    ).to.be.revertedWith('Composition targets must sum to 100%')
 
     await pool.addLSDToken(lsd3.target, adapter3.target, [5000, 3000, 2000])
     assert.deepEqual(await pool.getLSDTokens(), [lsd1.target, lsd2.target, lsd3.target])
@@ -143,7 +143,9 @@ describe('LiquidSDIndexPool', () => {
   })
 
   it('deposit should work correctly', async () => {
-    const { signers, accounts, pool, lsd1, lsd2, adapter1, adapter2 } = await loadFixture(deployFixture)
+    const { signers, accounts, pool, lsd1, lsd2, adapter1, adapter2 } = await loadFixture(
+      deployFixture
+    )
 
     await lsd1.connect(signers[2]).approve(pool.target, ethers.MaxUint256)
     await lsd2.connect(signers[2]).approve(pool.target, ethers.MaxUint256)
@@ -165,7 +167,9 @@ describe('LiquidSDIndexPool', () => {
   })
 
   it('withdraw should work correctly', async () => {
-    const { signers, accounts, pool, lsd1, lsd2, adapter1, adapter2 } = await loadFixture(deployFixture)
+    const { signers, accounts, pool, lsd1, lsd2, adapter1, adapter2 } = await loadFixture(
+      deployFixture
+    )
 
     await lsd1.connect(signers[2]).approve(pool.target, ethers.MaxUint256)
     await lsd2.connect(signers[2]).approve(pool.target, ethers.MaxUint256)
@@ -367,7 +371,9 @@ describe('LiquidSDIndexPool', () => {
   })
 
   it('withdrawal fee should work correctly', async () => {
-    const { signers, accounts, pool, lsd1, lsd2, adapter1, adapter2 } = await loadFixture(deployFixture)
+    const { signers, accounts, pool, lsd1, lsd2, adapter1, adapter2 } = await loadFixture(
+      deployFixture
+    )
 
     await pool.setCompositionTargets([8000, 2000])
     await adapter2.setExchangeRate(toEther(1))

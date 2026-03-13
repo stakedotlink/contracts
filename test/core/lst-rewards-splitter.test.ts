@@ -88,11 +88,11 @@ describe('LSTRewardsSplitter', () => {
 
     assert.equal(fromEther(await splitter0.principalDeposits()), 0)
     assert.equal(fromEther(await token.balanceOf(splitter0.target)), 0)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - acc0Balance)), 100)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - acc0Balance), 100)
 
     assert.equal(fromEther(await splitter1.principalDeposits()), 150)
     assert.equal(fromEther(await token.balanceOf(splitter1.target)), 150)
-    assert.equal(fromEther(((await token.balanceOf(accounts[1])) - acc1Balance)), 50)
+    assert.equal(fromEther((await token.balanceOf(accounts[1])) - acc1Balance), 50)
   })
 
   it('checkUpkeep should work correctly', async () => {

@@ -107,7 +107,7 @@ describe('PolygonVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 50)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
 
     await token.transfer(vault.target, toEther(50))
 
@@ -115,7 +115,7 @@ describe('PolygonVault', () => {
 
     await vault.withdrawRewards(true)
 
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 100)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 100)
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
@@ -141,7 +141,7 @@ describe('PolygonVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 70)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 50)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
 
     await time.increase(withdrawalDelay)
     await vault.withdraw()

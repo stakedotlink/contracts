@@ -489,7 +489,7 @@ describe('EspressoFundFlowController', () => {
     // Rewards should be withdrawn to strategy
     assert.equal(fromEther(await vaults[0].getRewards()), 0)
     assert.equal(fromEther(await vaults[1].getRewards()), 0)
-    assert.equal(fromEther(((await token.balanceOf(strategy.target)) - preBalance)), 50)
+    assert.equal(fromEther((await token.balanceOf(strategy.target)) - preBalance), 50)
     assert.equal(fromEther(await strategy.totalQueued()), 50)
 
     // Principal should remain unchanged

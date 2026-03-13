@@ -106,10 +106,16 @@ describe('CommunityVCS', () => {
     const { strategy } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(1000), encodeVaults([]))
-    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(strategy, 'VaultsAboveThreshold')
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'VaultsAboveThreshold'
+    )
 
     await strategy.deposit(toEther(90), encodeVaults([]))
-    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(strategy, 'VaultsAboveThreshold')
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'VaultsAboveThreshold'
+    )
 
     await strategy.deposit(toEther(10), encodeVaults([]))
     await strategy.performUpkeep('0x')

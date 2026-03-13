@@ -141,7 +141,9 @@ describe('RebaseController', () => {
   })
 
   it('checkUpkeep should work correctly', async () => {
-    const { token, rebaseController, strategy1, strategy2, strategy3 } = await loadFixture(deployFixture)
+    const { token, rebaseController, strategy1, strategy2, strategy3 } = await loadFixture(
+      deployFixture
+    )
 
     await token.transfer(strategy2.target, toEther(100))
 

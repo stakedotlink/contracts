@@ -1,6 +1,18 @@
 import { assert } from 'chai'
-import { toEther, deploy, deployUpgradeable, getAccounts, fromEther, getConnection } from '../utils/helpers'
-import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../types/ethers-contracts'
+import {
+  toEther,
+  deploy,
+  deployUpgradeable,
+  getAccounts,
+  fromEther,
+  getConnection,
+} from '../utils/helpers'
+import {
+  ERC677,
+  CommunityVault,
+  StakingMock,
+  StakingRewardsMock,
+} from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
 
@@ -44,9 +56,7 @@ describe('CommunityVault', () => {
   }
 
   it('claimRewards should work correctly', async () => {
-    const { signers, accounts, vault, rewardsController, token } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, vault, rewardsController, token } = await loadFixture(deployFixture)
 
     await vault.connect(signers[1]).deposit(toEther(100))
     await vault.connect(signers[1]).claimRewards(0, accounts[5])

@@ -113,10 +113,9 @@ describe('RewardsPoolController', () => {
   it('should not be able to add token thats already supported', async () => {
     const { token1, rewardsPool1, controller } = await loadFixture(deployFixture)
 
-    await expect(controller.addToken(token1.target, rewardsPool1.target)).to.be.revertedWithCustomError(
-      controller,
-      'InvalidToken()'
-    )
+    await expect(
+      controller.addToken(token1.target, rewardsPool1.target)
+    ).to.be.revertedWithCustomError(controller, 'InvalidToken()')
   })
 
   it('should be able to remove tokens', async () => {
@@ -141,7 +140,8 @@ describe('RewardsPoolController', () => {
 
   describe('RewardsPool', () => {
     it('withdrawableRewards should work correctly', async () => {
-      const { accounts, controller, token1, token2, rewardsPool1, rewardsPool2 } = await loadFixture(deployFixture)
+      const { accounts, controller, token1, token2, rewardsPool1, rewardsPool2 } =
+        await loadFixture(deployFixture)
 
       await token1.transferAndCall(rewardsPool1.target, toEther(900), '0x00')
       await token2.transferAndCall(rewardsPool2.target, toEther(300), '0x00')
@@ -163,9 +163,8 @@ describe('RewardsPoolController', () => {
     })
 
     it('withdrawRewards should work correctly', async () => {
-      const { signers, accounts, controller, token1, token2, rewardsPool1, rewardsPool2 } = await loadFixture(
-        deployFixture
-      )
+      const { signers, accounts, controller, token1, token2, rewardsPool1, rewardsPool2 } =
+        await loadFixture(deployFixture)
 
       await token1.transferAndCall(rewardsPool1.target, toEther(900), '0x00')
       await token2.transferAndCall(rewardsPool2.target, toEther(300), '0x00')
@@ -361,9 +360,7 @@ describe('RewardsPoolController', () => {
     })
 
     it('withdrawRewards should work correctly', async () => {
-      const { signers, accounts, controller, token3, token4 } = await loadFixture(
-        deployFixture2
-      )
+      const { signers, accounts, controller, token3, token4 } = await loadFixture(deployFixture2)
 
       await controller.connect(signers[1]).withdrawRewards([token3.target, token4.target])
       await controller.connect(signers[2]).withdrawRewards([token4.target])
@@ -456,7 +453,9 @@ describe('RewardsPoolController', () => {
     })
 
     it('should be able to distributeTokens', async () => {
-      const { accounts, controller, token1, token2, token3, token4 } = await loadFixture(deployFixture2)
+      const { accounts, controller, token1, token2, token3, token4 } = await loadFixture(
+        deployFixture2
+      )
 
       await token3.transfer(controller.target, toEther(150))
       await token4.transfer(controller.target, toEther(300))

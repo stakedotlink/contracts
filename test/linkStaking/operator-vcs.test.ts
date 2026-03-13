@@ -148,7 +148,9 @@ describe('OperatorVCS', () => {
   }
 
   it('should be able to add vault', async () => {
-    const { accounts, strategy, stakingController, rewardsController } = await loadFixture(deployFixture)
+    const { accounts, strategy, stakingController, rewardsController } = await loadFixture(
+      deployFixture
+    )
 
     await strategy.addVault(accounts[1], accounts[2], accounts[5])
     assert.equal((await strategy.getVaults()).length, 16)
@@ -173,8 +175,9 @@ describe('OperatorVCS', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
-    const { accounts, strategy, stakingPool, rewardsController, token, vaults } =
-      await loadFixture(deployFixture)
+    const { accounts, strategy, stakingPool, rewardsController, token, vaults } = await loadFixture(
+      deployFixture
+    )
 
     await stakingPool.deposit(accounts[0], toEther(400), [encodeVaults([])])
 
@@ -243,8 +246,9 @@ describe('OperatorVCS', () => {
   })
 
   it('updateDeposits should work correctly with reward withdrawals', async () => {
-    const { accounts, strategy, stakingPool, rewardsController, token, vaults } =
-      await loadFixture(deployFixture)
+    const { accounts, strategy, stakingPool, rewardsController, token, vaults } = await loadFixture(
+      deployFixture
+    )
 
     await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
     await stakingPool.withdraw(accounts[0], accounts[0], 1000, [encodeVaults([]), encodeVaults([])])
@@ -277,7 +281,10 @@ describe('OperatorVCS', () => {
 
     let vault = (await ethers.getContractAt('OperatorVault', vaults[0])) as OperatorVault
 
-    await expect(vault.withdrawRewards()).to.be.revertedWithCustomError(vault, 'OnlyRewardsReceiver')
+    await expect(vault.withdrawRewards()).to.be.revertedWithCustomError(
+      vault,
+      'OnlyRewardsReceiver'
+    )
 
     await rewardsController.setReward(vaults[0], toEther(10))
     await rewardsController.setReward(vaults[1], toEther(10))
@@ -416,8 +423,15 @@ describe('OperatorVCS', () => {
   })
 
   it('addVault should work correctly with removed vaults', async () => {
-    const { accounts, strategy, stakingPool, fundFlowController, stakingController, vaults, rewardsController } =
-      await loadFixture(deployFixture)
+    const {
+      accounts,
+      strategy,
+      stakingPool,
+      fundFlowController,
+      stakingController,
+      vaults,
+      rewardsController,
+    } = await loadFixture(deployFixture)
 
     await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
 

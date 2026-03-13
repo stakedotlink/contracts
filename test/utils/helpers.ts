@@ -8,7 +8,13 @@ const loadFixture = (connection as any).networkHelpers.loadFixture
 const networkHelpers = (connection as any).networkHelpers
 const upgradesApi = await upgrades(hre, connection)
 
-export const getConnection = () => ({ connection, ethers, loadFixture, networkHelpers, upgradesApi })
+export const getConnection = () => ({
+  connection,
+  ethers,
+  loadFixture,
+  networkHelpers,
+  upgradesApi,
+})
 
 export const toEther = (amount: string | number) => {
   return parseEther(amount.toString())

@@ -1,5 +1,12 @@
 import { assert, expect } from 'chai'
-import { deploy, deployUpgradeable, fromEther, getAccounts, toEther, getConnection } from '../utils/helpers'
+import {
+  deploy,
+  deployUpgradeable,
+  fromEther,
+  getAccounts,
+  toEther,
+  getConnection,
+} from '../utils/helpers'
 import { ERC677, LSDIndexAdapterMock } from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
@@ -62,7 +69,8 @@ describe('LSDIndexAdapter', () => {
     assert.equal(fromEther(await adapter.getTotalDepositsLSD()), 500)
     assert.equal(fromEther(await adapter.getTotalDeposits()), 1000)
 
-    await expect(lsd.connect(signers[1]).transferFrom(adapter.target, accounts[1], toEther(500))).to
-      .revert(ethers)
+    await expect(
+      lsd.connect(signers[1]).transferFrom(adapter.target, accounts[1], toEther(500))
+    ).to.revert(ethers)
   })
 })

@@ -117,7 +117,10 @@ describe('WLSTUSDCChainlinkPriceAdapter', () => {
     await stakingPool.updateStrategyRewards([0], '0x')
 
     const [, answer, , ,] = await adapter.latestRoundData()
-    assert.isTrue(Math.abs(Number(answer) / 1e8 - 25) < 0.01, `Expected ~25, got ${Number(answer) / 1e8}`)
+    assert.isTrue(
+      Math.abs(Number(answer) / 1e8 - 25) < 0.01,
+      `Expected ~25, got ${Number(answer) / 1e8}`
+    )
   })
 
   it('should return correct price when USDC depegs to $0.99', async () => {
@@ -126,7 +129,10 @@ describe('WLSTUSDCChainlinkPriceAdapter', () => {
     await usdcUSDFeed.updateAnswer(99000000)
 
     const [, answer, , ,] = await adapter.latestRoundData()
-    assert.isTrue(Math.abs(Number(answer) / 1e8 - 20.2) < 0.01, `Expected ~20.2, got ${Number(answer) / 1e8}`)
+    assert.isTrue(
+      Math.abs(Number(answer) / 1e8 - 20.2) < 0.01,
+      `Expected ~20.2, got ${Number(answer) / 1e8}`
+    )
   })
 
   it('should return correct price when LINK drops to $15', async () => {
@@ -159,6 +165,9 @@ describe('WLSTUSDCChainlinkPriceAdapter', () => {
     await underlyingUSDFeed.updateAnswer(3000000000)
 
     const [, answer, , ,] = await adapter.latestRoundData()
-    assert.isTrue(Math.abs(Number(answer) / 1e8 - 60) < 0.01, `Expected ~60, got ${Number(answer) / 1e8}`)
+    assert.isTrue(
+      Math.abs(Number(answer) / 1e8 - 60) < 0.01,
+      `Expected ~60, got ${Number(answer) / 1e8}`
+    )
   })
 })

@@ -8,7 +8,14 @@ import {
   WrappedSDToken,
   ERC677,
 } from '../../../types/ethers-contracts'
-import { deploy, deployUpgradeable, fromEther, getAccounts, getConnection, toEther } from '../../utils/helpers'
+import {
+  deploy,
+  deployUpgradeable,
+  fromEther,
+  getAccounts,
+  getConnection,
+  toEther,
+} from '../../utils/helpers'
 
 const { ethers, loadFixture } = getConnection()
 

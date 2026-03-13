@@ -1,6 +1,11 @@
 import { toEther, deploy, fromEther, getAccounts, getConnection } from '../../utils/helpers'
 import { assert, expect } from 'chai'
-import { ERC677, DistributionOracle, PriorityPoolMock, Operator } from '../../../types/ethers-contracts'
+import {
+  ERC677,
+  DistributionOracle,
+  PriorityPoolMock,
+  Operator,
+} from '../../../types/ethers-contracts'
 import cbor from 'cbor'
 
 const { ethers, loadFixture, networkHelpers } = getConnection()

@@ -129,8 +129,9 @@ describe('SecurityPool', () => {
   })
 
   it('claim process should work correctly', async () => {
-    const { accounts, signers, securityPool, stakingToken, rewardsPool, token } =
-      await loadFixture(deployFixture)
+    const { accounts, signers, securityPool, stakingToken, rewardsPool, token } = await loadFixture(
+      deployFixture
+    )
 
     await expect(securityPool.executeClaim(10)).to.be.revertedWithCustomError(
       securityPool,

@@ -248,7 +248,7 @@ describe('EspressoVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(fromEther(await vault.getRewards()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 100)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 50)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 50)
 
     // Add more rewards and withdraw again
     await vault.updateLifetimeRewards(toEther(80))
@@ -260,7 +260,7 @@ describe('EspressoVault', () => {
     await vault.withdrawRewards(toEther(80), '0x')
 
     assert.equal(fromEther(await vault.getRewards()), 0)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance2)), 30)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance2), 30)
 
     // Withdraw with outdated lifetime rewards in vault (new rewards accrued)
     const preBalance3: bigint = await token.balanceOf(accounts[0])
@@ -268,7 +268,7 @@ describe('EspressoVault', () => {
     await vault.withdrawRewards(toEther(100), '0x')
 
     assert.equal(fromEther(await vault.getRewards()), 0)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance3)), 20)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance3), 20)
   })
 
   it('updateLifetimeRewards should work correctly', async () => {
@@ -329,7 +329,7 @@ describe('EspressoVault', () => {
 
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 0)
     assert.equal(fromEther(await vault.getTotalDeposits()), 0)
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - preBalance)), 100)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance), 100)
   })
 
   it('getTotalDeposits should work correctly', async () => {

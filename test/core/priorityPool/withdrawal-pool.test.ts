@@ -205,7 +205,7 @@ describe('WithdrawalPool', () => {
 
     let startingBalance: bigint = await token.balanceOf(accounts[1])
     await withdrawalPool.connect(signers[1]).withdraw([2], [2])
-    assert.equal(fromEther(((await token.balanceOf(accounts[1])) - startingBalance)), 250)
+    assert.equal(fromEther((await token.balanceOf(accounts[1])) - startingBalance), 250)
     assert.deepEqual(
       (await withdrawalPool.getWithdrawalIdsByOwner(accounts[1])).map((id: bigint) => Number(id)),
       []
@@ -220,7 +220,7 @@ describe('WithdrawalPool', () => {
 
     startingBalance = await token.balanceOf(accounts[0])
     await withdrawalPool.withdraw([1, 3], [1, 2])
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - startingBalance)), 1500)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - startingBalance), 1500)
     assert.deepEqual(
       (await withdrawalPool.getWithdrawalIdsByOwner(accounts[1])).map((id: bigint) => Number(id)),
       []
@@ -262,7 +262,7 @@ describe('WithdrawalPool', () => {
     let startingBalance0: bigint = await token.balanceOf(accounts[0])
 
     await withdrawalPool.forceWithdraw([2, 1, 3], [2, 1, 2])
-    assert.equal(fromEther(((await token.balanceOf(accounts[1])) - startingBalance1)), 250)
+    assert.equal(fromEther((await token.balanceOf(accounts[1])) - startingBalance1), 250)
     assert.deepEqual(
       (await withdrawalPool.getWithdrawalIdsByOwner(accounts[1])).map((id: bigint) => Number(id)),
       []
@@ -275,7 +275,7 @@ describe('WithdrawalPool', () => {
       [[0, 0]]
     )
 
-    assert.equal(fromEther(((await token.balanceOf(accounts[0])) - startingBalance0)), 1500)
+    assert.equal(fromEther((await token.balanceOf(accounts[0])) - startingBalance0), 1500)
     assert.deepEqual(
       (await withdrawalPool.getWithdrawalIdsByOwner(accounts[1])).map((id: bigint) => Number(id)),
       []

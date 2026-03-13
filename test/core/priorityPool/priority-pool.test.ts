@@ -81,9 +81,7 @@ describe('PriorityPool', () => {
   }
 
   it('deposit should work correctly', async () => {
-    const { signers, accounts, pp, token, strategy, stakingPool } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, pp, token, strategy, stakingPool } = await loadFixture(deployFixture)
 
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
     assert.equal(fromEther(await pp.totalQueued()), 0)
@@ -152,7 +150,9 @@ describe('PriorityPool', () => {
   })
 
   it('deposit should work correctly with queued withdrawals', async () => {
-    const { signers, accounts, pp, token, stakingPool, withdrawalPool } = await loadFixture(deployFixture)
+    const { signers, accounts, pp, token, stakingPool, withdrawalPool } = await loadFixture(
+      deployFixture
+    )
 
     await stakingPool.approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(99), true, ['0x'])
@@ -449,9 +449,7 @@ describe('PriorityPool', () => {
   })
 
   it('claimLSDTokens should work correctly', async () => {
-    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await pp.deposit(toEther(2000), true, ['0x'])
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
@@ -510,9 +508,7 @@ describe('PriorityPool', () => {
   })
 
   it('unqueueTokens should work correctly', async () => {
-    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await pp.deposit(toEther(2000), true, ['0x'])
     await pp.connect(signers[1]).deposit(toEther(500), true, ['0x'])
@@ -604,9 +600,7 @@ describe('PriorityPool', () => {
   })
 
   it('withdraw should work correctly', async () => {
-    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await stakingPool.connect(signers[1]).approve(pp.target, ethers.MaxUint256)
     await stakingPool.connect(signers[2]).approve(pp.target, ethers.MaxUint256)
@@ -651,9 +645,7 @@ describe('PriorityPool', () => {
   })
 
   it('withdraw should work correctly with queued withdrawals', async () => {
-    const { pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(
-      deployFixture
-    )
+    const { pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(deployFixture)
 
     await stakingPool.approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(100), true, ['0x'])
@@ -667,9 +659,7 @@ describe('PriorityPool', () => {
   })
 
   it('withdraw should work correctly with queued tokens', async () => {
-    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
     await stakingPool.connect(signers[1]).approve(pp.target, ethers.MaxUint256)
     await stakingPool.connect(signers[2]).approve(pp.target, ethers.MaxUint256)
@@ -813,9 +803,7 @@ describe('PriorityPool', () => {
   })
 
   it('executeQueuedWithdrawals should work correctly', async () => {
-    const { pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(
-      deployFixture
-    )
+    const { pp, token, stakingPool, strategy, withdrawalPool } = await loadFixture(deployFixture)
 
     await stakingPool.approve(pp.target, ethers.MaxUint256)
     await pp.deposit(toEther(1100), true, ['0x'])
