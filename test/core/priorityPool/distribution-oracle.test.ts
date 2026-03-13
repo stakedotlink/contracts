@@ -15,38 +15,33 @@ const mineUpTo = networkHelpers.mineUpTo
 describe('DistributionOracle', () => {
   async function deployFixture() {
     const { accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
 
     const pp = (await deploy('PriorityPoolMock', [toEther(1000)])) as PriorityPoolMock
-    adrs.pp = await pp.getAddress()
 
-    const opContract = (await deploy('Operator', [adrs.token, accounts[0]])) as Operator
-    adrs.opContract = await opContract.getAddress()
+    const opContract = (await deploy('Operator', [token.target, accounts[0]])) as Operator
 
     const oracle = (await deploy('DistributionOracle', [
-      adrs.token,
-      adrs.opContract,
+      token.target,
+      opContract.target,
       '0x' + Buffer.from('64797f2053684fef80138a5be83281b1').toString('hex'),
       toEther(1),
       0,
       toEther(100),
       10,
-      adrs.pp,
+      pp.target,
     ])) as DistributionOracle
-    adrs.oracle = await oracle.getAddress()
 
     await opContract.setAuthorizedSenders([accounts[0]])
-    await token.transfer(adrs.oracle, toEther(100))
+    await token.transfer(oracle.target, toEther(100))
     await oracle.toggleManualVerification()
 
-    return { accounts, adrs, token, pp, opContract, oracle }
+    return { accounts, token, pp, opContract, oracle }
   }
 
   it('pauseForUpdate should work correctly', async () => {
@@ -249,10 +244,10 @@ describe('DistributionOracle', () => {
   })
 
   it('withdrawLink should work correctly', async () => {
-    const { accounts, adrs, oracle, token } = await loadFixture(deployFixture)
+    const { accounts, oracle, token } = await loadFixture(deployFixture)
 
     await oracle.withdrawLink(toEther(20))
-    assert.equal(fromEther(await token.balanceOf(adrs.oracle)), 80)
+    assert.equal(fromEther(await token.balanceOf(oracle.target)), 80)
     assert.equal(fromEther(await token.balanceOf(accounts[0])), 999999920)
   })
 

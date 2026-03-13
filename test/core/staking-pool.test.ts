@@ -800,12 +800,14 @@ describe('StakingPool', () => {
   })
 
   it('should revert transfer and burn when amount rounds to zero shares', async () => {
-    const { signers, accounts, adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+    const { signers, accounts, stakingPool, token, stake, strategy1 } = await loadFixture(
+      deployFixture
+    )
 
     await stake(1, 1000)
 
     // accrue rewards so totalStaked > totalShares
-    await token.transfer(adrs.strategy1, toEther(500))
+    await token.transfer(strategy1.target, toEther(500))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     assert.equal(await stakingPool.getSharesByStake(1), 0n)

@@ -839,15 +839,13 @@ describe('PriorityPool', () => {
   })
 
   it('withdraw should revert when transfer amount rounds to zero shares', async () => {
-    const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, pp, token, stakingPool, strategy } = await loadFixture(deployFixture)
 
-    await stakingPool.connect(signers[1]).approve(adrs.pp, ethers.MaxUint256)
+    await stakingPool.connect(signers[1]).approve(pp.target, ethers.MaxUint256)
 
     // deposit and accrue rewards so totalStaked > totalShares
     await pp.connect(signers[1]).deposit(toEther(1000), false, ['0x'])
-    await token.transfer(adrs.strategy, toEther(100))
+    await token.transfer(strategy.target, toEther(100))
     await stakingPool.updateStrategyRewards([0], '0x')
 
     assert.equal(await stakingPool.getSharesByStake(1), 0n)
@@ -874,7 +872,7 @@ describe('PriorityPool', () => {
     // attempt ERC677 withdraw path with 1 wei - should also revert
     await expect(
       stakingPool.transferAndCall(
-        adrs.pp,
+        pp.target,
         1,
         ethers.AbiCoder.defaultAbiCoder().encode(['bool', 'bytes[]'], [false, ['0x']])
       )
