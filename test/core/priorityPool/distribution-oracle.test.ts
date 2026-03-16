@@ -1,6 +1,6 @@
 import { toEther, deploy, fromEther, getAccounts, getConnection } from '../../utils/helpers'
 import { assert, expect } from 'chai'
-import {
+import type {
   ERC677,
   DistributionOracle,
   PriorityPoolMock,

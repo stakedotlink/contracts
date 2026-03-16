@@ -1,5 +1,5 @@
 import { assert, expect } from 'chai'
-import {
+import type {
   CCIPCurveGaugeReceiver,
   CCIPCurveGaugeSender,
   CurveGaugeDistributorMock,

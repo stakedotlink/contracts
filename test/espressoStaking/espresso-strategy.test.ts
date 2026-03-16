@@ -9,7 +9,7 @@ import {
   fromEther,
   getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC20Mintable,
   EspressoStakingMock,
   EspressoRewardsMock,

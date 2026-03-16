@@ -8,7 +8,12 @@ import {
   fromEther,
   getConnection,
 } from '../utils/helpers'
-import { ERC677, StrategyMock, StakingPool, WrappedSDToken } from '../../types/ethers-contracts'
+import type {
+  ERC677,
+  StrategyMock,
+  StakingPool,
+  WrappedSDToken,
+} from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
 

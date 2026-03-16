@@ -8,7 +8,7 @@ import {
   deployImplementation,
   getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC677,
   OperatorVCS,
   OperatorVault,

@@ -9,7 +9,7 @@ import {
   deployUpgradeable,
   getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC677,
   EthStakingStrategyMock,
   NWLOperatorController,

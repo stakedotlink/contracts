@@ -8,7 +8,7 @@ import {
   deployUpgradeable,
   getConnection,
 } from '../utils/helpers'
-import { ERC677, SecurityPool, RewardsPoolTimeBased } from '../../types/ethers-contracts'
+import type { ERC677, SecurityPool, RewardsPoolTimeBased } from '../../types/ethers-contracts'
 
 const { ethers, loadFixture, networkHelpers } = getConnection()
 const time = networkHelpers.time

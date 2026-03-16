@@ -8,7 +8,7 @@ import {
   concatBytes,
   getConnection,
 } from '../utils/helpers'
-import {
+import type {
   StakingPool,
   WrappedSDToken,
   EthStakingStrategy,

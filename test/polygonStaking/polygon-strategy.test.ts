@@ -9,7 +9,7 @@ import {
   deployImplementation,
   getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC20Mintable,
   PolygonStakeManagerMock,
   PolygonStrategy,

@@ -1,5 +1,5 @@
 import { deploy, fromEther, getAccounts, toEther, getConnection } from '../utils/helpers'
-import { StakingAllowance } from '../../types/ethers-contracts'
+import type { StakingAllowance } from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
 
 const { loadFixture } = getConnection()

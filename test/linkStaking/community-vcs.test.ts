@@ -9,7 +9,12 @@ import {
   deployImplementation,
   getConnection,
 } from '../utils/helpers'
-import { ERC677, CommunityVCS, StakingMock, StakingRewardsMock } from '../../types/ethers-contracts'
+import type {
+  ERC677,
+  CommunityVCS,
+  StakingMock,
+  StakingRewardsMock,
+} from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
 

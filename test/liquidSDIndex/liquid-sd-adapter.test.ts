@@ -7,7 +7,7 @@ import {
   toEther,
   getConnection,
 } from '../utils/helpers'
-import { ERC677, LSDIndexAdapterMock } from '../../types/ethers-contracts'
+import type { ERC677, LSDIndexAdapterMock } from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
 

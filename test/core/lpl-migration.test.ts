@@ -6,7 +6,7 @@ import {
   fromEther,
   getConnection,
 } from '../utils/helpers'
-import { ERC677, StakingAllowance, LPLMigration } from '../../types/ethers-contracts'
+import type { ERC677, StakingAllowance, LPLMigration } from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
 
 const { loadFixture } = getConnection()

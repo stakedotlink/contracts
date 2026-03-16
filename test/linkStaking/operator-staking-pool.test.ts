@@ -8,7 +8,7 @@ import {
   deployUpgradeable,
   getConnection,
 } from '../utils/helpers'
-import { LSTMock, OperatorStakingPool } from '../../types/ethers-contracts'
+import type { LSTMock, OperatorStakingPool } from '../../types/ethers-contracts'
 
 const { loadFixture } = getConnection()
 

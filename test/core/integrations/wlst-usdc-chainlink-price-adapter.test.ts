@@ -7,7 +7,7 @@ import {
   setupToken,
   getConnection,
 } from '../../utils/helpers'
-import {
+import type {
   ERC677,
   StrategyMock,
   StakingPool,

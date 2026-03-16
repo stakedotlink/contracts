@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai'
 import { toEther, deploy, fromEther, getConnection } from '../../utils/helpers'
-import { LinearBoostController } from '../../../types/ethers-contracts'
+import type { LinearBoostController } from '../../../types/ethers-contracts'
 
 const { loadFixture } = getConnection()
 

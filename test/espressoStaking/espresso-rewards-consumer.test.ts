@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai'
 import { deploy, getAccounts, getConnection, toEther, fromEther } from '../utils/helpers'
-import { EspressoRewardsConsumer, EspressoStrategyMock } from '../../types/ethers-contracts'
+import type { EspressoRewardsConsumer, EspressoStrategyMock } from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
 

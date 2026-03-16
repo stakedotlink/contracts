@@ -9,7 +9,7 @@ import {
   padBytes,
   getConnection,
 } from '../utils/helpers'
-import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../types/ethers-contracts'
+import type { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../types/ethers-contracts'
 import { Signer } from 'ethers'
 
 const { ethers, loadFixture } = getConnection()

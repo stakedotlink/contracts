@@ -1,6 +1,6 @@
 /* import { assert, expect } from 'chai'
 import { deploy, getAccounts, getConnection } from '../utils/helpers'
-import { OperatorWhitelist } from '../../types/ethers-contracts'
+import type { OperatorWhitelist } from '../../types/ethers-contracts'
 
 const { loadFixture } = getConnection()
 

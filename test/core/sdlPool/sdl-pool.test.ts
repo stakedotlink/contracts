@@ -8,7 +8,7 @@ import {
   deployUpgradeable,
   getConnection,
 } from '../../utils/helpers'
-import {
+import type {
   DelegatorPool,
   ERC677,
   LinearBoostController,

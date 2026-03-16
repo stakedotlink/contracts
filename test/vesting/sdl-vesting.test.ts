@@ -6,7 +6,7 @@ import {
   deployUpgradeable,
   getConnection,
 } from '../utils/helpers'
-import {
+import type {
   LinearBoostController,
   RewardsPool,
   SDLPool,

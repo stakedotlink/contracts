@@ -1,6 +1,6 @@
 /* import { assert, expect } from 'chai'
 import { deploy, fromEther, getAccounts, toEther, getConnection } from '../utils/helpers'
-import { RewardsReceiver } from '../../types/ethers-contracts'
+import type { RewardsReceiver } from '../../types/ethers-contracts'
 
 const { ethers, loadFixture } = getConnection()
 

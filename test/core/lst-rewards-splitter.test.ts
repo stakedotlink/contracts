@@ -7,7 +7,11 @@ import {
   deployUpgradeable,
   getConnection,
 } from '../utils/helpers'
-import { LSTMock, LSTRewardsSplitterController, StakingPool } from '../../types/ethers-contracts'
+import type {
+  LSTMock,
+  LSTRewardsSplitterController,
+  StakingPool,
+} from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
 
 const { ethers, loadFixture } = getConnection()
