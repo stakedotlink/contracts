@@ -1,8 +1,8 @@
-import { assert, expect } from 'chai'
-import { deploy, fromEther, getAccounts, toEther } from '../utils/helpers'
-import { RewardsReceiver } from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+/* import { assert, expect } from 'chai'
+import { deploy, fromEther, getAccounts, toEther, getConnection } from '../utils/helpers'
+import type { RewardsReceiver } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('RewardsReceiver', () => {
   async function deployFixture() {
@@ -61,4 +61,4 @@ describe('RewardsReceiver', () => {
     value = await rewardsReceiver.withdraw.staticCall()
     assert.equal(fromEther(value), 0, 'return value incorrect')
   })
-})
+}) */

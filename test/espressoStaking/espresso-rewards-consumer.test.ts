@@ -1,8 +1,8 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { deploy, getAccounts } from '../utils/helpers'
-import { EspressoRewardsConsumer, EspressoStrategyMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { deploy, getAccounts, getConnection, toEther, fromEther } from '../utils/helpers'
+import type { EspressoRewardsConsumer, EspressoStrategyMock } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('EspressoRewardsConsumer', () => {
   async function deployFixture() {
@@ -34,11 +34,7 @@ describe('EspressoRewardsConsumer', () => {
     const { consumer, strategyMock } = await loadFixture(deployFixture)
 
     const vaultIds = [0, 1, 2]
-    const lifetimeRewards = [
-      ethers.parseEther('100'),
-      ethers.parseEther('200'),
-      ethers.parseEther('300'),
-    ]
+    const lifetimeRewards = [toEther(100), toEther(200), toEther(300)]
 
     const report = ethers.AbiCoder.defaultAbiCoder().encode(
       ['uint256[]', 'uint256[]'],
@@ -54,9 +50,9 @@ describe('EspressoRewardsConsumer', () => {
     assert.equal(Number(lastVaultIds[0]), 0)
     assert.equal(Number(lastVaultIds[1]), 1)
     assert.equal(Number(lastVaultIds[2]), 2)
-    assert.equal(lastLifetimeRewards[0], ethers.parseEther('100'))
-    assert.equal(lastLifetimeRewards[1], ethers.parseEther('200'))
-    assert.equal(lastLifetimeRewards[2], ethers.parseEther('300'))
+    assert.equal(fromEther(lastLifetimeRewards[0]), 100)
+    assert.equal(fromEther(lastLifetimeRewards[1]), 200)
+    assert.equal(fromEther(lastLifetimeRewards[2]), 300)
     assert.equal(Number(await strategyMock.updateCount()), 1)
   })
 
@@ -65,7 +61,7 @@ describe('EspressoRewardsConsumer', () => {
 
     const report = ethers.AbiCoder.defaultAbiCoder().encode(
       ['uint256[]', 'uint256[]'],
-      [[0], [ethers.parseEther('100')]]
+      [[0], [toEther(100)]]
     )
 
     await expect(consumer.connect(signers[1]).onReport('0x', report))

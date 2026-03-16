@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,9 +7,10 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import {
-  ERC20,
+import type {
+  ERC20Mintable,
   EspressoStakingMock,
   EspressoRewardsMock,
   EspressoStrategy,
@@ -18,8 +18,10 @@ import {
   EspressoVault,
   StakingPool,
   WithdrawalPoolMock,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const exitEscrowPeriod = 7 * 86400 // 7 days
 const minTimeBetweenUnbonding = 10 * 86400 // 10 days
@@ -32,7 +34,7 @@ describe('EspressoFundFlowController', () => {
       'Espresso',
       'ESP',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const espressoStaking = (await deploy('EspressoStakingMock', [
@@ -479,7 +481,7 @@ describe('EspressoFundFlowController', () => {
     assert.equal(fromEther(await vaults[0].getRewards()), 20)
     assert.equal(fromEther(await vaults[1].getRewards()), 30)
 
-    const preBalance = await token.balanceOf(strategy.target)
+    const preBalance: bigint = await token.balanceOf(strategy.target)
 
     // Withdraw rewards
     await fundFlowController.withdrawRewards([0, 1], [toEther(20), toEther(30)], ['0x', '0x'])

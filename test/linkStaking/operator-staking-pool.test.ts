@@ -6,9 +6,11 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  getConnection,
 } from '../utils/helpers'
-import { LSTMock, OperatorStakingPool } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import type { LSTMock, OperatorStakingPool } from '../../types/ethers-contracts'
+
+const { loadFixture } = getConnection()
 
 describe('OperatorStakingPool', () => {
   async function deployFixture() {

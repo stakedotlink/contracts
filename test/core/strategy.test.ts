@@ -1,4 +1,3 @@
-import { ethers, upgrades } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,48 +6,48 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import { ERC677, StrategyMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import type { ERC677, StrategyMock } from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, upgradesApi } = getConnection()
 
 describe('Strategy', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
     await setupToken(token, accounts)
 
     const strategy = (await deployUpgradeable('StrategyMock', [
-      adrs.token,
+      token.target,
       accounts[0],
       toEther(1000),
       toEther(10),
     ])) as StrategyMock
-    adrs.strategy = await strategy.getAddress()
 
-    await token.approve(adrs.strategy, ethers.MaxUint256)
+    await token.approve(strategy.target, ethers.MaxUint256)
 
-    return { signers, accounts, adrs, token, strategy }
+    return { signers, accounts, token, strategy }
   }
 
   it('should be able to upgrade contract, state should persist', async () => {
-    const { adrs, token, strategy } = await loadFixture(deployFixture)
+    const { token, strategy } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(1000), '0x')
 
     let StrategyV2 = await ethers.getContractFactory('StrategyMockV2')
-    let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.strategy, StrategyV2, {
+    let upgradedImpAddress = (await upgradesApi.prepareUpgrade(strategy.target, StrategyV2, {
       kind: 'uups',
+      unsafeAllow: ['missing-initializer'],
     })) as string
     await strategy.upgradeTo(upgradedImpAddress)
 
-    let upgraded = await ethers.getContractAt('StrategyMockV2', adrs.strategy)
+    let upgraded = await ethers.getContractAt('StrategyMockV2', strategy.target)
     assert.equal(Number(await upgraded.contractVersion()), 2, 'contract not upgraded')
     assert.equal(fromEther(await upgraded.getTotalDeposits()), 1000, 'state not persisted')
     assert.equal(
@@ -59,11 +58,12 @@ describe('Strategy', () => {
   })
 
   it('contract should only be upgradeable by owner', async () => {
-    const { adrs, signers, strategy } = await loadFixture(deployFixture)
+    const { signers, strategy } = await loadFixture(deployFixture)
 
     let StrategyV2 = await ethers.getContractFactory('StrategyMockV2')
-    let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.strategy, StrategyV2, {
+    let upgradedImpAddress = (await upgradesApi.prepareUpgrade(strategy.target, StrategyV2, {
       kind: 'uups',
+      unsafeAllow: ['missing-initializer'],
     })) as string
 
     await expect(strategy.connect(signers[1]).upgradeTo(upgradedImpAddress)).to.be.revertedWith(

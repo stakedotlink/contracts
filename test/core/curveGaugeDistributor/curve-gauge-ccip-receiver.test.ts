@@ -1,14 +1,13 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { assert, expect } from 'chai'
-import { ethers } from 'hardhat'
-import { id, AbiCoder } from 'ethers'
-import {
+import type {
   CCIPCurveGaugeReceiver,
   CurveGaugeDistributorMock,
   MockCCIPRouter,
-} from '../../../typechain-types'
-import { deploy, fromEther, getAccounts, toEther } from '../../utils/helpers'
-import { ERC677 } from '../../../typechain-types/contracts/core/tokens/base'
+  ERC677,
+} from '../../../types/ethers-contracts'
+import { deploy, fromEther, getAccounts, getConnection, toEther } from '../../utils/helpers'
+
+const { ethers, loadFixture } = getConnection()
 
 const chainSelector = 7777n
 
@@ -66,8 +65,8 @@ describe('CCIPCurveGaugeReceiver', function () {
     ]
 
     const gasLimit = 200000
-    const functionSelector = id('CCIP EVMExtraArgsV1').slice(0, 10)
-    const defaultAbiCoder = AbiCoder.defaultAbiCoder()
+    const functionSelector = ethers.id('CCIP EVMExtraArgsV1').slice(0, 10)
+    const defaultAbiCoder = ethers.AbiCoder.defaultAbiCoder()
     const extraArgs = defaultAbiCoder.encode(['uint256'], [gasLimit])
     const encodedExtraArgs = `${functionSelector}${extraArgs.slice(2)}`
 
@@ -79,10 +78,10 @@ describe('CCIPCurveGaugeReceiver', function () {
       extraArgs: encodedExtraArgs,
     }
 
-    await expect(ccipRouter.connect(signers[1]).ccipSend(chainSelector, message)).to.be.reverted
+    await expect(ccipRouter.connect(signers[1]).ccipSend(chainSelector, message)).to.revert(ethers)
     await expect(
       ccipRouter.connect(signers[1]).ccipSend(chainSelector, { ...message, tokenAmounts: [] })
-    ).to.be.reverted
+    ).to.revert(ethers)
 
     await ccipRouter.ccipSend(chainSelector, message)
 

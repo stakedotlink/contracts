@@ -1,24 +1,30 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { assert, expect } from 'chai'
-import { ethers } from 'hardhat'
-import { id, AbiCoder } from 'ethers'
-import {
+import type {
   CCIPCurveGaugeReceiver,
   CCIPCurveGaugeSender,
   CurveGaugeDistributorMock,
   MockCCIPRouter,
   StakingPool,
   WrappedSDToken,
-} from '../../../typechain-types'
-import { deploy, deployUpgradeable, fromEther, getAccounts, toEther } from '../../utils/helpers'
-import { ERC677 } from '../../../typechain-types/contracts/core/tokens/base'
+  ERC677,
+} from '../../../types/ethers-contracts'
+import {
+  deploy,
+  deployUpgradeable,
+  fromEther,
+  getAccounts,
+  getConnection,
+  toEther,
+} from '../../utils/helpers'
+
+const { ethers, loadFixture } = getConnection()
 
 const sourceChainSelector = 7777n
 const destChainSelector = 8888n
 
 const gasLimit = 200000
-const functionSelector = id('CCIP EVMExtraArgsV1').slice(0, 10)
-const extraArgs = AbiCoder.defaultAbiCoder().encode(['uint256'], [gasLimit])
+const functionSelector = ethers.id('CCIP EVMExtraArgsV1').slice(0, 10)
+const extraArgs = ethers.AbiCoder.defaultAbiCoder().encode(['uint256'], [gasLimit])
 const encodedExtraArgs = `${functionSelector}${extraArgs.slice(2)}`
 
 describe('CCIPCurveGaugeSender', function () {

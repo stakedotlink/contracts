@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert } from 'chai'
 import {
   toEther,
@@ -7,15 +6,17 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../../utils/helpers'
-import {
+import type {
   ERC677,
   StrategyMock,
   StakingPool,
   WrappedSDToken,
   WLSTUnderlyingChainlinkPriceAdapter,
-} from '../../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('WLSTUnderlyingChainlinkPriceAdapter', () => {
   async function deployFixture() {

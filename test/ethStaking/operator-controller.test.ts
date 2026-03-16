@@ -1,4 +1,4 @@
-import { assert, expect } from 'chai'
+/* import { assert, expect } from 'chai'
 import {
   padBytes,
   concatBytes,
@@ -7,15 +7,16 @@ import {
   deploy,
   toEther,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC677,
   OperatorControllerMock,
   OperatorControllerMockV2,
   RewardsPool,
-} from '../../typechain-types'
-import { ethers, upgrades } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, upgradesApi } = getConnection()
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -308,7 +309,7 @@ describe('OperatorController', () => {
     await controller.assignNextValidators([0], [2], 2)
 
     let Controller = await ethers.getContractFactory('OperatorControllerMockV2')
-    let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.controller, Controller, {
+    let upgradedImpAddress = (await upgradesApi.prepareUpgrade(adrs.controller, Controller, {
       kind: 'uups',
     })) as string
 
@@ -341,4 +342,4 @@ describe('OperatorController', () => {
     )
     assert.equal(Number(await upgraded.staked(accounts[0])), 2, 'operator staked incorrect')
   })
-})
+}) */

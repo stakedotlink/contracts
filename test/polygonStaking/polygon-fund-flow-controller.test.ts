@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,17 +7,20 @@ import {
   setupToken,
   fromEther,
   deployImplementation,
+  getConnection,
 } from '../utils/helpers'
-import {
-  ERC20,
+import type {
+  ERC20Mintable,
   PolygonFundFlowController,
   PolygonStakeManagerMock,
   PolygonStrategy,
   PolygonValidatorShareMock,
   StakingPool,
   WithdrawalPoolMock,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const withdrawalDelay = 86400
 
@@ -30,7 +32,7 @@ describe('PolygonFundFlowController', () => {
       'Polygon',
       'POL',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const stakeManager = (await deploy('PolygonStakeManagerMock', [
@@ -251,7 +253,7 @@ describe('PolygonFundFlowController', () => {
     await strategy.restakeRewards([0, 2])
 
     assert.deepEqual(
-      (await fundFlowController.getVaultRewards()).map((v) => fromEther(v)),
+      (await fundFlowController.getVaultRewards()).map((v: bigint) => fromEther(v)),
       [0, 20, 0]
     )
 
@@ -305,7 +307,7 @@ describe('PolygonFundFlowController', () => {
     const { fundFlowController, withdrawalPool } = await loadFixture(deployFixture)
 
     assert.deepEqual(
-      (await fundFlowController.getVaultDeposits()).map((d) => fromEther(d)),
+      (await fundFlowController.getVaultDeposits()).map((d: bigint) => fromEther(d)),
       [10, 20, 30]
     )
 
@@ -315,7 +317,7 @@ describe('PolygonFundFlowController', () => {
     await fundFlowController.withdrawVaults([0n, 1n])
 
     assert.deepEqual(
-      (await fundFlowController.getVaultDeposits()).map((v) => fromEther(v)),
+      (await fundFlowController.getVaultDeposits()).map((v: bigint) => fromEther(v)),
       [0, 10, 30]
     )
   })
@@ -331,7 +333,7 @@ describe('PolygonFundFlowController', () => {
     } = await loadFixture(deployFixture)
 
     assert.deepEqual(
-      (await fundFlowController.getVaultRewards()).map((v) => fromEther(v)),
+      (await fundFlowController.getVaultRewards()).map((v: bigint) => fromEther(v)),
       [0, 0, 0]
     )
 
@@ -340,14 +342,14 @@ describe('PolygonFundFlowController', () => {
     await validatorShare3.addReward(vaults[2].target, toEther(15))
 
     assert.deepEqual(
-      (await fundFlowController.getVaultRewards()).map((v) => fromEther(v)),
+      (await fundFlowController.getVaultRewards()).map((v: bigint) => fromEther(v)),
       [5, 10, 15]
     )
 
     await strategy.restakeRewards([1])
 
     assert.deepEqual(
-      (await fundFlowController.getVaultRewards()).map((v) => fromEther(v)),
+      (await fundFlowController.getVaultRewards()).map((v: bigint) => fromEther(v)),
       [5, 0, 15]
     )
   })

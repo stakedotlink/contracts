@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,14 +6,17 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import {
-  ERC20,
+import type {
+  ERC20Mintable,
   PolygonStakeManagerMock,
   PolygonValidatorShareMock,
   PolygonVault,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const withdrawalDelay = 86400
 
@@ -26,7 +28,7 @@ describe('PolygonVault', () => {
       'Polygon',
       'POL',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const stakeManager = (await deploy('PolygonStakeManagerMock', [
@@ -98,7 +100,7 @@ describe('PolygonVault', () => {
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 200)
 
-    let preBalance = await token.balanceOf(accounts[0])
+    let preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(false)
 
@@ -129,7 +131,7 @@ describe('PolygonVault', () => {
     assert.equal(await vault.isWithdrawable(), false)
     assert.equal(fromEther(await vault.getQueuedWithdrawals()), 0)
 
-    let preBalance = await token.balanceOf(accounts[0])
+    let preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.unbond(toEther(30))
 
@@ -163,7 +165,7 @@ describe('PolygonVault', () => {
   it('withdraw should work correctly', async () => {
     const { vault, validatorShare, token, accounts } = await loadFixture(deployFixture)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.deposit(toEther(100))
     await validatorShare.addReward(vault.target, toEther(50))

@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,14 +6,17 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  getConnection,
 } from '../utils/helpers'
-import {
-  ERC20,
+import type {
+  ERC20Mintable,
   EspressoStakingMock,
   EspressoRewardsMock,
   EspressoVault,
-} from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const exitEscrowPeriod = 86400 // 1 day
 
@@ -26,7 +28,7 @@ describe('EspressoVault', () => {
       'Espresso',
       'ESP',
       1000000000,
-    ])) as ERC20
+    ])) as ERC20Mintable
     await setupToken(token, accounts)
 
     const espressoStaking = (await deploy('EspressoStakingMock', [
@@ -126,7 +128,7 @@ describe('EspressoVault', () => {
       deployFixture
     )
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.deposit(toEther(100))
     await vault.unbond(toEther(30))
@@ -239,7 +241,7 @@ describe('EspressoVault', () => {
     assert.equal(fromEther(await vault.getRewards()), 50)
     assert.equal(fromEther(await vault.getTotalDeposits()), 150)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(toEther(50), '0x')
 
@@ -253,7 +255,7 @@ describe('EspressoVault', () => {
 
     assert.equal(fromEther(await vault.getRewards()), 30)
 
-    const preBalance2 = await token.balanceOf(accounts[0])
+    const preBalance2: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(toEther(80), '0x')
 
@@ -261,7 +263,7 @@ describe('EspressoVault', () => {
     assert.equal(fromEther((await token.balanceOf(accounts[0])) - preBalance2), 30)
 
     // Withdraw with outdated lifetime rewards in vault (new rewards accrued)
-    const preBalance3 = await token.balanceOf(accounts[0])
+    const preBalance3: bigint = await token.balanceOf(accounts[0])
 
     await vault.withdrawRewards(toEther(100), '0x')
 
@@ -309,7 +311,7 @@ describe('EspressoVault', () => {
     assert.equal(fromEther(await vault.getPrincipalDeposits()), 100)
     assert.equal(await vault.isActive(), true)
 
-    const preBalance = await token.balanceOf(accounts[0])
+    const preBalance: bigint = await token.balanceOf(accounts[0])
 
     // Exit the validator in the mock
     await espressoStaking.exitValidator(validator)

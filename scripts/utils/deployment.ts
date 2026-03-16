@@ -1,7 +1,8 @@
 import { Addressable } from 'ethers'
 import fse from 'fs-extra'
-import { ethers, upgrades, network } from 'hardhat'
-import { getLedgerSigner } from './helpers'
+import { getConnection, getLedgerSigner } from './helpers'
+
+const { connection, ethers, upgradesApi } = await getConnection()
 
 export const deploy = async (contractName: string, args: any[] = []): Promise<any> => {
   const ledgerSigner = await getLedgerSigner()
@@ -11,13 +12,13 @@ export const deploy = async (contractName: string, args: any[] = []): Promise<an
 export const deployUpgradeable = async (contractName: string, args: any[] = [], options = {}) => {
   const ledgerSigner = await getLedgerSigner()
   const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
+  return upgradesApi.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
 }
 
 export const deployImplementation = async (contractName: string) => {
   const ledgerSigner = await getLedgerSigner()
   const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
-  return upgrades.deployImplementation(Contract, { kind: 'uups' })
+  return upgradesApi.deployImplementation(Contract, { kind: 'uups' })
 }
 
 export const upgradeProxy = async (
@@ -28,20 +29,21 @@ export const upgradeProxy = async (
 ) => {
   const ledgerSigner = await getLedgerSigner()
   const Contract = await ethers.getContractFactory(implementationContractName, ledgerSigner)
-  const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
+  return upgradesApi.upgradeProxy(proxyAddress, Contract, {
     useDeployedImplementation,
     call,
     kind: 'uups',
-  })
-  await contract.deployed()
-  return contract
+  }) as any
 }
 
 export const getDeployments = (networkName?: string) => {
-  fse.ensureFileSync(`deployments/${networkName || network.name}.json`)
-  const deployments = fse.readJSONSync(`deployments/${networkName || network.name}.json`, {
-    throws: false,
-  })
+  fse.ensureFileSync(`deployments/${networkName || connection.networkName}.json`)
+  const deployments = fse.readJSONSync(
+    `deployments/${networkName || connection.networkName}.json`,
+    {
+      throws: false,
+    }
+  )
 
   if (!deployments) {
     return {}
@@ -65,7 +67,7 @@ export const updateDeployments = (
   )
 
   fse.outputJSONSync(
-    `deployments/${network.name}.json`,
+    `deployments/${connection.networkName}.json`,
     { ...deployments, ...newDeploymentsWithArtifacts },
     { spaces: 2 }
   )
@@ -86,8 +88,10 @@ export const getContract = async (contractName: string, networkName?: string): P
 }
 
 export const printDeployments = () => {
-  fse.ensureFileSync(`deployments/${network.name}.json`)
-  const deployments = fse.readJSONSync(`deployments/${network.name}.json`, { throws: false })
+  fse.ensureFileSync(`deployments/${connection.networkName}.json`)
+  const deployments = fse.readJSONSync(`deployments/${connection.networkName}.json`, {
+    throws: false,
+  })
 
   if (!deployments) {
     console.log('Deployments: Nothing to print')

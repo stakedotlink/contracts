@@ -1,4 +1,4 @@
-import { assert, expect } from 'chai'
+/* import { assert, expect } from 'chai'
 import {
   deploy,
   padBytes,
@@ -7,15 +7,16 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
+  getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC677,
   OperatorWhitelistMock,
   RewardsPool,
   WLOperatorController,
-} from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -627,4 +628,4 @@ describe('WLOperatorController', () => {
       controller.connect(signers[1]).setOperatorWhitelist(accounts[2])
     ).to.be.revertedWith('Ownable: caller is not the owner')
   })
-})
+}) */

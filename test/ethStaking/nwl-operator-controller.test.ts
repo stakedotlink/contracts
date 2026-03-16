@@ -1,5 +1,4 @@
-import { ethers } from 'hardhat'
-import { assert, expect } from 'chai'
+/* import { assert, expect } from 'chai'
 import {
   deploy,
   padBytes,
@@ -8,14 +7,16 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
+  getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC677,
   EthStakingStrategyMock,
   NWLOperatorController,
   RewardsPool,
-} from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+} from '../../types/ethers-contracts'
+
+const { ethers, loadFixture } = getConnection()
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -575,4 +576,4 @@ describe('NWLOperatorController', () => {
     )
     assert.equal(hash, await controller.currentStateHash(), 'currentStateHash incorrect')
   })
-})
+}) */

@@ -1,17 +1,25 @@
-import { ethers } from 'hardhat'
+import hre, { network } from 'hardhat'
+import { parseEther, formatEther } from 'ethers'
+import { upgrades } from '@openzeppelin/hardhat-upgrades'
 import axios from 'axios'
 
+const connection = await network.connect(hre.globalOptions.network)
+const ethers = (connection as any).ethers
+const upgradesApi = await upgrades(hre, connection)
+
+export const getConnection = async () => ({ connection, ethers, upgradesApi })
+
 export const toEther = (amount: string | number) => {
-  return ethers.parseEther(amount.toString())
+  return parseEther(amount.toString())
 }
 
 export const fromEther = (amount: bigint) => {
-  return Number(ethers.formatEther(amount))
+  return Number(formatEther(amount))
 }
 
 export const getAccounts = async (): Promise<any> => {
   const signers = await ethers.getSigners()
-  const accounts = await Promise.all(signers.map(async (signer) => signer.getAddress()))
+  const accounts = await Promise.all(signers.map(async (signer: any) => signer.getAddress()))
   return { signers, accounts }
 }
 

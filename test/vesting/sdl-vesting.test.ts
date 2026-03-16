@@ -1,15 +1,23 @@
-import { toEther, deploy, getAccounts, fromEther, deployUpgradeable } from '../utils/helpers'
 import {
+  toEther,
+  deploy,
+  getAccounts,
+  fromEther,
+  deployUpgradeable,
+  getConnection,
+} from '../utils/helpers'
+import type {
   LinearBoostController,
   RewardsPool,
   SDLPool,
   SDLVesting,
   StakingAllowance,
   ERC677,
-} from '../../typechain-types'
+} from '../../types/ethers-contracts'
 import { assert, expect } from 'chai'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
-import { ethers } from 'hardhat'
+
+const { ethers, loadFixture, networkHelpers } = getConnection()
+const time = networkHelpers.time
 
 const DAY = 86400
 
@@ -117,7 +125,7 @@ describe('SDLVesting', () => {
     assert.equal(fromEther(await vesting.releasable()), 0)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(vesting.target)), 200)
     assert.deepEqual(
-      (await vesting.getRESDLPositions()).map((d) => [
+      (await vesting.getRESDLPositions()).map((d: any) => [
         fromEther(d[0]),
         fromEther(d[1]),
         Number(d[2]),
@@ -142,7 +150,7 @@ describe('SDLVesting', () => {
     assert.equal(fromEther(await vesting.releasable()), 0)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(vesting.target)), 400)
     assert.deepEqual(
-      (await vesting.getRESDLPositions()).map((d) => [
+      (await vesting.getRESDLPositions()).map((d: any) => [
         fromEther(d[0]),
         fromEther(d[1]),
         Number(d[2]),
@@ -167,7 +175,7 @@ describe('SDLVesting', () => {
     assert.equal(fromEther(await vesting.releasable()), 0)
     assert.equal(fromEther(await sdlPool.effectiveBalanceOf(vesting.target)), 1200)
     assert.deepEqual(
-      (await vesting.getRESDLPositions()).map((d) => [
+      (await vesting.getRESDLPositions()).map((d: any) => [
         fromEther(d[0]),
         fromEther(d[1]),
         Number(d[2]),
@@ -245,7 +253,7 @@ describe('SDLVesting', () => {
     await vesting.connect(signers[1]).withdrawRESDLPositions([1, 2])
 
     assert.deepEqual(
-      (await vesting.getRESDLPositions()).map((d) => [
+      (await vesting.getRESDLPositions()).map((d: any) => [
         fromEther(d[0]),
         fromEther(d[1]),
         Number(d[2]),

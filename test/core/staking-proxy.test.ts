@@ -6,8 +6,9 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  getConnection,
 } from '../utils/helpers'
-import {
+import type {
   ERC677,
   SDLPoolMock,
   StakingPool,
@@ -17,10 +18,10 @@ import {
   StakingAllowance,
   RewardsPoolWSD,
   StakingProxy,
-} from '../../typechain-types'
-import { ethers } from 'hardhat'
+} from '../../types/ethers-contracts'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+
+const { ethers, loadFixture } = getConnection()
 
 describe('StakingProxy', () => {
   async function deployFixture() {
@@ -263,7 +264,7 @@ describe('StakingProxy', () => {
     )
 
     assert.deepEqual(
-      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i) => {
+      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i: number) => {
         if (i < 2) return fromEther(d)
         return d
       }),
@@ -286,7 +287,7 @@ describe('StakingProxy', () => {
     assert.equal(fromEther(await stakingProxy.getTotalQueuedForDeposit(toEther(50))), 0)
     assert.equal(fromEther(await stakingProxy.getTotalQueuedForWithdrawal()), 150)
     assert.deepEqual(
-      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i) => {
+      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i: number) => {
         if (i < 2) return fromEther(d)
         return d
       }),
@@ -296,7 +297,7 @@ describe('StakingProxy', () => {
     await priorityPool.deposit(toEther(100), true, ['0x'])
 
     assert.deepEqual(
-      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i) => {
+      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i: number) => {
         if (i < 2) return fromEther(d)
         return d.map((v: any) => Number(v))
       }),
@@ -319,7 +320,7 @@ describe('StakingProxy', () => {
     assert.equal(fromEther(await stakingProxy.getTotalQueuedForDeposit(toEther(50))), 0)
     assert.equal(fromEther(await stakingProxy.getTotalQueuedForWithdrawal()), 50)
     assert.deepEqual(
-      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i) => {
+      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i: number) => {
         if (i < 2) return fromEther(d)
         return d
       }),
@@ -329,7 +330,7 @@ describe('StakingProxy', () => {
     await priorityPool.deposit(toEther(125), true, ['0x'])
 
     assert.deepEqual(
-      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i) => {
+      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i: number) => {
         if (i < 2) return fromEther(d)
         return d.map((v: any) => Number(v))
       }),
@@ -352,7 +353,7 @@ describe('StakingProxy', () => {
     assert.equal(fromEther(await stakingProxy.getTotalQueuedForDeposit(toEther(50))), 0)
     assert.equal(fromEther(await stakingProxy.getTotalQueuedForWithdrawal()), 0)
     assert.deepEqual(
-      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i) => {
+      (await stakingProxy.getTotalWithdrawable(toEther(50))).map((d: any, i: number) => {
         if (i < 2) return fromEther(d)
         return d
       }),
