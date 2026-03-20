@@ -9,14 +9,30 @@ import "./interfaces/ICommunityVault.sol";
  * @notice Implemented strategy for managing multiple Chainlink community staking vaults
  */
 contract CommunityVCS is VaultControllerStrategy {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
     // min number of non-full vaults before a new batch is deployed
     uint128 public vaultDeploymentThreshold;
     // number of vaults to deploy when threshold is met
     uint128 public vaultDeploymentAmount;
 
+    // number of vaults to process per batch during deposit updates
+    uint64 public vaultsPerBatch;
+    // index of the next vault to be processed in the current update
+    uint64 public currentVaultIndex;
+    // running accumulator of vault deposits across batched calls
+    uint128 public totalVaultDepositsAccum;
+
+    // address authorized to initiate vault deposit updates
+    address public depositUpdater;
+
     event SetVaultDeploymentParams(uint128 vaultDeploymentThreshold, uint128 vaultDeploymentAmount);
+    event SetVaultsPerBatch(uint64 vaultsPerBatch);
+    event SetDepositUpdater(address depositUpdater);
 
     error VaultsAboveThreshold();
+    error DepositUpdateInProgress();
+    error DepositUpdateNotReady();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -78,11 +94,22 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice Reverts if a batched deposit update is in progress
+     */
+    modifier notDuringDepositUpdate() {
+        if (currentVaultIndex != 0) revert DepositUpdateInProgress();
+        _;
+    }
+
+    /**
      * @notice Deposits tokens from the staking pool into vaults
      * @param _amount amount to deposit
      * @param _data encoded vault deposit order
      */
-    function deposit(uint256 _amount, bytes calldata _data) external override onlyStakingPool {
+    function deposit(
+        uint256 _amount,
+        bytes calldata _data
+    ) external override onlyStakingPool notDuringDepositUpdate {
         (, uint256 maxDeposits) = getVaultDepositLimits();
 
         // if vault deposit limit has changed in Chainlink staking contract, make adjustments
@@ -115,6 +142,18 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice Withdraws tokens from vaults and sends them to staking pool
+     * @param _amount amount to withdraw
+     * @param _data encoded vault withdrawal order
+     */
+    function withdraw(
+        uint256 _amount,
+        bytes calldata _data
+    ) public override onlyStakingPool notDuringDepositUpdate {
+        super.withdraw(_amount, _data);
+    }
+
+    /**
      * @notice Claims Chanlink staking rewards from vaults
      * @param _vaults list if vault indexes to claim from
      * @param _minRewards min amount of rewards per vault required to claim
@@ -122,7 +161,7 @@ contract CommunityVCS is VaultControllerStrategy {
     function claimRewards(
         uint256[] calldata _vaults,
         uint256 _minRewards
-    ) external returns (uint256) {
+    ) external notDuringDepositUpdate returns (uint256) {
         address receiver = address(this);
         uint256 balanceBefore = token.balanceOf(address(this));
         for (uint256 i = 0; i < _vaults.length; ++i) {
@@ -169,6 +208,84 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice Processes the next batch of vaults for a deposit update
+     * @dev accumulates getTotalDeposits() for the next `vaultsPerBatch` vaults.
+     * While an update is in progress, deposits, withdrawals, and reward claims are blocked.
+     */
+    function updateVaultDeposits() external {
+        if (currentVaultIndex == 0 && msg.sender != depositUpdater) revert SenderNotAuthorized();
+
+        uint256 numVaults = vaults.length;
+        uint64 startIndex = currentVaultIndex;
+        uint64 batchSize = vaultsPerBatch;
+        uint256 endIndex = startIndex + batchSize;
+        if (endIndex > numVaults) endIndex = numVaults;
+
+        uint256 total;
+        for (uint256 i = startIndex; i < endIndex; ++i) {
+            total += vaults[i].getTotalDeposits();
+        }
+
+        totalVaultDepositsAccum += uint128(total);
+        currentVaultIndex = uint64(endIndex);
+    }
+
+    /**
+     * @notice Updates deposit accounting and calculates fees on newly earned rewards
+     * @dev can only be called after all vault deposit batches have been processed
+     * @return depositChange change in deposits since last update
+     * @return receivers list of fee receivers
+     * @return amounts list of fee amounts
+     */
+    function updateDeposits(
+        bytes calldata _data
+    )
+        external
+        override
+        onlyStakingPool
+        returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
+    {
+        if (vaultsPerBatch == 0) {
+            // batching not configured, use default behavior
+            depositChange = getDepositChange();
+        } else {
+            if (currentVaultIndex < vaults.length) revert DepositUpdateNotReady();
+
+            uint256 totalBalance = uint256(totalVaultDepositsAccum) +
+                token.balanceOf(address(this));
+
+            currentVaultIndex = 0;
+            totalVaultDepositsAccum = 0;
+
+            depositChange = int(totalBalance) - int(totalDeposits);
+        }
+
+        uint256 newTotalDeposits = totalDeposits;
+
+        if (depositChange > 0) {
+            newTotalDeposits += uint256(depositChange);
+
+            receivers = new address[](fees.length);
+            amounts = new uint256[](fees.length);
+
+            for (uint256 i = 0; i < fees.length; ++i) {
+                receivers[i] = fees[i].receiver;
+                amounts[i] = (uint256(depositChange) * fees[i].basisPoints) / 10000;
+            }
+        } else if (depositChange < 0) {
+            newTotalDeposits -= uint256(depositChange * -1);
+        }
+
+        uint256 balance = token.balanceOf(address(this));
+        if (balance != 0) {
+            token.safeTransfer(address(stakingPool), balance);
+            newTotalDeposits -= balance;
+        }
+
+        totalDeposits = newTotalDeposits;
+    }
+
+    /**
      * @notice Sets the vault deployment parameters
      * @param _vaultDeploymentThreshold the min number of non-full vaults before a new batch is deployed
      * @param _vaultDeploymentAmount amount of vaults to deploy when threshold is met
@@ -180,6 +297,24 @@ contract CommunityVCS is VaultControllerStrategy {
         vaultDeploymentThreshold = _vaultDeploymentThreshold;
         vaultDeploymentAmount = _vaultDeploymentAmount;
         emit SetVaultDeploymentParams(_vaultDeploymentThreshold, _vaultDeploymentAmount);
+    }
+
+    /**
+     * @notice Sets the number of vaults to process per batch during deposit updates
+     * @param _vaultsPerBatch number of vaults per batch
+     */
+    function setVaultsPerBatch(uint64 _vaultsPerBatch) external onlyOwner notDuringDepositUpdate {
+        vaultsPerBatch = _vaultsPerBatch;
+        emit SetVaultsPerBatch(_vaultsPerBatch);
+    }
+
+    /**
+     * @notice Sets the address authorized to initiate vault deposit updates
+     * @param _depositUpdater address of the deposit updater
+     */
+    function setDepositUpdater(address _depositUpdater) external onlyOwner {
+        depositUpdater = _depositUpdater;
+        emit SetDepositUpdater(_depositUpdater);
     }
 
     /**

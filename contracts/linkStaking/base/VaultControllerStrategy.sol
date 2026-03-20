@@ -307,7 +307,7 @@ contract VaultDepositController is Strategy {
     // remaining functions are required to satisfy the strategy interface
 
     function updateDeposits(
-        bytes calldata _data
+        bytes calldata
     )
         external
         returns (int256 depositChange, address[] memory receivers, uint256[] memory amounts)
@@ -455,7 +455,7 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _amount amount to withdraw
      * @param _data encoded vault withdrawal order
      */
-    function withdraw(uint256 _amount, bytes calldata _data) external onlyStakingPool {
+    function withdraw(uint256 _amount, bytes calldata _data) public virtual onlyStakingPool {
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
         (bool success, ) = vaultDepositController.delegatecall(

@@ -21,7 +21,7 @@ const encodeVaults = (vaults: number[]) => {
 
 describe('CommunityVCS', () => {
   async function deployFixture() {
-    const { accounts } = await getAccounts()
+    const { signers, accounts } = await getAccounts()
     const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
@@ -72,10 +72,20 @@ describe('CommunityVCS', () => {
 
     await token.approve(adrs.strategy, ethers.MaxUint256)
     await token.transfer(adrs.rewardsController, toEther(10000))
+    await strategy.setDepositUpdater(accounts[0])
 
     const vaults = await strategy.getVaults()
 
-    return { accounts, adrs, token, rewardsController, stakingController, strategy, vaults }
+    return {
+      signers,
+      accounts,
+      adrs,
+      token,
+      rewardsController,
+      stakingController,
+      strategy,
+      vaults,
+    }
   }
 
   it('addVaults should work correctly', async () => {
@@ -178,5 +188,145 @@ describe('CommunityVCS', () => {
     assert.equal(fromEther(await stakingController.getStakerPrincipal(vaults[7])), 60)
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
     assert.equal(fromEther(await strategy.getTotalDeposits()), 800)
+  })
+
+  it('updateDeposits should work without batching when vaultsPerBatch is 0', async () => {
+    const { accounts, strategy, rewardsController } = await loadFixture(deployFixture)
+
+    let vaults = await strategy.getVaults()
+    await strategy.deposit(toEther(1000), encodeVaults([]))
+
+    // vaultsPerBatch defaults to 0, so updateDeposits should use getDepositChange directly
+    await rewardsController.setReward(vaults[0], toEther(50))
+    await rewardsController.setReward(vaults[5], toEther(30))
+
+    let data = await strategy.updateDeposits.staticCall('0x')
+    assert.equal(fromEther(data.depositChange), 80)
+    assert.equal(data.receivers[0], accounts[4])
+    assert.equal(fromEther(data.amounts[0]), 4)
+
+    await strategy.updateDeposits('0x')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1080)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+
+    // negative change (slashing)
+    await rewardsController.setReward(vaults[0], toEther(0))
+    data = await strategy.updateDeposits.staticCall('0x')
+    assert.equal(fromEther(data.depositChange), -50)
+    assert.deepEqual(data.receivers, [])
+    assert.deepEqual(data.amounts, [])
+  })
+
+  it('batched updateDeposits should work correctly', async () => {
+    const { signers, accounts, adrs, strategy, token, rewardsController } = await loadFixture(
+      deployFixture
+    )
+
+    let vaults = await strategy.getVaults()
+    await strategy.deposit(toEther(1000), encodeVaults([]))
+
+    // setVaultsPerBatch
+    await strategy.setVaultsPerBatch(5)
+    assert.equal(Number(await strategy.vaultsPerBatch()), 5)
+
+    await rewardsController.setReward(vaults[0], toEther(10))
+    await rewardsController.setReward(vaults[5], toEther(20))
+
+    // updateDeposits should revert before any batches are processed
+    await expect(strategy.updateDeposits('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateNotReady'
+    )
+
+    // first batch should revert for non-depositsUpdater
+    await expect(strategy.connect(signers[1]).updateVaultDeposits()).to.be.revertedWithCustomError(
+      strategy,
+      'SenderNotAuthorized'
+    )
+
+    // process all 4 batches (20 vaults / 5 per batch)
+    await strategy.updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 5)
+
+    // updateDeposits should revert while batching is incomplete
+    await expect(strategy.updateDeposits('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateNotReady'
+    )
+
+    // deposit, withdraw, and claimRewards should revert during update
+    await expect(strategy.deposit(toEther(100), encodeVaults([]))).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateInProgress'
+    )
+    await expect(strategy.withdraw(toEther(100), encodeVaults([0]))).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateInProgress'
+    )
+    await expect(strategy.claimRewards([0], toEther(5))).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateInProgress'
+    )
+
+    // subsequent batches callable by anyone
+    await strategy.connect(signers[1]).updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 10)
+
+    await strategy.connect(signers[2]).updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 15)
+
+    await strategy.updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 20)
+
+    // now updateDeposits should work and fees should be correct
+    let data = await strategy.updateDeposits.staticCall('0x')
+    assert.equal(fromEther(data.depositChange), 30)
+    assert.equal(data.receivers[0], accounts[4])
+    assert.equal(fromEther(data.amounts[0]), 1.5)
+
+    await strategy.updateDeposits('0x')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1030)
+    assert.equal(fromEther(await strategy.getDepositChange()), 0)
+
+    // state should be reset
+    assert.equal(Number(await strategy.currentVaultIndex()), 0)
+    assert.equal(Number(await strategy.totalVaultDepositsAccum()), 0)
+
+    // negative deposit change with batching
+    await rewardsController.setReward(vaults[0], toEther(0))
+    await strategy.updateVaultDeposits()
+    await strategy.updateVaultDeposits()
+    await strategy.updateVaultDeposits()
+    await strategy.updateVaultDeposits()
+    data = await strategy.updateDeposits.staticCall('0x')
+    assert.equal(fromEther(data.depositChange), -10)
+
+    await strategy.updateDeposits('0x')
+
+    // uneven batch size: 20 vaults with batch size 7 = 3 batches (7, 7, 6)
+    await strategy.setVaultsPerBatch(7)
+    await rewardsController.setReward(vaults[0], toEther(10))
+
+    await strategy.updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 7)
+
+    await strategy.updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 14)
+
+    await strategy.updateVaultDeposits()
+    assert.equal(Number(await strategy.currentVaultIndex()), 20)
+
+    await strategy.updateDeposits('0x')
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1030)
+
+    // token balance should be transferred to staking pool
+    await strategy.setVaultsPerBatch(20)
+    await token.transfer(adrs.strategy, toEther(50))
+
+    await strategy.updateVaultDeposits()
+    await strategy.updateDeposits('0x')
+
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 0)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1030)
   })
 })
