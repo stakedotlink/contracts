@@ -172,6 +172,24 @@ contract CommunityVCS is VaultControllerStrategy {
     }
 
     /**
+     * @notice Returns the available deposit room for this strategy
+     * @return available deposit room (0 if a batched deposit update is in progress)
+     */
+    function canDeposit() public view override returns (uint256) {
+        if (currentVaultIndex != 0) return 0;
+        return super.canDeposit();
+    }
+
+    /**
+     * @notice Returns the available withdrawal room for this strategy
+     * @return available withdrawal room (0 if a batched deposit update is in progress)
+     */
+    function canWithdraw() public view override returns (uint256) {
+        if (currentVaultIndex != 0) return 0;
+        return super.canWithdraw();
+    }
+
+    /**
      * @notice Returns the maximum amount of tokens this strategy can hold
      * @return maximum deposits
      */

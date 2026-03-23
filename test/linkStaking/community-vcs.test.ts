@@ -9,7 +9,13 @@ import {
   fromEther,
   deployImplementation,
 } from '../utils/helpers'
-import { ERC677, CommunityVCS, StakingMock, StakingRewardsMock } from '../../typechain-types'
+import {
+  ERC677,
+  CommunityVCS,
+  StakingMock,
+  StakingRewardsMock,
+  FundFlowControllerMock,
+} from '../../typechain-types'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const unbondingPeriod = 28 * 86400
@@ -74,6 +80,12 @@ describe('CommunityVCS', () => {
     await token.transfer(adrs.rewardsController, toEther(10000))
     await strategy.setDepositUpdater(accounts[0])
 
+    const fundFlowController = (await deploy('FundFlowControllerMock')) as FundFlowControllerMock
+    adrs.fundFlowController = await fundFlowController.getAddress()
+
+    await strategy.setFundFlowController(adrs.fundFlowController)
+    await fundFlowController.setClaimPeriodActive(true)
+
     const vaults = await strategy.getVaults()
 
     return {
@@ -84,6 +96,7 @@ describe('CommunityVCS', () => {
       rewardsController,
       stakingController,
       strategy,
+      fundFlowController,
       vaults,
     }
   }
@@ -218,12 +231,12 @@ describe('CommunityVCS', () => {
   })
 
   it('batched updateDeposits should work correctly', async () => {
-    const { signers, accounts, adrs, strategy, token, rewardsController } = await loadFixture(
-      deployFixture
-    )
+    const { signers, accounts, adrs, strategy, token, rewardsController, fundFlowController } =
+      await loadFixture(deployFixture)
 
     let vaults = await strategy.getVaults()
     await strategy.deposit(toEther(1000), encodeVaults([]))
+    await fundFlowController.setTotalUnbonded(adrs.strategy, toEther(500))
 
     // setVaultsPerBatch
     await strategy.setVaultsPerBatch(5)
@@ -253,6 +266,10 @@ describe('CommunityVCS', () => {
       strategy,
       'DepositUpdateNotReady'
     )
+
+    // canDeposit and canWithdraw should return 0 during update
+    assert.equal(fromEther(await strategy.canDeposit()), 0)
+    assert.equal(fromEther(await strategy.canWithdraw()), 0)
 
     // deposit, withdraw, and claimRewards should revert during update
     await expect(strategy.deposit(toEther(100), encodeVaults([]))).to.be.revertedWithCustomError(
@@ -291,6 +308,10 @@ describe('CommunityVCS', () => {
     // state should be reset
     assert.equal(Number(await strategy.currentVaultIndex()), 0)
     assert.equal(Number(await strategy.totalVaultDepositsAccum()), 0)
+
+    // canDeposit and canWithdraw should return non-zero after batch completes
+    assert.notEqual(fromEther(await strategy.canDeposit()), 0)
+    assert.notEqual(fromEther(await strategy.canWithdraw()), 0)
 
     // negative deposit change with batching
     await rewardsController.setReward(vaults[0], toEther(0))
