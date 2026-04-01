@@ -264,7 +264,7 @@
     "artifact": "CCIPCurveGaugeSender"
   },
   "LINKMigrator": {
-    "address": "0xdA77b1a19850606D1F4FAA0E200E035faa85FB15",
+    "address": "0x08E11a9A74E7aCc51aCe382b6D02aBE8B7cF7786",
     "artifact": "LINKMigrator"
   },
   "LINK_WLSTUnderlyingChainlinkPriceAdapter": {
@@ -306,5 +306,9 @@
   "stESP_SDLRewardsPool": {
     "address": "0x4A18AEA755bD2Ec7c0b7dD6f065bBB3725490342",
     "artifact": "RewardsPoolWSD"
+  },
+  "ESP_EspressoRewardsConsumer": {
+    "address": "0xe69D92f6910b45dA1D6Ddfb380efaa6AF56e33F9",
+    "artifact": "EspressoRewardsConsumer"
   }
 }

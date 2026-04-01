@@ -25,6 +25,11 @@ interface IEspressoStrategy {
         bytes[] calldata _authData
     ) external;
 
+    function updateLifetimeRewards(
+        uint256[] calldata _vaultIds,
+        uint256[] calldata _lifetimeRewards
+    ) external;
+
     function totalQueued() external view returns (uint256);
 
     function getVaults() external view returns (address[] memory);
