@@ -20,7 +20,7 @@ export const toEther = (amount: string | number) => {
   return parseEther(amount.toString())
 }
 
-export const fromEther = (amount: bigint) => {
+export const fromEther = (amount: bigint | number) => {
   return Number(formatEther(amount))
 }
 
