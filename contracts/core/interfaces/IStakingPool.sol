@@ -44,4 +44,14 @@ interface IStakingPool is IStakingRewardsPool {
     function getUnusedDeposits() external view returns (uint256);
 
     function burn(uint256 _amount) external;
+
+    function mintForVault(address _account, uint256 _amount) external;
+
+    function burnForVault(address _account, uint256 _amount) external;
+
+    function mintWithDeposit(address _to, uint256 _amount) external;
+
+    function donateTokens(uint256 _amount) external;
+
+    function writeDown(uint256 _amount) external;
 }
