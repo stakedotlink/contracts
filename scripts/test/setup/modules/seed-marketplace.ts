@@ -37,9 +37,7 @@ interface SharedAddresses {
 
 function loadSharedAddresses(): SharedAddresses {
   if (!fs.existsSync(SHARED_ADDRESSES_PATH)) {
-    throw new Error(
-      `Missing ${SHARED_ADDRESSES_PATH}. Did contracts-bootstrap run first?`
-    )
+    throw new Error(`Missing ${SHARED_ADDRESSES_PATH}. Did contracts-bootstrap run first?`)
   }
   return JSON.parse(fs.readFileSync(SHARED_ADDRESSES_PATH, 'utf-8'))
 }
@@ -51,11 +49,7 @@ function loadSharedAddresses(): SharedAddresses {
  */
 function foundryWallet(index: number): HDNodeWallet {
   // ethers v6: HDNodeWallet.fromPhrase requires the path argument
-  return ethers.HDNodeWallet.fromPhrase(
-    FOUNDRY_MNEMONIC,
-    undefined,
-    `m/44'/60'/0'/0/${index}`
-  )
+  return ethers.HDNodeWallet.fromPhrase(FOUNDRY_MNEMONIC, undefined, `m/44'/60'/0'/0/${index}`)
 }
 
 async function stakeForLock(
@@ -89,8 +83,8 @@ export async function seedOnChain() {
   // Use signers from the connected node (anvil's foundry-mnemonic accounts).
   const deployer = signers[0]
   const walletPrimary = signers[1] // primary tester — will own reSDL #1..#3
-  const walletBuyer = signers[2]   // buyer — places offer
-  const walletLister = signers[3]  // other lister — pre-seeds 2 listings
+  const walletBuyer = signers[2] // buyer — places offer
+  const walletLister = signers[3] // other lister — pre-seeds 2 listings
 
   console.log('--- seeding on-chain state ---')
   console.log('Deployer:', deployer.address)
@@ -136,26 +130,66 @@ export async function seedOnChain() {
 
   // 5. Wallet 1: stake SDL three times for varied lock states
   console.log('Wallet 1 staking 3 locks...')
-  await stakeForLock(sdlToken, sdlPoolAddress, walletPrimary, ethers.parseEther('10000'), SECONDS_PER_YEAR)
-  await stakeForLock(sdlToken, sdlPoolAddress, walletPrimary, ethers.parseEther('20000'), 4 * SECONDS_PER_YEAR)
-  await stakeForLock(sdlToken, sdlPoolAddress, walletPrimary, ethers.parseEther('5000'), 30 * SECONDS_PER_DAY)
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletPrimary,
+    ethers.parseEther('10000'),
+    SECONDS_PER_YEAR
+  )
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletPrimary,
+    ethers.parseEther('20000'),
+    4 * SECONDS_PER_YEAR
+  )
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletPrimary,
+    ethers.parseEther('5000'),
+    30 * SECONDS_PER_DAY
+  )
 
   // 6. Wallet 3: stake SDL twice
   console.log('Wallet 3 staking 2 locks...')
-  await stakeForLock(sdlToken, sdlPoolAddress, walletLister, ethers.parseEther('15000'), 2 * SECONDS_PER_YEAR)
-  await stakeForLock(sdlToken, sdlPoolAddress, walletLister, ethers.parseEther('8000'), 180 * SECONDS_PER_DAY)
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletLister,
+    ethers.parseEther('15000'),
+    2 * SECONDS_PER_YEAR
+  )
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletLister,
+    ethers.parseEther('8000'),
+    180 * SECONDS_PER_DAY
+  )
 
   // 7. Approvals
   console.log('Setting approvals...')
   const sdlPool = await ethers.getContractAt('SDLPool', sdlPoolAddress, deployer)
-  await (await sdlPool.connect(walletPrimary).setApprovalForAll(deployments.Seaport.address, true)).wait()
-  await (await sdlPool.connect(walletLister).setApprovalForAll(deployments.Seaport.address, true)).wait()
+  await (
+    await sdlPool.connect(walletPrimary).setApprovalForAll(deployments.Seaport.address, true)
+  ).wait()
+  await (
+    await sdlPool.connect(walletLister).setApprovalForAll(deployments.Seaport.address, true)
+  ).wait()
 
   // Buyer pre-approves Seaport (max) on the payment tokens it might use.
   const MAX = ethers.MaxUint256
-  await (await (mockWeth.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)).wait()
-  await (await (linkToken.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)).wait()
-  await (await (mockUsdc.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)).wait()
+  await (
+    await (mockWeth.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)
+  ).wait()
+  await (
+    await (linkToken.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)
+  ).wait()
+  await (
+    await (mockUsdc.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)
+  ).wait()
 
   console.log('--- on-chain seed complete ---')
 }
@@ -204,9 +238,7 @@ async function waitForSubgraphIndexed(timeoutMs = 60_000): Promise<void> {
       })
       const json = (await res.json()) as any
       const statuses = json?.data?.indexingStatuses || []
-      const mp = statuses.find(
-        (s: any) => s.subgraph?.includes('resdl-marketplace-localhost')
-      )
+      const mp = statuses.find((s: any) => s.subgraph?.includes('resdl-marketplace-localhost'))
       if (mp) {
         const chain = mp.chains[0]
         const head = parseInt(chain.chainHeadBlock?.number || '0')
@@ -300,8 +332,12 @@ function printWelcomeBanner(info: {
     `│  Address: ${info.primaryAddress}`.padEnd(67) + '│',
     '│                                                                  │',
     `│  Owns reSDL #${info.primaryTokenIds.join(', #')} (varied lock states)`.padEnd(67) + '│',
-    `│  Pre-seeded listings: reSDL #${info.listing1TokenId} (2 ETH), reSDL #${info.listing2TokenId} (1500 LINK)`.padEnd(67) + '│',
-    `│  Pre-seeded offer on your reSDL #${info.primaryTokenIds[0]}: 0.5 WETH from wallet 2`.padEnd(67) + '│',
+    `│  Pre-seeded listings: reSDL #${info.listing1TokenId} (2 ETH), reSDL #${info.listing2TokenId} (1500 LINK)`.padEnd(
+      67
+    ) + '│',
+    `│  Pre-seeded offer on your reSDL #${info.primaryTokenIds[0]}: 0.5 WETH from wallet 2`.padEnd(
+      67
+    ) + '│',
     '└──────────────────────────────────────────────────────────────────┘',
     '',
   ]
@@ -352,7 +388,9 @@ export async function seedViaApi() {
   const listerTokenIds = byOwner[walletLister.address.toLowerCase()] || []
   if (primaryTokenIds.length < 3 || listerTokenIds.length < 2) {
     throw new Error(
-      `Expected at least 3 NFTs for primary and 2 for lister. Got primary=${JSON.stringify(primaryTokenIds)} lister=${JSON.stringify(listerTokenIds)}`
+      `Expected at least 3 NFTs for primary and 2 for lister. Got primary=${JSON.stringify(
+        primaryTokenIds
+      )} lister=${JSON.stringify(listerTokenIds)}`
     )
   }
   const listing1TokenId = listerTokenIds[0]

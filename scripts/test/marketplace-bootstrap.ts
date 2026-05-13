@@ -21,11 +21,7 @@ const DEPLOYMENTS_PATH = path.resolve(__dirname, '../../deployments/localhost.js
 const FOUNDRY_MNEMONIC = 'test test test test test test test test test test test junk'
 
 function walletInfo(index: number) {
-  const w = ethers.HDNodeWallet.fromPhrase(
-    FOUNDRY_MNEMONIC,
-    undefined,
-    `m/44'/60'/0'/0/${index}`
-  )
+  const w = ethers.HDNodeWallet.fromPhrase(FOUNDRY_MNEMONIC, undefined, `m/44'/60'/0'/0/${index}`)
   return { address: w.address, privateKey: w.privateKey }
 }
 
@@ -55,9 +51,7 @@ async function main() {
         )
         return
       }
-      console.log(
-        '===== addresses.json present but contracts missing on chain; re-deploying ====='
-      )
+      console.log('===== addresses.json present but contracts missing on chain; re-deploying =====')
     } catch (e) {
       console.warn('Failed to parse existing addresses.json, re-deploying:', (e as Error).message)
     }
