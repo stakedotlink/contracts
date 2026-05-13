@@ -32,7 +32,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'localhost',
   networks: {
     localhost: {
-      url: 'http://127.0.0.1:8545',
+      url: process.env.RPC_URL || 'http://127.0.0.1:8545',
       gas: 'auto',
       ...ledgerConfig,
     },
