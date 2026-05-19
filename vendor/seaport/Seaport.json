@@ -1,0 +1,2939 @@
+{
+  "abi": [
+    {
+      "type": "constructor",
+      "inputs": [
+        {
+          "name": "conduitController",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "receive",
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "cancel",
+      "inputs": [
+        {
+          "name": "orders",
+          "type": "tuple[]",
+          "internalType": "struct OrderComponents[]",
+          "components": [
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "zone",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offer",
+              "type": "tuple[]",
+              "internalType": "struct OfferItem[]",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifierOrCriteria",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "startAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "consideration",
+              "type": "tuple[]",
+              "internalType": "struct ConsiderationItem[]",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifierOrCriteria",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "startAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "orderType",
+              "type": "uint8",
+              "internalType": "enum OrderType"
+            },
+            {
+              "name": "startTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "endTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "zoneHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "salt",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "counter",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cancelled",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "fulfillAdvancedOrder",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct AdvancedOrder",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "numerator",
+              "type": "uint120",
+              "internalType": "uint120"
+            },
+            {
+              "name": "denominator",
+              "type": "uint120",
+              "internalType": "uint120"
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            },
+            {
+              "name": "extraData",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct CriteriaResolver[]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "side",
+              "type": "uint8",
+              "internalType": "enum Side"
+            },
+            {
+              "name": "index",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "identifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "criteriaProof",
+              "type": "bytes32[]",
+              "internalType": "bytes32[]"
+            }
+          ]
+        },
+        {
+          "name": "fulfillerConduitKey",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "fulfilled",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "fulfillAvailableAdvancedOrders",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct AdvancedOrder[]",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "numerator",
+              "type": "uint120",
+              "internalType": "uint120"
+            },
+            {
+              "name": "denominator",
+              "type": "uint120",
+              "internalType": "uint120"
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            },
+            {
+              "name": "extraData",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct CriteriaResolver[]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "side",
+              "type": "uint8",
+              "internalType": "enum Side"
+            },
+            {
+              "name": "index",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "identifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "criteriaProof",
+              "type": "bytes32[]",
+              "internalType": "bytes32[]"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[][]",
+          "internalType": "struct FulfillmentComponent[][]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "itemIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[][]",
+          "internalType": "struct FulfillmentComponent[][]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "itemIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        },
+        {
+          "name": "fulfillerConduitKey",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "maximumFulfilled",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool[]",
+          "internalType": "bool[]"
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Execution[]",
+          "components": [
+            {
+              "name": "item",
+              "type": "tuple",
+              "internalType": "struct ReceivedItem",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifier",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "fulfillAvailableOrders",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Order[]",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[][]",
+          "internalType": "struct FulfillmentComponent[][]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "itemIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[][]",
+          "internalType": "struct FulfillmentComponent[][]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "itemIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        },
+        {
+          "name": "fulfillerConduitKey",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "maximumFulfilled",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool[]",
+          "internalType": "bool[]"
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Execution[]",
+          "components": [
+            {
+              "name": "item",
+              "type": "tuple",
+              "internalType": "struct ReceivedItem",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifier",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "fulfillBasicOrder",
+      "inputs": [
+        {
+          "name": "parameters",
+          "type": "tuple",
+          "internalType": "struct BasicOrderParameters",
+          "components": [
+            {
+              "name": "considerationToken",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "considerationIdentifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "considerationAmount",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address payable"
+            },
+            {
+              "name": "zone",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offerToken",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offerIdentifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "offerAmount",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "basicOrderType",
+              "type": "uint8",
+              "internalType": "enum BasicOrderType"
+            },
+            {
+              "name": "startTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "endTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "zoneHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "salt",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "offererConduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "fulfillerConduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "totalOriginalAdditionalRecipients",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "additionalRecipients",
+              "type": "tuple[]",
+              "internalType": "struct AdditionalRecipient[]",
+              "components": [
+                {
+                  "name": "amount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "fulfilled",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "fulfillBasicOrder_efficient_6GL6yc",
+      "inputs": [
+        {
+          "name": "parameters",
+          "type": "tuple",
+          "internalType": "struct BasicOrderParameters",
+          "components": [
+            {
+              "name": "considerationToken",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "considerationIdentifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "considerationAmount",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address payable"
+            },
+            {
+              "name": "zone",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offerToken",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offerIdentifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "offerAmount",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "basicOrderType",
+              "type": "uint8",
+              "internalType": "enum BasicOrderType"
+            },
+            {
+              "name": "startTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "endTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "zoneHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "salt",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "offererConduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "fulfillerConduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "totalOriginalAdditionalRecipients",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "additionalRecipients",
+              "type": "tuple[]",
+              "internalType": "struct AdditionalRecipient[]",
+              "components": [
+                {
+                  "name": "amount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "fulfilled",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "fulfillOrder",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct Order",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        },
+        {
+          "name": "fulfillerConduitKey",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "fulfilled",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "getContractOffererNonce",
+      "inputs": [
+        {
+          "name": "contractOfferer",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "nonce",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getCounter",
+      "inputs": [
+        {
+          "name": "offerer",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "counter",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getOrderHash",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct OrderComponents",
+          "components": [
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "zone",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offer",
+              "type": "tuple[]",
+              "internalType": "struct OfferItem[]",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifierOrCriteria",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "startAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "consideration",
+              "type": "tuple[]",
+              "internalType": "struct ConsiderationItem[]",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifierOrCriteria",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "startAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "orderType",
+              "type": "uint8",
+              "internalType": "enum OrderType"
+            },
+            {
+              "name": "startTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "endTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "zoneHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "salt",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "counter",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getOrderStatus",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "isValidated",
+          "type": "bool",
+          "internalType": "bool"
+        },
+        {
+          "name": "isCancelled",
+          "type": "bool",
+          "internalType": "bool"
+        },
+        {
+          "name": "totalFilled",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "totalSize",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "incrementCounter",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "newCounter",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "information",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "version",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "domainSeparator",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "conduitController",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "matchAdvancedOrders",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct AdvancedOrder[]",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "numerator",
+              "type": "uint120",
+              "internalType": "uint120"
+            },
+            {
+              "name": "denominator",
+              "type": "uint120",
+              "internalType": "uint120"
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            },
+            {
+              "name": "extraData",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct CriteriaResolver[]",
+          "components": [
+            {
+              "name": "orderIndex",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "side",
+              "type": "uint8",
+              "internalType": "enum Side"
+            },
+            {
+              "name": "index",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "identifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "criteriaProof",
+              "type": "bytes32[]",
+              "internalType": "bytes32[]"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Fulfillment[]",
+          "components": [
+            {
+              "name": "offerComponents",
+              "type": "tuple[]",
+              "internalType": "struct FulfillmentComponent[]",
+              "components": [
+                {
+                  "name": "orderIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "itemIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "considerationComponents",
+              "type": "tuple[]",
+              "internalType": "struct FulfillmentComponent[]",
+              "components": [
+                {
+                  "name": "orderIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "itemIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Execution[]",
+          "components": [
+            {
+              "name": "item",
+              "type": "tuple",
+              "internalType": "struct ReceivedItem",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifier",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "matchOrders",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Order[]",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Fulfillment[]",
+          "components": [
+            {
+              "name": "offerComponents",
+              "type": "tuple[]",
+              "internalType": "struct FulfillmentComponent[]",
+              "components": [
+                {
+                  "name": "orderIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "itemIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "considerationComponents",
+              "type": "tuple[]",
+              "internalType": "struct FulfillmentComponent[]",
+              "components": [
+                {
+                  "name": "orderIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "itemIndex",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Execution[]",
+          "components": [
+            {
+              "name": "item",
+              "type": "tuple",
+              "internalType": "struct ReceivedItem",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifier",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "name",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "stateMutability": "pure"
+    },
+    {
+      "type": "function",
+      "name": "validate",
+      "inputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct Order[]",
+          "components": [
+            {
+              "name": "parameters",
+              "type": "tuple",
+              "internalType": "struct OrderParameters",
+              "components": [
+                {
+                  "name": "offerer",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "zone",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "offer",
+                  "type": "tuple[]",
+                  "internalType": "struct OfferItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "consideration",
+                  "type": "tuple[]",
+                  "internalType": "struct ConsiderationItem[]",
+                  "components": [
+                    {
+                      "name": "itemType",
+                      "type": "uint8",
+                      "internalType": "enum ItemType"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "identifierOrCriteria",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "startAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "endAmount",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "recipient",
+                      "type": "address",
+                      "internalType": "address payable"
+                    }
+                  ]
+                },
+                {
+                  "name": "orderType",
+                  "type": "uint8",
+                  "internalType": "enum OrderType"
+                },
+                {
+                  "name": "startTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endTime",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "zoneHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "conduitKey",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "totalOriginalConsiderationItems",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "signature",
+              "type": "bytes",
+              "internalType": "bytes"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "CounterIncremented",
+      "inputs": [
+        {
+          "name": "newCounter",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "offerer",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OrderCancelled",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "offerer",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "zone",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OrderFulfilled",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "offerer",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "zone",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "offer",
+          "type": "tuple[]",
+          "indexed": false,
+          "internalType": "struct SpentItem[]",
+          "components": [
+            {
+              "name": "itemType",
+              "type": "uint8",
+              "internalType": "enum ItemType"
+            },
+            {
+              "name": "token",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "identifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "amount",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        },
+        {
+          "name": "consideration",
+          "type": "tuple[]",
+          "indexed": false,
+          "internalType": "struct ReceivedItem[]",
+          "components": [
+            {
+              "name": "itemType",
+              "type": "uint8",
+              "internalType": "enum ItemType"
+            },
+            {
+              "name": "token",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "identifier",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "amount",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "recipient",
+              "type": "address",
+              "internalType": "address payable"
+            }
+          ]
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OrderValidated",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "orderParameters",
+          "type": "tuple",
+          "indexed": false,
+          "internalType": "struct OrderParameters",
+          "components": [
+            {
+              "name": "offerer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "zone",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "offer",
+              "type": "tuple[]",
+              "internalType": "struct OfferItem[]",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifierOrCriteria",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "startAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ]
+            },
+            {
+              "name": "consideration",
+              "type": "tuple[]",
+              "internalType": "struct ConsiderationItem[]",
+              "components": [
+                {
+                  "name": "itemType",
+                  "type": "uint8",
+                  "internalType": "enum ItemType"
+                },
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "identifierOrCriteria",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "startAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "endAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "recipient",
+                  "type": "address",
+                  "internalType": "address payable"
+                }
+              ]
+            },
+            {
+              "name": "orderType",
+              "type": "uint8",
+              "internalType": "enum OrderType"
+            },
+            {
+              "name": "startTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "endTime",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "zoneHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "salt",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "conduitKey",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "totalOriginalConsiderationItems",
+              "type": "uint256",
+              "internalType": "uint256"
+            }
+          ]
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OrdersMatched",
+      "inputs": [
+        {
+          "name": "orderHashes",
+          "type": "bytes32[]",
+          "indexed": false,
+          "internalType": "bytes32[]"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "BadContractSignature",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "BadFraction",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "BadReturnValueFromERC20OnTransfer",
+      "inputs": [
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "from",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "BadSignatureV",
+      "inputs": [
+        {
+          "name": "v",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "CannotCancelOrder",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ConsiderationCriteriaResolverOutOfRange",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ConsiderationLengthNotEqualToTotalOriginal",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ConsiderationNotMet",
+      "inputs": [
+        {
+          "name": "orderIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "considerationIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "shortfallAmount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "CriteriaNotEnabledForItem",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ERC1155BatchTransferGenericFailure",
+      "inputs": [
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "from",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "identifiers",
+          "type": "uint256[]",
+          "internalType": "uint256[]"
+        },
+        {
+          "name": "amounts",
+          "type": "uint256[]",
+          "internalType": "uint256[]"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InexactFraction",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InsufficientNativeTokensSupplied",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "Invalid1155BatchTransferEncoding",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidBasicOrderParameterEncoding",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidCallToConduit",
+      "inputs": [
+        {
+          "name": "conduit",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidConduit",
+      "inputs": [
+        {
+          "name": "conduitKey",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "conduit",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidContractOrder",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidERC721TransferAmount",
+      "inputs": [
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidFulfillmentComponentData",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidMsgValue",
+      "inputs": [
+        {
+          "name": "value",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidNativeOfferItem",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidProof",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidRestrictedOrder",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidSignature",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidSigner",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidTime",
+      "inputs": [
+        {
+          "name": "startTime",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "endTime",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "MismatchedFulfillmentOfferAndConsiderationComponents",
+      "inputs": [
+        {
+          "name": "fulfillmentIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "MissingFulfillmentComponentOnAggregation",
+      "inputs": [
+        {
+          "name": "side",
+          "type": "uint8",
+          "internalType": "enum Side"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "MissingItemAmount",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "MissingOriginalConsiderationItems",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NativeTokenTransferGenericFailure",
+      "inputs": [
+        {
+          "name": "account",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "NoContract",
+      "inputs": [
+        {
+          "name": "account",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "NoReentrantCalls",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NoSpecifiedOrdersAvailable",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "OfferAndConsiderationRequiredOnFulfillment",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "OfferCriteriaResolverOutOfRange",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "OrderAlreadyFilled",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OrderCriteriaResolverOutOfRange",
+      "inputs": [
+        {
+          "name": "side",
+          "type": "uint8",
+          "internalType": "enum Side"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OrderIsCancelled",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OrderPartiallyFilled",
+      "inputs": [
+        {
+          "name": "orderHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "PartialFillsNotEnabledForOrder",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "TokenTransferGenericFailure",
+      "inputs": [
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "from",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "identifier",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "UnresolvedConsiderationCriteria",
+      "inputs": [
+        {
+          "name": "orderIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "considerationIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "UnresolvedOfferCriteria",
+      "inputs": [
+        {
+          "name": "orderIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "offerIndex",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "UnusedItemParameters",
+      "inputs": []
+    }
+  ],
+  "bytecode": "0x6101c06040523480156200001257600080fd5b506040516200645538038062006455833981016040819052620000359162000245565b808080808080808080806200004962000119565b610120526101005260e05260c081905260a0828152466101408190526040805160009485526020879052948152606091825230608090815292842085825293909152939052610160526001600160a01b038316610180819052630a96ad3960e01b825282519092630a96ad3992600480820193918290030181865afa158015620000d7573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190620000fd919062000277565b506101a0525050600160005550620002fb975050505050505050565b600080808080806200014560408051808201909152600781526614d9585c1bdc9d60ca1b602082015290565b80519060200120955060405180604001604052806003815260200162312e3560e81b81525080519060200120945060006040518060a00160405280606a8152602001620063eb606a9139905060006040518060c001604052806084815260200162006241608491399050600060405180610100016040528060d481526020016200631760d491399050604051806080016040528060528152602001620062c560529139805190602001209650828051906020012095508180519060200120945060008183856040516020016200021e93929190620002ce565b60405160208183030381529060405290508080519060200120945050505050909192939495565b6000602082840312156200025857600080fd5b81516001600160a01b03811681146200027057600080fd5b9392505050565b600080604083850312156200028b57600080fd5b505080516020909101519092909150565b6000815160005b81811015620002bf5760208185018101518683015201620002a3565b50600093019283525090919050565b6000620002f2620002eb620002e484886200029c565b866200029c565b846200029c565b95945050505050565b60805160a05160c05160e05161010051610120516101405161016051610180516101a051615eae620003936000396000612ed40152600081816112b90152612e9201526000612d7801526000612cbf015260008181610c1a01526116ae015260008181610b6c01526114c2015260008181610ae7015261161a01526000612cef01526000612d3901526000612d150152615eae6000f3fe60806040526004361061010d5760003560e01c8063a900866b116100a5578063f07ec37311610074578063f47b774011610059578063f47b77401461034c578063fb0f3ee114610121578063fd9f1e101461037057600080fd5b8063f07ec37314610319578063f2d12b121461033957600080fd5b8063a900866b1461029d578063b3a34c4c146102e0578063e7acab24146102f3578063ed98a5741461030657600080fd5b806379df72bd116100e157806379df72bd1461021c57806387201b411461023c578063881477321461025d578063a81744041461027d57600080fd5b801561012157806306fdde031461014957806346423aa71461016b5780635b34b966146101f957600080fd5b3661011c5761011a610390565b005b600080fd5b61013461012f3660046152db565b6103a5565b60405190151581526020015b60405180910390f35b34801561015557600080fd5b5061015e6103b6565b604051610140919061537b565b34801561017757600080fd5b506101d761018636600461538e565b60009081526002602052604090205460ff808216926101008304909116916effffffffffffffffffffffffffffff620100008204811692710100000000000000000000000000000000009092041690565b6040805194151585529215156020850152918301526060820152608001610140565b34801561020557600080fd5b5061020e6103c5565b604051908152602001610140565b34801561022857600080fd5b5061020e6102373660046153a7565b6103cf565b61024f61024a36600461545c565b610407565b604051610140929190615645565b34801561026957600080fd5b50610134610278366004615694565b610480565b61029061028b3660046156d6565b61049f565b6040516101409190615742565b3480156102a957600080fd5b5061020e6102b8366004615755565b73ffffffffffffffffffffffffffffffffffffffff1660009081526003602052604090205490565b6101346102ee366004615772565b61053e565b6101346103013660046157bc565b6105bc565b61024f61031436600461584c565b6105fb565b34801561032557600080fd5b5061020e610334366004615755565b6106a2565b6102906103473660046158f5565b6106cd565b34801561035857600080fd5b50610361610716565b604051610140939291906159a3565b34801561037c57600080fd5b5061013461038b366004615694565b61072e565b6003600054146103a3576103a33461073a565b565b60006103b08261074c565b92915050565b60606103c06109a9565b905090565b60006103c06109c1565b6000806103dc6004610a3f565b90506104006103f182610a505b63ffffffff16565b610140830135610acf565b3590565b9392505050565b60608061046c61042261041a6004610a3f565b610c706103e9565b61043961043160046020610cda565b610cf96103e9565b61045061044860046040610cda565b610d536103e9565b61045f61044860046060610cda565b89338a15028a0189610dad565b915091509b509b9950505050505050505050565b600061040061049a6104926004610a3f565b610de66103e9565b610e40565b60606105336104b96104b16004610a3f565b610f846103e9565b6040805160008082526020820190925290610515565b6105026040805160a081019091526000808252602082019081526020016000815260200160008152602001606081525090565b8152602001906001900390816104cf5790505b5061052d61052560046020610cda565b610fde6103e9565b33611038565b90505b949350505050565b60006104006105586105506004610a3f565b6110666103e9565b60408051600080825260208201909252906105b4565b6105a16040805160a081019091526000808252602082019081526020016000815260200160008152602001606081525090565b81526020019060019003908161056e5790505b5084336110dd565b60006105f16105d66105ce6004610a3f565b6112476103e9565b6105e561043160046020610cda565b853386150286016110dd565b9695505050505050565b60608061069161060e6104b16004610a3f565b604080516000808252602082019092529061066a565b6106576040805160a081019091526000808252602082019081526020016000815260200160008152602001606081525090565b8152602001906001900390816106245790505b5061067a61044860046020610cda565b61068961044860046040610cda565b883389610dad565b915091509850989650505050505050565b73ffffffffffffffffffffffffffffffffffffffff81166000908152600160205260408120546103b0565b60606107086106df61041a6004610a3f565b6106ee61043160046020610cda565b6106fd61052560046040610cda565b338615028601611038565b90505b979650505050505050565b60606000806107236112a4565b925092509250909192565b600061040083836112f5565b63a61be9f0600052806020526024601cfd5b600061012435600281901c9060031660018211833415821480610772576107723461073a565b506003841160a0810260240135907f0203020301010000000000000000000000000000000000000000000000000000861a907d010102030000000000000000000000000000000000000000000000000000871a6107d38a8883898888611461565b9450506101c4600582901b013560008660058111156107f4576107f4615545565b0361082a57604435602435171561081357636ab37ce76000526004601cfd5b61081d8382611779565b61082561184b565b610984565b604080516020808252818301909252600091602082018180368337019050509050600289600581111561085f5761085f615545565b0361089e5761089961087760c08d0160a08e01615755565b61088760808e0160608f01615755565b338e60c001358f60e0013587876118cc565b61096f565b60038960058111156108b2576108b2615545565b036108ec576108996108ca60c08d0160a08e01615755565b6108da60808e0160608f01615755565b338e60c001358f60e001358787611917565b600489600581111561090057610900615545565b0361093a5761089961091560208d018d615755565b338d60600160208101906109299190615755565b8e602001358f6040013587876118cc565b61096f61094a60208d018d615755565b338d606001602081019061095e9190615755565b8e602001358f604001358787611917565b610979838261194d565b61098281611a0b565b505b61098f85888c611a34565b6109996001600055565b5060019998505050505050505050565b6060602080526707536561706f727460475260606020f35b60006109cb611a9b565b600143034060801c336000526001602052604060002080548201925082815550503373ffffffffffffffffffffffffffffffffffffffff167f721c20121297512b72821b97f5326877ea8ecf4bb9948fea5bfcb6453074d37f82604051610a3491815260200190565b60405180910390a290565b6000813563ffffffff1682016103b0565b6000610a6461016060408051918201905290565b9050610a738282610140611aad565b610a90610a89610a84846040610cda565b611ab6565b6040830152565b6000610aa5610aa0846060610cda565b611b0a565b9050610ab2816060840152565b610ac5610abd825190565b610140840152565b50919050565b0190565b610140820151604080519084015180516000939284927f000000000000000000000000000000000000000000000000000000000000000092602090910190845b81811015610b5a5782517fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe001805186825260c082208652905260209384019390920191600101610b0f565b508060051b60405120945050505060007f00000000000000000000000000000000000000000000000000000000000000009150604051602060608901510160005b86811015610be65781517fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe001805186825260e082208552905260209283019290910190600101610b9b565b505060408051600587901b90207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08a0180517f00000000000000000000000000000000000000000000000000000000000000008252928b01805197815260608c018051938152610140909c019a8b5261018082209390915295909552939097525050925250919050565b60008063ffffffff8335169050600581901b610c956020820160408051918201905290565b8281529250602083810190850160005b83811015610cd057610cc8610cc2610cbd8484610cda565b611247565b82850152565b602001610ca5565b5050505050919050565b600061040063ffffffff610cf36103fc8686610acb8516565b16840190565b60008063ffffffff8335169050600581901b610d1e6020820160408051918201905290565b8281529250602083810190850160005b83811015610cd057610d4b610cc2610d468484610cda565b611b4e565b602001610d2e565b60008063ffffffff8335169050600581901b610d786020820160408051918201905290565b8281529250602083810190850160005b83811015610cd057610da5610cc2610da08484610cda565b611b91565b602001610d88565b606080600080610dc18b8b6000888a611bd5565b91509150610dd48b8a8a8a8a8787611f05565b93509350505097509795505050505050565b60008063ffffffff8335169050600581901b610e0b6020820160408051918201905290565b8281529250602083810190850160005b83811015610cd057610e38610cc2610e338484610cda565b61210b565b602001610e1b565b6000610e4a611a9b565b6000806000808551905060005b81811015610f77576000878281518110610e7357610e73615a11565b60209081029190910101518051909150600481608001516004811115610e9b57610e9b615545565b03610ea7575050610f6f565b80519450610eb48161214f565b60008181526002602052604081209850909650610ed690879089906001612197565b50865460ff16610f6c5780610140015181606001515114610ef957610ef9612246565b610f0885878460200151612254565b86547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff001660011787556040517ff280791efe782edcf06ce15c8f4dff17601db3b88eb3805a0db7d77faf757f0490610f639088908490615b4b565b60405180910390a15b50505b600101610e57565b5060019695505050505050565b60008063ffffffff8335169050600581901b610fa96020820160408051918201905290565b8281529250602083810190850160005b83811015610cd057610fd6610cc2610fd18484610cda565b611066565b602001610fb9565b60008063ffffffff8335169050600581901b6110036020820160408051918201905290565b8281529250602083810190850160005b83811015610cd057611030610cc261102b8484610cda565b612347565b602001611013565b606060008061104c878760018a5188611bd5565b915091506110598261237b565b61070b87868487856123ba565b600061107a61020060408051918201905290565b60a0810180825290915061109661109084610a3f565b82612521565b6110a260016020840152565b6110ae60016040840152565b6110cb6110c46110bf856020610cda565b612557565b6060840152565b610ac56110d661257f565b6080840152565b6000611101600486516080015160048111156110fb576110fb615545565b1461259b565b60008060006111118860016125ab565b604080516001808252818301909252939650919450925060009190816020015b611139615210565b815260200190600190039081611131579050509050888160008151811061116257611162615a11565b602002602001018190525061117781896127f9565b60008160008151811061118c5761118c615a11565b60200260200101516000015190506111a78185858b8b6129eb565b6040805160018082528183019092526000916020808301908036833701905050905085816000815181106111dd576111dd615a11565b60200260200101818152505061120e836000815181106111ff576111ff615a11565b60200260200101518288612b8f565b61122c86836000015184602001518b86604001518760600151612c3c565b6112366001600055565b5060019a9950505050505050505050565b600061125b61020060408051918201905290565b905061126f60208381019083016040611aad565b60a0810180825261128261109084610a3f565b6112936110c46110bf856060610cda565b610ac56110d66110bf856080610cda565b606060008060006112b3612cbb565b905060007f00000000000000000000000000000000000000000000000000000000000000009050606060005281602052806040526303312e3560635260a06000f35b60006112ff611a9b565b60008083815b81811015611446573687878381811061132057611320615a11565b90506020028101906113329190615c66565b905060006113436020830183615755565b905060006113576040840160208501615755565b9050600061136b60a0850160808601615ca4565b9050813314833314171560048214178717965060006113a061139561138d8790565b610a506103e9565b866101400135610acf565b6000818152600260205260409081902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000166101001781559051909a5090915073ffffffffffffffffffffffffffffffffffffffff80851691908616907f6bacc01dbe442496068f7d234edd811f1a5f833243e0aec824f86ab861f3c90d9061142e9085815260200190565b60405180910390a38560010195505050505050611305565b5050801561145657611456612d9a565b506001949350505050565b600061146d600061259b565b611475612da8565b4261016435111542610144351117156114a4576321ccfeb760005261014435602052610164356040526044601cfd5b610204356102643510156114c05763466aa6166000526004601cfd5b7f0000000000000000000000000000000000000000000000000000000000000000608081905260a08690526060602460c037604060646101203760e060802061016052610264358060051b6102a0016001820181526020810190508781526080602460208301376101608760a0528660c052600060e052600061020435935060005b84811015611596578060400261028401602081610100376040816101203760208101358317925060208401935060e0608020845260a0850194508a8552896020860152604081606087013750600101611542565b6001850160051b610160206060526102643594505b848110156115e6578060400261028401925060a0840193508984528860208501526040836060860137602083013591909117906001016115ab565b5073ffffffffffffffffffffffffffffffffffffffff811115611611576339f3e3fd6000526004601cfd5b505050505060007f00000000000000000000000000000000000000000000000000000000000000009050806080528260a052606060c460c03760206101046101203760c0608020600052602060002060e0526102643560051b6102000160018152836020820152606060c46040830137505060843573ffffffffffffffffffffffffffffffffffffffff81166000908152600160205260408120547f000000000000000000000000000000000000000000000000000000000000000060808190529091506040608460a03760605161010052886101205260a061014461014037816101e05261018060802093505050506102643560051b6101800181815233602082015260806040820152610120606082015260a061026435026101e00160a4356084357f9d9af8e38d66c62e2c12f0225249fd9d721c54b83f48d9352c97c6cacdcb6f318385a36000606052016040526105f1816117746102208a018a615cc5565b612e07565b60c43560843560e4356101043584156117fb57600060405190507f4ce34aa200000000000000000000000000000000000000000000000000000000815260206004820152600160248201528660448201528460648201528360848201523360a48201528260c48201528160e48201526117f58682610104612e8c565b50611843565b600286600581111561180f5761180f615545565b0361183657806001146118255761182581612f98565b61183184843385612faa565b611843565b6118438484338585613080565b505050505050565b346064356084356102643560061b600080805b8381101561189d5761028481013592506102a481013591508683111561188657611886613179565b82870396506118958284613187565b60400161185e565b50858511156118ae576118ae613179565b6118b88486613187565b848611156118435761184333868803613187565b6118d681836131c1565b816118fd57826001146118ec576118ec83612f98565b6118f887878787612faa565b61190e565b61190e828260028a8a8a8a8a6131e0565b50505050505050565b61192083613279565b61192a81836131c1565b8161193c576118f88787878787613080565b61190e828260038a8a8a8a8a6131e0565b6000806000806000861561197557505060843592503391505060c4356101043560e43561198a565b50339350506084359150506024356064356044355b80156119985761199861328c565b50600586901b6101e403356102643560061b600080805b838110156119f05761028481013592506102a481013591508a156119da576119d78387615d59565b95505b6119e8878a8486898f61329a565b6040016119af565b506119ff86898988888e61329a565b50505050505050505050565b6040815114611a175750565b6000611a24826020015190565b9050611a3081836132d0565b5050565b611a5c82611a4860a0840160808501615755565b331415600182116004909210919091161690565b15611a9657600080611a6e85846132f4565b9092509050611a93611a8660a0850160808601615755565b86848463fb5014fc6133d4565b50505b505050565b6001600054146103a3576103a3613441565b80838337505050565b600063ffffffff8235166040519150808252602082018160051b81018060a084026020870183378293505b81841015611afa5780845260209093019260a001611ae1565b60405250919392505050565b9052565b600063ffffffff8235166040519150808252602082018160051b81018060c084026020870183378293505b81841015611afa5780845260209093019260c001611b35565b6000611b6160a060408051918201905290565b9050611b6f82826080611aad565b611b8c611b85611b80846080610cda565b61344f565b6080830152565b919050565b600063ffffffff8235166040519150808252602082018160051b8101808360061b6020870183378293505b81841015611afa57808452602090930192604001611bbc565b60606000611be3600161259b565b7c400000000000000000000000000000000000000000000000000000000060003516611c0d615210565b88516000908067ffffffffffffffff811115611c2b57611c2b6159e2565b604051908082528060200260200182016040528015611c54578160200160208202803683370190505b50955060010160051b905060608060205b83811015611e6d57808d0151945089600003611c875760006020860152611e65565b6000806000611c96888f6125ab565b92509250925081600003611cb35750506000602087015250611e65565b82848c01528c600190039c506000886000015160a0015190506000896000015160c001519050896000015160400151975060008851905060008b60000151608001519050600481108060005250600181118e179d505060005b81811015611dad5760008a8281518110611d2857611d28615a11565b602002602001015190506000518151108e179d506000611d4d88888460800151613487565b90508160800151826060015103611d6a5760608201819052611d7f565b611d7988888460600151613487565b60608301525b6000611d93836060015183898960006134c6565b606084018190526080909301929092525050600101611d0c565b508a5160600151805190985060005b81811015611e5c5760008a8281518110611dd857611dd8615a11565b602002602001015190506000611df389898460800151613487565b90508160800151826060015103611e105760608201819052611e25565b611e1f89898460600151613487565b60608301525b6000611e398360600151838a8a60016134c6565b6060840181905260a0840180516080909501949094529092525050600101611dbc565b50505050505050505b602001611c65565b5050507c40000000000000000000000000000000000000000000000000000000018303611e9c57611e9c61351b565b611ea68a8a6127f9565b600060205b82811015611ef6578681015191508115611eee57808c01519350600084600001519050611eec83826000015183602001518c85604001518660600151612c3c565b505b602001611eab565b50505050509550959350505050565b855185516060918291611f188183615d6c565b67ffffffffffffffff811115611f3057611f306159e2565b604051908082528060200260200182016040528015611fbc57816020015b60408051610100810182526000606082018181526080830182905260a0830182905260c0830182905260e08301829052825260208083018290529282015282527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff909201910181611f4e5790505b5092506000805b83811015612045576000611ff48e60008f8581518110611fe557611fe5615a11565b60200260200101518e8e613529565b80518051602083015160809092015192935015159114161561201b5782600101925061203c565b80868484038151811061203057612030615a11565b60200260200101819052505b50600101611fc3565b5060005b828110156120ce57600061207b8e60018e858151811061206b5761206b615a11565b60200260200101518e6000613529565b8051805160208301516080909201519293501515911416156120a2578260010192506120c5565b80868487850103815181106120b9576120b9615a11565b60200260200101819052505b50600101612049565b5080156120dc578084510384525b5082516000036120ee576120ee613604565b6120fb8b84888a89613612565b9350505097509795505050505050565b600061211d6040808051918201905290565b905061213761213361212e84610a3f565b61392e565b8252565b611b8c6121486110bf846020610cda565b6020830152565b600061216582606001515183610140015161394e565b815173ffffffffffffffffffffffffffffffffffffffff166000908152600160205260409020546103b0908390610acf565b8254600090610100900460ff16156121c05781156121b8576121b88561395e565b506000610536565b83546201000090046effffffffffffffffffffffffffffff16801561223a5783156121f3576121ee86613970565b61223a565b84547101000000000000000000000000000000000090046effffffffffffffffffffffffffffff16811061223a5782156122305761223086613982565b6000915050610536565b50600195945050505050565b632165628a6000526004601cfd5b33831480156122635750505050565b600061226d612cbb565b7f190100000000000000000000000000000000000000000000000000000000000060009081526002828152602287815260428320908390528651939450929190601f601d840116106102e27fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9d840110161561232d576122ec8688613994565b7f1901000000000000000000000000000000000000000000000000000000000000600090815260028690526022828152604282209190529097509050612330565b50815b61233d888285858a613a30565b5050505050505050565b60006123596040808051918201905290565b905061236a612133610da084610a3f565b611b8c612148610da0846020610cda565b80518060051b6040019050602082038051602082527f4b9f2d36e1b4c93de62cc077b00b1a91d84b6c31b4a14e012718dcca230689e78383a190525050565b83516060908067ffffffffffffffff8111156123d8576123d86159e2565b60405190808252806020026020018201604052801561246457816020015b60408051610100810182526000606082018181526080830182905260a0830182905260c0830182905260e08301829052825260208083018290529282015282527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9092019101816123f65790505b5091506000805b828110156124f957600088828151811061248757612487615a11565b6020026020010151905060006124a78b8360000151846020015186613bf1565b8051805160208301516080909201519293501515911416156124ce578360010193506124ef565b8086858503815181106124e3576124e3615a11565b60200260200101819052505b505060010161246b565b508015612507578083510383525b506125158783878787613612565b50505b95945050505050565b61252e8282610160611aad565b61253f610a89610a84846040610cda565b611a30612550610aa0846060610cda565b6060830152565b6040518135601f0163ffffffe01660200180838337913563ffffffff16815290810160405290565b6000612592602060408051918201905290565b60008152905090565b6125a3611a9b565b600201600055565b600080600080856000015190506125cb8160a001518260c0015187613e8c565b6125df5750600092508291508190506127f2565b602086015160408701516effffffffffffffffffffffffffffff9182169450169150600060048260800151600481111561261b5761261b615545565b03612652576001838502189050801561263657612636613eaf565b61264582886080015188613ebd565b94509450945050506127f2565b50818311831517801561266757612667613eaf565b6080820151600116158484111615612681576126816140e7565b61268a8261214f565b60008181526002602052604081209196506126a990879083908a612197565b6126bd5750600093508392506127f2915050565b805460ff166126d9576126d98360000151878a60600151612254565b8080548060881c806126ed578791506127dd565b6effffffffffffffffffffffffffffff8260101c1691506001870361271a579081039650945084806127dd565b808703612738579087018681038782110297889003979003906127dd565b80870297810291909602810187810388821102918290039796919003906effffffffffffffffffffffffffffff80831190881117156127dd5761278a565b60005b8215610ac557908290069190612779565b61279d6127978884612776565b89612776565b80150197889004979687900496909104906effffffffffffffffffffffffffffff80831190881117156127dd57634e487b7160005260116020526024601cfd5b508560881b8160101b17600117825550505050505b9250925092565b8051825160005b828110156128f957600084828151811061281c5761281c615a11565b602002602001015190506000816000015190508381106128435761284382602001516140f5565b600087828151811061285757612857615a11565b6020026020010151905080602001516effffffffffffffffffffffffffffff16600003612886575050506128f1565b80516040808201519085015163bfb3f8ce6000876020015160018111156128af576128af615545565b146128cc5760006128c1856060614107565b9350636088d7de9150505b825182106128de57806000526004601cfd5b6128e9838389614113565b505050505050505b600101612800565b5060005b81811015611a9357600085828151811061291957612919615a11565b6020026020010151905080602001516effffffffffffffffffffffffffffff1660000361294657506129e3565b805160608101515160005b8181101561299b576129848360600151828151811061297257612972615a11565b60200260200101516000015160031090565b156129935761299385826141c9565b600101612951565b505060408101515160005b818110156129de576129c78360400151828151811061297257612972615a11565b156129d6576129d685826141df565b6001016129a6565b505050505b6001016128fd565b60a085015160c08601516040805160208082528183019092526000916020820181803683375050506040890151519091506000805b82811015612aa15760008b604001518281518110612a4057612a40615a11565b60200260200101519050600081600001519050801584179350506000612a74826060015183608001518e8e8c8c60006141f5565b606083015250608081018890528b516101208d0151612a98918391886142316103e9565b50600101612a20565b5060808a01516004811082168015612abb57612abb61351b565b50505060608901515160009150815b81811015612b675760008b606001518281518110612aea57612aea615a11565b602002602001015190506000612b0e826060015183608001518e8e8c8c60016141f5565b6060830181905260a083015160808401529050600082516005811115612b3657612b36615545565b03612b4e5747945084811115612b4e57612b4e613179565b612b5d82338c896142316103e9565b5050600101612aca565b5050612b7282611a0b565b50478015612b8457612b843382613187565b505050505050505050565b825160808101516020820151600092839283928392916004811060019091111633909114151615612be257612bca86828a608001518a614334565b60208301519194509250945063fb5014fc9350612c2f565b600481608001516004811115612bfa57612bfa615545565b0361233d578051945060008560601b9050612c1c87838b608001518b8561445b565b639397928596509094509250612c2f9050565b61233d85878585886133d4565b606082905060608290508573ffffffffffffffffffffffffffffffffffffffff168773ffffffffffffffffffffffffffffffffffffffff167f9d9af8e38d66c62e2c12f0225249fd9d721c54b83f48d9352c97c6cacdcb6f318a888686604051612ca99493929190615db9565b60405180910390a35050505050505050565b60007f00000000000000000000000000000000000000000000000000000000000000004614612d75575060408051608080517f000000000000000000000000000000000000000000000000000000000000000060009081527f00000000000000000000000000000000000000000000000000000000000000006020527f0000000000000000000000000000000000000000000000000000000000000000855246606090815230845260a08220949095529093529190915290565b507f000000000000000000000000000000000000000000000000000000000000000090565b63fed398fc6000526004601cfd5b600435602014610224356102401416610244356102606102643560061b011416601861012435107401000000000000000000000000000000000000000060843560a4351760c435602435171710161680612e0457612e0461452d565b50565b600083815260026020526040902060843590612e268582600180612197565b50805460ff16612e7157612e71828686868080601f01602080910402602001604051908101604052809392919081815260200183838082843760009201919091525061225492505050565b71010000000000000000000000000000010001905550505050565b604080517f000000000000000000000000000000000000000000000000000000000000000074ff000000000000000000000000000000000000000017600090815260208690527f000000000000000000000000000000000000000000000000000000000000000083526055600b209190925273ffffffffffffffffffffffffffffffffffffffff169050600080600080526020600085876000875af19150600051905081612f4557612f3c61453b565b612f4583614582565b7fffffffff0000000000000000000000000000000000000000000000000000000081167f4ce34aa20000000000000000000000000000000000000000000000000000000014611843576118438684614594565b6369f95827600052806020526024601cfd5b833b612fc257635f15d672600052836020526024601cfd5b6040517f23b872dd000000000000000000000000000000000000000000000000000000006000528360045282602452816044526000806064600080895af180613071573d1561304e57601f3d0160051c8260051c8160030281831115613035578183036003028280028480020360091c01015b5a60208201101561304a573d6000803e3d6000fd5b5050505b63f486bc8760005285602052846040528360605282608052600160a05260a4601cfd5b50604052505060006060525050565b843b61309857635f15d672600052846020526024601cfd5b60405160805160a05160c0517ff242432a000000000000000000000000000000000000000000000000000000006000528760045286602452856044528460645260a0608452600060a45260008060c46000808d5af18061315d573d1561313b57601f3d0160051c8560051c8160030281831115613122578183036003028280028480020360091c01015b5a602082011015613137573d6000803e3d6000fd5b5050505b63f486bc87600052896020528860405287606052866080528560a05260a4601cfd5b5060809290925260a05260c05260405250506000606052505050565b638ffff9806000526004601cfd5b61319081613279565b600080600080600085875af1905080611a96576131ab61453b565b63bc806b9660005282602052816040526044601cfd5b60006131ce836020015190565b9050818114611a9657611a9683611a0b565b600060208851036132345750604080885260208089018a90527f4ce34aa200000000000000000000000000000000000000000000000000000000918901919091526044880152600160648801819052613243565b50606487018051600101908190525b603c60c082028901038781528660208201528560408201528460608201528360808201528260a082015250505050505050505050565b80612e04576391b3e5146000526004601cfd5b636ab37ce76000526004601cfd5b6132a383613279565b6132ad81836131c1565b816132be57611831868686866145aa565b6118438282600189898960008a6131e0565b6064810151604082019060c0026044016132eb848383612e8c565b50506020905250565b6000806132ff6146c2565b6317b1f942815260208082015260408101858152336060830152601c9091019250613333610a896080860160608701615755565b61334461014460e083016060611aad565b610140613352816060840152565b61336060a082016080840152565b61026435602081026102000160a082026101600161338182858701836146cd565b92909201915061339490508160a0840152565b61339f600082840152565b6020016133ad8160c0840152565b6133b8600182840152565b6133c58682840160200152565b80606401925050509250929050565b6000807fffffffff000000000000000000000000000000000000000000000000000000008551166000805260206000868860008c5af16000519093501490508161342e5761342061453b565b82600052856020526024601cfd5b8061190e5782600052856020526024601cfd5b637fa8a9876000526004601cfd5b60008063ffffffff83351690506001810160051b6134738160408051918201905290565b9250613480848483611aad565b5050919050565b6000828403613497575080610400565b82848309156134ae5763c63cf0896000526004601cfd5b60006134ba8584615e61565b93909304949350505050565b6000848614613511578383034285900380820360006134e5838a615e61565b6134ef838c615e61565b6134f99190615d6c565b90508584878303040181151502945050505050612518565b5092949350505050565b6312d3f5a36000526004601cfd5b60408051610100810182526000606082018181526080830182905260a0830182905260c0830182905260e0830182905282526020820181905291810191909152835160000361357b5761357b856146e4565b8051600086600181111561359157613591615545565b036135c25773ffffffffffffffffffffffffffffffffffffffff831660808201526135bd8786846146f6565b6135db565b6135cd878684614861565b336020830152604082018490525b80606001516000036135fa576000602083018190526080820152600181525b5095945050505050565b63d5da9a1b6000526004601cfd5b845160609060008167ffffffffffffffff811115613632576136326159e2565b60405190808252806020026020018201604052801561365b578160200160208202803683370190505b5060408051602080825281830190925291925060009190602082018180368337019050508851909150600090815b818110156137045760008b82815181106136a5576136a5615a11565b602090810291909101015180519091506000815160058111156136ca576136ca615545565b036136e65747945084816060015111156136e6576136e6613179565b6136fa818360200151846040015189614231565b5050600101613689565b50505060005b838110156138845760008a828151811061372657613726615a11565b6020026020010151905080602001516effffffffffffffffffffffffffffff1660000361377757600084838151811061376157613761615a11565b911515602092830291909101909101525061387c565b600184838151811061378b5761378b615a11565b9115156020928302919091019091015280516040810151805160005b818110156138135760008382815181106137c3576137c3615a11565b60200260200101519050806060015160001461380057608081018051908e905285516101208701516137fa9184918c6142316103e9565b60808201525b60808101516060909101526001016137a7565b5050506060810151805160005b8181101561387657600083828151811061383c5761383c615a11565b602002602001015190506000816060015190508060001461386257613862888483614982565b5060a0810151606090910152600101613820565b50505050505b60010161370a565b5061388e81611a0b565b47801561389f5761389f3382613187565b85156139165760005b84811015613914578381815181106138c2576138c2615a11565b60200260200101511561390c5761390c8b82815181106138e4576138e4615a11565b60200260200101518a8b84815181106138ff576138ff615a11565b6020026020010151612b8f565b6001016138a8565b505b6139206001600055565b509098975050505050505050565b600061394261016060408051918201905290565b9050611b8c8282612521565b80821015611a3057611a3061499c565b631a515574600052806020526024601cfd5b63ee9e0e63600052806020526024601cfd5b6310fda3e1600052806020526024601cfd5b600080600084516001811660410380820360051c9250808752806020018701915050805160e81c6003820191506001811660051b868152825160208218525060015b83811015613a0357604060002082821c60051b6020908116918252938401805191909418526001016139d6565b505050604060002091506000613a18826149aa565b60009081526020939093525050604090209392505050565b600080600052815160208303805182604103600060018211613ab2576040870151606088015160001a8315613a9157601b8260ff1c0190507f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff821660408a01525b88528a85526020600060808760015afa508385528588526040880152506000515b8a148a1515169450849050613bd3578585526040825260448503805160408703517f1626ba7e0000000000000000000000000000000000000000000000000000000083528960408903526020600060648b01858f5afa96508615613ba9577f1626ba7e0000000000000000000000000000000000000000000000000000000060005114613ba9578b3b15613b4e57634f7fb80d6000526004601cfd5b6001866041031115613b6857638baa579f6000526004601cfd5b640101000000606089015160001a1a15604187141615613b9b57631f003d0a600052606088015160001a6020526024601cfd5b63815e1d646000526004601cfd5b83855291527fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc08601525b5050508061184357613be361453b565b634f7fb80d6000526004601cfd5b60408051610100810182526000606082018181526080830182905260a0830182905260c0830182905260e083018290528252602082018190529181019190915283511580613c3e57508251155b15613c4b57613c4b614dbb565b60408051610100810182526000606082018181526080830182905260a0830182905260c0830182905260e0830182905282526020820181905291810191909152613c96868583614861565b80516060810151600003613cc157506000602082018190528151608001528051600190529050610536565b613ccc8787856146f6565b80604001518360000151604001511881602001518460000151602001511882600001516005811115613d0057613d00615545565b8551516005811115613d1457613d14615545565b1860ff161773ffffffffffffffffffffffffffffffffffffffff1617600014613d4057613d4084614dc9565b82600001516060015181606001511115613dd357600085600081518110613d6957613d69615a11565b6020026020010151905083600001516060015182606001510388826000015181518110613d9857613d98615a11565b60200260200101516000015160600151826020015181518110613dbd57613dbd615a11565b6020026020010151606001818152505050613e60565b600086600081518110613de857613de8615a11565b6020026020010151905081606001518460000151606001510388826000015181518110613e1757613e17615a11565b60200260200101516000015160400151826020015181518110613e3c57613e3c615a11565b60200260200101516060018181525050816060015184600001516060018181525050505b608090810151835173ffffffffffffffffffffffffffffffffffffffff90911691015250949350505050565b428084111590831116818015613ea0575080155b15610400576104008484614ddb565b635a052b326000526004601cfd5b600080600085610140015186606001515114613edb57613edb612246565b855160008080613eeb8a8a614df1565b9150915060008082846000885af173ffffffffffffffffffffffffffffffffffffffff85166000908152600360205260409020805460018101909155606086901b189750925082613f4f57613f408888614ea1565b965096509650505050506140de565b505050506000806000613f646103e9614ec390565b92509250925082600014613f7b57613f7b86615007565b604089015151825180821115613f9457613f9488615007565b60005b82811015614015576000613fc58d604001518381518110613fba57613fba615a11565b602002602001015190565b90506000613fde878481518110613fba57613fba615a11565b9050613fea8282615019565b614005613ff8606084015190565b60608501511190565b1190565b1797909717965050600101613f97565b505050604089018290526060890151815181518111156140385761403888615007565b60005b818110156140ba57600061405a848381518110613fba57613fba615a11565b90506000614073868481518110613fba57613fba615a11565b905061409161408360a084015190565b60a083015181159114171590565b61409b8383615019565b6140a9613ff8606086015190565b17179790971796505060010161403b565b5050506060890181905282156140d3576140d386615007565b506001935083925050505b93509350939050565b63a11b63ff6000526004601cfd5b63133c37c6600052806020526024601cfd5b60006104008284015190565b600083838151811061412757614127615a11565b602002602001015190506000816000015190506141448160031090565b61415057614150615076565b604082015180156141735761416e8460600151828660800151615084565b614186565b60808401515115614186576141866150d2565b60048214600303838160058111156141a0576141a0615545565b908160058111156141b3576141b3615545565b9052505050606090920151604090910152505050565b63a8930e9a60005281602052806040526044601cfd5b63d692933260005281602052806040526044601cfd5b600086880361421057614209868689613487565b905061070b565b61070861421e87878b613487565b61422988888b613487565b8686866134c6565b60008451600581111561424657614246615545565b03614290576040840151602085015173ffffffffffffffffffffffffffffffffffffffff1617156142795761427961328c565b61428b84608001518560600151613187565b61432e565b6001845160058111156142a5576142a5615545565b036142d6576040840151156142bc576142bc61328c565b61428b84602001518486608001518760600151868661329a565b6002845160058111156142eb576142eb615545565b0361430f5761428b84602001518486608001518760400151886060015187876118cc565b61432e8460200151848660800151876040015188606001518787611917565b50505050565b60008061433f6146c2565b6317b1f942815260208082015260408101878152336060830152601c9091019250855160408201528561437d61437660a083015190565b60e0840152565b61439361438b60c083015190565b610100840152565b6143a96143a160e083015190565b610120840152565b6101406143b7816060850152565b60006143c4604084015190565b905060006143d4828487016150e0565b9283019290506143e5836080870152565b60006143f2606086015190565b9050600061440282868901615147565b9485019490506144138560a0890152565b60006144218c878a016151b5565b9586019590506144328660c08a0152565b60006144408c888b016151d5565b9a9f96909a016024019d50949b505050505050505050505050565b6000806144666146c2565b63f4dd92ce815287841860a0820152601c8101925060200160a0808252876000614491604083015190565b905060006144a1828587016150e0565b9384019390506144b2846020870152565b60006144bf606085015190565b905060006144cf82878901615147565b9586019590506144e0866040890152565b60006144ee8d888a016151b5565b9687019690506144ff8760608a0152565b600061450d8d898b016151d5565b905080880197508760040199505050505050505050509550959350505050565b6339f3e3fd6000526004601cfd5b3d156103a357601f3d0160051c60405160051c816003028183111561456d578183036003028280028480020360091c01015b5a602082011015611a96573d6000803e3d6000fd5b63d13d53d4600052806020526024601cfd5b631cf99b2660005281602052806040526044601cfd5b6040517f23b872dd00000000000000000000000000000000000000000000000000000000600052836004528260245281604452602060006064600080895af1803d15601f3d116001600051141617163d151581166146b25780873b1515166146b257806146a05781614682573d1561465f57601f3d0160051c8360051c8160030281831115614646578183036003028280028480020360091c01015b5a60208201101561465b573d6000803e3d6000fd5b5050505b63f486bc8760005286602052856040528460605260006080528360a05260a4601cfd5b6398891923600052866020528560405284606052836080526084601cfd5b635f15d672600052866020526024601cfd5b5050604052505060006060525050565b60006103c060405190565b8082828560045afa80153d15171561432e57600080fd5b63375c24c1600052806020526024601cfd5b600080600084855160051b86015b80821015614812576020820191508151518851811061472557614725614840565b8060051b60208a01015190508051602084510151600060408301516020850151158151841015171561475b575050505050614704565b8260051b60208201015191505060608101935083518901915083511589831060011b178817975081985060008452895193508615600181146147c55760608220881860408c01516101208601511860208d01518651181717156147c0576147c0614840565b614808565b815185526020820151602086015260408201516040860152835160208c015261012084015160408c015260608520975060208c0192508683181561480857865183525b5050505050614704565b505050816060845101528015611a935760018103614838576391b3e5146000526004601cfd5b611a9361484e565b637fda72796000526004601cfd5b634e487b7160005260116020526024601cfd5b600080600084855160051b86015b8082101561495b576020820191508151518851811061489057614890614840565b8060051b60208a01015190506020835101516000606083510151602084015115815184101517156148c4575050505061486f565b8260051b60208201015191505060608101925082518801915082511588831060011b178717965081975060008352885192508515600181146149175760a08220871461491257614912614840565b614952565b8151845260208201516020850152604082015160408501526080820151608085015260a08220965060208b0192508583181561495257855183525b5050505061486f565b50508351606001839052508015611a935760018103614838576391b3e5146000526004601cfd5b63a5f542086000528260205281604052806060526064601cfd5b63466aa6166000526004601cfd5b6000614db2565b60006009821015614b0b576005821015614a68576003821015614a1b577f832c58a5b611aadcfa6a082ac9d04bace53d8278387f10040347b7e98eb5b30260018314027fbf8e29b89f29ed9b529c154a63038ffca562f8d7cd1e2545dda53a1b582dde30186103b0565b7ff3e8417a785f980bdaf134fa0274a6bf891eeb8195cd94b09d2aa651046e28bc60038314027fa02eb7ff164c884e5e2c336dc85f81c6a93329d8e9adf214b32729b894de2af1186103b0565b6007821015614abe577f25d02425402d882d211a7ab774c0ed6eca048c4d03d9af40132475744753b2a360058314027f1c19f71958cdd8f081b4c31f7caf5c010b29d12950be2fa1c95070dc47e30b55186103b0565b7fb58d772fb09b426b9dece637f61ca9065f2b994f1464b51e9207f55f7c8f594860078314027f7ff98d9d4e55d876c5cfac10b43c04039522f3ddfb0ea9bfe70c68cfb5c7cc14186103b0565b6011821015614c6357600d821015614bc057600b821015614b73577f6f0ec38c21f6f583ab7f3c5413c773ffd5344c34fde1d390958e438bf667448f60098314027fd1d97d1ef5eaa37a4ee5fbf234e6f6d64eb511eb562221cd7edfbdde0848da05186103b0565b7f32f4e7485d6485f9f6c255929b9905c62ba919758bbe231f231eaeecf33d810c600b8314027fbb98d87cc12922b83759626c5f07d72266da9702d19ffad6a514c73a89002f5f186103b0565b600f821015614c16577f8df51df98847160517f5b1186b4bc3f418d98b8a7f17f1292f392d79d600d79e600d8314027f6b5b04cbae4fcb1a9d78e7b2dfc51a36933d023cf6e347e03d517b472a852590186103b0565b7fcc4886e37eedd9aacd6c1c2c9247197a621a71282e87a7cbc673f3736d9aa141600f8314027f1da3eed3ecef6ebaa6e5023c057ec2c75150693fd0dac5c90f4a142f9879fde8186103b0565b6015821015614d0f576013821015614cc2577f2d7a3ed6dab270fdb8e054b2ad525f0ce2a8b89cc76c17f0965434740f673a5560118314027fc3939feff011e53ab8c35ca3370aad54c5df1fc2938cd62543174fa6e7d85877186103b0565b7f54b3212a178782f104e0d514b41a9a5c4ca9c980bf6597c3cecbf280917e202a60138314027f5a4f867d3d458dabecad65f6201ceeaba0096df2d0c491cc32e6ea4e64350017186103b0565b6017821015614d65577fbb40bf8cea3a5a716e2b6eb08bbdac8ec159f82f380783db3c56904f15a43d0460158314027f3bd8cff538aba49a9c374c806d277181e9651624b3e31111bc0624574f8bca1d186103b0565b7f403be09941a31d05cfc2f896505811353d45d38743288b016630cce39435476a60178314027f1d51df90cba8de7637ca3e8fe1e3511d1dc2f23487d05dbdecb781860c21ac1c186103b0565b6103b0826149b1565b6398e9db6e6000526004601cfd5b63bced929d600052806020526024601cfd5b6321ccfeb760005281602052806040526044601cfd5b60008083614dfd6146c2565b639891976581523360208201908152608060408301819052601c9092019450906000614e2a604085015190565b90506000614e3a828486016150e0565b928301929050614e4b836040860152565b6000614e58606087015190565b90506000614e68828688016150e0565b948501949050614e79856060880152565b896000614e88828989016151b5565b9a9d96909a016004019b50949950505050505050505050565b60008060008415614eb557614eb584615007565b509193600093508392509050565b60803d106000808080808086614f255760406000803e6000516020513d81113d8311179850909450925086614f255760208460003e600051915060208360203e506020516000805261ffff828217113d608060a08402600786901b0101111796505b86614f4957614f378260208601614f52565b9550614f468160208501614fb1565b94505b50505050909192565b6000604051905060c08302602001810160405282815260208360010160051b8083015b81831015614fa8578083850152608085823e6060810151608082015260808501945060a081019050602083019250614f75565b50505092915050565b6000604051905060e08302602001810160405282815260208360010160051b8083015b81831015614fa8578083850152608085823e604060608601608083013e60a094909401936020929092019160c001614fd4565b6393979285600052806020526024601cfd5b600082516040840151801560038311161561503f57600482146003039150604084015190505b6060850151606085015150608086015181146040860151831416855184146020870151602089015114161615935050505092915050565b6394eb6af66000526004601cfd5b600083600052602060002060208301835160051b81015b808210156150c357815180841160051b9384526020938418526040600020929091019061509b565b5050831490508061432e5761432e5b6309bde3396000526004601cfd5b6000825180835260208401602084018260051b82015b8083101561513457825180518352602081015160208401526040810151604084015260608101516060840152506020830192506080820191506150f6565b5050508060071b60200191505092915050565b600080615152845190565b8084529050602084810190600583901b860181019085015b6151748383614001565b156151a257600061518484615206565b9050615192818360a06146cd565b506020929092019160a00161516a565b60a0840260200194505050505092915050565b600063ffffffe0603f6151c6855190565b011690506103b08383836146cd565b6000806151e0845190565b8084529050600581901b6151fb6020868101908601836146cd565b602001949350505050565b60006103b0825190565b6040518060a00160405280615223615244565b81526000602082018190526040820152606080820181905260809091015290565b604051806101600160405280600073ffffffffffffffffffffffffffffffffffffffff168152602001600073ffffffffffffffffffffffffffffffffffffffff1681526020016060815260200160608152602001600060048111156152ab576152ab615545565b815260006020820181905260408201819052606082018190526080820181905260a0820181905260c09091015290565b6000602082840312156152ed57600080fd5b813567ffffffffffffffff81111561530457600080fd5b8201610240818503121561040057600080fd5b6000815180845260005b8181101561533d57602081850181015186830182015201615321565b5060006020828601015260207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f83011685010191505092915050565b6020815260006104006020830184615317565b6000602082840312156153a057600080fd5b5035919050565b6000602082840312156153b957600080fd5b813567ffffffffffffffff8111156153d057600080fd5b8201610160818503121561040057600080fd5b60008083601f8401126153f557600080fd5b50813567ffffffffffffffff81111561540d57600080fd5b6020830191508360208260051b850101111561542857600080fd5b9250929050565b73ffffffffffffffffffffffffffffffffffffffff81168114612e0457600080fd5b8035611b8c8161542f565b600080600080600080600080600080600060e08c8e03121561547d57600080fd5b67ffffffffffffffff808d35111561549457600080fd5b6154a18e8e358f016153e3565b909c509a5060208d01358110156154b757600080fd5b6154c78e60208f01358f016153e3565b909a50985060408d01358110156154dd57600080fd5b6154ed8e60408f01358f016153e3565b909850965060608d013581101561550357600080fd5b506155148d60608e01358e016153e3565b909550935060808c0135925061552c60a08d01615451565b915060c08c013590509295989b509295989b9093969950565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052602160045260246000fd5b60068110611b0657611b06615545565b61558f828251615574565b602081015173ffffffffffffffffffffffffffffffffffffffff8082166020850152604083015160408501526060830151606085015280608084015116608085015250505050565b600081518084526020808501945080840160005b8381101561563a578151615600888251615584565b8084015173ffffffffffffffffffffffffffffffffffffffff1660a08901526040015160c088015260e090960195908201906001016155eb565b509495945050505050565b604080825283519082018190526000906020906060840190828701845b82811015615680578151151584529284019290840190600101615662565b505050838103828501526105f181866155d7565b600080602083850312156156a757600080fd5b823567ffffffffffffffff8111156156be57600080fd5b6156ca858286016153e3565b90969095509350505050565b600080600080604085870312156156ec57600080fd5b843567ffffffffffffffff8082111561570457600080fd5b615710888389016153e3565b9096509450602087013591508082111561572957600080fd5b50615736878288016153e3565b95989497509550505050565b60208152600061040060208301846155d7565b60006020828403121561576757600080fd5b81356104008161542f565b6000806040838503121561578557600080fd5b823567ffffffffffffffff81111561579c57600080fd5b8301604081860312156157ae57600080fd5b946020939093013593505050565b6000806000806000608086880312156157d457600080fd5b853567ffffffffffffffff808211156157ec57600080fd5b9087019060a0828a03121561580057600080fd5b9095506020870135908082111561581657600080fd5b50615823888289016153e3565b90955093505060408601359150606086013561583e8161542f565b809150509295509295909350565b60008060008060008060008060a0898b03121561586857600080fd5b883567ffffffffffffffff8082111561588057600080fd5b61588c8c838d016153e3565b909a50985060208b01359150808211156158a557600080fd5b6158b18c838d016153e3565b909850965060408b01359150808211156158ca57600080fd5b506158d78b828c016153e3565b999c989b509699959896976060870135966080013595509350505050565b60008060008060008060006080888a03121561591057600080fd5b873567ffffffffffffffff8082111561592857600080fd5b6159348b838c016153e3565b909950975060208a013591508082111561594d57600080fd5b6159598b838c016153e3565b909750955060408a013591508082111561597257600080fd5b5061597f8a828b016153e3565b90945092505060608801356159938161542f565b8091505092959891949750929550565b6060815260006159b66060830186615317565b905083602083015273ffffffffffffffffffffffffffffffffffffffff83166040830152949350505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b600081518084526020808501945080840160005b8381101561563a578151615a69888251615574565b8084015173ffffffffffffffffffffffffffffffffffffffff168885015260408082015190890152606080820151908901526080908101519088015260a09096019590820190600101615a54565b600081518084526020808501945080840160005b8381101561563a578151615ae0888251615574565b8084015173ffffffffffffffffffffffffffffffffffffffff90811689860152604080830151908a0152606080830151908a0152608080830151908a015260a091820151169088015260c09096019590820190600101615acb565b60058110611b0657611b06615545565b82815260406020820152615b7860408201835173ffffffffffffffffffffffffffffffffffffffff169052565b60006020830151615ba1606084018273ffffffffffffffffffffffffffffffffffffffff169052565b506040830151610160806080850152615bbe6101a0850183615a40565b915060608501517fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc08584030160a0860152615bf98382615ab7565b9250506080850151615c0e60c0860182615b3b565b5060a085015160e085015260c0850151610100818187015260e0870151915061012082818801528188015192506101409150828288015280880151848801525080870151610180870152505050809150509392505050565b600082357ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffea1833603018112615c9a57600080fd5b9190910192915050565b600060208284031215615cb657600080fd5b81356005811061040057600080fd5b60008083357fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe1843603018112615cfa57600080fd5b83018035915067ffffffffffffffff821115615d1557600080fd5b60200191503681900382131561542857600080fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b818103818111156103b0576103b0615d2a565b808201808211156103b0576103b0615d2a565b600081518084526020808501945080840160005b8381101561563a57615da6878351615584565b60a0969096019590820190600101615d93565b60006080808301878452602073ffffffffffffffffffffffffffffffffffffffff808916828701526040848188015283895180865260a089019150848b01955060005b81811015615e3d578651615e11848251615574565b808701518616848801528481015185850152606090810151908401529585019591870191600101615dfc565b50508781036060890152615e51818a615d7f565b9c9b505050505050505050505050565b80820281158282048414176103b0576103b0615d2a56fea264697066735822122030917b98d48875b186b1fd6f8d589c482ffbf5e871cc0fa7f20fba2571f6945e64736f6c63430008110033436f6e73696465726174696f6e4974656d2875696e7438206974656d547970652c6164647265737320746f6b656e2c75696e74323536206964656e7469666965724f7243726974657269612c75696e74323536207374617274416d6f756e742c75696e7432353620656e64416d6f756e742c6164647265737320726563697069656e7429454950373132446f6d61696e28737472696e67206e616d652c737472696e672076657273696f6e2c75696e7432353620636861696e49642c6164647265737320766572696679696e67436f6e7472616374294f72646572436f6d706f6e656e74732861646472657373206f6666657265722c61646472657373207a6f6e652c4f666665724974656d5b5d206f666665722c436f6e73696465726174696f6e4974656d5b5d20636f6e73696465726174696f6e2c75696e7438206f72646572547970652c75696e7432353620737461727454696d652c75696e7432353620656e6454696d652c62797465733332207a6f6e65486173682c75696e743235362073616c742c6279746573333220636f6e647569744b65792c75696e7432353620636f756e746572294f666665724974656d2875696e7438206974656d547970652c6164647265737320746f6b656e2c75696e74323536206964656e7469666965724f7243726974657269612c75696e74323536207374617274416d6f756e742c75696e7432353620656e64416d6f756e7429"
+}
