@@ -5,6 +5,7 @@ import { setupMETISStaking } from './modules/setup-metis-staking'
 import { setupPOLStaking } from './modules/setup-polygon-staking'
 import { setupESPStaking } from './modules/setup-espresso-staking'
 import { setupOther } from './modules/setup-other'
+import { setupMarketplace } from './modules/setup-marketplace'
 
 async function main() {
   await setupCore()
@@ -13,6 +14,7 @@ async function main() {
   await setupPOLStaking()
   await setupESPStaking()
   await setupOther()
+  await setupMarketplace()
 
   printDeployments()
   console.log('setup-test-env-ready')
