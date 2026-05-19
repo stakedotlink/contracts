@@ -7,6 +7,7 @@ import { deployESPStaking } from './modules/deploy-espresso-staking'
 import { deploySubgraphMockContracts } from './modules/deploy-subgraph-mocks'
 import { deployDeprecated } from './modules/deploy-deprecated'
 import { deployOther } from './modules/deploy-other'
+import { deployMarketplace } from './modules/deploy-marketplace'
 
 const path = './deployments/localhost.json'
 
@@ -23,6 +24,7 @@ async function main() {
   await deployESPStaking()
   await deploySubgraphMockContracts()
   await deployOther()
+  await deployMarketplace()
 }
 
 main()
