@@ -132,11 +132,18 @@ async function main() {
     overrides: { contractAddress: seaportAddress, seaportVersion } as any,
   })
 
+  // setup-test-env's setup-link-staking advances the chain ~28 days via
+  // time.increase(). Use block.timestamp (not Date.now) as the base so
+  // orders aren't born already-expired relative to the chain clock.
+  const latestBlock = await ethers.provider.getBlock('latest')
+  const nowOnChain = latestBlock?.timestamp ?? Math.floor(Date.now() / 1000)
+  const endTime = nowOnChain + 7 * 24 * 3600
+
   console.log(`Listing 1: ${listing1TokenId} for 2 ETH`)
   const { executeAllActions: ex1 } = await listerSeaport.createOrder({
     offer: [{ itemType: ItemType.ERC721, token: resdlAddress, identifier: listing1TokenId }],
     consideration: [{ amount: ethers.parseEther('2').toString(), recipient: walletLister.address }],
-    endTime: Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
+    endTime,
   })
   const order1 = await ex1()
   const r1 = await postJson(`${BACKEND_URL}/api/orders`, orderToApiPayload(order1))
@@ -149,7 +156,7 @@ async function main() {
     consideration: [
       { token: linkAddress, amount: ethers.parseEther('1500').toString(), recipient: walletLister.address },
     ],
-    endTime: Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
+    endTime,
   })
   const order2 = await ex2()
   const r2 = await postJson(`${BACKEND_URL}/api/orders`, orderToApiPayload(order2))
@@ -170,7 +177,7 @@ async function main() {
         recipient: walletBuyer.address,
       },
     ],
-    endTime: Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
+    endTime,
   })
   const order3 = await ex3()
   const order3Hash = buyerSeaport.getOrderHash(order3.parameters)
