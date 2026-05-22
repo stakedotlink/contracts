@@ -603,8 +603,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
 
         token.safeTransferFrom(msg.sender, address(this), _amount);
 
-        uint256 canDeposit = stakingPool.canDeposit();
-        if (canDeposit < _amount) revert InsufficientDepositRoom();
+        uint256 strategyDepositRoom = stakingPool.getStrategyDepositRoom();
+        if (strategyDepositRoom < _amount) revert InsufficientDepositRoom();
 
         stakingPool.deposit(_account, _amount, _data);
     }
