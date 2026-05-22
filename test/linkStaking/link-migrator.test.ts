@@ -16,9 +16,9 @@ import {
   StakingPool,
   PriorityPool,
   CommunityVCS,
+  WithdrawalPoolMock,
 } from '../../typechain-types'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
-import { WithdrawalPool } from '../../typechain-types/contracts/core/test/WithdrawalPoolMock.sol'
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -74,7 +74,7 @@ describe('LINKMigrator', () => {
       pp.target,
       toEther(10),
       0,
-    ])) as WithdrawalPool
+    ])) as WithdrawalPoolMock
 
     let vaultImplementation = await deployImplementation('CommunityVault')
     const vaultDepositController = await deploy('VaultDepositController')
@@ -217,5 +217,39 @@ describe('LINKMigrator', () => {
 
     await ethers.provider.send('evm_mine')
     await ethers.provider.send('evm_setAutomine', [true])
+  })
+
+  it('should migrate even when idle LINK on the staking pool has pushed canDeposit to 0', async () => {
+    const { migrator, communityPool, stakingPool, strategy, accounts, token } = await loadFixture(
+      deployFixture
+    )
+
+    await token.approve(stakingPool.target, toEther(5000))
+    await stakingPool.donateTokens(toEther(5000))
+
+    assert.equal(fromEther(await stakingPool.canDeposit()), 0)
+
+    const totalStakedBefore = await stakingPool.totalStaked()
+    const strategyDepositsBefore = await strategy.getTotalDeposits()
+
+    await communityPool.unbond()
+    await time.increase(unbondingPeriod)
+
+    await ethers.provider.send('evm_setAutomine', [false])
+    await migrator.initiateMigration(toEther(200))
+    await communityPool.unstake(toEther(200))
+
+    await token.transferAndCall(
+      migrator.target,
+      toEther(200),
+      ethers.AbiCoder.defaultAbiCoder().encode(['bytes[]'], [[encodeVaults([])]])
+    )
+    await ethers.provider.send('evm_mine')
+    await ethers.provider.send('evm_setAutomine', [true])
+
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[0])), 200)
+    assert.equal(fromEther((await stakingPool.totalStaked()) - totalStakedBefore), 200)
+    assert.equal(fromEther((await strategy.getTotalDeposits()) - strategyDepositsBefore), 200)
+    assert.deepEqual(await migrator.migrations(accounts[0]), [0n, 0n, 0n, 0n])
   })
 })

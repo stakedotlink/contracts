@@ -856,6 +856,44 @@ describe('PriorityPool', () => {
     assert.equal(fromEther(await stakingPool.totalStaked()), 3000)
   })
 
+  it('bypassQueue should succeed when strategies have room even if stakingPool.canDeposit is 0', async () => {
+    const { accounts, signers, adrs, pp, token, stakingPool, strategy } = await loadFixture(
+      deployFixture
+    )
+
+    await pp.setQueueBypassController(accounts[1])
+
+    await pp.deposit(toEther(1000), false, ['0x'])
+    await token.approve(adrs.stakingPool, ethers.MaxUint256)
+    await stakingPool.donateTokens(toEther(1000))
+    await strategy.setMaxDeposits(toEther(1500))
+
+    assert.equal(fromEther(await stakingPool.canDeposit()), 0)
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 500)
+
+    await pp.connect(signers[1]).bypassQueue(accounts[2], toEther(500), ['0x'])
+
+    assert.equal(fromEther(await stakingPool.balanceOf(accounts[2])), 500)
+    assert.equal(fromEther(await strategy.getTotalDeposits()), 1500)
+    assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 1000)
+  })
+
+  it('bypassQueue should revert when strategies have no deposit room', async () => {
+    const { accounts, adrs, signers, pp, token, stakingPool } = await loadFixture(deployFixture)
+
+    await pp.setQueueBypassController(accounts[1])
+
+    await pp.deposit(toEther(1000), false, ['0x'])
+    await token.approve(adrs.stakingPool, ethers.MaxUint256)
+    await stakingPool.donateTokens(toEther(500))
+
+    assert.equal(fromEther(await stakingPool.getStrategyDepositRoom()), 0)
+
+    await expect(
+      pp.connect(signers[1]).bypassQueue(accounts[2], toEther(100), ['0x'])
+    ).to.be.revertedWithCustomError(pp, 'InsufficientDepositRoom()')
+  })
+
   it('withdraw should revert when transfer amount rounds to zero shares', async () => {
     const { signers, accounts, adrs, pp, token, stakingPool, strategy } = await loadFixture(
       deployFixture
