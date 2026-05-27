@@ -95,23 +95,63 @@ export async function setupMarketplace() {
   }
 
   console.log('Wallet 1 staking 3 locks...')
-  await stakeForLock(sdlToken, sdlPoolAddress, walletPrimary, ethers.parseEther('10000'), SECONDS_PER_YEAR)
-  await stakeForLock(sdlToken, sdlPoolAddress, walletPrimary, ethers.parseEther('20000'), 4 * SECONDS_PER_YEAR)
-  await stakeForLock(sdlToken, sdlPoolAddress, walletPrimary, ethers.parseEther('5000'), 30 * SECONDS_PER_DAY)
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletPrimary,
+    ethers.parseEther('10000'),
+    SECONDS_PER_YEAR
+  )
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletPrimary,
+    ethers.parseEther('20000'),
+    4 * SECONDS_PER_YEAR
+  )
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletPrimary,
+    ethers.parseEther('5000'),
+    30 * SECONDS_PER_DAY
+  )
 
   console.log('Wallet 3 staking 2 locks...')
-  await stakeForLock(sdlToken, sdlPoolAddress, walletLister, ethers.parseEther('15000'), 2 * SECONDS_PER_YEAR)
-  await stakeForLock(sdlToken, sdlPoolAddress, walletLister, ethers.parseEther('8000'), 180 * SECONDS_PER_DAY)
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletLister,
+    ethers.parseEther('15000'),
+    2 * SECONDS_PER_YEAR
+  )
+  await stakeForLock(
+    sdlToken,
+    sdlPoolAddress,
+    walletLister,
+    ethers.parseEther('8000'),
+    180 * SECONDS_PER_DAY
+  )
 
   console.log('Setting approvals...')
   const sdlPool = await ethers.getContractAt('SDLPool', sdlPoolAddress, deployer)
-  await (await sdlPool.connect(walletPrimary).setApprovalForAll(deployments.Seaport.address, true)).wait()
-  await (await sdlPool.connect(walletLister).setApprovalForAll(deployments.Seaport.address, true)).wait()
+  await (
+    await sdlPool.connect(walletPrimary).setApprovalForAll(deployments.Seaport.address, true)
+  ).wait()
+  await (
+    await sdlPool.connect(walletLister).setApprovalForAll(deployments.Seaport.address, true)
+  ).wait()
 
   const MAX = ethers.MaxUint256
-  await (await (mockWeth.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)).wait()
-  await (await (linkToken.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)).wait()
-  await (await (mockUsdc.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)).wait()
+  await (
+    await (mockWeth.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)
+  ).wait()
+  await (
+    await (linkToken.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)
+  ).wait()
+  await (
+    await (mockUsdc.connect(walletBuyer) as any).approve(deployments.Seaport.address, MAX)
+  ).wait()
 
   console.log('--- setupMarketplace complete ---')
 }

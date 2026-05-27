@@ -37,7 +37,9 @@ async function waitForBackend(timeoutMs = 60_000): Promise<void> {
     }
     await new Promise((r) => setTimeout(r, 1000))
   }
-  throw new Error(`Backend health check at ${BACKEND_URL}/api/health timed out after ${timeoutMs}ms`)
+  throw new Error(
+    `Backend health check at ${BACKEND_URL}/api/health timed out after ${timeoutMs}ms`
+  )
 }
 
 async function discoverMintedTokenIds(
@@ -154,7 +156,11 @@ async function main() {
   const { executeAllActions: ex2 } = await listerSeaport.createOrder({
     offer: [{ itemType: ItemType.ERC721, token: resdlAddress, identifier: listing2TokenId }],
     consideration: [
-      { token: linkAddress, amount: ethers.parseEther('1500').toString(), recipient: walletLister.address },
+      {
+        token: linkAddress,
+        amount: ethers.parseEther('1500').toString(),
+        recipient: walletLister.address,
+      },
     ],
     endTime,
   })
