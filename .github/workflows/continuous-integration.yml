@@ -17,6 +17,13 @@ jobs:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
+      # node-hid (pulled in transitively via @ledgerhq/hw-transport-node-hid) has no
+      # prebuilt binary for the runner's current Node, so yarn install compiles it from
+      # source whenever the node_modules cache misses (e.g. any yarn.lock change). That
+      # source build needs libusb headers, which ubuntu-latest does not ship by default.
+      - name: Install native build dependencies (node-hid → libusb)
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+
       - name: Install Yarn dependencies
         run: yarn install
 
