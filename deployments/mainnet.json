@@ -308,7 +308,7 @@
     "artifact": "RewardsPoolWSD"
   },
   "ESP_EspressoRewardsConsumer": {
-    "address": "0xe69D92f6910b45dA1D6Ddfb380efaa6AF56e33F9",
+    "address": "0x03f724D62237Aee787DAE2a8Cd9882B94BD4Ca73",
     "artifact": "EspressoRewardsConsumer"
   }
 }
