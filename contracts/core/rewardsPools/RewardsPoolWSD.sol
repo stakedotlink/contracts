@@ -47,7 +47,9 @@ contract RewardsPoolWSD is RewardsPool {
      * @notice distributes new rewards that have been deposited
      **/
     function distributeRewards() public override {
-        if (controller.totalStaked() == 0) revert NothingStaked();
+        // if nothing is staked, retain the undistributed balance without reverting or wrapping it;
+        // the next distributeRewards() call folds it in once totalStaked becomes positive again
+        if (controller.totalStaked() == 0) return;
 
         uint256 balance = token.balanceOf(address(this));
         token.transferAndCall(address(wsdToken), balance, "0x");

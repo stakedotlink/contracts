@@ -74,6 +74,10 @@ contract RewardsPool {
      * @notice distributes new rewards that have been deposited
      **/
     function distributeRewards() public virtual {
+        // if nothing is staked, retain the undistributed balance without reverting or accounting it;
+        // the next distributeRewards() call folds it in once totalStaked becomes positive again
+        if (controller.totalStaked() == 0) return;
+
         uint256 toDistribute = token.balanceOf(address(this)) - totalRewards;
         totalRewards += toDistribute;
         _updateRewardPerToken(toDistribute);

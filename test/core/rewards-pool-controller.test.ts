@@ -170,6 +170,37 @@ describe('RewardsPoolController', () => {
       )
     })
 
+    it('distributeToken retains rewards when nothing is staked and folds them in later', async () => {
+      const { accounts, adrs, controller, token1, rewardsPool1, stake, withdraw } =
+        await loadFixture(deployFixture)
+
+      // drain all stake so totalStaked == 0
+      await withdraw(1, 1000)
+      await withdraw(2, 500)
+      assert.equal(fromEther(await controller.totalStaked()), 0)
+
+      // rewards arriving (via ERC677 onTokenTransfer -> distributeRewards) while nothing is staked
+      // must not revert; the balance is retained in the pool and left unaccounted
+      await token1.transferAndCall(adrs.rewardsPool1, toEther(100), '0x00')
+      assert.equal(fromEther(await token1.balanceOf(adrs.rewardsPool1)), 100)
+      assert.equal(fromEther(await rewardsPool1.totalRewards()), 0, 'balance was accounted early')
+      assert.equal(fromEther(await rewardsPool1.rewardPerToken()), 0, 'rewardPerToken advanced early')
+
+      // an explicit distributeRewards while unstaked is also a no-op rather than a revert
+      await rewardsPool1.distributeRewards()
+      assert.equal(fromEther(await rewardsPool1.totalRewards()), 0)
+
+      // once staking resumes, the retained balance is folded into the next distribution
+      await stake(1, 1000)
+      await rewardsPool1.distributeRewards()
+      assert.equal(fromEther(await rewardsPool1.totalRewards()), 100)
+      assert.equal(
+        fromEther((await controller.withdrawableRewards(accounts[1]))[0]),
+        100,
+        'retained rewards not credited after re-staking'
+      )
+    })
+
     it('withdrawRewards should work correctly', async () => {
       const { signers, accounts, adrs, controller, token1, token2 } = await loadFixture(
         deployFixture
