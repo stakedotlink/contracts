@@ -360,14 +360,19 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 totalVaultsAdded;
         uint256 totalDepositsAdded;
 
-        // deposits continue with the vault they left off at during the previous call regardless of group deposit order
+        // deposits continue with the vault they left off at during the previous call regardless of group deposit
+        // order. The continuation vault must remain at position zero to preserve the index pointer the consumer
+        // requires, but its room is only counted when the consumer will deposit into it, namely when it is not
+        // removed
         if (groupDepositIndex < maxVaultIndex) {
             vaultDepositOrder[0] = groupDepositIndex;
             ++totalVaultsAdded;
             (uint256 withdrawalIndex, ) = _vcs.vaultGroups(groupDepositIndex % numVaultGroups);
             uint256 deposits = IVault(vaults[groupDepositIndex]).getPrincipalDeposits();
             if (
-                deposits != maxDeposits && (groupDepositIndex != withdrawalIndex || deposits == 0)
+                deposits != maxDeposits &&
+                (groupDepositIndex != withdrawalIndex || deposits == 0) &&
+                !IVault(vaults[groupDepositIndex]).isRemoved()
             ) {
                 totalDepositsAdded += maxDeposits - deposits;
             }
@@ -379,7 +384,12 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
 
             for (uint256 j = groupDepositOrder[i]; j < maxVaultIndex; j += numVaultGroups) {
                 uint256 deposits = IVault(vaults[j]).getPrincipalDeposits();
-                if (j != groupDepositIndex && deposits != maxDeposits) {
+                // match the consumer's eligibility check so a removed vault the consumer will skip is not counted
+                if (
+                    j != groupDepositIndex &&
+                    deposits != maxDeposits &&
+                    !IVault(vaults[j]).isRemoved()
+                ) {
                     vaultDepositOrder[totalVaultsAdded] = j;
                     ++totalVaultsAdded;
                     // only count deposit room if withdrawalIndex is not equal to the current vault
@@ -422,11 +432,19 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
         uint256 totalWithdrawsAdded;
 
         // withdrawals continue with the vault they left off at during the previous call when the current
-        // group was unbonded
+        // group was unbonded. The continuation vault must remain at position zero to preserve the index
+        // pointer the consumer requires, but its principal is only counted when the consumer will act on
+        // it, namely deposits != 0 && claimPeriodActive() && !isRemoved()
         if (withdrawalIndex < maxVaultIndex) {
             vaultWithdrawalOrder[0] = withdrawalIndex;
             ++totalVaultsAdded;
-            totalWithdrawsAdded += IVault(vaults[withdrawalIndex]).getPrincipalDeposits();
+            if (
+                IVault(vaults[withdrawalIndex]).getPrincipalDeposits() != 0 &&
+                IVault(vaults[withdrawalIndex]).claimPeriodActive() &&
+                !IVault(vaults[withdrawalIndex]).isRemoved()
+            ) {
+                totalWithdrawsAdded += IVault(vaults[withdrawalIndex]).getPrincipalDeposits();
+            }
         }
 
         // iterate through vaults in the current unbonded group emptying each entirely before moving onto the next
@@ -434,7 +452,13 @@ contract FundFlowController is UUPSUpgradeable, OwnableUpgradeable {
             IVault vault = IVault(vaults[i]);
             uint256 deposits = vault.getPrincipalDeposits();
 
-            if (i != withdrawalIndex && deposits != 0 && vault.claimPeriodActive()) {
+            // match the consumer's eligibility check so a vault the consumer will skip is not counted
+            if (
+                i != withdrawalIndex &&
+                deposits != 0 &&
+                vault.claimPeriodActive() &&
+                !vault.isRemoved()
+            ) {
                 vaultWithdrawalOrder[totalVaultsAdded] = i;
                 totalWithdrawsAdded += deposits;
                 totalVaultsAdded++;
