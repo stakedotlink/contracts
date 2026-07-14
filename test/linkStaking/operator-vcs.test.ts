@@ -422,6 +422,79 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 120)
   })
 
+  it('removeVaultSkipRewardUpdate removes a queued vault without a reward update', async () => {
+    const {
+      signers,
+      accounts,
+      strategy,
+      stakingPool,
+      rewardsController,
+      vaults,
+      stakingController,
+      fundFlowController,
+    } = await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
+    await rewardsController.setReward(vaults[5], toEther(40))
+    await rewardsController.setReward(vaults[6], toEther(100))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    await rewardsController.setReward(vaults[5], toEther(50))
+
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [
+      encodeVaults([0, 5]),
+      encodeVaults([]),
+    ])
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingController.removeOperator(vaults[5])
+    await stakingController.removeOperator(vaults[4])
+    await strategy.queueVaultRemoval(5)
+    await strategy.queueVaultRemoval(4)
+
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    // non-owner cannot use the escape hatch
+    await expect(
+      strategy.connect(signers[1]).removeVaultSkipRewardUpdate(0)
+    ).to.be.revertedWith('Ownable: caller is not the owner')
+
+    // owner can remove the queued vault without a preceding strategy reward update. The vault is
+    // removed and its principal de-registered; unlike the normal removeVault path, pending rewards
+    // on the other vaults are not folded in, which is the intended consequence of skipping the
+    // update — the next updateStrategyRewards reconciles them.
+    await strategy.removeVaultSkipRewardUpdate(0)
+
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [4n])
+    assert.deepEqual(await strategy.getRemovedVaults(), [5n])
+    // started at 900 principal; removing vault 5 de-registers its 100 principal
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
+
+    // the deferred reward settlement must self-heal on the next update WITHOUT fabricating a loss:
+    // depositChange must be non-negative (a spurious negative would trip the rebase pool-closure path)
+    assert.isAtLeast(fromEther(await strategy.getDepositChange()), 0, 'skip-removal fabricated a loss')
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    assert.equal(fromEther(await strategy.getDepositChange()), 0, 'accounting did not reconcile')
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
+  })
+
   it('addVault should work correctly with removed vaults', async () => {
     const { accounts, adrs, strategy, stakingPool, fundFlowController, stakingController, vaults } =
       await loadFixture(deployFixture)
