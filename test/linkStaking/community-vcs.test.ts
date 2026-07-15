@@ -144,6 +144,39 @@ describe('CommunityVCS', () => {
     assert.equal((await strategy.checkUpkeep('0x'))[0], false)
   })
 
+  it('vault deployment is blocked while a deposit-update batch is in progress', async () => {
+    const { strategy } = await loadFixture(deployFixture)
+
+    // deposit and start a batched deposit update (20 vaults / 5 per batch)
+    await strategy.deposit(toEther(1000), encodeVaults([]))
+    await strategy.setVaultsPerBatch(5)
+    await strategy.updateVaultDeposits()
+    assert.notEqual(Number(await strategy.currentVaultIndex()), 0)
+
+    // checkUpkeep must not signal work while a batch is in progress
+    assert.equal((await strategy.checkUpkeep('0x'))[0], false)
+
+    // both vault-deployment paths must be blocked mid-batch so vaults.length cannot outrun the batch
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateInProgress'
+    )
+    await expect(strategy.addVaults(5)).to.be.revertedWithCustomError(
+      strategy,
+      'DepositUpdateInProgress'
+    )
+
+    // finish the remaining batches and consume the update (resets currentVaultIndex to 0)
+    await strategy.updateVaultDeposits()
+    await strategy.updateVaultDeposits()
+    await strategy.updateVaultDeposits()
+    await strategy.updateDeposits('0x')
+    assert.equal(Number(await strategy.currentVaultIndex()), 0)
+
+    // deployment paths work again once no batch is in progress
+    await strategy.addVaults(5)
+  })
+
   it('claimRewards should work correctly', async () => {
     const { adrs, strategy, rewardsController, token } = await loadFixture(deployFixture)
 

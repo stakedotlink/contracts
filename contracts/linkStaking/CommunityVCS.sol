@@ -203,7 +203,8 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         return (
-            (vaults.length - globalVaultState.depositIndex) < vaultDeploymentThreshold,
+            currentVaultIndex == 0 &&
+                (vaults.length - globalVaultState.depositIndex) < vaultDeploymentThreshold,
             bytes("")
         );
     }
@@ -211,7 +212,7 @@ contract CommunityVCS is VaultControllerStrategy {
     /**
      * @notice Deploys a new batch of vaults
      */
-    function performUpkeep(bytes calldata) external {
+    function performUpkeep(bytes calldata) external notDuringDepositUpdate {
         if ((vaults.length - globalVaultState.depositIndex) >= vaultDeploymentThreshold)
             revert VaultsAboveThreshold();
         _deployVaults(vaultDeploymentAmount);
@@ -221,7 +222,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @notice Deploys a new batch of vaults
      * @param _numVaults number of vaults to deploy
      */
-    function addVaults(uint256 _numVaults) external onlyOwner {
+    function addVaults(uint256 _numVaults) external onlyOwner notDuringDepositUpdate {
         _deployVaults(_numVaults);
     }
 
