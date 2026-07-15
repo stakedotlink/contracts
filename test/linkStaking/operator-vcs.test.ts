@@ -529,6 +529,39 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther((await strategy.vaultGroups(1))[1]), 100)
   })
 
+  it('addVault does not credit group room when reusing a removed ungrouped slot', async () => {
+    const { accounts, strategy, stakingController } = await loadFixture(deployFixture)
+
+    // append a 16th vault at index 15; with no deposits folding vaults into groups it sits at or
+    // above depositIndex and is therefore ungrouped
+    await strategy.addVault(accounts[2], accounts[3], accounts[4])
+    const vaults = await strategy.getVaults()
+    assert.equal(vaults.length, 16)
+    const ungroupedIndex = 15
+    const depositIndex = Number((await strategy.globalVaultState())[3])
+    assert.isAtMost(depositIndex, ungroupedIndex, 'reused index must be ungrouped for this test')
+
+    // snapshot every group's deposit room before the ungrouped remove/reuse cycle
+    const numGroups = Number((await strategy.globalVaultState())[0])
+    const roomBefore: bigint[] = []
+    for (let g = 0; g < numGroups; g++) roomBefore.push((await strategy.vaultGroups(g))[1])
+
+    // remove the ungrouped vault, then re-add so addVault reuses its (ungrouped) slot
+    await stakingController.removeOperator(vaults[ungroupedIndex])
+    await strategy.queueVaultRemoval(ungroupedIndex)
+    await strategy.removeVault(0)
+    await strategy.addVault(accounts[2], accounts[3], accounts[4])
+
+    // no group's totalDepositRoom should have been credited for the reused ungrouped slot
+    for (let g = 0; g < numGroups; g++) {
+      assert.equal(
+        (await strategy.vaultGroups(g))[1],
+        roomBefore[g],
+        `group ${g} deposit room was over-credited for a reused ungrouped slot`
+      )
+    }
+  })
+
   it('setOperatorRewardPercentage should work correctly', async () => {
     const { accounts, strategy, stakingPool, rewardsController, vaults } = await loadFixture(
       deployFixture

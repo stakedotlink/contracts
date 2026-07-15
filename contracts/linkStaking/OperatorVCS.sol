@@ -379,8 +379,11 @@ contract OperatorVCS is VaultControllerStrategy {
             vaults[index] = IVault(newVault);
             vaults.pop();
             removedVaults.pop();
-            uint256 group = index % globalVaultState.numVaultGroups;
-            vaultGroups[group].totalDepositRoom += uint128(vaultMaxDeposits);
+
+            if (index < globalVaultState.depositIndex) {
+                uint256 group = index % globalVaultState.numVaultGroups;
+                vaultGroups[group].totalDepositRoom += uint128(vaultMaxDeposits);
+            }
         }
 
         emit VaultAdded(_operator, newVault);
