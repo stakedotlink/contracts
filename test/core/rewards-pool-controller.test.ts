@@ -170,6 +170,44 @@ describe('RewardsPoolController', () => {
       )
     })
 
+    it('carries the reward-per-token round-down remainder forward without breaking solvency', async () => {
+      const { accounts, adrs, controller, token1, rewardsPool1 } = await loadFixture(deployFixture)
+
+      // totalStaked is 1500e18. A reward whose (reward * 1e18) is not divisible by totalStaked leaves
+      // a numerator round-down remainder. Send 100e18 + 700 wei; the 700 wei portion truncates.
+      const first = toEther(100) + 700n
+      await token1.transfer(adrs.rewardsPool1, first)
+      await rewardsPool1.distributeRewards()
+
+      // the scaled numerator remainder is retained in rewardPerTokenCarry (not stranded), while
+      // totalRewards still accounts the full received amount (solvency buffer preserved)
+      assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) > 0n, 'numerator remainder not carried')
+      assert.equal(await rewardsPool1.totalRewards(), first)
+
+      // solvency invariant holds: sum of claimable never exceeds totalRewards
+      const claimableAfterFirst =
+        (await controller.withdrawableRewards(accounts[1]))[0] +
+        (await controller.withdrawableRewards(accounts[2]))[0]
+      assert.isTrue(claimableAfterFirst <= (await rewardsPool1.totalRewards()), 'insolvent')
+
+      // the numerator remainder is captured in rewardPerTokenCarry rather than discarded (the original
+      // code has no such carry — the remainder was simply lost each distribution), and the carry stays
+      // bounded below totalStaked so it always represents deferred-not-stranded value
+      assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) < (await controller.totalStaked()))
+
+      // across further truncating distributions the carry keeps accumulating remainders and, once they
+      // combine past totalStaked, folds the recovered value into rewardPerToken; solvency holds throughout
+      for (let i = 0; i < 4; i++) {
+        await token1.transfer(adrs.rewardsPool1, first)
+        await rewardsPool1.distributeRewards()
+        const claimable =
+          (await controller.withdrawableRewards(accounts[1]))[0] +
+          (await controller.withdrawableRewards(accounts[2]))[0]
+        assert.isTrue(claimable <= (await rewardsPool1.totalRewards()), 'insolvent during distributions')
+        assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) < (await controller.totalStaked()))
+      }
+    })
+
     it('distributeToken retains rewards when nothing is staked and folds them in later', async () => {
       const { accounts, adrs, controller, token1, rewardsPool1, stake, withdraw } =
         await loadFixture(deployFixture)
