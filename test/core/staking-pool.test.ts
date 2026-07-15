@@ -843,4 +843,25 @@ describe('StakingPool', () => {
     const sharesAfter = await stakingPool.sharesOf(accounts[1])
     assert.notEqual(sharesBefore, sharesAfter, 'shares must change for valid transfer')
   })
+
+  it('updateStrategyRewards does not revert when a fee rounds to zero shares', async () => {
+    const { adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
+    await stake(1, 1000)
+
+    // inflate the share price so totalStaked >> totalShares (getSharesByStake rounds small amounts to 0)
+    await token.transfer(adrs.strategy1, toEther(500))
+    await stakingPool.updateStrategyRewards([0], '0x')
+    assert.equal(await stakingPool.getSharesByStake(1), 0n)
+
+    // a tiny subsequent reward makes each fee amount (a fraction of the depositChange) round to zero
+    // shares; pre-fix this reverted the whole reward update with "Transfer amount too small"
+    await token.transfer(adrs.strategy1, 5n)
+    const totalStakedBefore = await stakingPool.totalStaked()
+
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
+
+    // the update completed and folded in the reward rather than reverting
+    assert.equal(await stakingPool.totalStaked(), totalStakedBefore + 5n)
+  })
 })
