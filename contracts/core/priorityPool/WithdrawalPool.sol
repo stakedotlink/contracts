@@ -489,7 +489,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             }
 
             if (sharesRemaining > sharesToWithdraw) {
-                // partially finalize withdrawal
+                // partially finalize withdrawal.
                 queuedWithdrawals[i] = Withdrawal(
                     uint128(sharesRemaining - sharesToWithdraw),
                     uint128(
@@ -497,12 +497,6 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
                             _getStakeByShares(sharesToWithdraw)
                     )
                 );
-
-                // handle remaining dust
-                if (queuedWithdrawals[i].sharesRemaining < 100) {
-                    totalQueuedShareWithdrawals -= queuedWithdrawals[i].sharesRemaining;
-                    delete queuedWithdrawals[i].sharesRemaining;
-                }
 
                 indexOfNextWithdrawal = i;
                 withdrawalBatches.push(
