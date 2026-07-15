@@ -125,7 +125,9 @@ contract OperatorVCS is VaultControllerStrategy {
         uint256 withdrawableRewards = lsdToken.balanceOf(address(this));
         uint256 amountToWithdraw = _amount > withdrawableRewards ? withdrawableRewards : _amount;
 
-        unclaimedOperatorRewards -= amountToWithdraw;
+        unclaimedOperatorRewards -= amountToWithdraw > unclaimedOperatorRewards
+            ? unclaimedOperatorRewards
+            : amountToWithdraw;
         lsdToken.safeTransfer(_receiver, amountToWithdraw);
 
         return amountToWithdraw;

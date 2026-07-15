@@ -313,6 +313,51 @@ describe('OperatorVCS', () => {
     assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[1])).toFixed(2)), 1.33)
   })
 
+  it('withdrawOperatorRewards transfers the full balance without underflowing on rebase surplus', async () => {
+    const { accounts, adrs, strategy, stakingPool, rewardsController, vaults, token } =
+      await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(100), [encodeVaults([])])
+
+    // accrue operator rewards so unclaimedOperatorRewards > 0 and the strategy holds stLINK
+    await rewardsController.setReward(vaults[0], toEther(10))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    assert.isTrue((await strategy.getOperatorRewards())[0] > 0n)
+
+    // rebase the pool up so the strategy's stLINK balance grows beyond unclaimedOperatorRewards
+    // (stLINK is rebasing; unclaimedOperatorRewards is recorded in nominal terms)
+    await token.transfer(adrs.rewardsController, toEther(1000))
+    await rewardsController.setReward(vaults[1], toEther(1000))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+
+    const [unclaimed, balance] = await strategy.getOperatorRewards()
+    assert.isTrue(balance > unclaimed, 'test needs strategy stLINK balance > unclaimedOperatorRewards')
+
+    // impersonate a registered vault and request its full balance; pre-fix the balance-capped amount
+    // exceeds unclaimedOperatorRewards and the decrement underflows/reverts
+    const vaultAddr = vaults[0]
+    await ethers.provider.send('hardhat_impersonateAccount', [vaultAddr])
+    await ethers.provider.send('hardhat_setBalance', [vaultAddr, '0x56BC75E2D63100000'])
+    const vaultSigner = await ethers.getSigner(vaultAddr)
+
+    const startingBalance = await stakingPool.balanceOf(accounts[3])
+    const returned = await strategy
+      .connect(vaultSigner)
+      .withdrawOperatorRewards.staticCall(accounts[3], balance)
+    await strategy.connect(vaultSigner).withdrawOperatorRewards(accounts[3], balance)
+
+    await ethers.provider.send('hardhat_stopImpersonatingAccount', [vaultAddr])
+
+    // the full balance (rewards + rebase surplus) is transferred to the receiver, the accounting is
+    // zeroed rather than underflowing, and no meaningful stLINK is left stranded in the strategy
+    assert.equal(returned, balance, 'did not transfer the full available balance')
+    const received = (await stakingPool.balanceOf(accounts[3])) - startingBalance
+    assert.isTrue(received >= balance - 100n, `received ${received}, expected ~${balance}`)
+    assert.equal((await strategy.getOperatorRewards())[0], 0n)
+    // any residual is sub-share transfer dust, not the stranded rebase surplus (which was ~1000 stLINK)
+    assert.isTrue((await stakingPool.balanceOf(adrs.strategy)) < 100n, 'rebase surplus left stranded')
+  })
+
   it('queueVaultRemoval should work correctly', async () => {
     const { accounts, strategy, stakingPool, vaults, stakingController, fundFlowController } =
       await loadFixture(deployFixture)
