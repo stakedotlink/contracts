@@ -92,6 +92,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     event SetPoolStatus(PoolStatus status);
     event SetQueueDepositParams(uint128 queueDepositMin, uint128 queueDepositMax);
     event DepositTokens(uint256 unusedTokensAmount, uint256 queuedTokensAmount);
+    event SetAllowInstantWithdrawals(bool allowInstantWithdrawals);
+    event SetDistributionOracle(address distributionOracle);
+    event SetRebaseController(address rebaseController);
+    event SetWithdrawalPool(address withdrawalPool);
+    event SetQueueBypassController(address queueBypassController);
 
     error InvalidValue();
     error UnauthorizedToken();
@@ -644,6 +649,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setAllowInstantWithdrawals(bool _allowInstantWithdrawals) external onlyOwner {
         allowInstantWithdrawals = _allowInstantWithdrawals;
+        emit SetAllowInstantWithdrawals(_allowInstantWithdrawals);
     }
 
     /**
@@ -652,6 +658,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setDistributionOracle(address _distributionOracle) external onlyOwner {
         distributionOracle = _distributionOracle;
+        emit SetDistributionOracle(_distributionOracle);
     }
 
     /**
@@ -661,6 +668,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setRebaseController(address _rebaseController) external onlyOwner {
         rebaseController = _rebaseController;
+        emit SetRebaseController(_rebaseController);
     }
 
     /**
@@ -677,6 +685,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         token.safeApprove(_withdrawalPool, type(uint256).max);
 
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
+        emit SetWithdrawalPool(_withdrawalPool);
     }
 
     /**
@@ -686,6 +695,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setQueueBypassController(address _queueBypassController) external onlyOwner {
         queueBypassController = _queueBypassController;
+        emit SetQueueBypassController(_queueBypassController);
     }
 
     /**

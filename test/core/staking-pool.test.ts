@@ -108,6 +108,20 @@ describe('StakingPool', () => {
     assert.equal(Number(await stakingPool.decimals()), 18, 'Decimals incorrect')
   })
 
+  it('admin setters emit events', async () => {
+    const { accounts, stakingPool } = await loadFixture(deployFixture)
+
+    await expect(stakingPool.setUnusedDepositLimit(toEther(123)))
+      .to.emit(stakingPool, 'SetUnusedDepositLimit')
+      .withArgs(toEther(123))
+    await expect(stakingPool.setPriorityPool(accounts[3]))
+      .to.emit(stakingPool, 'SetPriorityPool')
+      .withArgs(accounts[3])
+    await expect(stakingPool.setRebaseController(accounts[3]))
+      .to.emit(stakingPool, 'SetRebaseController')
+      .withArgs(accounts[3])
+  })
+
   it('should be able to add new fee', async () => {
     const { accounts, adrs, stakingPool, erc677Receiver } = await loadFixture(deployFixture)
 

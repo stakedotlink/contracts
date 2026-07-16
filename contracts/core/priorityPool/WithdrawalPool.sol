@@ -72,6 +72,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     event WithdrawalsFinalized(uint256 amount);
     event SetMinWithdrawalAmount(uint256 minWithdrawalAmount);
     event SetMinTimeBetweenWithdrawals(uint64 minTimeBetweenWithdrawals);
+    event UpdateWithdrawalBatchIdCutoff(uint128 withdrawalIdCutoff, uint128 withdrawalBatchIdCutoff);
 
     error SenderNotAuthorized();
     error InvalidWithdrawalId();
@@ -455,6 +456,11 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
         withdrawalIdCutoff = uint128(newWithdrawalIdCutoff);
         withdrawalBatchIdCutoff = uint128(newWithdrawalBatchIdCutoff);
+
+        emit UpdateWithdrawalBatchIdCutoff(
+            uint128(newWithdrawalIdCutoff),
+            uint128(newWithdrawalBatchIdCutoff)
+        );
     }
 
     /**

@@ -45,6 +45,12 @@ contract StakingPool is StakingRewardsPool {
     );
     event Burn(address indexed account, uint256 amount);
     event DonateTokens(address indexed sender, uint256 amount);
+    event RemoveStrategy(address indexed strategy);
+    event ReorderStrategies(uint256[] newOrder);
+    event UpdateFee(uint256 indexed index, address receiver, uint256 feeBasisPoints);
+    event SetUnusedDepositLimit(uint256 unusedDepositLimit);
+    event SetPriorityPool(address priorityPool);
+    event SetRebaseController(address rebaseController);
 
     error SenderNotAuthorized();
     error InvalidDeposit();
@@ -319,6 +325,7 @@ contract StakingPool is StakingRewardsPool {
         }
         strategies.pop();
         token.safeApprove(address(strategy), 0);
+        emit RemoveStrategy(address(strategy));
     }
 
     /**
@@ -338,6 +345,8 @@ contract StakingPool is StakingRewardsPool {
             strategies[i] = strategyAddresses[_newOrder[i]];
             strategyAddresses[_newOrder[i]] = address(0);
         }
+
+        emit ReorderStrategies(_newOrder);
     }
 
     /*
@@ -384,6 +393,7 @@ contract StakingPool is StakingRewardsPool {
         }
 
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
+        emit UpdateFee(_index, _receiver, _feeBasisPoints);
     }
 
     /**
@@ -440,6 +450,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function setUnusedDepositLimit(uint256 _unusedDepositLimit) external onlyOwner {
         unusedDepositLimit = _unusedDepositLimit;
+        emit SetUnusedDepositLimit(_unusedDepositLimit);
     }
 
     /**
@@ -448,6 +459,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function setPriorityPool(address _priorityPool) external onlyOwner {
         priorityPool = _priorityPool;
+        emit SetPriorityPool(_priorityPool);
     }
 
     /**
@@ -457,6 +469,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function setRebaseController(address _rebaseController) external onlyOwner {
         rebaseController = _rebaseController;
+        emit SetRebaseController(_rebaseController);
     }
 
     /**
