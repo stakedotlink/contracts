@@ -79,6 +79,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     error AmountTooSmall();
     error NoUpkeepNeeded();
     error InvalidCalldata();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -100,6 +101,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         uint256 _minWithdrawalAmount,
         uint64 _minTimeBetweenWithdrawals
     ) public initializer {
+        if (_token == address(0) || _lst == address(0) || _priorityPool == address(0))
+            revert InvalidAddress();
         __UUPSUpgradeable_init();
         __Ownable_init();
         token = IERC20Upgradeable(_token);

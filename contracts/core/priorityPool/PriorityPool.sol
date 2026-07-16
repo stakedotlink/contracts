@@ -114,6 +114,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error InsufficientLiquidity();
     error WithdrawFailed();
     error InvalidCalldata();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -137,6 +138,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint128 _queueDepositMax,
         bool _allowInstantWithdrawals
     ) public initializer {
+        if (_token == address(0) || _stakingPool == address(0) || _sdlPool == address(0))
+            revert InvalidAddress();
+        if (_queueDepositMin > _queueDepositMax) revert InvalidAmount();
         __UUPSUpgradeable_init();
         __Ownable_init();
         __Pausable_init();
@@ -636,6 +640,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint128 _queueDepositMin,
         uint128 _queueDepositMax
     ) external onlyOwner {
+        if (_queueDepositMin > _queueDepositMax) revert InvalidAmount();
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
