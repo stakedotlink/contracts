@@ -580,8 +580,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return minimum deposits
      */
     function getMinDeposits() public view virtual override returns (uint256) {
-        return
-            fundFlowController.claimPeriodActive() ? totalDeposits - totalUnbonded : totalDeposits;
+        if (!fundFlowController.claimPeriodActive()) return totalDeposits;
+        return totalDeposits > totalUnbonded ? totalDeposits - totalUnbonded : 0;
     }
 
     /**
