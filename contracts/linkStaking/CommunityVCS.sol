@@ -134,11 +134,10 @@ contract CommunityVCS is VaultControllerStrategy {
 
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
-        (bool success, ) = vaultDepositController.delegatecall(
+        AddressUpgradeable.functionDelegateCall(
+            vaultDepositController,
             abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
         );
-
-        if (!success) revert DepositFailed();
     }
 
     /**

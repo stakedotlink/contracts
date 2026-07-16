@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../../core/interfaces/IERC677.sol";
@@ -376,8 +377,6 @@ abstract contract VaultControllerStrategy is Strategy {
     error InvalidBasisPoints();
     error SenderNotAuthorized();
     error InvalidWithdrawalIndexes();
-    error DepositFailed();
-    error WithdrawalFailed();
     error VaultDepositControllerNotSet();
 
     /**
@@ -444,11 +443,10 @@ abstract contract VaultControllerStrategy is Strategy {
     function deposit(uint256 _amount, bytes calldata _data) external virtual onlyStakingPool {
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
-        (bool success, ) = vaultDepositController.delegatecall(
+        AddressUpgradeable.functionDelegateCall(
+            vaultDepositController,
             abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
         );
-
-        if (!success) revert DepositFailed();
     }
 
     /**
@@ -459,11 +457,10 @@ abstract contract VaultControllerStrategy is Strategy {
     function withdraw(uint256 _amount, bytes calldata _data) public virtual onlyStakingPool {
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
-        (bool success, ) = vaultDepositController.delegatecall(
+        AddressUpgradeable.functionDelegateCall(
+            vaultDepositController,
             abi.encodeWithSelector(VaultDepositController.withdraw.selector, _amount, _data)
         );
-
-        if (!success) revert WithdrawalFailed();
     }
 
     /**

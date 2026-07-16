@@ -138,6 +138,7 @@ describe('VaultControllerStrategy', () => {
       vaults,
       vaultContracts,
       fundFlowController,
+      vaultDepositController,
     }
   }
 
@@ -157,8 +158,15 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('depositToVaults should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vaults, fundFlowController } =
-      await loadFixture(deployFixture)
+    const {
+      adrs,
+      strategy,
+      token,
+      stakingController,
+      vaults,
+      fundFlowController,
+      vaultDepositController,
+    } = await loadFixture(deployFixture)
 
     // Deposit into vaults that don't yet belong to a group
 
@@ -221,10 +229,10 @@ describe('VaultControllerStrategy', () => {
 
     await expect(
       strategy.deposit(toEther(200), encodeVaults([6, 11, 4]))
-    ).to.be.revertedWithCustomError(strategy, 'DepositFailed()')
+    ).to.be.revertedWithCustomError(vaultDepositController, 'InvalidVaultIds()')
     await expect(
       strategy.deposit(toEther(200), encodeVaults([1, 12]))
-    ).to.be.revertedWithCustomError(strategy, 'DepositFailed()')
+    ).to.be.revertedWithCustomError(vaultDepositController, 'InvalidVaultIds()')
 
     await strategy.deposit(toEther(200), encodeVaults([1, 6, 11, 4]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 710)
@@ -315,8 +323,15 @@ describe('VaultControllerStrategy', () => {
   })
 
   it('withdraw should work correctly', async () => {
-    const { adrs, strategy, token, stakingController, vaults, fundFlowController } =
-      await loadFixture(deployFixture)
+    const {
+      adrs,
+      strategy,
+      token,
+      stakingController,
+      vaults,
+      fundFlowController,
+      vaultDepositController,
+    } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(1200), encodeVaults([]))
     await fundFlowController.updateVaultGroups()
@@ -331,10 +346,10 @@ describe('VaultControllerStrategy', () => {
 
     await expect(
       strategy.withdraw(toEther(150), encodeVaults([5, 10]))
-    ).to.be.revertedWithCustomError(strategy, 'WithdrawalFailed()')
+    ).to.be.revertedWithCustomError(vaultDepositController, 'InvalidVaultIds()')
     await expect(
       strategy.withdraw(toEther(150), encodeVaults([0, 1]))
-    ).to.be.revertedWithCustomError(strategy, 'WithdrawalFailed()')
+    ).to.be.revertedWithCustomError(vaultDepositController, 'InvalidVaultIds()')
 
     await strategy.withdraw(toEther(150), encodeVaults([0, 5]))
     assert.equal(fromEther(await token.balanceOf(adrs.stakingController)), 1050)
@@ -377,13 +392,13 @@ describe('VaultControllerStrategy', () => {
 
     await expect(
       strategy.withdraw(toEther(101), encodeVaults([6, 11]))
-    ).to.be.revertedWithCustomError(strategy, 'WithdrawalFailed()')
+    ).to.be.revertedWithCustomError(vaultDepositController, 'InsufficientTokensUnbonded()')
 
     await time.increase(claimPeriod)
 
     await expect(strategy.withdraw(toEther(20), encodeVaults([6]))).to.be.revertedWithCustomError(
-      strategy,
-      'WithdrawalFailed()'
+      vaultDepositController,
+      'InsufficientTokensUnbonded()'
     )
 
     await fundFlowController.updateVaultGroups()
@@ -536,14 +551,18 @@ describe('VaultControllerStrategy', () => {
       if (principal === 0n) continue
       if (idx === keepIdx) {
         // leave a small remainder well below totalUnbonded
-        if (principal > toEther(10)) await stakingController.slashOperator(vaults[idx], principal - toEther(10))
+        if (principal > toEther(10))
+          await stakingController.slashOperator(vaults[idx], principal - toEther(10))
       } else {
         await stakingController.slashOperator(vaults[idx], principal)
       }
     }
     await strategy.updateDeposits('0x')
     const td = await strategy.getTotalDeposits()
-    assert.isTrue(td > 0n && td < (await strategy.totalUnbonded()), 'need 0 < totalDeposits < totalUnbonded')
+    assert.isTrue(
+      td > 0n && td < (await strategy.totalUnbonded()),
+      'need 0 < totalDeposits < totalUnbonded'
+    )
     assert.isTrue(await fundFlowController.claimPeriodActive(), 'claim period must be active')
 
     // getMinDeposits must return 0 rather than reverting on underflow, so pool-wide canWithdraw works
