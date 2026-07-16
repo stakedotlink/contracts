@@ -113,6 +113,7 @@ contract VaultDepositController is Strategy {
 
         GlobalVaultState memory globalState = globalVaultState;
         uint64[] memory vaultIds = abi.decode(_data, (uint64[]));
+        if (vaultIds.length == 0) revert InvalidVaultIds();
         VaultGroup memory group = vaultGroups[globalState.curUnbondedVaultGroup];
 
         // withdrawals must continue with the vault they left off at during the previous call
@@ -598,6 +599,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function setWithdrawalIndexes(uint64[] calldata _withdrawalIndexes) external onlyOwner {
         uint256 numVaultGroups = globalVaultState.numVaultGroups;
+        if (_withdrawalIndexes.length != numVaultGroups) revert InvalidWithdrawalIndexes();
         for (uint256 i = 0; i < numVaultGroups; ++i) {
             if (_withdrawalIndexes[i] % numVaultGroups != i) revert InvalidWithdrawalIndexes();
             vaultGroups[i].withdrawalIndex = _withdrawalIndexes[i];

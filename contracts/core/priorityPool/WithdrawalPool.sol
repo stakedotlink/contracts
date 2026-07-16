@@ -77,6 +77,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     error InvalidWithdrawalId();
     error AmountTooSmall();
     error NoUpkeepNeeded();
+    error InvalidCalldata();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -326,10 +327,15 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         uint256[] calldata _withdrawalIds,
         uint256[] calldata _batchIds
     ) external onlyOwner {
+        if (_withdrawalIds.length != _batchIds.length) revert InvalidCalldata();
+
         for (uint256 i = 0; i < _withdrawalIds.length; ++i) {
             uint256 withdrawalId = _withdrawalIds[i];
             Withdrawal memory withdrawal = queuedWithdrawals[_withdrawalIds[i]];
+
             uint256 batchId = _batchIds[i];
+            if (batchId == 0) revert InvalidWithdrawalId();
+
             WithdrawalBatch memory batch = withdrawalBatches[batchId];
             address owner = withdrawalOwners[withdrawalId];
 

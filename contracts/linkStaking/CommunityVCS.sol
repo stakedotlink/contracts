@@ -163,8 +163,10 @@ contract CommunityVCS is VaultControllerStrategy {
         uint256 _minRewards
     ) external notDuringDepositUpdate returns (uint256) {
         address receiver = address(this);
+        uint256 numVaults = vaults.length;
         uint256 balanceBefore = token.balanceOf(address(this));
         for (uint256 i = 0; i < _vaults.length; ++i) {
+            if (_vaults[i] >= numVaults) revert InvalidVaultIds();
             ICommunityVault(address(vaults[_vaults[i]])).claimRewards(_minRewards, receiver);
         }
         uint256 balanceAfter = token.balanceOf(address(this));

@@ -329,6 +329,17 @@ describe('StakingPool', () => {
     await expect(withdraw(1, 1001)).to.be.revertedWith('Not enough liquidity available to withdraw')
   })
 
+  it('deposit tolerates a data array shorter than the strategy list', async () => {
+    const { accounts, adrs, token, stakingPool } = await loadFixture(deployFixture)
+
+    // deposit cascades across all 3 strategies (1000 + 2000 + 2000) but supplies only 2 data
+    // entries; the loop must fall back to empty bytes for the 3rd strategy instead of panicking
+    await token.transfer(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x', '0x'])
+
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy3)), 2000)
+  })
+
   it('staking should correctly deposit into strategies', async () => {
     const { adrs, token, stake } = await loadFixture(deployFixture)
 

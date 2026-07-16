@@ -275,6 +275,17 @@ describe('WithdrawalPool', () => {
     await withdrawalPool.queueWithdrawal(accounts[0], toEther(500))
     await withdrawalPool.deposit(toEther(1200))
 
+    // mismatched calldata array lengths revert with a named error rather than reading past an array
+    await expect(withdrawalPool.forceWithdraw([1], [1, 2])).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'InvalidCalldata()'
+    )
+    // batchId 0 reverts with a named error rather than underflowing withdrawalBatches[batchId - 1]
+    await expect(withdrawalPool.forceWithdraw([1], [0])).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'InvalidWithdrawalId()'
+    )
+
     await expect(withdrawalPool.forceWithdraw([1, 3], [1, 1])).to.be.revertedWithCustomError(
       withdrawalPool,
       'InvalidWithdrawalId()'

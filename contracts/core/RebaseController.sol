@@ -35,6 +35,7 @@ contract RebaseController is Ownable {
     error PoolOpen();
     error SenderNotAuthorized();
     error NoLossDetected();
+    error InvalidStrategy();
 
     /**
      * @notice Initializes contract
@@ -115,6 +116,7 @@ contract RebaseController is Ownable {
 
         uint256 strategyIdxWithLoss = abi.decode(_performData, (uint256));
         address[] memory strategies = stakingPool.getStrategies();
+        if (strategyIdxWithLoss >= strategies.length) revert InvalidStrategy();
 
         if (!_lossExceedsThreshold(IStrategy(strategies[strategyIdxWithLoss]).getDepositChange()))
             revert NoLossDetected();

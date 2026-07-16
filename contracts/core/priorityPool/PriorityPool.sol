@@ -108,6 +108,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error StatusAlreadySet();
     error InsufficientLiquidity();
     error WithdrawFailed();
+    error InvalidCalldata();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -227,6 +228,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         address[] calldata _accounts,
         uint256[] calldata _distributionShareAmounts
     ) external view returns (uint256[] memory) {
+        if (_accounts.length != _distributionShareAmounts.length) revert InvalidCalldata();
         uint256[] memory withdrawableAmounts = new uint256[](_accounts.length);
 
         for (uint256 i = 0; i < _accounts.length; i++) {
