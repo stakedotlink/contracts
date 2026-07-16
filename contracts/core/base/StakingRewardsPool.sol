@@ -42,6 +42,8 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
     /**
      * @notice Returns the total supply of liquid staking tokens
+     * @dev totalSupply includes all staked value; balanceOf suppresses sub-100-wei dust, so
+     * totalSupply is not exactly equal to the sum of balanceOf across accounts holding dust
      * @return total supply
      */
     function totalSupply() public view override returns (uint256) {
@@ -50,6 +52,9 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
 
     /**
      * @notice Returns an account's LST balance
+     * @dev a sub-100-wei balance is reported as 0 (dust guard); such dust cannot be transferred or
+     * burned anyway once the share price exceeds it. As a result the ERC20 invariant totalSupply() ==
+     * sum(balanceOf) does not hold for accounts holding sub-100-wei dust
      * @param _account account address
      * @return account's balance
      */
@@ -148,7 +153,7 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         shares[_sender] -= sharesToTransfer;
         shares[_recipient] += sharesToTransfer;
 
-        emit Transfer(_sender, _recipient, _amount);
+        emit Transfer(_sender, _recipient, getStakeByShares(sharesToTransfer));
     }
 
     /**

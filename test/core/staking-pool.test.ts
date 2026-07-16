@@ -290,6 +290,26 @@ describe('StakingPool', () => {
     await expect(stake(1, 10001)).to.be.revertedWith('ERC20: transfer amount exceeds balance')
   })
 
+  it('transfer emits the actual moved value, not the requested amount', async () => {
+    const { signers, accounts, adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
+    await stake(1, 1000)
+    // accrue rewards so the share price exceeds 1 token/share (totalStaked > totalShares)
+    await token.transfer(adrs.strategy1, toEther(500))
+    await stakingPool.updateStrategyRewards([0], '0x')
+
+    // transfer an amount that does not divide evenly into shares; the credited value floors below it
+    const requested = toEther(100) + 7n
+    const shares = await stakingPool.getSharesByStake(requested)
+    const actual = await stakingPool.getStakeByShares(shares)
+    assert.isTrue(actual < requested, 'test needs a rounding remainder')
+
+    // the Transfer event must report the actual moved value (actual), not the nominal requested amount
+    await expect(stakingPool.connect(signers[1]).transfer(accounts[2], requested))
+      .to.emit(stakingPool, 'Transfer')
+      .withArgs(accounts[1], accounts[2], actual)
+  })
+
   it('should be able to withdraw tokens', async () => {
     const { accounts, stakingPool, token, stake, withdraw } = await loadFixture(deployFixture)
 
