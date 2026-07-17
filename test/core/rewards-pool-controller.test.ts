@@ -181,7 +181,10 @@ describe('RewardsPoolController', () => {
 
       // the scaled numerator remainder is retained in rewardPerTokenCarry (not stranded), while
       // totalRewards still accounts the full received amount (solvency buffer preserved)
-      assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) > 0n, 'numerator remainder not carried')
+      assert.isTrue(
+        (await rewardsPool1.rewardPerTokenCarry()) > 0n,
+        'numerator remainder not carried'
+      )
       assert.equal(await rewardsPool1.totalRewards(), first)
 
       // solvency invariant holds: sum of claimable never exceeds totalRewards
@@ -203,7 +206,10 @@ describe('RewardsPoolController', () => {
         const claimable =
           (await controller.withdrawableRewards(accounts[1]))[0] +
           (await controller.withdrawableRewards(accounts[2]))[0]
-        assert.isTrue(claimable <= (await rewardsPool1.totalRewards()), 'insolvent during distributions')
+        assert.isTrue(
+          claimable <= (await rewardsPool1.totalRewards()),
+          'insolvent during distributions'
+        )
         assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) < (await controller.totalStaked()))
       }
     })
@@ -222,7 +228,11 @@ describe('RewardsPoolController', () => {
       await token1.transferAndCall(adrs.rewardsPool1, toEther(100), '0x00')
       assert.equal(fromEther(await token1.balanceOf(adrs.rewardsPool1)), 100)
       assert.equal(fromEther(await rewardsPool1.totalRewards()), 0, 'balance was accounted early')
-      assert.equal(fromEther(await rewardsPool1.rewardPerToken()), 0, 'rewardPerToken advanced early')
+      assert.equal(
+        fromEther(await rewardsPool1.rewardPerToken()),
+        0,
+        'rewardPerToken advanced early'
+      )
 
       // an explicit distributeRewards while unstaked is also a no-op rather than a revert
       await rewardsPool1.distributeRewards()

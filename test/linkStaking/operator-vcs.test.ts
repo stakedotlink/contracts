@@ -331,7 +331,10 @@ describe('OperatorVCS', () => {
     await stakingPool.updateStrategyRewards([0], encode(0))
 
     const [unclaimed, balance] = await strategy.getOperatorRewards()
-    assert.isTrue(balance > unclaimed, 'test needs strategy stLINK balance > unclaimedOperatorRewards')
+    assert.isTrue(
+      balance > unclaimed,
+      'test needs strategy stLINK balance > unclaimedOperatorRewards'
+    )
 
     // impersonate a registered vault and request its full balance; pre-fix the balance-capped amount
     // exceeds unclaimedOperatorRewards and the decrement underflows/reverts
@@ -355,7 +358,10 @@ describe('OperatorVCS', () => {
     assert.isTrue(received >= balance - 100n, `received ${received}, expected ~${balance}`)
     assert.equal((await strategy.getOperatorRewards())[0], 0n)
     // any residual is sub-share transfer dust, not the stranded rebase surplus (which was ~1000 stLINK)
-    assert.isTrue((await stakingPool.balanceOf(adrs.strategy)) < 100n, 'rebase surplus left stranded')
+    assert.isTrue(
+      (await stakingPool.balanceOf(adrs.strategy)) < 100n,
+      'rebase surplus left stranded'
+    )
   })
 
   it('queueVaultRemoval should work correctly', async () => {
@@ -517,9 +523,9 @@ describe('OperatorVCS', () => {
     await fundFlowController.updateVaultGroups()
 
     // non-owner cannot use the escape hatch
-    await expect(
-      strategy.connect(signers[1]).removeVaultSkipRewardUpdate(0)
-    ).to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(strategy.connect(signers[1]).removeVaultSkipRewardUpdate(0)).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
 
     // owner can remove the queued vault without a preceding strategy reward update. The vault is
     // removed and its principal de-registered; unlike the normal removeVault path, pending rewards
@@ -534,7 +540,11 @@ describe('OperatorVCS', () => {
 
     // the deferred reward settlement must self-heal on the next update WITHOUT fabricating a loss:
     // depositChange must be non-negative (a spurious negative would trip the rebase pool-closure path)
-    assert.isAtLeast(fromEther(await strategy.getDepositChange()), 0, 'skip-removal fabricated a loss')
+    assert.isAtLeast(
+      fromEther(await strategy.getDepositChange()),
+      0,
+      'skip-removal fabricated a loss'
+    )
     await stakingPool.updateStrategyRewards([0], encode(0))
     assert.equal(fromEther(await strategy.getDepositChange()), 0, 'accounting did not reconcile')
     assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)

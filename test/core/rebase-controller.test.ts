@@ -247,7 +247,11 @@ describe('RebaseController', () => {
 
     // a sub-threshold loss must not flag upkeep or allow closure
     await strategy3.simulateSlash(toEther(50))
-    assert.equal((await rebaseController.checkUpkeep('0x'))[0], false, 'sub-threshold flagged upkeep')
+    assert.equal(
+      (await rebaseController.checkUpkeep('0x'))[0],
+      false,
+      'sub-threshold flagged upkeep'
+    )
     await expect(rebaseController.performUpkeep(encode([2]))).to.be.revertedWithCustomError(
       rebaseController,
       'NoLossDetected()'
