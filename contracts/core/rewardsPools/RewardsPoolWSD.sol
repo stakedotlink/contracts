@@ -52,7 +52,7 @@ contract RewardsPoolWSD is RewardsPool {
         if (controller.totalStaked() == 0) return;
 
         uint256 balance = token.balanceOf(address(this));
-        token.transferAndCall(address(wsdToken), balance, "0x");
+        token.transferAndCall(address(wsdToken), balance, "");
 
         uint256 toDistribute = wsdToken.balanceOf(address(this)) - totalRewards;
         totalRewards += toDistribute;

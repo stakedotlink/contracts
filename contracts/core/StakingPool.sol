@@ -601,7 +601,7 @@ contract StakingPool is StakingRewardsPool {
                     if (feesPaidCount == totalFeeCount - 1) {
                         uint256 remaining = balanceOf(address(this));
                         if (getSharesByStake(remaining) != 0) {
-                            transferAndCallFrom(address(this), receivers[i][j], remaining, "0x");
+                            transferAndCallFrom(address(this), receivers[i][j], remaining, "");
                         }
                     } else {
                         if (getSharesByStake(feeAmounts[i][j]) != 0) {
@@ -609,7 +609,7 @@ contract StakingPool is StakingRewardsPool {
                                 address(this),
                                 receivers[i][j],
                                 feeAmounts[i][j],
-                                "0x"
+                                ""
                             );
                         }
                         feesPaidCount++;
