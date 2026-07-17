@@ -97,7 +97,9 @@ abstract contract RewardsPoolController is UUPSUpgradeable, OwnableUpgradeable {
      */
     function distributeTokens(address[] memory _tokens) public {
         for (uint256 i = 0; i < _tokens.length; ++i) {
-            distributeToken(_tokens[i]);
+            if (IERC20Upgradeable(_tokens[i]).balanceOf(address(this)) != 0) {
+                distributeToken(_tokens[i]);
+            }
         }
     }
 

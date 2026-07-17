@@ -369,6 +369,27 @@ describe('RewardsPoolController', () => {
         'account-2 withdrawableRewards incorrect'
       )
     })
+
+    it('distributeTokens skips zero-balance tokens instead of reverting the whole batch', async () => {
+      const { accounts, adrs, controller, token1 } = await loadFixture(deployFixture)
+
+      // only token1 is funded; token2 has a zero balance
+      await token1.transfer(adrs.controller, toEther(900))
+
+      // the batch must not revert on the empty token2; token1 is still distributed
+      await controller.distributeTokens([adrs.token1, adrs.token2])
+      assert.equal(
+        fromEther((await controller.withdrawableRewards(accounts[1]))[0]),
+        600,
+        'funded token was not distributed'
+      )
+
+      // a direct distributeToken on the empty token still reverts (single-token semantics unchanged)
+      await expect(controller.distributeToken(adrs.token2)).to.be.revertedWithCustomError(
+        controller,
+        'NothingToDistribute()'
+      )
+    })
   })
 
   describe('RewardsPoolWSD', () => {
