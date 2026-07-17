@@ -105,6 +105,10 @@ contract VaultDepositController is Strategy {
     /**
      * @notice Withdraws tokens from vaults and sends them to staking pool
      * @dev called by VaultControllerStrategy using delegatecall
+     * @dev may transfer up to minDeposits - 1 more than _amount by design: to respect the Chainlink
+     * per-vault minimum stake, a vault that would be left with a sub-minimum remainder is drained in
+     * full instead of partially. The surplus lands in the staking pool as undeployed balance and is
+     * redeposited on the next cycle; pool accounting is preserved.
      * @param _amount amount to withdraw
      * @param _data encoded vault withdrawal order
      */
