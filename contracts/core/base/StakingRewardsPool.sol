@@ -34,7 +34,6 @@ abstract contract StakingRewardsPool is ERC677Upgradeable, UUPSUpgradeable, Owna
         string memory _liquidTokenName,
         string memory _liquidTokenSymbol
     ) public onlyInitializing {
-        require(_token != address(0), "Token cannot be zero address");
         __ERC677_init(_liquidTokenName, _liquidTokenSymbol, 0);
         __UUPSUpgradeable_init();
         __Ownable_init();

@@ -76,6 +76,7 @@ contract StakingPool is StakingRewardsPool {
         Fee[] memory _fees,
         uint256 _unusedDepositLimit
     ) public initializer {
+        require(_token != address(0), "Token cannot be zero address");
         __StakingRewardsPool_init(_token, _liquidTokenName, _liquidTokenSymbol);
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
