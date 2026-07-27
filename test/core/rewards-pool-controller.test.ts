@@ -170,6 +170,85 @@ describe('RewardsPoolController', () => {
       )
     })
 
+    it('carries the reward-per-token round-down remainder forward without breaking solvency', async () => {
+      const { accounts, adrs, controller, token1, rewardsPool1 } = await loadFixture(deployFixture)
+
+      // totalStaked is 1500e18. A reward whose (reward * 1e18) is not divisible by totalStaked leaves
+      // a numerator round-down remainder. Send 100e18 + 700 wei; the 700 wei portion truncates.
+      const first = toEther(100) + 700n
+      await token1.transfer(adrs.rewardsPool1, first)
+      await rewardsPool1.distributeRewards()
+
+      // the scaled numerator remainder is retained in rewardPerTokenCarry (not stranded), while
+      // totalRewards still accounts the full received amount (solvency buffer preserved)
+      assert.isTrue(
+        (await rewardsPool1.rewardPerTokenCarry()) > 0n,
+        'numerator remainder not carried'
+      )
+      assert.equal(await rewardsPool1.totalRewards(), first)
+
+      // solvency invariant holds: sum of claimable never exceeds totalRewards
+      const claimableAfterFirst =
+        (await controller.withdrawableRewards(accounts[1]))[0] +
+        (await controller.withdrawableRewards(accounts[2]))[0]
+      assert.isTrue(claimableAfterFirst <= (await rewardsPool1.totalRewards()), 'insolvent')
+
+      // the numerator remainder is captured in rewardPerTokenCarry rather than discarded (the original
+      // code has no such carry — the remainder was simply lost each distribution), and the carry stays
+      // bounded below totalStaked so it always represents deferred-not-stranded value
+      assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) < (await controller.totalStaked()))
+
+      // across further truncating distributions the carry keeps accumulating remainders and, once they
+      // combine past totalStaked, folds the recovered value into rewardPerToken; solvency holds throughout
+      for (let i = 0; i < 4; i++) {
+        await token1.transfer(adrs.rewardsPool1, first)
+        await rewardsPool1.distributeRewards()
+        const claimable =
+          (await controller.withdrawableRewards(accounts[1]))[0] +
+          (await controller.withdrawableRewards(accounts[2]))[0]
+        assert.isTrue(
+          claimable <= (await rewardsPool1.totalRewards()),
+          'insolvent during distributions'
+        )
+        assert.isTrue((await rewardsPool1.rewardPerTokenCarry()) < (await controller.totalStaked()))
+      }
+    })
+
+    it('distributeToken retains rewards when nothing is staked and folds them in later', async () => {
+      const { accounts, adrs, controller, token1, rewardsPool1, stake, withdraw } =
+        await loadFixture(deployFixture)
+
+      // drain all stake so totalStaked == 0
+      await withdraw(1, 1000)
+      await withdraw(2, 500)
+      assert.equal(fromEther(await controller.totalStaked()), 0)
+
+      // rewards arriving (via ERC677 onTokenTransfer -> distributeRewards) while nothing is staked
+      // must not revert; the balance is retained in the pool and left unaccounted
+      await token1.transferAndCall(adrs.rewardsPool1, toEther(100), '0x00')
+      assert.equal(fromEther(await token1.balanceOf(adrs.rewardsPool1)), 100)
+      assert.equal(fromEther(await rewardsPool1.totalRewards()), 0, 'balance was accounted early')
+      assert.equal(
+        fromEther(await rewardsPool1.rewardPerToken()),
+        0,
+        'rewardPerToken advanced early'
+      )
+
+      // an explicit distributeRewards while unstaked is also a no-op rather than a revert
+      await rewardsPool1.distributeRewards()
+      assert.equal(fromEther(await rewardsPool1.totalRewards()), 0)
+
+      // once staking resumes, the retained balance is folded into the next distribution
+      await stake(1, 1000)
+      await rewardsPool1.distributeRewards()
+      assert.equal(fromEther(await rewardsPool1.totalRewards()), 100)
+      assert.equal(
+        fromEther((await controller.withdrawableRewards(accounts[1]))[0]),
+        100,
+        'retained rewards not credited after re-staking'
+      )
+    })
+
     it('withdrawRewards should work correctly', async () => {
       const { signers, accounts, adrs, controller, token1, token2 } = await loadFixture(
         deployFixture
@@ -298,6 +377,27 @@ describe('RewardsPoolController', () => {
         ),
         JSON.stringify([300, 100]),
         'account-2 withdrawableRewards incorrect'
+      )
+    })
+
+    it('distributeTokens skips zero-balance tokens instead of reverting the whole batch', async () => {
+      const { accounts, adrs, controller, token1 } = await loadFixture(deployFixture)
+
+      // only token1 is funded; token2 has a zero balance
+      await token1.transfer(adrs.controller, toEther(900))
+
+      // the batch must not revert on the empty token2; token1 is still distributed
+      await controller.distributeTokens([adrs.token1, adrs.token2])
+      assert.equal(
+        fromEther((await controller.withdrawableRewards(accounts[1]))[0]),
+        600,
+        'funded token was not distributed'
+      )
+
+      // a direct distributeToken on the empty token still reverts (single-token semantics unchanged)
+      await expect(controller.distributeToken(adrs.token2)).to.be.revertedWithCustomError(
+        controller,
+        'NothingToDistribute()'
       )
     })
   })

@@ -71,6 +71,7 @@ describe('RebaseController', () => {
       adrs.securityPool,
       accounts[0],
       accounts[0],
+      0,
     ])) as RebaseController
     adrs.rebaseController = await rebaseController.getAddress()
 
@@ -235,5 +236,46 @@ describe('RebaseController', () => {
     assert.equal(await securityPool.claimInProgress(), false)
     assert.equal(fromEther(await stakingPool.totalStaked()), 750)
     assert.equal(fromEther(await stakingPool.getStrategyRewards([0, 1, 2])), 0)
+  })
+
+  it('lossThreshold gates pool closure on small losses', async () => {
+    const { adrs, rebaseController, strategy3, priorityPool } = await loadFixture(deployFixture)
+
+    // raise the threshold so only losses greater than 50 close the pool
+    await rebaseController.setLossThreshold(toEther(50))
+    assert.equal(fromEther(await rebaseController.lossThreshold()), 50)
+
+    // a sub-threshold loss must not flag upkeep or allow closure
+    await strategy3.simulateSlash(toEther(50))
+    assert.equal(
+      (await rebaseController.checkUpkeep('0x'))[0],
+      false,
+      'sub-threshold flagged upkeep'
+    )
+    await expect(rebaseController.performUpkeep(encode([2]))).to.be.revertedWithCustomError(
+      rebaseController,
+      'NoLossDetected()'
+    )
+
+    // once the loss exceeds the threshold, closure proceeds
+    await strategy3.simulateSlash(toEther(1))
+    const data = await rebaseController.checkUpkeep('0x')
+    assert.equal(data[0], true, 'above-threshold did not flag upkeep')
+    assert.equal(Number(decode(data[1])), 2)
+
+    await rebaseController.performUpkeep(encode([2]))
+    assert.equal(Number(await priorityPool.poolStatus()), 2)
+  })
+
+  it('setLossThreshold is owner-only and emits', async () => {
+    const { signers, accounts, rebaseController } = await loadFixture(deployFixture)
+
+    await expect(rebaseController.setLossThreshold(toEther(10)))
+      .to.emit(rebaseController, 'SetLossThreshold')
+      .withArgs(toEther(10))
+
+    await expect(
+      rebaseController.connect(signers[1]).setLossThreshold(toEther(20))
+    ).to.be.revertedWith('Ownable: caller is not the owner')
   })
 })

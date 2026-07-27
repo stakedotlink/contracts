@@ -177,6 +177,37 @@ describe('WithdrawalPool', () => {
     )
   })
 
+  it('does not discard sub-100 dust shares on partial finalization', async () => {
+    const { accounts, withdrawalPool, token } = await loadFixture(deployFixture)
+
+    // share price is 2 tokens/share in this fixture, so toEther(1000) queues 500e18 shares
+    await withdrawalPool.queueWithdrawal(accounts[0], toEther(1000))
+
+    // finalize all but 50 wei of shares, leaving sharesRemaining = 50 (< 100 dust threshold)
+    await withdrawalPool.deposit(toEther(1000) - 100n)
+
+    const [wd] = await withdrawalPool.getWithdrawals([1])
+    // the leftover dust must be retained (not deleted to zero) so its value is not lost
+    assert.equal(wd[0], 50n, 'sub-100 dust shares were discarded instead of retained')
+    // and it must still be counted in the queued total (50 shares x 2 = 100 wei of stLINK)
+    assert.equal(
+      await withdrawalPool.getTotalQueuedWithdrawals(),
+      100n,
+      'dust shares were removed from the queued total'
+    )
+
+    // a later deposit finalizes the leftover dust (only 100 wei of stLINK is still queued)
+    await withdrawalPool.deposit(100n)
+
+    // the owner can now claim the full value: the already-finalized portion (batch 1) plus the dust
+    const startingBalance = await token.balanceOf(accounts[0])
+    await withdrawalPool.withdraw([1], [1])
+    // essentially the full 1000 stLINK (500 shares x 2) is recovered, dust included — within a few
+    // wei of per-batch stakePerShares rounding. The dust value is NOT lost (pre-fix it was zeroed).
+    const recovered = (await token.balanceOf(accounts[0])) - startingBalance
+    assert.isTrue(recovered >= toEther(1000) - 200n, `dust value lost: only ${recovered} recovered`)
+  })
+
   it('withdraw should work correctly', async () => {
     const { signers, accounts, withdrawalPool, token } = await loadFixture(deployFixture)
 
@@ -243,6 +274,17 @@ describe('WithdrawalPool', () => {
     await withdrawalPool.queueWithdrawal(accounts[1], toEther(250))
     await withdrawalPool.queueWithdrawal(accounts[0], toEther(500))
     await withdrawalPool.deposit(toEther(1200))
+
+    // mismatched calldata array lengths revert with a named error rather than reading past an array
+    await expect(withdrawalPool.forceWithdraw([1], [1, 2])).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'InvalidCalldata()'
+    )
+    // batchId 0 reverts with a named error rather than underflowing withdrawalBatches[batchId - 1]
+    await expect(withdrawalPool.forceWithdraw([1], [0])).to.be.revertedWithCustomError(
+      withdrawalPool,
+      'InvalidWithdrawalId()'
+    )
 
     await expect(withdrawalPool.forceWithdraw([1, 3], [1, 1])).to.be.revertedWithCustomError(
       withdrawalPool,

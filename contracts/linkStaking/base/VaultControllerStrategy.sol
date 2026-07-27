@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../../core/interfaces/IERC677.sol";
@@ -104,6 +105,10 @@ contract VaultDepositController is Strategy {
     /**
      * @notice Withdraws tokens from vaults and sends them to staking pool
      * @dev called by VaultControllerStrategy using delegatecall
+     * @dev may transfer up to minDeposits - 1 more than _amount by design: to respect the Chainlink
+     * per-vault minimum stake, a vault that would be left with a sub-minimum remainder is drained in
+     * full instead of partially. The surplus lands in the staking pool as undeployed balance and is
+     * redeposited on the next cycle; pool accounting is preserved.
      * @param _amount amount to withdraw
      * @param _data encoded vault withdrawal order
      */
@@ -113,6 +118,7 @@ contract VaultDepositController is Strategy {
 
         GlobalVaultState memory globalState = globalVaultState;
         uint64[] memory vaultIds = abi.decode(_data, (uint64[]));
+        if (vaultIds.length == 0) revert InvalidVaultIds();
         VaultGroup memory group = vaultGroups[globalState.curUnbondedVaultGroup];
 
         // withdrawals must continue with the vault they left off at during the previous call
@@ -375,8 +381,6 @@ abstract contract VaultControllerStrategy is Strategy {
     error InvalidBasisPoints();
     error SenderNotAuthorized();
     error InvalidWithdrawalIndexes();
-    error DepositFailed();
-    error WithdrawalFailed();
     error VaultDepositControllerNotSet();
 
     /**
@@ -443,11 +447,10 @@ abstract contract VaultControllerStrategy is Strategy {
     function deposit(uint256 _amount, bytes calldata _data) external virtual onlyStakingPool {
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
-        (bool success, ) = vaultDepositController.delegatecall(
+        AddressUpgradeable.functionDelegateCall(
+            vaultDepositController,
             abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
         );
-
-        if (!success) revert DepositFailed();
     }
 
     /**
@@ -458,11 +461,10 @@ abstract contract VaultControllerStrategy is Strategy {
     function withdraw(uint256 _amount, bytes calldata _data) public virtual onlyStakingPool {
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
-        (bool success, ) = vaultDepositController.delegatecall(
+        AddressUpgradeable.functionDelegateCall(
+            vaultDepositController,
             abi.encodeWithSelector(VaultDepositController.withdraw.selector, _amount, _data)
         );
-
-        if (!success) revert WithdrawalFailed();
     }
 
     /**
@@ -579,8 +581,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @return minimum deposits
      */
     function getMinDeposits() public view virtual override returns (uint256) {
-        return
-            fundFlowController.claimPeriodActive() ? totalDeposits - totalUnbonded : totalDeposits;
+        if (!fundFlowController.claimPeriodActive()) return totalDeposits;
+        return totalDeposits > totalUnbonded ? totalDeposits - totalUnbonded : 0;
     }
 
     /**
@@ -598,6 +600,7 @@ abstract contract VaultControllerStrategy is Strategy {
      */
     function setWithdrawalIndexes(uint64[] calldata _withdrawalIndexes) external onlyOwner {
         uint256 numVaultGroups = globalVaultState.numVaultGroups;
+        if (_withdrawalIndexes.length != numVaultGroups) revert InvalidWithdrawalIndexes();
         for (uint256 i = 0; i < numVaultGroups; ++i) {
             if (_withdrawalIndexes[i] % numVaultGroups != i) revert InvalidWithdrawalIndexes();
             vaultGroups[i].withdrawalIndex = _withdrawalIndexes[i];

@@ -45,6 +45,12 @@ contract StakingPool is StakingRewardsPool {
     );
     event Burn(address indexed account, uint256 amount);
     event DonateTokens(address indexed sender, uint256 amount);
+    event RemoveStrategy(address indexed strategy);
+    event ReorderStrategies(uint256[] newOrder);
+    event UpdateFee(uint256 indexed index, address receiver, uint256 feeBasisPoints);
+    event SetUnusedDepositLimit(uint256 unusedDepositLimit);
+    event SetPriorityPool(address priorityPool);
+    event SetRebaseController(address rebaseController);
 
     error SenderNotAuthorized();
     error InvalidDeposit();
@@ -70,6 +76,7 @@ contract StakingPool is StakingRewardsPool {
         Fee[] memory _fees,
         uint256 _unusedDepositLimit
     ) public initializer {
+        require(_token != address(0), "Token cannot be zero address");
         __StakingRewardsPool_init(_token, _liquidTokenName, _liquidTokenSymbol);
         for (uint256 i = 0; i < _fees.length; i++) {
             fees.push(_fees[i]);
@@ -319,6 +326,7 @@ contract StakingPool is StakingRewardsPool {
         }
         strategies.pop();
         token.safeApprove(address(strategy), 0);
+        emit RemoveStrategy(address(strategy));
     }
 
     /**
@@ -338,6 +346,8 @@ contract StakingPool is StakingRewardsPool {
             strategies[i] = strategyAddresses[_newOrder[i]];
             strategyAddresses[_newOrder[i]] = address(0);
         }
+
+        emit ReorderStrategies(_newOrder);
     }
 
     /*
@@ -384,6 +394,7 @@ contract StakingPool is StakingRewardsPool {
         }
 
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
+        emit UpdateFee(_index, _receiver, _feeBasisPoints);
     }
 
     /**
@@ -440,6 +451,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function setUnusedDepositLimit(uint256 _unusedDepositLimit) external onlyOwner {
         unusedDepositLimit = _unusedDepositLimit;
+        emit SetUnusedDepositLimit(_unusedDepositLimit);
     }
 
     /**
@@ -448,6 +460,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function setPriorityPool(address _priorityPool) external onlyOwner {
         priorityPool = _priorityPool;
+        emit SetPriorityPool(_priorityPool);
     }
 
     /**
@@ -457,6 +470,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function setRebaseController(address _rebaseController) external onlyOwner {
         rebaseController = _rebaseController;
+        emit SetRebaseController(_rebaseController);
     }
 
     /**
@@ -478,7 +492,7 @@ contract StakingPool is StakingRewardsPool {
             for (uint256 i = 0; i < strategies.length; i++) {
                 IStrategy strategy = IStrategy(strategies[i]);
                 uint256 strategyCanDeposit = strategy.canDeposit();
-                bytes memory strategyData = _data.length > 0 ? _data[i] : bytes("");
+                bytes memory strategyData = i < _data.length ? _data[i] : bytes("");
 
                 if (strategyCanDeposit >= toDeposit) {
                     strategy.deposit(toDeposit, strategyData);
@@ -504,7 +518,7 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = strategies.length; i > 0; i--) {
             IStrategy strategy = IStrategy(strategies[i - 1]);
             uint256 strategyCanWithdrawdraw = strategy.canWithdraw();
-            bytes memory strategyData = _data.length > 0 ? _data[i - 1] : bytes("");
+            bytes memory strategyData = (i - 1) < _data.length ? _data[i - 1] : bytes("");
 
             if (strategyCanWithdrawdraw >= toWithdraw) {
                 strategy.withdraw(toWithdraw, strategyData);
@@ -586,14 +600,19 @@ contract StakingPool is StakingRewardsPool {
             for (uint256 i = 0; i < receivers.length; i++) {
                 for (uint256 j = 0; j < receivers[i].length; j++) {
                     if (feesPaidCount == totalFeeCount - 1) {
-                        transferAndCallFrom(
-                            address(this),
-                            receivers[i][j],
-                            balanceOf(address(this)),
-                            "0x"
-                        );
+                        uint256 remaining = balanceOf(address(this));
+                        if (getSharesByStake(remaining) != 0) {
+                            transferAndCallFrom(address(this), receivers[i][j], remaining, "");
+                        }
                     } else {
-                        transferAndCallFrom(address(this), receivers[i][j], feeAmounts[i][j], "0x");
+                        if (getSharesByStake(feeAmounts[i][j]) != 0) {
+                            transferAndCallFrom(
+                                address(this),
+                                receivers[i][j],
+                                feeAmounts[i][j],
+                                ""
+                            );
+                        }
                         feesPaidCount++;
                     }
                 }

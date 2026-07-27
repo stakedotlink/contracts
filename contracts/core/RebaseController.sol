@@ -25,10 +25,17 @@ contract RebaseController is Ownable {
     // address authorized to update rewards
     address public rewardsUpdater;
 
+    // minimum magnitude of a strategy's negative deposit change required to close the pool and
+    // initiate a security-pool claim; smaller losses are absorbed by the normal rebase flow
+    uint256 public lossThreshold;
+
+    event SetLossThreshold(uint256 lossThreshold);
+
     error PoolClosed();
     error PoolOpen();
     error SenderNotAuthorized();
     error NoLossDetected();
+    error InvalidStrategy();
 
     /**
      * @notice Initializes contract
@@ -37,19 +44,22 @@ contract RebaseController is Ownable {
      * @param _securityPool address of security pool
      * @param _emergencyPauser address authorized to pause pool in case of emergency
      * @param _rewardsUpdater address authorized to update rewards
+     * @param _lossThreshold minimum loss magnitude required to close the pool via performUpkeep
      */
     constructor(
         address _stakingPool,
         address _priorityPool,
         address _securityPool,
         address _emergencyPauser,
-        address _rewardsUpdater
+        address _rewardsUpdater,
+        uint256 _lossThreshold
     ) {
         stakingPool = IStakingPool(_stakingPool);
         priorityPool = IPriorityPool(_priorityPool);
         securityPool = ISecurityPool(_securityPool);
         emergencyPauser = _emergencyPauser;
         rewardsUpdater = _rewardsUpdater;
+        lossThreshold = _lossThreshold;
     }
 
     /**
@@ -89,7 +99,7 @@ contract RebaseController is Ownable {
 
         for (uint256 i = 0; i < strategies.length; ++i) {
             int256 depositChange = IStrategy(strategies[i]).getDepositChange();
-            if (depositChange < 0) {
+            if (_lossExceedsThreshold(depositChange)) {
                 return (true, abi.encode(i));
             }
         }
@@ -106,8 +116,9 @@ contract RebaseController is Ownable {
 
         uint256 strategyIdxWithLoss = abi.decode(_performData, (uint256));
         address[] memory strategies = stakingPool.getStrategies();
+        if (strategyIdxWithLoss >= strategies.length) revert InvalidStrategy();
 
-        if (IStrategy(strategies[strategyIdxWithLoss]).getDepositChange() >= 0)
+        if (!_lossExceedsThreshold(IStrategy(strategies[strategyIdxWithLoss]).getDepositChange()))
             revert NoLossDetected();
 
         priorityPool.setPoolStatus(IPriorityPool.PoolStatus.CLOSED);
@@ -153,6 +164,25 @@ contract RebaseController is Ownable {
      */
     function setRewardsUpdater(address _rewardsUpdater) external onlyOwner {
         rewardsUpdater = _rewardsUpdater;
+    }
+
+    /**
+     * @notice Sets the minimum loss magnitude required to close the pool via performUpkeep
+     * @param _lossThreshold minimum loss magnitude
+     */
+    function setLossThreshold(uint256 _lossThreshold) external onlyOwner {
+        lossThreshold = _lossThreshold;
+        emit SetLossThreshold(_lossThreshold);
+    }
+
+    /**
+     * @notice Returns whether a strategy's deposit change represents a loss large enough to
+     * close the pool
+     * @param _depositChange change in deposits reported by a strategy
+     * @return true if the loss magnitude exceeds lossThreshold, false otherwise
+     */
+    function _lossExceedsThreshold(int256 _depositChange) private view returns (bool) {
+        return _depositChange < 0 && uint256(-_depositChange) > lossThreshold;
     }
 
     /**

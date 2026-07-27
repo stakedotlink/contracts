@@ -125,7 +125,9 @@ contract OperatorVCS is VaultControllerStrategy {
         uint256 withdrawableRewards = lsdToken.balanceOf(address(this));
         uint256 amountToWithdraw = _amount > withdrawableRewards ? withdrawableRewards : _amount;
 
-        unclaimedOperatorRewards -= amountToWithdraw;
+        unclaimedOperatorRewards -= amountToWithdraw > unclaimedOperatorRewards
+            ? unclaimedOperatorRewards
+            : amountToWithdraw;
         lsdToken.safeTransfer(_receiver, amountToWithdraw);
 
         return amountToWithdraw;
@@ -297,9 +299,28 @@ contract OperatorVCS is VaultControllerStrategy {
      * @param _queueIndex index of vault in removal queue
      */
     function removeVault(uint256 _queueIndex) public {
+        _updateStrategyRewards();
+        _removeVault(_queueIndex);
+    }
+
+    /**
+     * @notice Removes a queued vault without first running a strategy reward update
+     * @dev escape hatch for when a reverting vault blocks the reward update that removeVault performs,
+     * making the vault otherwise unremovable. Forfeits the removed operator's reward split since the
+     * last update (swept to the pool), so it is owner-only and only for when removeVault is blocked.
+     * @param _queueIndex index of vault in removal queue
+     */
+    function removeVaultSkipRewardUpdate(uint256 _queueIndex) external onlyOwner {
+        _removeVault(_queueIndex);
+    }
+
+    /**
+     * @notice Withdraws a queued vault's funds and de-registers it from the strategy
+     * @param _queueIndex index of vault in removal queue
+     */
+    function _removeVault(uint256 _queueIndex) private {
         address vault = address(vaults[vaultsToRemove[_queueIndex]]);
 
-        _updateStrategyRewards();
         (uint256 principalWithdrawn, uint256 rewardsWithdrawn) = IOperatorVault(vault).exitVault();
 
         totalDeposits -= principalWithdrawn + rewardsWithdrawn;
@@ -360,8 +381,11 @@ contract OperatorVCS is VaultControllerStrategy {
             vaults[index] = IVault(newVault);
             vaults.pop();
             removedVaults.pop();
-            uint256 group = index % globalVaultState.numVaultGroups;
-            vaultGroups[group].totalDepositRoom += uint128(vaultMaxDeposits);
+
+            if (index < globalVaultState.depositIndex) {
+                uint256 group = index % globalVaultState.numVaultGroups;
+                vaultGroups[group].totalDepositRoom += uint128(vaultMaxDeposits);
+            }
         }
 
         emit VaultAdded(_operator, newVault);

@@ -134,11 +134,10 @@ contract CommunityVCS is VaultControllerStrategy {
 
         if (vaultDepositController == address(0)) revert VaultDepositControllerNotSet();
 
-        (bool success, ) = vaultDepositController.delegatecall(
+        AddressUpgradeable.functionDelegateCall(
+            vaultDepositController,
             abi.encodeWithSelector(VaultDepositController.deposit.selector, _amount, _data)
         );
-
-        if (!success) revert DepositFailed();
     }
 
     /**
@@ -163,8 +162,10 @@ contract CommunityVCS is VaultControllerStrategy {
         uint256 _minRewards
     ) external notDuringDepositUpdate returns (uint256) {
         address receiver = address(this);
+        uint256 numVaults = vaults.length;
         uint256 balanceBefore = token.balanceOf(address(this));
         for (uint256 i = 0; i < _vaults.length; ++i) {
+            if (_vaults[i] >= numVaults) revert InvalidVaultIds();
             ICommunityVault(address(vaults[_vaults[i]])).claimRewards(_minRewards, receiver);
         }
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -203,7 +204,8 @@ contract CommunityVCS is VaultControllerStrategy {
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         return (
-            (vaults.length - globalVaultState.depositIndex) < vaultDeploymentThreshold,
+            currentVaultIndex == 0 &&
+                (vaults.length - globalVaultState.depositIndex) < vaultDeploymentThreshold,
             bytes("")
         );
     }
@@ -211,7 +213,7 @@ contract CommunityVCS is VaultControllerStrategy {
     /**
      * @notice Deploys a new batch of vaults
      */
-    function performUpkeep(bytes calldata) external {
+    function performUpkeep(bytes calldata) external notDuringDepositUpdate {
         if ((vaults.length - globalVaultState.depositIndex) >= vaultDeploymentThreshold)
             revert VaultsAboveThreshold();
         _deployVaults(vaultDeploymentAmount);
@@ -221,7 +223,7 @@ contract CommunityVCS is VaultControllerStrategy {
      * @notice Deploys a new batch of vaults
      * @param _numVaults number of vaults to deploy
      */
-    function addVaults(uint256 _numVaults) external onlyOwner {
+    function addVaults(uint256 _numVaults) external onlyOwner notDuringDepositUpdate {
         _deployVaults(_numVaults);
     }
 
