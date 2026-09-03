@@ -553,14 +553,11 @@ contract EspressoStrategy is Strategy {
 
     /**
      * @notice Adds a new fee
-     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
-     * the old rate before the percentage changes
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         if (_receiver == address(0)) revert InvalidAddress();
-        _updateStrategyRewards();
         fees.push(Fee(_receiver, _feeBasisPoints));
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
         emit AddFee(_receiver, _feeBasisPoints);
@@ -568,8 +565,6 @@ contract EspressoStrategy is Strategy {
 
     /**
      * @notice Updates an existing fee
-     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
-     * the old rate before the percentage changes
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -579,8 +574,6 @@ contract EspressoStrategy is Strategy {
         address _receiver,
         uint256 _feeBasisPoints
     ) external onlyOwner {
-        _updateStrategyRewards();
-
         if (_feeBasisPoints == 0) {
             Fee memory toRemove = fees[_index];
             fees[_index] = fees[fees.length - 1];
@@ -632,19 +625,6 @@ contract EspressoStrategy is Strategy {
     function setMaxRewardChangeBPS(uint256 _maxRewardChangeBPS) external onlyOwner {
         maxRewardChangeBPS = _maxRewardChangeBPS;
         emit SetMaxRewardChangeBPS(_maxRewardChangeBPS);
-    }
-
-    /**
-     * @notice Updates rewards for all strategies controlled by the staking pool
-     * @dev called before fees are changed to credit any past rewards at the old rate
-     */
-    function _updateStrategyRewards() internal {
-        address[] memory strategies = stakingPool.getStrategies();
-        uint256[] memory strategyIdxs = new uint256[](strategies.length);
-        for (uint256 i = 0; i < strategies.length; ++i) {
-            strategyIdxs[i] = i;
-        }
-        stakingPool.updateStrategyRewards(strategyIdxs, "");
     }
 
     /**
