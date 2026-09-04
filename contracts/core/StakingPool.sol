@@ -350,7 +350,6 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = 0; i < strategyIdxs.length; ++i) {
             strategyIdxs[i] = i;
         }
-        _updateStrategyRewards(strategyIdxs, "");
 
         fees.push(Fee(_receiver, _feeBasisPoints));
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
@@ -373,7 +372,6 @@ contract StakingPool is StakingRewardsPool {
         for (uint256 i = 0; i < strategyIdxs.length; ++i) {
             strategyIdxs[i] = i;
         }
-        _updateStrategyRewards(strategyIdxs, "");
 
         if (_feeBasisPoints == 0) {
             fees[_index] = fees[fees.length - 1];
