@@ -64,7 +64,7 @@ async function main() {
   /**
    * Draining the deposit queue leaves the pool's `totalQueued` at zero while
    * accounts that queued deposits still carry their own balances: those are
-   * only cleared by a distribution, which `distribute-queue.ts` publishes.
+   * only cleared by a distribution.
    *
    * A withdrawal from such an account then fails at the wallet with "ERC20:
    * insufficient allowance". `useWithdrawForm` approves
@@ -83,8 +83,7 @@ async function main() {
       `account ${accountIndex} has ${link(accountQueued)} of queued deposits.\n` +
         'Emptying the deposit queue would leave it unable to unqueue them, and the\n' +
         'withdrawal would revert with "ERC20: insufficient allowance".\n' +
-        'Use an account that has never queued a deposit, such as ACCOUNT=1, or run\n' +
-        'distribute-queue.ts first to settle the queued balances.'
+        'Use an account that has never queued a deposit, such as ACCOUNT=1.'
     )
   }
 

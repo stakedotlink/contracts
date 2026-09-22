@@ -17,5 +17,3 @@ node_modules
 ignition/deployments/chain-31337
 
 deployments/localhost.json
-
-scripts/test/state/
