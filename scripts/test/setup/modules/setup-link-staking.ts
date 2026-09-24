@@ -72,6 +72,29 @@ export async function setupLINKStaking() {
 
   // Staking Setup
 
+  /**
+   * Point the strategies at the fund flow controller.
+   *
+   * Without it their `fundFlowController` stays at the zero address, and
+   * `VaultControllerStrategy.getMinDeposits` asks it on every call whether a
+   * claim period is active. A call to address zero returns no data, the
+   * `bool` fails to decode, and the read reverts with "function returned an
+   * unexpected amount of data". That takes `StakingPool.canWithdraw` with it,
+   * which is what stopped `WithdrawalPool.performUpkeep` from ever settling a
+   * batch locally: it asks as the withdrawal pool, the one caller that
+   * reaches the staking pool's liquidity even with instant withdrawals off.
+   *
+   * Here rather than in the deploy module, though the controller is created
+   * there. Every transaction in the deploy consumes a deployer nonce, and
+   * contract addresses are derived from it: two extra calls in the middle
+   * shifted every later address, so `Multicall3` moved out from under the
+   * address `ui/src/config/chains.js` falls back to and the whole app read
+   * zeroes. Setup runs after every deployment and cannot move anything.
+   */
+  const fundFlowController = await getContract('LINK_FundFlowController')
+  await (await operatorVCS.setFundFlowController(fundFlowController.target)).wait()
+  await (await communityVCS.setFundFlowController(fundFlowController.target)).wait()
+
   await setupToken(linkToken, accounts)
 
   await (
