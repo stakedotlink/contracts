@@ -1,6 +1,7 @@
-import { toEther } from '../../../utils/helpers'
+import { ethers } from 'hardhat'
+import { getAccounts, toEther } from '../../../utils/helpers'
 import { getContract } from '../../../utils/deployment'
-import { StakingAllowance, ERC677 } from '../../../../typechain-types'
+import { StakingAllowance, ERC677, OperatorVCS } from '../../../../typechain-types'
 
 export async function setupOther() {
   const linkCurvePool = await getContract('LINK_CurvePool')
@@ -23,4 +24,17 @@ export async function setupOther() {
 
   await (await sdlToken.mint(vesting0.target, toEther(400000))).wait()
   await (await sdlToken.mint(vesting1.target, toEther(400000))).wait()
+
+  // Operator rewards: vault 0 pays Operator_0 (accounts[12], the SDL_Vesting_NOP_0 beneficiary),
+  // so the UI can claim and rotate the receiver from that wallet. The other vaults keep
+  // accounts[0] from deploy, which gives the "not the receiver" state. Called on the vault
+  // directly: once a receiver is set, only that receiver can change it.
+  //
+  // Keep this after every deploy in the setup: it spends a nonce of accounts[0], and anything
+  // deployed later would land at a different address than the UI's testnet config expects.
+  const { accounts } = await getAccounts()
+  const operatorVCS = (await getContract('LINK_OperatorVCS')) as OperatorVCS
+  const [opVault0] = await operatorVCS.getVaults()
+  const vault0 = await ethers.getContractAt('OperatorVault', opVault0)
+  await (await vault0.setRewardsReceiver(accounts[12])).wait()
 }
