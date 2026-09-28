@@ -372,6 +372,7 @@ abstract contract VaultControllerStrategy is Strategy {
     event SetVaultImplementation(address vaultImplementation);
 
     error FeesTooLarge();
+    error ZeroFee();
     error InvalidBasisPoints();
     error SenderNotAuthorized();
     error InvalidWithdrawalIndexes();
@@ -634,6 +635,8 @@ abstract contract VaultControllerStrategy is Strategy {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
+        if (_feeBasisPoints == 0) revert ZeroFee();
+
         fees.push(Fee(_receiver, _feeBasisPoints));
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }

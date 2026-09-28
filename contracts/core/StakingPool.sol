@@ -49,6 +49,7 @@ contract StakingPool is StakingRewardsPool {
     error SenderNotAuthorized();
     error InvalidDeposit();
     error NothingStaked();
+    error ZeroFee();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -346,6 +347,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
+        if (_feeBasisPoints == 0) revert ZeroFee();
+
         fees.push(Fee(_receiver, _feeBasisPoints));
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
     }
