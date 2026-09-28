@@ -50,6 +50,7 @@ contract StakingPool is StakingRewardsPool {
     error InvalidDeposit();
     error NothingStaked();
     error ZeroFee();
+    error InvalidAddress();
     error InvalidDepositChange();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -349,6 +350,7 @@ contract StakingPool is StakingRewardsPool {
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         if (_feeBasisPoints == 0) revert ZeroFee();
+        if (_receiver == address(0)) revert InvalidAddress();
 
         fees.push(Fee(_receiver, _feeBasisPoints));
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
@@ -371,6 +373,7 @@ contract StakingPool is StakingRewardsPool {
             fees[_index] = fees[fees.length - 1];
             fees.pop();
         } else {
+            if (_receiver == address(0)) revert InvalidAddress();
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
         }

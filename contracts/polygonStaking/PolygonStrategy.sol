@@ -618,6 +618,7 @@ contract PolygonStrategy is Strategy {
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
         if (_feeBasisPoints == 0) revert ZeroFee();
+        if (_receiver == address(0)) revert InvalidAddress();
 
         fees.push(Fee(_receiver, _feeBasisPoints));
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
@@ -641,6 +642,7 @@ contract PolygonStrategy is Strategy {
             fees.pop();
             emit RemoveFee(_index, toRemove.receiver, toRemove.basisPoints);
         } else {
+            if (_receiver == address(0)) revert InvalidAddress();
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
             if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
