@@ -50,6 +50,7 @@ contract StakingPool is StakingRewardsPool {
     error InvalidDeposit();
     error NothingStaked();
     error ZeroFee();
+    error InvalidDepositChange();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -544,7 +545,9 @@ contract StakingPool is StakingRewardsPool {
 
         // update totalStaked if there was a net change in deposits
         if (totalRewards != 0) {
-            totalStaked = uint256(int256(totalStaked) + totalRewards);
+            int256 newTotalStaked = int256(totalStaked) + totalRewards;
+            if (newTotalStaked < 0) revert InvalidDepositChange();
+            totalStaked = uint256(newTotalStaked);
         }
 
         // calulate fees if net positive rewards were earned
