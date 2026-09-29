@@ -310,5 +310,9 @@
   "ESP_EspressoRewardsConsumer": {
     "address": "0x03f724D62237Aee787DAE2a8Cd9882B94BD4Ca73",
     "artifact": "EspressoRewardsConsumer"
+  },
+  "TokenForwarder": {
+    "address": "0x69EDF650b329D138348C2441bc69f5a1948d8e76",
+    "artifact": "TokenForwarder"
   }
 }
