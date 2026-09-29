@@ -372,6 +372,8 @@ abstract contract VaultControllerStrategy is Strategy {
     event SetVaultImplementation(address vaultImplementation);
 
     error FeesTooLarge();
+    error ZeroFee();
+    error InvalidAddress();
     error InvalidBasisPoints();
     error SenderNotAuthorized();
     error InvalidWithdrawalIndexes();
@@ -630,21 +632,19 @@ abstract contract VaultControllerStrategy is Strategy {
 
     /**
      * @notice Adds a new fee
-     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
-     * the old rate before the percentage changes
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
-        _updateStrategyRewards();
+        if (_feeBasisPoints == 0) revert ZeroFee();
+        if (_receiver == address(0)) revert InvalidAddress();
+
         fees.push(Fee(_receiver, _feeBasisPoints));
         if (_totalFeesBasisPoints() > 3000) revert FeesTooLarge();
     }
 
     /**
      * @notice Updates an existing fee
-     * @dev stakingPool.updateStrategyRewards is called to credit all past fees at
-     * the old rate before the percentage changes
      * @param _index index of fee
      * @param _receiver receiver of fee
      * @param _feeBasisPoints fee in basis points
@@ -654,12 +654,11 @@ abstract contract VaultControllerStrategy is Strategy {
         address _receiver,
         uint256 _feeBasisPoints
     ) external onlyOwner {
-        _updateStrategyRewards();
-
         if (_feeBasisPoints == 0) {
             fees[_index] = fees[fees.length - 1];
             fees.pop();
         } else {
+            if (_receiver == address(0)) revert InvalidAddress();
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
         }

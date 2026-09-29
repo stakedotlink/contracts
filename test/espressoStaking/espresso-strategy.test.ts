@@ -1554,14 +1554,12 @@ describe('EspressoStrategy', () => {
       'FeesTooLarge'
     )
 
-    // Adding 0 basisPoints should work (edge case)
-    await strategy.addFee(accounts[5], 0)
+    // Should revert if adding a 0 basis point fee
+    await expect(strategy.addFee(accounts[5], 0)).to.be.revertedWithCustomError(strategy, 'ZeroFee')
 
-    assert.equal((await strategy.getFees()).length, 5)
-    assert.equal(Number((await strategy.getFees())[4].basisPoints), 0)
+    assert.equal((await strategy.getFees()).length, 4)
 
     // Verify fee receivers can be the same address (multiple fees to same receiver)
-    await strategy.updateFee(4, accounts[5], 0) // remove the 0 fee first
     await strategy.updateFee(3, accounts[4], 0) // remove to make room
 
     // Now total = 2000, can add 1000 more

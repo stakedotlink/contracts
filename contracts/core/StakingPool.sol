@@ -49,6 +49,9 @@ contract StakingPool is StakingRewardsPool {
     error SenderNotAuthorized();
     error InvalidDeposit();
     error NothingStaked();
+    error ZeroFee();
+    error InvalidAddress();
+    error InvalidDepositChange();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -346,11 +349,8 @@ contract StakingPool is StakingRewardsPool {
      * @param _feeBasisPoints fee in basis points
      **/
     function addFee(address _receiver, uint256 _feeBasisPoints) external onlyOwner {
-        uint256[] memory strategyIdxs = new uint256[](strategies.length);
-        for (uint256 i = 0; i < strategyIdxs.length; ++i) {
-            strategyIdxs[i] = i;
-        }
-        _updateStrategyRewards(strategyIdxs, "");
+        if (_feeBasisPoints == 0) revert ZeroFee();
+        if (_receiver == address(0)) revert InvalidAddress();
 
         fees.push(Fee(_receiver, _feeBasisPoints));
         require(_totalFeesBasisPoints() <= 4000, "Total fees must be <= 40%");
@@ -369,16 +369,11 @@ contract StakingPool is StakingRewardsPool {
     ) external onlyOwner {
         require(_index < fees.length, "Fee does not exist");
 
-        uint256[] memory strategyIdxs = new uint256[](strategies.length);
-        for (uint256 i = 0; i < strategyIdxs.length; ++i) {
-            strategyIdxs[i] = i;
-        }
-        _updateStrategyRewards(strategyIdxs, "");
-
         if (_feeBasisPoints == 0) {
             fees[_index] = fees[fees.length - 1];
             fees.pop();
         } else {
+            if (_receiver == address(0)) revert InvalidAddress();
             fees[_index].receiver = _receiver;
             fees[_index].basisPoints = _feeBasisPoints;
         }
@@ -553,7 +548,9 @@ contract StakingPool is StakingRewardsPool {
 
         // update totalStaked if there was a net change in deposits
         if (totalRewards != 0) {
-            totalStaked = uint256(int256(totalStaked) + totalRewards);
+            int256 newTotalStaked = int256(totalStaked) + totalRewards;
+            if (newTotalStaked < 0) revert InvalidDepositChange();
+            totalStaked = uint256(newTotalStaked);
         }
 
         // calulate fees if net positive rewards were earned
