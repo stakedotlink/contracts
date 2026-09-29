@@ -86,6 +86,41 @@ describe('PriorityPool', () => {
     return { signers, accounts, adrs, token, stakingPool, strategy, sdlPool, pp, withdrawalPool }
   }
 
+  it('initialize validates addresses and queue deposit bounds', async () => {
+    const { adrs } = await loadFixture(deployFixture)
+
+    // zero address for any critical immutable reverts
+    await expect(
+      deployUpgradeable('PriorityPool', [
+        ethers.ZeroAddress,
+        adrs.stakingPool,
+        adrs.sdlPool,
+        toEther(100),
+        toEther(1000),
+        false,
+      ])
+    ).to.be.reverted
+    // queueDepositMin must be <= queueDepositMax
+    await expect(
+      deployUpgradeable('PriorityPool', [
+        adrs.token,
+        adrs.stakingPool,
+        adrs.sdlPool,
+        toEther(1000),
+        toEther(100),
+        false,
+      ])
+    ).to.be.reverted
+  })
+
+  it('setQueueDepositParams enforces min <= max', async () => {
+    const { pp } = await loadFixture(deployFixture)
+    await expect(
+      pp.setQueueDepositParams(toEther(1000), toEther(100))
+    ).to.be.revertedWithCustomError(pp, 'InvalidAmount()')
+    await pp.setQueueDepositParams(toEther(50), toEther(2000)) // valid
+  })
+
   it('deposit should work correctly', async () => {
     const { signers, accounts, adrs, pp, token, strategy, stakingPool } = await loadFixture(
       deployFixture

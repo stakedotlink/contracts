@@ -92,6 +92,11 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     event SetPoolStatus(PoolStatus status);
     event SetQueueDepositParams(uint128 queueDepositMin, uint128 queueDepositMax);
     event DepositTokens(uint256 unusedTokensAmount, uint256 queuedTokensAmount);
+    event SetAllowInstantWithdrawals(bool allowInstantWithdrawals);
+    event SetDistributionOracle(address distributionOracle);
+    event SetRebaseController(address rebaseController);
+    event SetWithdrawalPool(address withdrawalPool);
+    event SetQueueBypassController(address queueBypassController);
 
     error InvalidValue();
     error UnauthorizedToken();
@@ -108,6 +113,8 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
     error StatusAlreadySet();
     error InsufficientLiquidity();
     error WithdrawFailed();
+    error InvalidCalldata();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -131,6 +138,9 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint128 _queueDepositMax,
         bool _allowInstantWithdrawals
     ) public initializer {
+        if (_token == address(0) || _stakingPool == address(0) || _sdlPool == address(0))
+            revert InvalidAddress();
+        if (_queueDepositMin > _queueDepositMax) revert InvalidAmount();
         __UUPSUpgradeable_init();
         __Ownable_init();
         __Pausable_init();
@@ -227,6 +237,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         address[] calldata _accounts,
         uint256[] calldata _distributionShareAmounts
     ) external view returns (uint256[] memory) {
+        if (_accounts.length != _distributionShareAmounts.length) revert InvalidCalldata();
         uint256[] memory withdrawableAmounts = new uint256[](_accounts.length);
 
         for (uint256 i = 0; i < _accounts.length; i++) {
@@ -629,6 +640,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         uint128 _queueDepositMin,
         uint128 _queueDepositMax
     ) external onlyOwner {
+        if (_queueDepositMin > _queueDepositMax) revert InvalidAmount();
         queueDepositMin = _queueDepositMin;
         queueDepositMax = _queueDepositMax;
         emit SetQueueDepositParams(_queueDepositMin, _queueDepositMax);
@@ -642,6 +654,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setAllowInstantWithdrawals(bool _allowInstantWithdrawals) external onlyOwner {
         allowInstantWithdrawals = _allowInstantWithdrawals;
+        emit SetAllowInstantWithdrawals(_allowInstantWithdrawals);
     }
 
     /**
@@ -650,6 +663,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setDistributionOracle(address _distributionOracle) external onlyOwner {
         distributionOracle = _distributionOracle;
+        emit SetDistributionOracle(_distributionOracle);
     }
 
     /**
@@ -659,6 +673,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setRebaseController(address _rebaseController) external onlyOwner {
         rebaseController = _rebaseController;
+        emit SetRebaseController(_rebaseController);
     }
 
     /**
@@ -675,6 +690,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
         token.safeApprove(_withdrawalPool, type(uint256).max);
 
         withdrawalPool = IWithdrawalPool(_withdrawalPool);
+        emit SetWithdrawalPool(_withdrawalPool);
     }
 
     /**
@@ -684,6 +700,7 @@ contract PriorityPool is UUPSUpgradeable, OwnableUpgradeable, PausableUpgradeabl
      */
     function setQueueBypassController(address _queueBypassController) external onlyOwner {
         queueBypassController = _queueBypassController;
+        emit SetQueueBypassController(_queueBypassController);
     }
 
     /**

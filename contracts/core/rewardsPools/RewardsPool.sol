@@ -19,6 +19,7 @@ contract RewardsPool {
 
     uint256 public rewardPerToken;
     uint256 public totalRewards;
+    uint256 public rewardPerTokenCarry;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public userRewards;
 
@@ -74,6 +75,10 @@ contract RewardsPool {
      * @notice distributes new rewards that have been deposited
      **/
     function distributeRewards() public virtual {
+        // if nothing is staked, retain the undistributed balance without reverting or accounting it;
+        // the next distributeRewards() call folds it in once totalStaked becomes positive again
+        if (controller.totalStaked() == 0) return;
+
         uint256 toDistribute = token.balanceOf(address(this)) - totalRewards;
         totalRewards += toDistribute;
         _updateRewardPerToken(toDistribute);
@@ -114,6 +119,10 @@ contract RewardsPool {
     function _updateRewardPerToken(uint256 _reward) internal virtual {
         uint256 totalStaked = controller.totalStaked();
         if (totalStaked == 0) revert NothingStaked();
-        rewardPerToken += ((_reward * 1e18) / totalStaked);
+        // carry the scaled numerator remainder across distributions so the per-distribution round-down
+        // is recovered
+        uint256 numerator = _reward * 1e18 + rewardPerTokenCarry;
+        rewardPerToken += numerator / totalStaked;
+        rewardPerTokenCarry = numerator % totalStaked;
     }
 }

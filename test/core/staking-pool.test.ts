@@ -108,6 +108,20 @@ describe('StakingPool', () => {
     assert.equal(Number(await stakingPool.decimals()), 18, 'Decimals incorrect')
   })
 
+  it('admin setters emit events', async () => {
+    const { accounts, stakingPool } = await loadFixture(deployFixture)
+
+    await expect(stakingPool.setUnusedDepositLimit(toEther(123)))
+      .to.emit(stakingPool, 'SetUnusedDepositLimit')
+      .withArgs(toEther(123))
+    await expect(stakingPool.setPriorityPool(accounts[3]))
+      .to.emit(stakingPool, 'SetPriorityPool')
+      .withArgs(accounts[3])
+    await expect(stakingPool.setRebaseController(accounts[3]))
+      .to.emit(stakingPool, 'SetRebaseController')
+      .withArgs(accounts[3])
+  })
+
   it('should be able to add new fee', async () => {
     const { accounts, adrs, stakingPool, erc677Receiver } = await loadFixture(deployFixture)
 
@@ -290,6 +304,26 @@ describe('StakingPool', () => {
     await expect(stake(1, 10001)).to.be.revertedWith('ERC20: transfer amount exceeds balance')
   })
 
+  it('transfer emits the actual moved value, not the requested amount', async () => {
+    const { signers, accounts, adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
+    await stake(1, 1000)
+    // accrue rewards so the share price exceeds 1 token/share (totalStaked > totalShares)
+    await token.transfer(adrs.strategy1, toEther(500))
+    await stakingPool.updateStrategyRewards([0], '0x')
+
+    // transfer an amount that does not divide evenly into shares; the credited value floors below it
+    const requested = toEther(100) + 7n
+    const shares = await stakingPool.getSharesByStake(requested)
+    const actual = await stakingPool.getStakeByShares(shares)
+    assert.isTrue(actual < requested, 'test needs a rounding remainder')
+
+    // the Transfer event must report the actual moved value (actual), not the nominal requested amount
+    await expect(stakingPool.connect(signers[1]).transfer(accounts[2], requested))
+      .to.emit(stakingPool, 'Transfer')
+      .withArgs(accounts[1], accounts[2], actual)
+  })
+
   it('should be able to withdraw tokens', async () => {
     const { accounts, stakingPool, token, stake, withdraw } = await loadFixture(deployFixture)
 
@@ -327,6 +361,17 @@ describe('StakingPool', () => {
     await stake(1, 1000)
     await strategy1.setMinDeposits(0)
     await expect(withdraw(1, 1001)).to.be.revertedWith('Not enough liquidity available to withdraw')
+  })
+
+  it('deposit tolerates a data array shorter than the strategy list', async () => {
+    const { accounts, adrs, token, stakingPool } = await loadFixture(deployFixture)
+
+    // deposit cascades across all 3 strategies (1000 + 2000 + 2000) but supplies only 2 data
+    // entries; the loop must fall back to empty bytes for the 3rd strategy instead of panicking
+    await token.transfer(accounts[0], toEther(5000))
+    await stakingPool.deposit(accounts[0], toEther(5000), ['0x', '0x'])
+
+    assert.equal(fromEther(await token.balanceOf(adrs.strategy3)), 2000)
   })
 
   it('staking should correctly deposit into strategies', async () => {
@@ -842,5 +887,26 @@ describe('StakingPool', () => {
     await stakingPool.connect(signers[1]).transfer(accounts[2], firstValidAmount)
     const sharesAfter = await stakingPool.sharesOf(accounts[1])
     assert.notEqual(sharesBefore, sharesAfter, 'shares must change for valid transfer')
+  })
+
+  it('updateStrategyRewards does not revert when a fee rounds to zero shares', async () => {
+    const { adrs, stakingPool, token, stake } = await loadFixture(deployFixture)
+
+    await stake(1, 1000)
+
+    // inflate the share price so totalStaked >> totalShares (getSharesByStake rounds small amounts to 0)
+    await token.transfer(adrs.strategy1, toEther(500))
+    await stakingPool.updateStrategyRewards([0], '0x')
+    assert.equal(await stakingPool.getSharesByStake(1), 0n)
+
+    // a tiny subsequent reward makes each fee amount (a fraction of the depositChange) round to zero
+    // shares; pre-fix this reverted the whole reward update with "Transfer amount too small"
+    await token.transfer(adrs.strategy1, 5n)
+    const totalStakedBefore = await stakingPool.totalStaked()
+
+    await stakingPool.updateStrategyRewards([0, 1, 2], '0x')
+
+    // the update completed and folded in the reward rather than reverting
+    assert.equal(await stakingPool.totalStaked(), totalStakedBefore + 5n)
   })
 })

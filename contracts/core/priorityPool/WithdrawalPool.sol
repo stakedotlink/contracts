@@ -72,11 +72,17 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
     event WithdrawalsFinalized(uint256 amount);
     event SetMinWithdrawalAmount(uint256 minWithdrawalAmount);
     event SetMinTimeBetweenWithdrawals(uint64 minTimeBetweenWithdrawals);
+    event UpdateWithdrawalBatchIdCutoff(
+        uint128 withdrawalIdCutoff,
+        uint128 withdrawalBatchIdCutoff
+    );
 
     error SenderNotAuthorized();
     error InvalidWithdrawalId();
     error AmountTooSmall();
     error NoUpkeepNeeded();
+    error InvalidCalldata();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -98,6 +104,8 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         uint256 _minWithdrawalAmount,
         uint64 _minTimeBetweenWithdrawals
     ) public initializer {
+        if (_token == address(0) || _lst == address(0) || _priorityPool == address(0))
+            revert InvalidAddress();
         __UUPSUpgradeable_init();
         __Ownable_init();
         token = IERC20Upgradeable(_token);
@@ -326,10 +334,15 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         uint256[] calldata _withdrawalIds,
         uint256[] calldata _batchIds
     ) external onlyOwner {
+        if (_withdrawalIds.length != _batchIds.length) revert InvalidCalldata();
+
         for (uint256 i = 0; i < _withdrawalIds.length; ++i) {
             uint256 withdrawalId = _withdrawalIds[i];
             Withdrawal memory withdrawal = queuedWithdrawals[_withdrawalIds[i]];
+
             uint256 batchId = _batchIds[i];
+            if (batchId == 0) revert InvalidWithdrawalId();
+
             WithdrawalBatch memory batch = withdrawalBatches[batchId];
             address owner = withdrawalOwners[withdrawalId];
 
@@ -449,6 +462,11 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
         withdrawalIdCutoff = uint128(newWithdrawalIdCutoff);
         withdrawalBatchIdCutoff = uint128(newWithdrawalBatchIdCutoff);
+
+        emit UpdateWithdrawalBatchIdCutoff(
+            uint128(newWithdrawalIdCutoff),
+            uint128(newWithdrawalBatchIdCutoff)
+        );
     }
 
     /**
@@ -489,7 +507,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
             }
 
             if (sharesRemaining > sharesToWithdraw) {
-                // partially finalize withdrawal
+                // partially finalize withdrawal.
                 queuedWithdrawals[i] = Withdrawal(
                     uint128(sharesRemaining - sharesToWithdraw),
                     uint128(
@@ -497,12 +515,6 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
                             _getStakeByShares(sharesToWithdraw)
                     )
                 );
-
-                // handle remaining dust
-                if (queuedWithdrawals[i].sharesRemaining < 100) {
-                    totalQueuedShareWithdrawals -= queuedWithdrawals[i].sharesRemaining;
-                    delete queuedWithdrawals[i].sharesRemaining;
-                }
 
                 indexOfNextWithdrawal = i;
                 withdrawalBatches.push(

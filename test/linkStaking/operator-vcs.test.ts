@@ -313,6 +313,57 @@ describe('OperatorVCS', () => {
     assert.equal(Number(fromEther(await stakingPool.balanceOf(accounts[1])).toFixed(2)), 1.33)
   })
 
+  it('withdrawOperatorRewards transfers the full balance without underflowing on rebase surplus', async () => {
+    const { accounts, adrs, strategy, stakingPool, rewardsController, vaults, token } =
+      await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(100), [encodeVaults([])])
+
+    // accrue operator rewards so unclaimedOperatorRewards > 0 and the strategy holds stLINK
+    await rewardsController.setReward(vaults[0], toEther(10))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    assert.isTrue((await strategy.getOperatorRewards())[0] > 0n)
+
+    // rebase the pool up so the strategy's stLINK balance grows beyond unclaimedOperatorRewards
+    // (stLINK is rebasing; unclaimedOperatorRewards is recorded in nominal terms)
+    await token.transfer(adrs.rewardsController, toEther(1000))
+    await rewardsController.setReward(vaults[1], toEther(1000))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+
+    const [unclaimed, balance] = await strategy.getOperatorRewards()
+    assert.isTrue(
+      balance > unclaimed,
+      'test needs strategy stLINK balance > unclaimedOperatorRewards'
+    )
+
+    // impersonate a registered vault and request its full balance; pre-fix the balance-capped amount
+    // exceeds unclaimedOperatorRewards and the decrement underflows/reverts
+    const vaultAddr = vaults[0]
+    await ethers.provider.send('hardhat_impersonateAccount', [vaultAddr])
+    await ethers.provider.send('hardhat_setBalance', [vaultAddr, '0x56BC75E2D63100000'])
+    const vaultSigner = await ethers.getSigner(vaultAddr)
+
+    const startingBalance = await stakingPool.balanceOf(accounts[3])
+    const returned = await strategy
+      .connect(vaultSigner)
+      .withdrawOperatorRewards.staticCall(accounts[3], balance)
+    await strategy.connect(vaultSigner).withdrawOperatorRewards(accounts[3], balance)
+
+    await ethers.provider.send('hardhat_stopImpersonatingAccount', [vaultAddr])
+
+    // the full balance (rewards + rebase surplus) is transferred to the receiver, the accounting is
+    // zeroed rather than underflowing, and no meaningful stLINK is left stranded in the strategy
+    assert.equal(returned, balance, 'did not transfer the full available balance')
+    const received = (await stakingPool.balanceOf(accounts[3])) - startingBalance
+    assert.isTrue(received >= balance - 100n, `received ${received}, expected ~${balance}`)
+    assert.equal((await strategy.getOperatorRewards())[0], 0n)
+    // any residual is sub-share transfer dust, not the stranded rebase surplus (which was ~1000 stLINK)
+    assert.isTrue(
+      (await stakingPool.balanceOf(adrs.strategy)) < 100n,
+      'rebase surplus left stranded'
+    )
+  })
+
   it('queueVaultRemoval should work correctly', async () => {
     const { accounts, strategy, stakingPool, vaults, stakingController, fundFlowController } =
       await loadFixture(deployFixture)
@@ -422,6 +473,83 @@ describe('OperatorVCS', () => {
     assert.equal(fromEther(await token.balanceOf(adrs.stakingPool)), 120)
   })
 
+  it('removeVaultSkipRewardUpdate removes a queued vault without a reward update', async () => {
+    const {
+      signers,
+      accounts,
+      strategy,
+      stakingPool,
+      rewardsController,
+      vaults,
+      stakingController,
+      fundFlowController,
+    } = await loadFixture(deployFixture)
+
+    await stakingPool.deposit(accounts[0], toEther(1000), [encodeVaults([])])
+    await rewardsController.setReward(vaults[5], toEther(40))
+    await rewardsController.setReward(vaults[6], toEther(100))
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    await rewardsController.setReward(vaults[5], toEther(50))
+
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingPool.withdraw(accounts[0], accounts[0], toEther(130), [
+      encodeVaults([0, 5]),
+      encodeVaults([]),
+    ])
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    await stakingController.removeOperator(vaults[5])
+    await stakingController.removeOperator(vaults[4])
+    await strategy.queueVaultRemoval(5)
+    await strategy.queueVaultRemoval(4)
+
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+    await time.increase(claimPeriod)
+    await fundFlowController.updateVaultGroups()
+
+    // non-owner cannot use the escape hatch
+    await expect(strategy.connect(signers[1]).removeVaultSkipRewardUpdate(0)).to.be.revertedWith(
+      'Ownable: caller is not the owner'
+    )
+
+    // owner can remove the queued vault without a preceding strategy reward update. The vault is
+    // removed and its principal de-registered; unlike the normal removeVault path, pending rewards
+    // on the other vaults are not folded in, which is the intended consequence of skipping the
+    // update — the next updateStrategyRewards reconciles them.
+    await strategy.removeVaultSkipRewardUpdate(0)
+
+    assert.deepEqual(await strategy.getVaultRemovalQueue(), [4n])
+    assert.deepEqual(await strategy.getRemovedVaults(), [5n])
+    // started at 900 principal; removing vault 5 de-registers its 100 principal
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
+
+    // the deferred reward settlement must self-heal on the next update WITHOUT fabricating a loss:
+    // depositChange must be non-negative (a spurious negative would trip the rebase pool-closure path)
+    assert.isAtLeast(
+      fromEther(await strategy.getDepositChange()),
+      0,
+      'skip-removal fabricated a loss'
+    )
+    await stakingPool.updateStrategyRewards([0], encode(0))
+    assert.equal(fromEther(await strategy.getDepositChange()), 0, 'accounting did not reconcile')
+    assert.equal(fromEther(await strategy.totalPrincipalDeposits()), 800)
+  })
+
   it('addVault should work correctly with removed vaults', async () => {
     const { accounts, adrs, strategy, stakingPool, fundFlowController, stakingController, vaults } =
       await loadFixture(deployFixture)
@@ -454,6 +582,39 @@ describe('OperatorVCS', () => {
     assert.equal(await vault.operator(), accounts[2])
     assert.equal(await vault.rewardsReceiver(), accounts[3])
     assert.equal(fromEther((await strategy.vaultGroups(1))[1]), 100)
+  })
+
+  it('addVault does not credit group room when reusing a removed ungrouped slot', async () => {
+    const { accounts, strategy, stakingController } = await loadFixture(deployFixture)
+
+    // append a 16th vault at index 15; with no deposits folding vaults into groups it sits at or
+    // above depositIndex and is therefore ungrouped
+    await strategy.addVault(accounts[2], accounts[3], accounts[4])
+    const vaults = await strategy.getVaults()
+    assert.equal(vaults.length, 16)
+    const ungroupedIndex = 15
+    const depositIndex = Number((await strategy.globalVaultState())[3])
+    assert.isAtMost(depositIndex, ungroupedIndex, 'reused index must be ungrouped for this test')
+
+    // snapshot every group's deposit room before the ungrouped remove/reuse cycle
+    const numGroups = Number((await strategy.globalVaultState())[0])
+    const roomBefore: bigint[] = []
+    for (let g = 0; g < numGroups; g++) roomBefore.push((await strategy.vaultGroups(g))[1])
+
+    // remove the ungrouped vault, then re-add so addVault reuses its (ungrouped) slot
+    await stakingController.removeOperator(vaults[ungroupedIndex])
+    await strategy.queueVaultRemoval(ungroupedIndex)
+    await strategy.removeVault(0)
+    await strategy.addVault(accounts[2], accounts[3], accounts[4])
+
+    // no group's totalDepositRoom should have been credited for the reused ungrouped slot
+    for (let g = 0; g < numGroups; g++) {
+      assert.equal(
+        (await strategy.vaultGroups(g))[1],
+        roomBefore[g],
+        `group ${g} deposit room was over-credited for a reused ungrouped slot`
+      )
+    }
   })
 
   it('setOperatorRewardPercentage should work correctly', async () => {
