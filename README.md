@@ -37,11 +37,11 @@ https://docs.stake.link/
 - [Yarn](https://github.com/yarnpkg/yarn)
 - [Node Version Manager, i.e., nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### Use node v14.17.4
+### Use node v22
 
 ```bash
-$ nvm install 14.17.4
-$ nvm use 14.17.4
+$ nvm install 22
+$ nvm use 22
 ```
 
 ### Install dependencies
@@ -52,7 +52,7 @@ $ yarn
 
 ### Hardhat configuration
 
-1. Inside `hardhat.config.ts`, add a provider url to the networks object for each network you would like to connect to
+1. Set env vars `MAINNET_RPC_URL` and `POLYGON_RPC_URL` for the networks you would like to connect to, and `ETHERSCAN_API_KEY` for contract verification
 2. Also replace `accounts[0]` with the private key of the address you will be using for contract deployments and running scripts
 3. Set env var `HARDHAT_NETWORK` to the network you want to deploy to and/or interact with (default is `localhost`)
 
