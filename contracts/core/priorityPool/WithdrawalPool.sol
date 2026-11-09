@@ -129,10 +129,11 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
 
     /**
      * @notice Returns the total amount of liquid staking tokens queued for withdrawal
+     * @dev excludes a remainder too small to transfer on its own, see _finalizableQueuedStake
      * @return total amount queued for withdrawal
      */
     function getTotalQueuedWithdrawals() external view returns (uint256) {
-        return _getStakeByShares(totalQueuedShareWithdrawals);
+        return _finalizableQueuedStake();
     }
 
     /**
@@ -399,7 +400,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      */
     function checkUpkeep(bytes calldata) external view returns (bool, bytes memory) {
         if (
-            _getStakeByShares(totalQueuedShareWithdrawals) != 0 &&
+            _finalizableQueuedStake() != 0 &&
             priorityPool.canWithdraw(address(this), 0) != 0 &&
             block.timestamp > timeOfLastWithdrawal + minTimeBetweenWithdrawals
         ) {
@@ -414,7 +415,7 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
      */
     function performUpkeep(bytes calldata _performData) external {
         uint256 canWithdraw = priorityPool.canWithdraw(address(this), 0);
-        uint256 totalQueued = _getStakeByShares(totalQueuedShareWithdrawals);
+        uint256 totalQueued = _finalizableQueuedStake();
         if (
             totalQueued == 0 ||
             canWithdraw == 0 ||
@@ -536,6 +537,18 @@ contract WithdrawalPool is UUPSUpgradeable, OwnableUpgradeable {
         assert(sharesToWithdraw == 0);
 
         emit WithdrawalsFinalized(_amount);
+    }
+
+    /**
+     * @notice Returns the amount of LST queued for withdrawal that can be finalized
+     * @dev a full finalization can leave a remainder of shares whose stake converts back to 0
+     * shares, which cannot be transferred on its own; it stays queued and finalizes together
+     * with the next queued withdrawal
+     * @return amount of LST that can be finalized
+     */
+    function _finalizableQueuedStake() internal view returns (uint256) {
+        uint256 stake = _getStakeByShares(totalQueuedShareWithdrawals);
+        return _getSharesByStake(stake) == 0 ? 0 : stake;
     }
 
     /**
