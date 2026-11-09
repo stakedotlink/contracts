@@ -1,26 +1,23 @@
 # stake.link Liquid Staking Protocol
 
-stake.link is a Liquid Staking protocol, built initially for the Chainlink Network with upcoming support for Ethereum
-2.0's beacon chain. stake.link consists of the highest-quality node operators and validators to ensure a seamless and
-secure way to put tokens to stake.
+stake.link is a Liquid Staking protocol for the Chainlink, Polygon and Espresso networks. stake.link consists of the
+highest-quality node operators and validators to ensure a seamless and secure way to put tokens to stake.
 
 ## Chainlink
 
 By building on top of Chainlink Staking stake.link offers a way for users to stake their LINK across Chainlink Node
-Operators and in-future the wider community pool, receiving stLINK, the liquid staking receipt token that rebases
-rewards. stLINK is always backed by the amount of LINK staked 1:1.
+Operators and the community pool, receiving stLINK, the liquid staking receipt token that rebases rewards. stLINK is
+always backed by the amount of LINK staked 1:1.
 
-## Ethereum 2.0
+## Polygon
 
-stake.link proposes a unique way of liquid staking within the Ethereum ecosystem, by allowing both reputable and
-self-hosted validators to participate in the same pool. By the way of governance, any self-hosted validator has the
-opportunity to raise a proposal to become a whitelisted reputable validator removing the need for the validator to
-provide collateral by being performant.
+stake.link delegates staked POL across Polygon validators, with users receiving stPOL, the liquid staking receipt token
+that rebases rewards. stPOL is always backed by the amount of POL staked 1:1.
 
-Users who stake their ETH within the stake.link protocol will in return receive sdlETH, the liquid staking receipt token
-that is backed by staked ETH on the beacon chain 1:1. Users who stake ETH will see their tokens buffered, being
-distributed between validators who are either whitelisted or non-whitelisted, with all users receiving a blended reward
-rate between the two.
+## Espresso
+
+stake.link delegates staked ESP across Espresso validators, with users receiving stESP, the liquid staking receipt token
+that rebases rewards. stESP is always backed by the amount of ESP staked 1:1.
 
 ## Technical Documentation
 
