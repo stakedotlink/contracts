@@ -27,6 +27,10 @@
     "address": "0x08341befE6428568cdF798D19223821697DcEC15",
     "artifact": "LPLMigration"
   },
+  "LinkPoolNFT": {
+    "address": "0x72E577012fA2452ce8D6544580E3B4e5f83AA68F",
+    "artifact": "LinkPoolNFT"
+  },
   "FlatFee": {
     "address": "0x8ef5d844De9bbf52FCacED2ecf66B7FAf0B3AA12",
     "artifact": "FlatFee"
@@ -210,6 +214,10 @@
   "LINK_FundFlowController": {
     "address": "0xd2e7381d8d3FcC97C1b4d88761bDBc8Dd26a0200",
     "artifact": "FundFlowController"
+  },
+  "StakedotlinkCouncil": {
+    "address": "0x358fb1c8E14CE61D3D83F17E6804a678B5847673",
+    "artifact": "StakedotlinkCouncil"
   },
   "GovernanceTimelock": {
     "address": "0xb72d8F5213b3E52FAf13Aa074b03C4788e78349F",
