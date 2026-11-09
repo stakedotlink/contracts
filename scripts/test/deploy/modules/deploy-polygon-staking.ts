@@ -6,7 +6,7 @@ import {
   deployUpgradeable,
   deployImplementation,
 } from '../../../utils/deployment'
-import { getAccounts, toEther, ethers } from '../../../utils/helpers'
+import { getAccounts, toEther } from '../../../utils/helpers'
 
 // Polygon Strategy
 const PolygonStrategyArgs = {

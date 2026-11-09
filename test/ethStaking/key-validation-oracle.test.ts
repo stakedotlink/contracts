@@ -11,7 +11,6 @@ import {
   loadFixture,
 } from '../utils/helpers'
 import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../typechain-types'
-import { Signer } from 'ethers'
 
 const keyPairs = {
   keys: concatBytes([padBytes('0xa1', 48), padBytes('0xa2', 48), padBytes('0xa3', 48)]),

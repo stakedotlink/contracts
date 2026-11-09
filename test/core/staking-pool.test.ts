@@ -123,7 +123,7 @@ describe('StakingPool', () => {
   })
 
   it('should be able to add new fee', async () => {
-    const { accounts, adrs, stakingPool, erc677Receiver } = await loadFixture(deployFixture)
+    const { accounts, adrs, stakingPool } = await loadFixture(deployFixture)
 
     await stakingPool.addFee(accounts[1], 500)
     assert.deepEqual(

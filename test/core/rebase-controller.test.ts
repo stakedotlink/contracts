@@ -239,7 +239,7 @@ describe('RebaseController', () => {
   })
 
   it('lossThreshold gates pool closure on small losses', async () => {
-    const { adrs, rebaseController, strategy3, priorityPool } = await loadFixture(deployFixture)
+    const { rebaseController, strategy3, priorityPool } = await loadFixture(deployFixture)
 
     // raise the threshold so only losses greater than 50 close the pool
     await rebaseController.setLossThreshold(toEther(50))
@@ -268,7 +268,7 @@ describe('RebaseController', () => {
   })
 
   it('setLossThreshold is owner-only and emits', async () => {
-    const { signers, accounts, rebaseController } = await loadFixture(deployFixture)
+    const { signers, rebaseController } = await loadFixture(deployFixture)
 
     await expect(rebaseController.setLossThreshold(toEther(10)))
       .to.emit(rebaseController, 'SetLossThreshold')

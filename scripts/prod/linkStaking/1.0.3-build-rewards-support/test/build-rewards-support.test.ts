@@ -1,7 +1,6 @@
 import { GovernanceTimelock } from '../../../../../typechain-types'
-import { deploy, deployImplementation, getContract } from '../../../../utils/deployment'
+import { deployImplementation, getContract } from '../../../../utils/deployment'
 import {
-  fromEther,
   getAccounts,
   toEther,
   ethers,

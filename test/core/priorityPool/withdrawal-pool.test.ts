@@ -316,7 +316,7 @@ describe('WithdrawalPool', () => {
   })
 
   it('forceWithdraw should work correctly', async () => {
-    const { signers, accounts, withdrawalPool, token } = await loadFixture(deployFixture)
+    const { accounts, withdrawalPool, token } = await loadFixture(deployFixture)
 
     await withdrawalPool.queueWithdrawal(accounts[0], toEther(1000))
     await withdrawalPool.queueWithdrawal(accounts[1], toEther(250))

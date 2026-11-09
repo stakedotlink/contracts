@@ -163,8 +163,7 @@ describe('OperatorVault', () => {
   })
 
   it('updateDeposits should work correctly', async () => {
-    const { accounts, adrs, strategy, vault, rewardsController, stakingController } =
-      await loadFixture(deployFixture)
+    const { accounts, adrs, strategy, vault, rewardsController } = await loadFixture(deployFixture)
 
     await rewardsController.setReward(adrs.vault, toEther(10))
     assert.deepEqual(
@@ -250,7 +249,7 @@ describe('OperatorVault', () => {
   })
 
   it('exitVault should work correctly', async () => {
-    const { accounts, adrs, strategy, token, vault, rewardsController, stakingController } =
+    const { accounts, adrs, strategy, vault, rewardsController, stakingController } =
       await loadFixture(deployFixture)
 
     await rewardsController.setReward(adrs.vault, toEther(10))

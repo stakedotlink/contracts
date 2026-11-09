@@ -485,7 +485,7 @@ describe('SDLPool', () => {
   })
 
   it('only the lock owner should be able to initiate an unlock, lock id must be valid', async () => {
-    const { sdlPool, sdlToken, signers, accounts } = await loadFixture(deployFixture)
+    const { sdlPool, sdlToken, signers } = await loadFixture(deployFixture)
 
     await sdlToken.transferAndCall(
       sdlPool.target,
@@ -1091,7 +1091,7 @@ describe('SDLPool', () => {
   })
 
   it('operator approvals should work correctly', async () => {
-    const { sdlPool, sdlToken, signers, accounts, rewardsPool } = await loadFixture(deployFixture)
+    const { sdlPool, sdlToken, signers, accounts } = await loadFixture(deployFixture)
 
     await sdlToken.transferAndCall(
       sdlPool.target,

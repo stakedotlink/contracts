@@ -497,9 +497,7 @@ describe('EspressoFundFlowController', () => {
   })
 
   it('getVaultDeposits should work correctly', async () => {
-    const { stakingPool, strategy, fundFlowController, vaults, accounts } = await loadFixture(
-      deployFixture
-    )
+    const { stakingPool, strategy, fundFlowController, accounts } = await loadFixture(deployFixture)
 
     // Initially all vaults have zero deposits
     let deposits = await fundFlowController.getVaultDeposits()
@@ -564,7 +562,7 @@ describe('EspressoFundFlowController', () => {
   })
 
   it('getUnbondingVaults should work correctly', async () => {
-    const { stakingPool, fundFlowController, withdrawalPool, vaults, accounts } = await loadFixture(
+    const { stakingPool, fundFlowController, withdrawalPool, accounts } = await loadFixture(
       deployFixture
     )
 

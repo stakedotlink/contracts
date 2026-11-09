@@ -11,7 +11,6 @@ import {
 } from '../utils/helpers'
 import {
   ERC677,
-  SDLPoolMock,
   StakingPool,
   PriorityPool,
   StrategyMock,
@@ -386,7 +385,7 @@ describe('StakingProxy', () => {
   })
 
   it('should be able to claim reSDL rewards', async () => {
-    const { stakingProxy, sdlPool, sdlToken, accounts, stakingPool, priorityPool, token } =
+    const { stakingProxy, sdlPool, sdlToken, accounts, stakingPool, priorityPool } =
       await loadFixture(deployFixture)
 
     await sdlToken.transferAndCall(

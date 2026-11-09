@@ -83,7 +83,7 @@ describe('OperatorController', () => {
   })
 
   it('addKeyPairs and getKeyPairs should work correctly', async () => {
-    const { accounts, controller } = await loadFixture(deployFixture)
+    const { controller } = await loadFixture(deployFixture)
 
     await controller.addOperator('Testing123')
     await controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)

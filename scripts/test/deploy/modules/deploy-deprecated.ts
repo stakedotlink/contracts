@@ -1,5 +1,5 @@
-import { updateDeployments, deploy, getContract } from '../../../utils/deployment'
-import { getAccounts, toEther } from '../../../utils/helpers'
+import { updateDeployments, deploy } from '../../../utils/deployment'
+import { getAccounts } from '../../../utils/helpers'
 
 export async function deployDeprecated() {
   const { accounts } = await getAccounts()

@@ -22,11 +22,6 @@ export const deploy = async (contractName: string, args: any[] = []) => {
   return ethers.deployContract(contractName, args) as any
 }
 
-export const attach = async (contractName: string, contractAddress: string) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return Contract.attach(contractAddress)
-}
-
 // several initializers are reinitializer(N) functions that call parent initializers inside an
 // if-branch (fresh deploy vs. migration), which the OZ validator can't see
 const withValidationOptions = (options: UpgradeOptions): UpgradeOptions => ({

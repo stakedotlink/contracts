@@ -1,4 +1,4 @@
-import { fromEther, getAccounts, toEther, ethers, time } from '../../../../utils/helpers'
+import { getAccounts, toEther, ethers, time } from '../../../../utils/helpers'
 import { getContract } from '../../../../utils/deployment'
 import {
   CommunityVCS,

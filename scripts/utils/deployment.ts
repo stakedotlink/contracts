@@ -1,4 +1,3 @@
-import { Addressable } from 'ethers'
 import fse from 'fs-extra'
 import type { UpgradeOptions } from '@openzeppelin/hardhat-upgrades'
 import { ethers, getLedgerSigner, networkName as connectedNetworkName, upgrades } from './helpers'
@@ -30,23 +29,6 @@ export const deployImplementation = async (contractName: string, options: Upgrad
   const ledgerSigner = await getLedgerSigner()
   const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
   return upgrades.deployImplementation(Contract, withValidationOptions(options))
-}
-
-export const upgradeProxy = async (
-  proxyAddress: string | Addressable,
-  implementationContractName: string,
-  useDeployedImplementation = false,
-  call?: { fn: string; args?: unknown[] } | undefined
-) => {
-  const ledgerSigner = await getLedgerSigner()
-  const Contract = await ethers.getContractFactory(implementationContractName, ledgerSigner)
-  const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
-    useDeployedImplementation,
-    call,
-    kind: 'uups',
-  })
-  await contract.waitForDeployment()
-  return contract
 }
 
 export const getDeployments = (networkName?: string) => {
