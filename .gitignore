@@ -9,11 +9,7 @@ node_modules
 /typechain
 /typechain-types
 
-# solidity-coverage files
+# Coverage files
 /coverage
-/coverage.json
-
-# Hardhat Ignition default folder for deployments against a local node
-ignition/deployments/chain-31337
 
 deployments/localhost.json
