@@ -53,32 +53,41 @@ $ yarn
 ### Hardhat configuration
 
 1. Set env vars `MAINNET_RPC_URL` and `POLYGON_RPC_URL` for the networks you would like to connect to, and `ETHERSCAN_API_KEY` for contract verification
-2. Also replace `accounts[0]` with the private key of the address you will be using for contract deployments and running scripts
-3. Set env var `HARDHAT_NETWORK` to the network you want to deploy to and/or interact with (default is `localhost`)
+2. To sign deployments and scripts with a Ledger, add its address to `ledgerAccounts` in `hardhat.config.ts`
+3. Set env var `HARDHAT_NETWORK` (or pass `--network`) to the network you want to deploy to and/or interact with (default is `localhost`)
 
 ## II. Running Locally
 
-To run hardhat and deploy all contracts, run:
+To run a local hardhat node, run:
 
 ```bash
 $ yarn start
 ```
 
-To run hardhat, deploy all contracts, and send a series of transactions that mock user behaviour, run:
+To run a local hardhat node, deploy all contracts, and send a series of transactions that mock user behaviour, run:
 
 ```bash
-$ yarn start-mock-data
+$ yarn start-test-env
 ```
 
-## III. Deploying Contracts
-
-The following commands can be used both on local and non-local networks.
-
-To deploy all contracts to the currently selected network, run:
+To do the same against a node that is already running, run:
 
 ```bash
 $ yarn deploy
+$ yarn setup-test-env
 ```
+
+Deployed addresses are written to `deployments/localhost.json`.
+
+## III. Deploying Contracts
+
+Production deployment and upgrade scripts live in `scripts/prod`, grouped by product and release. To run one against a network, run:
+
+```bash
+$ npx hardhat run scripts/prod/<product>/<release>/<script>.ts --network mainnet
+```
+
+Deployed addresses are recorded in `deployments/<network>.json`.
 
 ## IV. Testing
 
@@ -88,8 +97,8 @@ To run all contract tests, run:
 $ yarn test
 ```
 
-To generate events for metrics testing, run:
+To generate a coverage report in `coverage/`, run:
 
 ```bash
-$ yarn luv-deyta
+$ yarn test --coverage
 ```
