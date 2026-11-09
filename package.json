@@ -15,7 +15,7 @@
     "start-test-env": "node scripts/test/start-test-envs.js",
     "setup-test-env": "npx hardhat run scripts/test/setup/setup-test-env.ts",
     "compile": "npx hardhat compile",
-    "tsc": "tsc",
+    "tsc": "tsc --noEmit",
     "prettier": "prettier --check \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
     "prettier:fix": "prettier --write \"contracts/**/*.sol*\" \"test/**/*.ts*\" \"scripts/**/*.ts*\"",
     "solhint": "solhint contracts/**/*.sol"

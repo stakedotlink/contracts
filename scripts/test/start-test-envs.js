@@ -1,6 +1,6 @@
 import child_process from 'child_process'
 
-// Start hardhat, wait for `deploy-status-ready` status, then run mock data script
+// Compile, start a hardhat node, wait for its first mined block, then deploy and set up the test environment
 
 async function compile() {
   const child = child_process.spawn('npx', ['yarn', 'compile'])
