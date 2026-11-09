@@ -7,6 +7,8 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -14,8 +16,6 @@ import {
   RewardsPool,
   WLOperatorController,
 } from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -28,7 +28,6 @@ const keyPairs = {
 describe('WLOperatorController', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     let operatorWhitelist = (await deploy('OperatorWhitelistMock', [
       [accounts[0]],
@@ -38,23 +37,20 @@ describe('WLOperatorController', () => {
       'test',
       100000,
     ])) as ERC677
-    adrs.wsdToken = await wsdToken.getAddress()
 
     const controller = (await deployUpgradeable('WLOperatorController', [
       accounts[0],
-      adrs.wsdToken,
+      wsdToken.target,
       await operatorWhitelist.getAddress(),
       2,
     ])) as WLOperatorController
-    adrs.controller = await controller.getAddress()
 
     const rewardsPool = (await deploy('RewardsPool', [
-      adrs.controller,
-      adrs.wsdToken,
+      controller.target,
+      wsdToken.target,
     ])) as RewardsPool
-    adrs.rewardsPool = await rewardsPool.getAddress()
 
-    await controller.setRewardsPool(adrs.rewardsPool)
+    await controller.setRewardsPool(rewardsPool.target)
     await controller.setKeyValidationOracle(accounts[0])
     await controller.setBeaconOracle(accounts[0])
 
@@ -67,7 +63,7 @@ describe('WLOperatorController', () => {
       }
     }
 
-    return { signers, accounts, adrs, wsdToken, controller, rewardsPool }
+    return { signers, accounts, wsdToken, controller, rewardsPool }
   }
 
   it('addOperator should work correctly', async () => {
@@ -504,12 +500,12 @@ describe('WLOperatorController', () => {
   })
 
   it('RewardsPoolController functions should work', async () => {
-    const { accounts, adrs, controller, wsdToken, rewardsPool } = await loadFixture(deployFixture)
+    const { accounts, controller, wsdToken, rewardsPool } = await loadFixture(deployFixture)
 
     await controller.setOperatorOwner(2, accounts[2])
     await controller.setOperatorOwner(4, accounts[4])
     await controller.assignNextValidators([0, 2, 4], [3, 3, 2], 8)
-    await wsdToken.transferAndCall(adrs.rewardsPool, toEther(100), '0x00')
+    await wsdToken.transferAndCall(rewardsPool.target, toEther(100), '0x00')
 
     assert.equal(
       fromEther(await rewardsPool.withdrawableRewards(accounts[0])),

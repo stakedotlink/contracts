@@ -1,17 +1,23 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { assert, expect } from 'chai'
-import { ethers } from 'hardhat'
 import { id, AbiCoder } from 'ethers'
 import {
   CCIPCurveGaugeReceiver,
   CCIPCurveGaugeSender,
   CurveGaugeDistributorMock,
+  ERC677,
   MockCCIPRouter,
   StakingPool,
   WrappedSDToken,
 } from '../../../typechain-types'
-import { deploy, deployUpgradeable, fromEther, getAccounts, toEther } from '../../utils/helpers'
-import { ERC677 } from '../../../typechain-types/contracts/core/tokens/base'
+import {
+  deploy,
+  deployUpgradeable,
+  fromEther,
+  getAccounts,
+  toEther,
+  loadFixture,
+  ethers,
+} from '../../utils/helpers'
 
 const sourceChainSelector = 7777n
 const destChainSelector = 8888n

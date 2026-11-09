@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,9 @@ import {
   setupToken,
   fromEther,
   deployImplementation,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import {
   ERC20,
@@ -18,7 +20,6 @@ import {
   StakingPool,
   WithdrawalPoolMock,
 } from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const withdrawalDelay = 86400
 

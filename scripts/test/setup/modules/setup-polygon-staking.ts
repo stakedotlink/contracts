@@ -1,4 +1,4 @@
-import { getAccounts, toEther, setupToken } from '../../../utils/helpers'
+import { getAccounts, toEther, setupToken, ethers } from '../../../utils/helpers'
 import { deploy, getContract } from '../../../utils/deployment'
 import {
   StakingPool,
@@ -7,7 +7,6 @@ import {
   PolygonStrategy,
   PolygonFundFlowController,
 } from '../../../../typechain-types'
-import { ethers } from 'hardhat'
 
 /*
 Accounts:

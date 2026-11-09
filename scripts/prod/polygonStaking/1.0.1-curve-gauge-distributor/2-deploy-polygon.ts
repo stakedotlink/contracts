@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat'
+import { ethers } from '../../../utils/helpers'
 import { updateDeployments, getContract, deploy } from '../../../utils/deployment'
 
 const CurveGaugeDistributorArgs = {

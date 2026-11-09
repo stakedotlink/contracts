@@ -1,22 +1,19 @@
-import { deploy, fromEther, getAccounts, toEther } from '../utils/helpers'
+import { deploy, fromEther, getAccounts, toEther, loadFixture } from '../utils/helpers'
 import { StakingAllowance } from '../../typechain-types'
 import { assert, expect } from 'chai'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('StakingAllowance', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('StakingAllowance', [
       'Staking Allowance',
       'STA',
     ])) as StakingAllowance
-    adrs.token = await token.getAddress()
 
     await token.mint(accounts[0], toEther(10000))
 
-    return { signers, accounts, adrs, token }
+    return { signers, accounts, token }
   }
 
   it('should be able to burn tokens', async () => {

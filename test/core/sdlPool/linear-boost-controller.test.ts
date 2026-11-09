@@ -1,7 +1,6 @@
 import { assert, expect } from 'chai'
-import { toEther, deploy, fromEther } from '../../utils/helpers'
+import { toEther, deploy, fromEther, loadFixture } from '../../utils/helpers'
 import { LinearBoostController } from '../../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const DAY = 86400
 

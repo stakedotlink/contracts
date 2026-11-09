@@ -1,8 +1,6 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { deploy, getAccounts } from '../utils/helpers'
+import { deploy, getAccounts, ethers, loadFixture } from '../utils/helpers'
 import { EspressoRewardsConsumer, EspressoStrategyMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 // 10-byte (bytes10) CRE workflow name authorized to produce reports
 const WORKFLOW_NAME = ethers.hexlify(ethers.toUtf8Bytes('esprewards'))

@@ -1,9 +1,8 @@
-import hre from 'hardhat'
 import Safe from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 import { CommunityVCS, OperatorVCS, PriorityPool, StakingPool } from '../../../../typechain-types'
 import { getContract } from '../../../utils/deployment'
-import { getAccounts } from '../../../utils/helpers'
+import { getAccounts, provider } from '../../../utils/helpers'
 import { MetaTransactionData } from '@safe-global/types-kit'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
@@ -16,7 +15,7 @@ async function main() {
   })
 
   const protocolKitOwner = await Safe.init({
-    provider: hre.network.provider,
+    provider: provider,
     signer: accounts[0],
     safeAddress: multisigAddress,
   })

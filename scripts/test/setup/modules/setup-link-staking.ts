@@ -1,4 +1,4 @@
-import { getAccounts, toEther, setupToken } from '../../../utils/helpers'
+import { getAccounts, toEther, setupToken, ethers, time } from '../../../utils/helpers'
 import { getContract, deploy, updateDeployments } from '../../../utils/deployment'
 import {
   StakingPool,
@@ -10,9 +10,7 @@ import {
   StakingMock,
 } from '../../../../typechain-types'
 import base58 from 'bs58'
-import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 /*
 Accounts:

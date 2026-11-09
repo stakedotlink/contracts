@@ -1,14 +1,12 @@
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { assert, expect } from 'chai'
-import { ethers } from 'hardhat'
 import { id, AbiCoder } from 'ethers'
 import {
   CCIPCurveGaugeReceiver,
   CurveGaugeDistributorMock,
+  ERC677,
   MockCCIPRouter,
 } from '../../../typechain-types'
-import { deploy, fromEther, getAccounts, toEther } from '../../utils/helpers'
-import { ERC677 } from '../../../typechain-types/contracts/core/tokens/base'
+import { deploy, fromEther, getAccounts, toEther, loadFixture, ethers } from '../../utils/helpers'
 
 const chainSelector = 7777n
 
@@ -79,10 +77,10 @@ describe('CCIPCurveGaugeReceiver', function () {
       extraArgs: encodedExtraArgs,
     }
 
-    await expect(ccipRouter.connect(signers[1]).ccipSend(chainSelector, message)).to.be.reverted
+    await expect(ccipRouter.connect(signers[1]).ccipSend(chainSelector, message)).to.revert(ethers)
     await expect(
       ccipRouter.connect(signers[1]).ccipSend(chainSelector, { ...message, tokenAmounts: [] })
-    ).to.be.reverted
+    ).to.revert(ethers)
 
     await ccipRouter.ccipSend(chainSelector, message)
 

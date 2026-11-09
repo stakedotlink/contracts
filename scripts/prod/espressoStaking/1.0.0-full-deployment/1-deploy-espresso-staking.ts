@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { EspressoStrategy, PriorityPool, StakingPool } from '../../../../typechain-types'
 import {
   updateDeployments,
@@ -7,7 +6,7 @@ import {
   deployUpgradeable,
   deployImplementation,
 } from '../../../utils/deployment'
-import { toEther } from '../../../utils/helpers'
+import { toEther, ethers } from '../../../utils/helpers'
 
 // Espresso Strategy
 const EspressoStrategyArgs = {

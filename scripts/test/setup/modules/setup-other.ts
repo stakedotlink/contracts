@@ -1,5 +1,4 @@
-import { ethers } from 'hardhat'
-import { getAccounts, toEther } from '../../../utils/helpers'
+import { getAccounts, toEther, ethers } from '../../../utils/helpers'
 import { getContract } from '../../../utils/deployment'
 import { StakingAllowance, ERC677, OperatorVCS } from '../../../../typechain-types'
 

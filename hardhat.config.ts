@@ -1,7 +1,13 @@
-import { HardhatUserConfig } from 'hardhat/config'
-import '@nomicfoundation/hardhat-toolbox'
-import '@nomicfoundation/hardhat-ledger'
-import '@openzeppelin/hardhat-upgrades'
+import { configVariable, defineConfig } from 'hardhat/config'
+import type { EdrNetworkUserConfig } from 'hardhat/types/config'
+import hardhatEthers from '@nomicfoundation/hardhat-ethers'
+import hardhatEthersChaiMatchers from '@nomicfoundation/hardhat-ethers-chai-matchers'
+import hardhatLedger from '@nomicfoundation/hardhat-ledger'
+import hardhatMocha from '@nomicfoundation/hardhat-mocha'
+import hardhatNetworkHelpers from '@nomicfoundation/hardhat-network-helpers'
+import hardhatTypechain from '@nomicfoundation/hardhat-typechain'
+import hardhatVerify from '@nomicfoundation/hardhat-verify'
+import hardhatUpgrades from '@openzeppelin/hardhat-upgrades'
 
 const balance = '100000000000000000000000'
 const accounts = [
@@ -28,39 +34,64 @@ const ledgerConfig = {
   },
 }
 
-const config: HardhatUserConfig = {
-  defaultNetwork: 'localhost',
+const simulatedNetwork: EdrNetworkUserConfig = {
+  type: 'edr-simulated',
+  chainId: 1337,
+  accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
+  mining: {
+    auto: true,
+    interval: 5000,
+  },
+  gas: 'auto',
+}
+
+export default defineConfig({
+  plugins: [
+    hardhatEthers,
+    hardhatEthersChaiMatchers,
+    hardhatLedger,
+    hardhatMocha,
+    hardhatNetworkHelpers,
+    hardhatTypechain,
+    hardhatVerify,
+    hardhatUpgrades,
+  ],
   networks: {
+    default: simulatedNetwork,
+    node: simulatedNetwork,
     localhost: {
+      type: 'http',
       url: 'http://127.0.0.1:8545',
       gas: 'auto',
       ...ledgerConfig,
     },
     mainnet: {
-      url: '',
+      type: 'http',
+      url: configVariable('MAINNET_RPC_URL'),
       ...ledgerConfig,
     },
     polygon: {
-      url: '',
-      accounts,
-    },
-    hardhat: {
-      chainId: 1337,
-      accounts: accounts.map((acct) => ({ privateKey: acct, balance })),
-      mining: {
-        auto: true,
-        interval: 5000,
-      },
-      gas: 'auto',
+      type: 'http',
+      url: configVariable('POLYGON_RPC_URL'),
+      ...ledgerConfig,
     },
   },
-  etherscan: {
-    apiKey: '',
+  verify: {
+    etherscan: {
+      apiKey: configVariable('ETHERSCAN_API_KEY'),
+    },
+    sourcify: {
+      enabled: false,
+    },
   },
-  sourcify: {
-    enabled: false,
+  typechain: {
+    outDir: 'typechain-types',
   },
   solidity: {
+    npmFilesToBuild: [
+      '@chainlink/contracts/src/v0.8/operatorforwarder/Operator.sol',
+      '@openzeppelin/contracts/token/ERC20/ERC20.sol',
+    ],
     compilers: [
       {
         version: '0.8.22',
@@ -100,6 +131,4 @@ const config: HardhatUserConfig = {
       },
     ],
   },
-}
-
-export default config
+})

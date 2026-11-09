@@ -1,7 +1,6 @@
-import { getAccounts, toEther, setupToken } from '../../../utils/helpers'
+import { getAccounts, toEther, setupToken, ethers } from '../../../utils/helpers'
 import { getContract } from '../../../utils/deployment'
 import { StakingAllowance, ERC677, DelegatorPool, LPLMigration } from '../../../../typechain-types'
-import { ethers } from 'hardhat'
 
 /*
 Accounts:

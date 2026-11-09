@@ -1,4 +1,4 @@
-import { ethers, upgrades } from 'hardhat'
+import { ethers, upgrades } from '../../../utils/helpers'
 import { deployImplementation, getContract } from '../../../utils/deployment'
 
 async function main() {

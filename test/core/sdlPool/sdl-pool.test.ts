@@ -6,6 +6,9 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  ethers,
+  loadFixture,
+  time,
 } from '../../utils/helpers'
 import {
   DelegatorPool,
@@ -15,8 +18,6 @@ import {
   SDLPool,
   StakingAllowance,
 } from '../../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const DAY = 86400
 
@@ -484,7 +485,7 @@ describe('SDLPool', () => {
   })
 
   it('only the lock owner should be able to initiate an unlock, lock id must be valid', async () => {
-    const { sdlPool, sdlToken, signers, accounts } = await loadFixture(deployFixture)
+    const { sdlPool, sdlToken, signers } = await loadFixture(deployFixture)
 
     await sdlToken.transferAndCall(
       sdlPool.target,
@@ -703,7 +704,7 @@ describe('SDLPool', () => {
     )
 
     await time.increase(200 * DAY)
-    sdlPool.withdraw(1, toEther(1))
+    await sdlPool.withdraw(1, toEther(1))
   })
 
   it('only the lock owner should be able to withdraw, lock id must be valid', async () => {
@@ -728,7 +729,7 @@ describe('SDLPool', () => {
       'InvalidLockId()'
     )
 
-    sdlPool.withdraw(1, toEther(1))
+    await sdlPool.withdraw(1, toEther(1))
   })
 
   it('should be able to transfer ownership of locks using transferFrom', async () => {
@@ -1090,7 +1091,7 @@ describe('SDLPool', () => {
   })
 
   it('operator approvals should work correctly', async () => {
-    const { sdlPool, sdlToken, signers, accounts, rewardsPool } = await loadFixture(deployFixture)
+    const { sdlPool, sdlToken, signers, accounts } = await loadFixture(deployFixture)
 
     await sdlToken.transferAndCall(
       sdlPool.target,

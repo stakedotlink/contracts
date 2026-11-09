@@ -6,10 +6,11 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
-  SDLPoolMock,
   StakingPool,
   PriorityPool,
   StrategyMock,
@@ -18,9 +19,7 @@ import {
   RewardsPoolWSD,
   StakingProxy,
 } from '../../typechain-types'
-import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('StakingProxy', () => {
   async function deployFixture() {
@@ -386,7 +385,7 @@ describe('StakingProxy', () => {
   })
 
   it('should be able to claim reSDL rewards', async () => {
-    const { stakingProxy, sdlPool, sdlToken, accounts, stakingPool, priorityPool, token } =
+    const { stakingProxy, sdlPool, sdlToken, accounts, stakingPool, priorityPool } =
       await loadFixture(deployFixture)
 
     await sdlToken.transferAndCall(

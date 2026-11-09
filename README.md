@@ -1,26 +1,23 @@
 # stake.link Liquid Staking Protocol
 
-stake.link is a Liquid Staking protocol, built initially for the Chainlink Network with upcoming support for Ethereum
-2.0's beacon chain. stake.link consists of the highest-quality node operators and validators to ensure a seamless and
-secure way to put tokens to stake.
+stake.link is a Liquid Staking protocol for the Chainlink, Polygon and Espresso networks. stake.link consists of the
+highest-quality node operators and validators to ensure a seamless and secure way to put tokens to stake.
 
 ## Chainlink
 
 By building on top of Chainlink Staking stake.link offers a way for users to stake their LINK across Chainlink Node
-Operators and in-future the wider community pool, receiving stLINK, the liquid staking receipt token that rebases
-rewards. stLINK is always backed by the amount of LINK staked 1:1.
+Operators and the community pool, receiving stLINK, the liquid staking receipt token that rebases rewards. stLINK is
+always backed by the amount of LINK staked 1:1.
 
-## Ethereum 2.0
+## Polygon
 
-stake.link proposes a unique way of liquid staking within the Ethereum ecosystem, by allowing both reputable and
-self-hosted validators to participate in the same pool. By the way of governance, any self-hosted validator has the
-opportunity to raise a proposal to become a whitelisted reputable validator removing the need for the validator to
-provide collateral by being performant.
+stake.link delegates staked POL across Polygon validators, with users receiving stPOL, the liquid staking receipt token
+that rebases rewards. stPOL is always backed by the amount of POL staked 1:1.
 
-Users who stake their ETH within the stake.link protocol will in return receive sdlETH, the liquid staking receipt token
-that is backed by staked ETH on the beacon chain 1:1. Users who stake ETH will see their tokens buffered, being
-distributed between validators who are either whitelisted or non-whitelisted, with all users receiving a blended reward
-rate between the two.
+## Espresso
+
+stake.link delegates staked ESP across Espresso validators, with users receiving stESP, the liquid staking receipt token
+that rebases rewards. stESP is always backed by the amount of ESP staked 1:1.
 
 ## Technical Documentation
 
@@ -37,11 +34,11 @@ https://docs.stake.link/
 - [Yarn](https://github.com/yarnpkg/yarn)
 - [Node Version Manager, i.e., nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### Use node v14.17.4
+### Use node v22
 
 ```bash
-$ nvm install 14.17.4
-$ nvm use 14.17.4
+$ nvm install 22
+$ nvm use 22
 ```
 
 ### Install dependencies
@@ -52,33 +49,42 @@ $ yarn
 
 ### Hardhat configuration
 
-1. Inside `hardhat.config.ts`, add a provider url to the networks object for each network you would like to connect to
-2. Also replace `accounts[0]` with the private key of the address you will be using for contract deployments and running scripts
-3. Set env var `HARDHAT_NETWORK` to the network you want to deploy to and/or interact with (default is `localhost`)
+1. Set env vars `MAINNET_RPC_URL` and `POLYGON_RPC_URL` for the networks you would like to connect to, and `ETHERSCAN_API_KEY` for contract verification
+2. To sign deployments and scripts with a Ledger, add its address to `ledgerAccounts` in `hardhat.config.ts`
+3. Set env var `HARDHAT_NETWORK` (or pass `--network`) to the network you want to deploy to and/or interact with (default is `localhost`)
 
 ## II. Running Locally
 
-To run hardhat and deploy all contracts, run:
+To run a local hardhat node, run:
 
 ```bash
 $ yarn start
 ```
 
-To run hardhat, deploy all contracts, and send a series of transactions that mock user behaviour, run:
+To run a local hardhat node, deploy all contracts, and send a series of transactions that mock user behaviour, run:
 
 ```bash
-$ yarn start-mock-data
+$ yarn start-test-env
 ```
 
-## III. Deploying Contracts
-
-The following commands can be used both on local and non-local networks.
-
-To deploy all contracts to the currently selected network, run:
+To do the same against a node that is already running, run:
 
 ```bash
 $ yarn deploy
+$ yarn setup-test-env
 ```
+
+Deployed addresses are written to `deployments/localhost.json`.
+
+## III. Deploying Contracts
+
+Production deployment and upgrade scripts live in `scripts/prod`, grouped by product and release. To run one against a network, run:
+
+```bash
+$ npx hardhat run scripts/prod/<product>/<release>/<script>.ts --network mainnet
+```
+
+Deployed addresses are recorded in `deployments/<network>.json`.
 
 ## IV. Testing
 
@@ -88,8 +94,8 @@ To run all contract tests, run:
 $ yarn test
 ```
 
-To generate events for metrics testing, run:
+To generate a coverage report in `coverage/`, run:
 
 ```bash
-$ yarn luv-deyta
+$ yarn test --coverage
 ```

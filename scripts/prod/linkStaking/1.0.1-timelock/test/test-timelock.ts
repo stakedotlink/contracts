@@ -1,6 +1,5 @@
-import { fromEther, getAccounts, toEther } from '../../../../utils/helpers'
+import { getAccounts, toEther, ethers, time } from '../../../../utils/helpers'
 import { getContract } from '../../../../utils/deployment'
-import { ethers } from 'hardhat'
 import {
   CommunityVCS,
   FundFlowController,
@@ -12,7 +11,10 @@ import {
   WithdrawalPool,
 } from '../../../../../typechain-types'
 import { assert, expect } from 'chai'
-import { time } from '@nomicfoundation/hardhat-network-helpers'
+
+// runs against a mainnet fork at block 22046736, before ownership moved to the timelock:
+//   npx hardhat node --fork <rpc url> --fork-block-number 22046736
+//   MAINNET_RPC_URL=http://127.0.0.1:8545 npx hardhat run <this file> --network mainnet
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 const executorAddress = '0xd1243345c4c7Ff0A26aF4d291d9C058C9dF3479C'

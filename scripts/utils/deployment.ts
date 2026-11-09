@@ -1,45 +1,39 @@
-import { Addressable } from 'ethers'
 import fse from 'fs-extra'
-import { ethers, upgrades, network } from 'hardhat'
-import { getLedgerSigner } from './helpers'
+import type { UpgradeOptions } from '@openzeppelin/hardhat-upgrades'
+import { ethers, getLedgerSigner, networkName as connectedNetworkName, upgrades } from './helpers'
 
 export const deploy = async (contractName: string, args: any[] = []): Promise<any> => {
   const ledgerSigner = await getLedgerSigner()
   return (await ethers.deployContract(contractName, args, ledgerSigner)).waitForDeployment()
 }
 
-export const deployUpgradeable = async (contractName: string, args: any[] = [], options = {}) => {
-  const ledgerSigner = await getLedgerSigner()
-  const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
-}
+// several initializers are reinitializer(N) functions that call parent initializers inside an
+// if-branch (fresh deploy vs. migration), which the OZ validator can't see
+const withValidationOptions = (options: UpgradeOptions): UpgradeOptions => ({
+  kind: 'uups',
+  ...options,
+  unsafeAllow: ['missing-initializer-call', ...(options.unsafeAllow ?? [])],
+})
 
-export const deployImplementation = async (contractName: string) => {
-  const ledgerSigner = await getLedgerSigner()
-  const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
-  return upgrades.deployImplementation(Contract, { kind: 'uups' })
-}
-
-export const upgradeProxy = async (
-  proxyAddress: string | Addressable,
-  implementationContractName: string,
-  useDeployedImplementation = false,
-  call?: { fn: string; args?: unknown[] } | undefined
+export const deployUpgradeable = async (
+  contractName: string,
+  args: any[] = [],
+  options: UpgradeOptions = {}
 ) => {
   const ledgerSigner = await getLedgerSigner()
-  const Contract = await ethers.getContractFactory(implementationContractName, ledgerSigner)
-  const contract = await upgrades.upgradeProxy(proxyAddress, Contract, {
-    useDeployedImplementation,
-    call,
-    kind: 'uups',
-  })
-  await contract.deployed()
-  return contract
+  const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
+  return upgrades.deployProxy(Contract, args, withValidationOptions(options)) as any
+}
+
+export const deployImplementation = async (contractName: string, options: UpgradeOptions = {}) => {
+  const ledgerSigner = await getLedgerSigner()
+  const Contract = await ethers.getContractFactory(contractName, ledgerSigner)
+  return upgrades.deployImplementation(Contract, withValidationOptions(options))
 }
 
 export const getDeployments = (networkName?: string) => {
-  fse.ensureFileSync(`deployments/${networkName || network.name}.json`)
-  const deployments = fse.readJSONSync(`deployments/${networkName || network.name}.json`, {
+  fse.ensureFileSync(`deployments/${networkName || connectedNetworkName}.json`)
+  const deployments = fse.readJSONSync(`deployments/${networkName || connectedNetworkName}.json`, {
     throws: false,
   })
 
@@ -65,7 +59,7 @@ export const updateDeployments = (
   )
 
   fse.outputJSONSync(
-    `deployments/${network.name}.json`,
+    `deployments/${connectedNetworkName}.json`,
     { ...deployments, ...newDeploymentsWithArtifacts },
     { spaces: 2 }
   )
@@ -86,8 +80,10 @@ export const getContract = async (contractName: string, networkName?: string): P
 }
 
 export const printDeployments = () => {
-  fse.ensureFileSync(`deployments/${network.name}.json`)
-  const deployments = fse.readJSONSync(`deployments/${network.name}.json`, { throws: false })
+  fse.ensureFileSync(`deployments/${connectedNetworkName}.json`)
+  const deployments = fse.readJSONSync(`deployments/${connectedNetworkName}.json`, {
+    throws: false,
+  })
 
   if (!deployments) {
     console.log('Deployments: Nothing to print')

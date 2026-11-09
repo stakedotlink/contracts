@@ -4,8 +4,7 @@ import {
   deployUpgradeable,
   deploy,
 } from '../../../utils/deployment'
-import { ethers } from 'hardhat'
-import { toEther } from '../../../utils/helpers'
+import { toEther, ethers } from '../../../utils/helpers'
 import { FundFlowController, RebaseController, WithdrawalPool } from '../../../../typechain-types'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'

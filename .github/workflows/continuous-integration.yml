@@ -8,14 +8,17 @@ jobs:
 
     steps:
       - name: Checkout the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
-          submodules: recursive
+          node-version: 22
 
       - name: Install native build deps (node-hid)
         run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v6
         with:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
@@ -35,8 +38,8 @@ jobs:
       - name: Compile contracts
         run: yarn compile
 
+      - name: Typecheck
+        run: yarn tsc
+
       - name: Run tests
-        env:
-          ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
-        run: |
-          yarn test
+        run: yarn test

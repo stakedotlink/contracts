@@ -1,4 +1,14 @@
-import { ethers, upgrades } from 'hardhat'
+import hre from 'hardhat'
+import { upgrades as createUpgradesApi, type UpgradeOptions } from '@openzeppelin/hardhat-upgrades'
+
+// one connection shared by every test file, so helpers, fixtures and tests run on the same chain
+const connection = await hre.network.create()
+
+export const { ethers, networkHelpers } = connection
+export const { time } = networkHelpers
+export const loadFixture = networkHelpers.loadFixture.bind(networkHelpers)
+export const mineUpTo = networkHelpers.mineUpTo.bind(networkHelpers)
+export const upgrades = await createUpgradesApi(hre, connection)
 
 export const toEther = (amount: string | number) => {
   return ethers.parseEther(amount.toString())
@@ -12,19 +22,26 @@ export const deploy = async (contractName: string, args: any[] = []) => {
   return ethers.deployContract(contractName, args) as any
 }
 
-export const attach = async (contractName: string, contractAddress: string) => {
+// several initializers are reinitializer(N) functions that call parent initializers inside an
+// if-branch (fresh deploy vs. migration), which the OZ validator can't see
+const withValidationOptions = (options: UpgradeOptions): UpgradeOptions => ({
+  kind: 'uups',
+  ...options,
+  unsafeAllow: ['missing-initializer-call', ...(options.unsafeAllow ?? [])],
+})
+
+export const deployUpgradeable = async (
+  contractName: string,
+  args: any[] = [],
+  options: UpgradeOptions = {}
+) => {
   const Contract = await ethers.getContractFactory(contractName)
-  return Contract.attach(contractAddress)
+  return upgrades.deployProxy(Contract, args, withValidationOptions(options)) as any
 }
 
-export const deployUpgradeable = async (contractName: string, args: any[] = [], options = {}) => {
+export const deployImplementation = async (contractName: string, options: UpgradeOptions = {}) => {
   const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployProxy(Contract, args, { kind: 'uups', ...options }) as any
-}
-
-export const deployImplementation = async (contractName: string) => {
-  const Contract = await ethers.getContractFactory(contractName)
-  return upgrades.deployImplementation(Contract, { kind: 'uups' })
+  return upgrades.deployImplementation(Contract, withValidationOptions(options))
 }
 
 export const getAccounts = async () => {

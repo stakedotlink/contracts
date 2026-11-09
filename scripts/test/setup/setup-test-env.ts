@@ -1,7 +1,6 @@
 import { printDeployments } from '../../utils/deployment'
 import { setupCore } from './modules/setup-core'
 import { setupLINKStaking } from './modules/setup-link-staking'
-import { setupMETISStaking } from './modules/setup-metis-staking'
 import { setupPOLStaking } from './modules/setup-polygon-staking'
 import { setupESPStaking } from './modules/setup-espresso-staking'
 import { setupOther } from './modules/setup-other'
@@ -9,7 +8,6 @@ import { setupOther } from './modules/setup-other'
 async function main() {
   await setupCore()
   await setupLINKStaking()
-  await setupMETISStaking()
   await setupPOLStaking()
   await setupESPStaking()
   await setupOther()

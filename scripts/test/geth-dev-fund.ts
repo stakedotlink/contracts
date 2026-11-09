@@ -1,5 +1,4 @@
-import { ethers } from 'hardhat'
-import { getAccounts } from '../utils/helpers'
+import { getAccounts, ethers } from '../utils/helpers'
 
 async function main() {
   const { accounts } = await getAccounts()

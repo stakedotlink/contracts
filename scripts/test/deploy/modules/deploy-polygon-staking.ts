@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { PriorityPool, SDLPool, StakingPool } from '../../../../typechain-types'
 import {
   updateDeployments,

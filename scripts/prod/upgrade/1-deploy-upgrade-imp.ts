@@ -1,4 +1,4 @@
-import { ethers, upgrades } from 'hardhat'
+import { ethers, upgrades } from '../../utils/helpers'
 import { getContract } from '../../utils/deployment'
 
 // Deployment key in deployments/<network>.json (e.g. 'LINK_PriorityPool', 'LINK_CommunityVCS')

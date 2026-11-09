@@ -1,11 +1,18 @@
-import { ethers, upgrades } from 'hardhat'
 import { GovernanceTimelock } from '../../../../../typechain-types'
-import { deploy, deployImplementation, getContract } from '../../../../utils/deployment'
-import { fromEther, getAccounts, toEther } from '../../../../utils/helpers'
+import { deployImplementation, getContract } from '../../../../utils/deployment'
+import {
+  getAccounts,
+  toEther,
+  ethers,
+  upgrades,
+  loadFixture,
+  time,
+} from '../../../../utils/helpers'
 import { assert } from 'chai'
-import { loadFixture, reset, time } from '@nomicfoundation/hardhat-network-helpers'
 
-const blockNumber = 22421455
+// runs against a mainnet fork at block 22421455:
+//   npx hardhat node --fork <rpc url> --fork-block-number 22421455
+//   npx hardhat test mocha <this file> --network localhost
 
 const FundFlowControllerArgs = {
   linkToken: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
@@ -20,8 +27,6 @@ const enable = true
 
 describe('BUILD rewards support', () => {
   async function deployFixture() {
-    await reset(process.env.FORK_RPC_URL, blockNumber)
-
     const { accounts, signers } = await getAccounts()
     const multisig = await ethers.getImpersonatedSigner(multisigAddress)
     const executor = await ethers.getImpersonatedSigner(
@@ -30,12 +35,14 @@ describe('BUILD rewards support', () => {
     await signers[0].sendTransaction({ to: multisigAddress, value: toEther(10) })
     await signers[0].sendTransaction({ to: executor, value: toEther(10) })
 
+    // these initializers call parent initializers inside an if-branch, which the OZ validator can't see
     const fundFlowController = await getContract('LINK_FundFlowController', 'mainnet')
     const fundFlowControllerImp = (await upgrades.prepareUpgrade(
       fundFlowController.target,
       await ethers.getContractFactory('FundFlowController'),
       {
         kind: 'uups',
+        unsafeAllow: ['missing-initializer-call'],
       }
     )) as string
     console.log('FundFlowController implementation deployed at: ', fundFlowControllerImp)
@@ -46,7 +53,7 @@ describe('BUILD rewards support', () => {
       await ethers.getContractFactory('OperatorVCS'),
       {
         kind: 'uups',
-        unsafeAllow: ['delegatecall'],
+        unsafeAllow: ['delegatecall', 'missing-initializer-call'],
       }
     )) as string
     console.log('OperatorVCS implementation deployed at: ', operatorVCSImp)
@@ -57,7 +64,7 @@ describe('BUILD rewards support', () => {
       await ethers.getContractFactory('CommunityVCS'),
       {
         kind: 'uups',
-        unsafeAllow: ['delegatecall'],
+        unsafeAllow: ['delegatecall', 'missing-initializer-call'],
       }
     )) as string
     console.log('CommunityVCS implementation deployed at: ', communityVCSImp)
