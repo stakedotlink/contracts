@@ -36,6 +36,7 @@ describe('CurveGaugeDistributor stLINK/LINK integration', () => {
       liquidityGaugeV6,
       accounts[0],
       epochDuration,
+      1, // index of stLINK in the curve pool
     ])) as CurveGaugeDistributor
 
     const stableSwap = new ethers.Contract(curveStableSwapNG, [

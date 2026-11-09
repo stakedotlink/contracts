@@ -35,12 +35,14 @@ describe('BUILD rewards support', () => {
     await signers[0].sendTransaction({ to: multisigAddress, value: toEther(10) })
     await signers[0].sendTransaction({ to: executor, value: toEther(10) })
 
+    // these initializers call parent initializers inside an if-branch, which the OZ validator can't see
     const fundFlowController = await getContract('LINK_FundFlowController', 'mainnet')
     const fundFlowControllerImp = (await upgrades.prepareUpgrade(
       fundFlowController.target,
       await ethers.getContractFactory('FundFlowController'),
       {
         kind: 'uups',
+        unsafeAllow: ['missing-initializer-call'],
       }
     )) as string
     console.log('FundFlowController implementation deployed at: ', fundFlowControllerImp)
@@ -51,7 +53,7 @@ describe('BUILD rewards support', () => {
       await ethers.getContractFactory('OperatorVCS'),
       {
         kind: 'uups',
-        unsafeAllow: ['delegatecall'],
+        unsafeAllow: ['delegatecall', 'missing-initializer-call'],
       }
     )) as string
     console.log('OperatorVCS implementation deployed at: ', operatorVCSImp)
@@ -62,7 +64,7 @@ describe('BUILD rewards support', () => {
       await ethers.getContractFactory('CommunityVCS'),
       {
         kind: 'uups',
-        unsafeAllow: ['delegatecall'],
+        unsafeAllow: ['delegatecall', 'missing-initializer-call'],
       }
     )) as string
     console.log('CommunityVCS implementation deployed at: ', communityVCSImp)
