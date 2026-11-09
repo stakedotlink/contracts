@@ -39,48 +39,41 @@ const withdrawalCredentials = padBytes('0x12345', 32)
 describe('DepositController', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const wETH = (await deploy('WrappedETH')) as WrappedETH
-    adrs.wETH = await wETH.getAddress()
 
     const stakingPool = (await deployUpgradeable('StakingPool', [
-      adrs.wETH,
+      wETH.target,
       'LinkPool ETH',
       'lplETH',
       [],
       toEther(10000),
     ])) as StakingPool
-    adrs.stakingPool = await stakingPool.getAddress()
 
     const wsdToken = (await deploy('WrappedSDToken', [
-      adrs.stakingPool,
+      stakingPool.target,
       'Wrapped LinkPool ETH',
       'wlplETH',
     ])) as WrappedSDToken
-    adrs.wsdToken = await wsdToken.getAddress()
 
     const depositContract = (await deploy('DepositContract')) as DepositContract
-    adrs.depositContract = await depositContract.getAddress()
 
     const strategy = (await deployUpgradeable('EthStakingStrategy', [
-      adrs.wETH,
-      adrs.stakingPool,
+      wETH.target,
+      stakingPool.target,
       toEther(1000),
       toEther(10),
-      adrs.depositContract,
+      depositContract.target,
       withdrawalCredentials,
       1000,
     ])) as EthStakingStrategy
-    adrs.strategy = await strategy.getAddress()
 
     await strategy.setBeaconOracle(accounts[0])
 
     const nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
-      adrs.strategy,
-      adrs.wsdToken,
+      strategy.target,
+      wsdToken.target,
     ])) as NWLOperatorController
-    adrs.nwlOperatorController = await nwlOperatorController.getAddress()
 
     await nwlOperatorController.setKeyValidationOracle(accounts[0])
     await nwlOperatorController.setBeaconOracle(accounts[0])
@@ -89,30 +82,27 @@ describe('DepositController', () => {
       [accounts[0]],
     ])) as OperatorWhitelistMock
     const wlOperatorController = (await deployUpgradeable('WLOperatorController', [
-      adrs.strategy,
-      adrs.wsdToken,
+      strategy.target,
+      wsdToken.target,
       await operatorWhitelist.getAddress(),
       2,
     ])) as WLOperatorController
-    adrs.wlOperatorController = await wlOperatorController.getAddress()
 
     await wlOperatorController.setKeyValidationOracle(accounts[0])
     await wlOperatorController.setBeaconOracle(accounts[0])
 
     const nwlRewardsPool = (await deploy('RewardsPool', [
-      adrs.nwlOperatorController,
-      adrs.wsdToken,
+      nwlOperatorController.target,
+      wsdToken.target,
     ])) as RewardsPool
-    adrs.nwlRewardsPool = await nwlRewardsPool.getAddress()
 
     const wlRewardsPool = (await deploy('RewardsPool', [
-      adrs.wlOperatorController,
-      adrs.wsdToken,
+      wlOperatorController.target,
+      wsdToken.target,
     ])) as RewardsPool
-    adrs.wlRewardsPool = await wlRewardsPool.getAddress()
 
-    await nwlOperatorController.setRewardsPool(adrs.nwlRewardsPool)
-    await wlOperatorController.setRewardsPool(adrs.wlRewardsPool)
+    await nwlOperatorController.setRewardsPool(nwlRewardsPool.target)
+    await wlOperatorController.setRewardsPool(wlRewardsPool.target)
 
     for (let i = 0; i < 5; i++) {
       await nwlOperatorController.addOperator('test')
@@ -131,24 +121,22 @@ describe('DepositController', () => {
     }
 
     const depositController = (await deploy('DepositController', [
-      adrs.depositContract,
-      adrs.strategy,
-      adrs.nwlOperatorController,
-      adrs.wlOperatorController,
+      depositContract.target,
+      strategy.target,
+      nwlOperatorController.target,
+      wlOperatorController.target,
     ])) as DepositController
-    adrs.depositController = await depositController.getAddress()
 
-    await strategy.setNWLOperatorController(adrs.nwlOperatorController)
-    await strategy.setWLOperatorController(adrs.wlOperatorController)
-    await strategy.setDepositController(adrs.depositController)
-    await stakingPool.addStrategy(adrs.strategy)
+    await strategy.setNWLOperatorController(nwlOperatorController.target)
+    await strategy.setWLOperatorController(wlOperatorController.target)
+    await strategy.setDepositController(depositController.target)
+    await stakingPool.addStrategy(strategy.target)
     await stakingPool.setPriorityPool(accounts[0])
-    await wETH.approve(adrs.stakingPool, ethers.MaxUint256)
+    await wETH.approve(stakingPool.target, ethers.MaxUint256)
 
     return {
       signers,
       accounts,
-      adrs,
       wETH,
       stakingPool,
       wsdToken,

@@ -5,24 +5,22 @@ import { RewardsReceiver } from '../../typechain-types'
 describe('RewardsReceiver', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const rewardsReceiver = (await deploy('RewardsReceiver', [
       accounts[0],
       toEther(4),
       toEther(5),
     ])) as RewardsReceiver
-    adrs.rewardsReceiver = await rewardsReceiver.getAddress()
 
-    return { signers, accounts, adrs, rewardsReceiver }
+    return { signers, accounts, rewardsReceiver }
   }
 
   it('withdraw should work correctly', async () => {
-    const { signers, adrs, rewardsReceiver } = await loadFixture(deployFixture)
+    const { signers, rewardsReceiver } = await loadFixture(deployFixture)
 
-    await signers[0].sendTransaction({ to: adrs.rewardsReceiver, value: toEther(8) })
+    await signers[0].sendTransaction({ to: rewardsReceiver.target, value: toEther(8) })
     assert.equal(
-      fromEther(await ethers.provider.getBalance(adrs.rewardsReceiver)),
+      fromEther(await ethers.provider.getBalance(rewardsReceiver.target)),
       8,
       'ETH balance incorrect'
     )
@@ -36,7 +34,7 @@ describe('RewardsReceiver', () => {
 
     await rewardsReceiver.withdraw()
     assert.equal(
-      fromEther(await ethers.provider.getBalance(adrs.rewardsReceiver)),
+      fromEther(await ethers.provider.getBalance(rewardsReceiver.target)),
       3,
       'ETH balance incorrect'
     )
@@ -51,7 +49,7 @@ describe('RewardsReceiver', () => {
 
     await rewardsReceiver.withdraw()
     assert.equal(
-      fromEther(await ethers.provider.getBalance(adrs.rewardsReceiver)),
+      fromEther(await ethers.provider.getBalance(rewardsReceiver.target)),
       0,
       'ETH balance incorrect'
     )

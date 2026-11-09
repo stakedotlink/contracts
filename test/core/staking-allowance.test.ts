@@ -5,17 +5,15 @@ import { assert, expect } from 'chai'
 describe('StakingAllowance', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('StakingAllowance', [
       'Staking Allowance',
       'STA',
     ])) as StakingAllowance
-    adrs.token = await token.getAddress()
 
     await token.mint(accounts[0], toEther(10000))
 
-    return { signers, accounts, adrs, token }
+    return { signers, accounts, token }
   }
 
   it('should be able to burn tokens', async () => {

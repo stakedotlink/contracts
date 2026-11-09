@@ -24,38 +24,34 @@ describe('RebaseController', () => {
 
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const token = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'Chainlink',
       'LINK',
       1000000000,
     ])) as ERC677
-    adrs.token = await token.getAddress()
 
     await setupToken(token, accounts)
 
     const stakingPool = (await deployUpgradeable('StakingPool', [
-      adrs.token,
+      token.target,
       'LinkPool LINK',
       'lpLINK',
       [[accounts[4], 1000]],
       toEther(10000),
     ])) as StakingPool
-    adrs.stakingPool = await stakingPool.getAddress()
 
     const priorityPool = (await deployUpgradeable('PriorityPool', [
-      adrs.token,
-      adrs.stakingPool,
+      token.target,
+      stakingPool.target,
       accounts[0],
       toEther(100),
       toEther(1000),
       false,
     ])) as PriorityPool
-    adrs.priorityPool = await priorityPool.getAddress()
 
     const securityPool = (await deployUpgradeable('SecurityPool', [
-      adrs.token,
+      token.target,
       'name',
       'symbol',
       accounts[0],
@@ -63,57 +59,51 @@ describe('RebaseController', () => {
       10,
       100,
     ])) as SecurityPool
-    adrs.securityPool = await securityPool.getAddress()
 
     const rebaseController = (await deploy('RebaseController', [
-      adrs.stakingPool,
-      adrs.priorityPool,
-      adrs.securityPool,
+      stakingPool.target,
+      priorityPool.target,
+      securityPool.target,
       accounts[0],
       accounts[0],
       0,
     ])) as RebaseController
-    adrs.rebaseController = await rebaseController.getAddress()
 
     const strategy1 = (await deployUpgradeable('StrategyMock', [
-      adrs.token,
-      adrs.stakingPool,
+      token.target,
+      stakingPool.target,
       toEther(200),
       toEther(10),
     ])) as StrategyMock
-    adrs.strategy1 = await strategy1.getAddress()
 
     const strategy2 = (await deployUpgradeable('StrategyMock', [
-      adrs.token,
-      adrs.stakingPool,
+      token.target,
+      stakingPool.target,
       toEther(200),
       toEther(20),
     ])) as StrategyMock
-    adrs.strategy2 = await strategy2.getAddress()
 
     const strategy3 = (await deployUpgradeable('StrategyMock', [
-      adrs.token,
-      adrs.stakingPool,
+      token.target,
+      stakingPool.target,
       toEther(10000),
       toEther(10),
     ])) as StrategyMock
-    adrs.strategy3 = await strategy3.getAddress()
 
-    await stakingPool.addStrategy(adrs.strategy1)
-    await stakingPool.addStrategy(adrs.strategy2)
-    await stakingPool.addStrategy(adrs.strategy3)
+    await stakingPool.addStrategy(strategy1.target)
+    await stakingPool.addStrategy(strategy2.target)
+    await stakingPool.addStrategy(strategy3.target)
     await stakingPool.setPriorityPool(accounts[0])
-    await stakingPool.setRebaseController(adrs.rebaseController)
-    await priorityPool.setRebaseController(adrs.rebaseController)
-    await securityPool.setRebaseController(adrs.rebaseController)
+    await stakingPool.setRebaseController(rebaseController.target)
+    await priorityPool.setRebaseController(rebaseController.target)
+    await securityPool.setRebaseController(rebaseController.target)
 
-    await token.approve(adrs.stakingPool, ethers.MaxUint256)
+    await token.approve(stakingPool.target, ethers.MaxUint256)
     await stakingPool.deposit(accounts[0], toEther(1000), ['0x', '0x', '0x'])
 
     return {
       signers,
       accounts,
-      adrs,
       token,
       stakingPool,
       priorityPool,
@@ -126,11 +116,11 @@ describe('RebaseController', () => {
   }
 
   it('updateRewards should work correctly', async () => {
-    const { adrs, token, rebaseController, strategy1, strategy2, strategy3 } = await loadFixture(
+    const { token, rebaseController, strategy1, strategy2, strategy3 } = await loadFixture(
       deployFixture
     )
 
-    await token.transfer(adrs.strategy2, toEther(100))
+    await token.transfer(strategy2.target, toEther(100))
     await strategy1.simulateSlash(toEther(10))
     await strategy3.simulateSlash(toEther(10))
 
@@ -140,8 +130,8 @@ describe('RebaseController', () => {
     assert.equal(fromEther(await strategy2.getDepositChange()), 0)
     assert.equal(fromEther(await strategy3.getDepositChange()), 0)
 
-    await token.transfer(adrs.strategy2, toEther(10))
-    await token.transfer(adrs.strategy3, toEther(20))
+    await token.transfer(strategy2.target, toEther(10))
+    await token.transfer(strategy3.target, toEther(20))
 
     await rebaseController.updateRewards('0x')
 
@@ -151,9 +141,11 @@ describe('RebaseController', () => {
   })
 
   it('checkUpkeep should work correctly', async () => {
-    const { adrs, token, rebaseController, strategy1, strategy3 } = await loadFixture(deployFixture)
+    const { strategy2, token, rebaseController, strategy1, strategy3 } = await loadFixture(
+      deployFixture
+    )
 
-    await token.transfer(adrs.strategy2, toEther(100))
+    await token.transfer(strategy2.target, toEther(100))
 
     let data = await rebaseController.checkUpkeep('0x')
     assert.equal(data[0], false, 'upkeepNeeded incorrect')
@@ -177,10 +169,10 @@ describe('RebaseController', () => {
   })
 
   it('performUpkeep should work correctly', async () => {
-    const { adrs, token, rebaseController, strategy1, strategy3, priorityPool, securityPool } =
+    const { strategy2, token, rebaseController, strategy1, strategy3, priorityPool, securityPool } =
       await loadFixture(deployFixture)
 
-    await token.transfer(adrs.strategy2, toEther(100))
+    await token.transfer(strategy2.target, toEther(100))
     await strategy1.simulateSlash(toEther(10))
     await strategy3.simulateSlash(toEther(10))
 

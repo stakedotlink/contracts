@@ -41,54 +41,46 @@ const withdrawalCredentials = padBytes('0x12345', 32)
 describe('EthStakingStrategy', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const wETH = (await deploy('WrappedETH')) as WrappedETH
-    adrs.wETH = await wETH.getAddress()
 
     const erc677Receiver = (await deploy('ERC677ReceiverMock')) as ERC677ReceiverMock
-    adrs.erc677Receiver = await erc677Receiver.getAddress()
 
     const stakingPool = (await deployUpgradeable('StakingPool', [
-      adrs.wETH,
+      wETH.target,
       'LinkPool ETH',
       'lplETH',
       [
         [accounts[4], 1000],
-        [adrs.erc677Receiver, 2000],
+        [erc677Receiver.target, 2000],
       ],
       toEther(10000),
     ])) as StakingPool
-    adrs.stakingPool = await stakingPool.getAddress()
 
     const wsdToken = (await deploy('WrappedSDToken', [
-      adrs.stakingPool,
+      stakingPool.target,
       'Wrapped LinkPool ETH',
       'wlplETH',
     ])) as WrappedSDToken
-    adrs.wsdToken = await wsdToken.getAddress()
 
     const depositContract = (await deploy('DepositContract')) as DepositContract
-    adrs.depositContract = await depositContract.getAddress()
 
     const strategy = (await deployUpgradeable('EthStakingStrategy', [
-      adrs.wETH,
-      adrs.stakingPool,
+      wETH.target,
+      stakingPool.target,
       toEther(1000),
       toEther(10),
-      adrs.depositContract,
+      depositContract.target,
       withdrawalCredentials,
       1000,
     ])) as EthStakingStrategy
-    adrs.strategy = await strategy.getAddress()
 
     await strategy.setBeaconOracle(accounts[0])
 
     const nwlOperatorController = (await deployUpgradeable('NWLOperatorController', [
-      adrs.strategy,
-      adrs.stakingPool,
+      strategy.target,
+      stakingPool.target,
     ])) as NWLOperatorController
-    adrs.nwlOperatorController = await nwlOperatorController.getAddress()
 
     await nwlOperatorController.setKeyValidationOracle(accounts[0])
     await nwlOperatorController.setBeaconOracle(accounts[0])
@@ -97,32 +89,29 @@ describe('EthStakingStrategy', () => {
       [accounts[0]],
     ])) as OperatorWhitelistMock
     const wlOperatorController = (await deployUpgradeable('WLOperatorController', [
-      adrs.strategy,
-      adrs.stakingPool,
+      strategy.target,
+      stakingPool.target,
       await operatorWhitelist.getAddress(),
       2,
     ])) as WLOperatorController
-    adrs.wlOperatorController = await wlOperatorController.getAddress()
 
     await wlOperatorController.setKeyValidationOracle(accounts[0])
     await wlOperatorController.setBeaconOracle(accounts[0])
 
     const nwlRewardsPool = (await deploy('RewardsPoolWSD', [
-      adrs.nwlOperatorController,
-      adrs.stakingPool,
-      adrs.wsdToken,
+      nwlOperatorController.target,
+      stakingPool.target,
+      wsdToken.target,
     ])) as RewardsPool
-    adrs.nwlRewardsPool = await nwlRewardsPool.getAddress()
 
     const wlRewardsPool = (await deploy('RewardsPoolWSD', [
-      adrs.wlOperatorController,
-      adrs.stakingPool,
-      adrs.wsdToken,
+      wlOperatorController.target,
+      stakingPool.target,
+      wsdToken.target,
     ])) as RewardsPool
-    adrs.wlRewardsPool = await wlRewardsPool.getAddress()
 
-    await nwlOperatorController.setRewardsPool(adrs.nwlRewardsPool)
-    await wlOperatorController.setRewardsPool(adrs.wlRewardsPool)
+    await nwlOperatorController.setRewardsPool(nwlRewardsPool.target)
+    await wlOperatorController.setRewardsPool(wlRewardsPool.target)
 
     for (let i = 0; i < 5; i++) {
       await nwlOperatorController.addOperator('test')
@@ -152,30 +141,28 @@ describe('EthStakingStrategy', () => {
     }
 
     const rewardsReceiver = (await deploy('RewardsReceiver', [
-      adrs.strategy,
+      strategy.target,
       toEther(4),
       toEther(5),
     ])) as RewardsReceiver
-    adrs.rewardsReceiver = await rewardsReceiver.getAddress()
 
     async function stake(amount: number) {
       await wETH.wrap({ value: toEther(amount) })
       await stakingPool.deposit(accounts[0], toEther(amount), ['0x'])
     }
 
-    await strategy.setNWLOperatorController(adrs.nwlOperatorController)
-    await strategy.setWLOperatorController(adrs.wlOperatorController)
+    await strategy.setNWLOperatorController(nwlOperatorController.target)
+    await strategy.setWLOperatorController(wlOperatorController.target)
     await strategy.setDepositController(accounts[0])
-    await strategy.setRewardsReceiver(adrs.rewardsReceiver)
-    await stakingPool.addStrategy(adrs.strategy)
+    await strategy.setRewardsReceiver(rewardsReceiver.target)
+    await stakingPool.addStrategy(strategy.target)
     await stakingPool.setPriorityPool(accounts[0])
     await stakingPool.setRebaseController(accounts[0])
-    await wETH.approve(adrs.stakingPool, ethers.MaxUint256)
+    await wETH.approve(stakingPool.target, ethers.MaxUint256)
 
     return {
       signers,
       accounts,
-      adrs,
       wETH,
       erc677Receiver,
       stakingPool,
@@ -192,10 +179,10 @@ describe('EthStakingStrategy', () => {
   }
 
   it('should be able to deposit into strategy', async () => {
-    const { adrs, wETH, strategy, stake } = await loadFixture(deployFixture)
+    const { wETH, strategy, stake } = await loadFixture(deployFixture)
 
     await stake(2)
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 2, 'strategy balance incorrect')
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 2, 'strategy balance incorrect')
     assert.equal(fromEther(await strategy.getTotalDeposits()), 2, 'getTotalDeposits incorrect')
     assert.equal(fromEther(await strategy.bufferedETH()), 2)
   })
@@ -210,15 +197,8 @@ describe('EthStakingStrategy', () => {
   })
 
   it('depositEther should work correctly', async () => {
-    const {
-      adrs,
-      wETH,
-      strategy,
-      depositContract,
-      nwlOperatorController,
-      wlOperatorController,
-      stake,
-    } = await loadFixture(deployFixture)
+    const { wETH, strategy, depositContract, nwlOperatorController, wlOperatorController, stake } =
+      await loadFixture(deployFixture)
 
     await stake(1000)
     await strategy.depositEther(5, 0, [], [])
@@ -233,9 +213,13 @@ describe('EthStakingStrategy', () => {
       assert.equal(event.args[3], signatures[index], 'Incorrect signature')
     })
 
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 920, 'strategy balance incorrect')
     assert.equal(
-      fromEther(await ethers.provider.getBalance(adrs.depositContract)),
+      fromEther(await wETH.balanceOf(strategy.target)),
+      920,
+      'strategy balance incorrect'
+    )
+    assert.equal(
+      fromEther(await ethers.provider.getBalance(depositContract.target)),
       160,
       'deposit contract balance incorrect'
     )
@@ -262,9 +246,13 @@ describe('EthStakingStrategy', () => {
       assert.equal(event.args[3], signatures[index], 'Incorrect signature')
     })
 
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 776, 'strategy balance incorrect')
     assert.equal(
-      fromEther(await ethers.provider.getBalance(adrs.depositContract)),
+      fromEther(await wETH.balanceOf(strategy.target)),
+      776,
+      'strategy balance incorrect'
+    )
+    assert.equal(
+      fromEther(await ethers.provider.getBalance(depositContract.target)),
       320,
       'deposit contract balance incorrect'
     )
@@ -290,9 +278,13 @@ describe('EthStakingStrategy', () => {
       assert.equal(event.args[3], signatures[index], 'Incorrect signature')
     })
 
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 648, 'strategy balance incorrect')
     assert.equal(
-      fromEther(await ethers.provider.getBalance(adrs.depositContract)),
+      fromEther(await wETH.balanceOf(strategy.target)),
+      648,
+      'strategy balance incorrect'
+    )
+    assert.equal(
+      fromEther(await ethers.provider.getBalance(depositContract.target)),
       448,
       'deposit contract balance incorrect'
     )
@@ -374,12 +366,20 @@ describe('EthStakingStrategy', () => {
   })
 
   it('updateDeposits should work correctly with positive rewards', async () => {
-    const { signers, accounts, adrs, strategy, stakingPool, wsdToken, stake } = await loadFixture(
-      deployFixture
-    )
+    const {
+      signers,
+      accounts,
+      rewardsReceiver,
+      nwlRewardsPool,
+      wlRewardsPool,
+      strategy,
+      stakingPool,
+      wsdToken,
+      stake,
+    } = await loadFixture(deployFixture)
 
     await stake(1000)
-    await signers[0].sendTransaction({ to: adrs.rewardsReceiver, value: toEther(8) })
+    await signers[0].sendTransaction({ to: rewardsReceiver.target, value: toEther(8) })
     await strategy.depositEther(6, 2, [0], [2])
     await strategy.reportBeaconState(3, toEther(196), toEther(0))
 
@@ -388,14 +388,14 @@ describe('EthStakingStrategy', () => {
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(adrs.nwlRewardsPool))
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.target))
       ),
       17.0625,
       'nwl operator rewards incorrect'
     )
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(adrs.wlRewardsPool))
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(wlRewardsPool.target))
       ),
       2.625,
       'wl operator rewards incorrect'
@@ -411,9 +411,8 @@ describe('EthStakingStrategy', () => {
   })
 
   it('updateDeposits should work correctly with negative rewards', async () => {
-    const { accounts, adrs, strategy, stakingPool, wsdToken, stake } = await loadFixture(
-      deployFixture
-    )
+    const { accounts, nwlRewardsPool, wlRewardsPool, strategy, stakingPool, wsdToken, stake } =
+      await loadFixture(deployFixture)
 
     await stake(1000)
     await strategy.depositEther(6, 2, [0], [2])
@@ -424,14 +423,14 @@ describe('EthStakingStrategy', () => {
     await stakingPool.updateStrategyRewards([0], '0x')
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(adrs.nwlRewardsPool))
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(nwlRewardsPool.target))
       ),
       0,
       'nwl operator rewards incorrect'
     )
     assert.equal(
       fromEther(
-        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(adrs.wlRewardsPool))
+        await wsdToken.getUnderlyingByWrapped(await wsdToken.balanceOf(wlRewardsPool.target))
       ),
       0,
       'wl operator rewards incorrect'
@@ -447,43 +446,41 @@ describe('EthStakingStrategy', () => {
   })
 
   it('rewards receiver should work correctly', async () => {
-    const { signers, adrs, wETH, strategy, rewardsReceiver, stake } = await loadFixture(
-      deployFixture
-    )
+    const { signers, wETH, strategy, rewardsReceiver, stake } = await loadFixture(deployFixture)
 
-    await signers[0].sendTransaction({ to: adrs.rewardsReceiver, value: toEther(8) })
+    await signers[0].sendTransaction({ to: rewardsReceiver.target, value: toEther(8) })
     await stake(32)
     await strategy.depositEther(2, 0, [], [])
 
     await strategy.reportBeaconState(2, toEther(64), toEther(0))
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 0)
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 0)
     assert.equal(fromEther(await strategy.getDepositChange()), 0)
     assert.equal(fromEther(await strategy.bufferedETH()), 0)
 
     await strategy.reportBeaconState(2, toEther(63), toEther(0))
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 0)
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 0)
     assert.equal(fromEther(await strategy.getDepositChange()), -1)
     assert.equal(fromEther(await strategy.bufferedETH()), 0)
 
     await strategy.reportBeaconState(2, toEther(65), toEther(0))
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 5)
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 5)
     assert.equal(fromEther(await strategy.getDepositChange()), 6)
     assert.equal(fromEther(await strategy.bufferedETH()), 5)
 
     await strategy.reportBeaconState(2, toEther(66), toEther(0))
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 5)
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 5)
     assert.equal(fromEther(await strategy.getDepositChange()), 7)
     assert.equal(fromEther(await strategy.bufferedETH()), 5)
 
     await rewardsReceiver.setWithdrawalLimits(toEther(0), toEther(4))
 
     await strategy.reportBeaconState(2, toEther(67), toEther(0))
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 8)
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 8)
     assert.equal(fromEther(await strategy.getDepositChange()), 11)
     assert.equal(fromEther(await strategy.bufferedETH()), 8)
 
     await strategy.reportBeaconState(2, toEther(68), toEther(0))
-    assert.equal(fromEther(await wETH.balanceOf(adrs.strategy)), 8)
+    assert.equal(fromEther(await wETH.balanceOf(strategy.target)), 8)
     assert.equal(fromEther(await strategy.getDepositChange()), 12)
     assert.equal(fromEther(await strategy.bufferedETH()), 8)
   })

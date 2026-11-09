@@ -5,15 +5,13 @@ import { OperatorWhitelist } from '../../typechain-types'
 describe('OperatorWhitelist', () => {
   async function deployFixture() {
     const { accounts, signers } = await getAccounts()
-    const adrs: any = {}
 
     const opWhitelist = (await deploy('OperatorWhitelist', [
       accounts[0],
       accounts.slice(2),
     ])) as OperatorWhitelist
-    adrs.opWhitelist = await opWhitelist.getAddress()
 
-    return { signers, accounts, adrs, opWhitelist }
+    return { signers, accounts, opWhitelist }
   }
 
   it('getWhitelistEntry should work correctly', async () => {

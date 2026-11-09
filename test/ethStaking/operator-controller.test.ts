@@ -29,28 +29,24 @@ const keyPairs = {
 describe('OperatorController', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const sdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'test',
       'test',
       50,
     ])) as ERC677
-    adrs.sdToken = await sdToken.getAddress()
 
     const controller = (await deployUpgradeable('OperatorControllerMock', [
       accounts[0],
-      adrs.sdToken,
+      sdToken.target,
     ])) as OperatorControllerMock
-    adrs.controller = await controller.getAddress()
 
     const rewardsPool = (await deploy('RewardsPool', [
-      adrs.controller,
-      adrs.sdToken,
+      controller.target,
+      sdToken.target,
     ])) as RewardsPool
-    adrs.rewardsPool = await rewardsPool.getAddress()
 
-    await controller.setRewardsPool(adrs.rewardsPool)
+    await controller.setRewardsPool(rewardsPool.target)
     await controller.setKeyValidationOracle(accounts[0])
     await controller.setBeaconOracle(accounts[0])
 
@@ -63,7 +59,7 @@ describe('OperatorController', () => {
       }
     }
 
-    return { signers, accounts, adrs, sdToken, controller, rewardsPool }
+    return { signers, accounts, sdToken, controller, rewardsPool }
   }
 
   it('addOperator should work correctly', async () => {
@@ -133,13 +129,13 @@ describe('OperatorController', () => {
   })
 
   it('rewards distribution should work correctly', async () => {
-    const { signers, accounts, adrs, controller, sdToken } = await loadFixture(deployFixture)
+    const { signers, accounts, rewardsPool, controller, sdToken } = await loadFixture(deployFixture)
 
     await controller.assignNextValidators([0], [1], 1)
-    await sdToken.transferAndCall(adrs.controller, toEther(50), '0x00')
+    await sdToken.transferAndCall(controller.target, toEther(50), '0x00')
 
     assert.equal(
-      fromEther(await sdToken.balanceOf(adrs.rewardsPool)),
+      fromEther(await sdToken.balanceOf(rewardsPool.target)),
       50,
       'rewards pool balance incorrect'
     )
@@ -304,12 +300,12 @@ describe('OperatorController', () => {
   })
 
   it('contract upgradeability should work correctly', async () => {
-    const { signers, accounts, adrs, controller } = await loadFixture(deployFixture)
+    const { signers, accounts, controller } = await loadFixture(deployFixture)
 
     await controller.assignNextValidators([0], [2], 2)
 
     let Controller = await ethers.getContractFactory('OperatorControllerMockV2')
-    let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.controller, Controller, {
+    let upgradedImpAddress = (await upgrades.prepareUpgrade(controller.target, Controller, {
       kind: 'uups',
       unsafeAllow: ['missing-initializer'],
     })) as string
@@ -322,7 +318,7 @@ describe('OperatorController', () => {
 
     let upgraded = (await ethers.getContractAt(
       'OperatorControllerMockV2',
-      adrs.controller
+      controller.target
     )) as OperatorControllerMockV2
     assert.equal(Number(await upgraded.contractVersion()), 2, 'contract not upgraded')
 

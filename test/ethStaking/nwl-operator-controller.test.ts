@@ -28,25 +28,22 @@ const keyPairs = {
 describe('NWLOperatorController', () => {
   async function deployFixture() {
     const { signers, accounts } = await getAccounts()
-    const adrs: any = {}
 
     const wsdToken = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
       'test',
       'test',
       100000,
     ])) as ERC677
-    adrs.wsdToken = await wsdToken.getAddress()
 
     const controller = (await deployUpgradeable('NWLOperatorController', [
       accounts[0],
-      adrs.wsdToken,
+      wsdToken.target,
     ])) as NWLOperatorController
-    adrs.controller = await controller.getAddress()
 
     const setupController = async (ctrlr: NWLOperatorController) => {
       const rewardsPool = (await deploy('RewardsPool', [
         await ctrlr.getAddress(),
-        adrs.wsdToken,
+        wsdToken.target,
       ])) as RewardsPool
 
       await ctrlr.setRewardsPool(await rewardsPool.getAddress())
@@ -68,9 +65,8 @@ describe('NWLOperatorController', () => {
     }
 
     const rewardsPool = await setupController(controller)
-    adrs.rewardsPool = await rewardsPool.getAddress()
 
-    return { signers, accounts, adrs, wsdToken, controller, rewardsPool, setupController }
+    return { signers, accounts, wsdToken, controller, rewardsPool, setupController }
   }
 
   it('addOperator should work correctly', async () => {
@@ -90,7 +86,7 @@ describe('NWLOperatorController', () => {
   })
 
   it('addKeyPairs should work correctly', async () => {
-    const { signers, adrs, controller } = await loadFixture(deployFixture)
+    const { signers, controller } = await loadFixture(deployFixture)
 
     await controller.addOperator('Testing123')
     await controller.addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures, {
@@ -102,7 +98,10 @@ describe('NWLOperatorController', () => {
     assert.equal(Number(op[6]), 3, 'operator totalKeyPairs incorrect')
     assert.equal(Number(op[7]), 0, 'operator usedKeyPairs incorrect')
 
-    assert.equal(fromEther(await ethers.provider.getBalance(adrs.controller)), 3 * 16 + 5 * 3 * 16)
+    assert.equal(
+      fromEther(await ethers.provider.getBalance(controller.target)),
+      3 * 16 + 5 * 3 * 16
+    )
 
     await expect(
       controller.connect(signers[1]).addKeyPairs(5, 3, keyPairs.keys, keyPairs.signatures)
@@ -166,7 +165,7 @@ describe('NWLOperatorController', () => {
   })
 
   it('removeKeyPairs should work correctly', async () => {
-    const { signers, accounts, adrs, controller } = await loadFixture(deployFixture)
+    const { signers, accounts, controller } = await loadFixture(deployFixture)
 
     await controller.addKeyPairs(2, 3, keyPairs.keys, keyPairs.signatures, {
       value: toEther(3 * 16),
@@ -220,7 +219,7 @@ describe('NWLOperatorController', () => {
     )
 
     assert.equal(Number(await controller.queueLength()), 4, 'queueLength incorrect')
-    assert.equal(fromEther(await ethers.provider.getBalance(adrs.controller)), 16 * 10)
+    assert.equal(fromEther(await ethers.provider.getBalance(controller.target)), 16 * 10)
   })
 
   it('assignNextValidators should work correctly', async () => {
@@ -431,12 +430,12 @@ describe('NWLOperatorController', () => {
   })
 
   it('RewardsPoolController functions should work', async () => {
-    const { accounts, adrs, controller, rewardsPool, wsdToken } = await loadFixture(deployFixture)
+    const { accounts, controller, rewardsPool, wsdToken } = await loadFixture(deployFixture)
 
     await controller.setOperatorOwner(2, accounts[2])
     await controller.setOperatorOwner(4, accounts[4])
     await controller.assignNextValidators(8)
-    await wsdToken.transferAndCall(adrs.rewardsPool, toEther(100), '0x00')
+    await wsdToken.transferAndCall(rewardsPool.target, toEther(100), '0x00')
 
     assert.equal(
       fromEther(await rewardsPool.withdrawableRewards(accounts[0])),
@@ -492,15 +491,14 @@ describe('NWLOperatorController', () => {
   })
 
   it('withdrawableStake and withdrawStake should work correctly', async () => {
-    const { signers, adrs, setupController } = await loadFixture(deployFixture)
+    const { signers, wsdToken, setupController } = await loadFixture(deployFixture)
 
     const strategy = (await deploy('EthStakingStrategyMock')) as EthStakingStrategyMock
     const controller = (await deployUpgradeable('NWLOperatorController', [
       await strategy.getAddress(),
-      adrs.wsdToken,
+      wsdToken.target,
     ])) as NWLOperatorController
-    adrs.controller = await controller.getAddress()
-    await strategy.setNWLOperatorController(adrs.controller)
+    await strategy.setNWLOperatorController(controller.target)
     await setupController(controller)
 
     await strategy.depositEther(8)
