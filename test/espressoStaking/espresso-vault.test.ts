@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,6 +6,9 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import {
   ERC20,
@@ -14,7 +16,6 @@ import {
   EspressoRewardsMock,
   EspressoVault,
 } from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const exitEscrowPeriod = 86400 // 1 day
 

@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,9 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import {
   ERC20,
@@ -19,7 +21,6 @@ import {
   StakingPool,
   WithdrawalPoolMock,
 } from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const exitEscrowPeriod = 7 * 86400 // 7 days
 const minTimeBetweenUnbonding = 10 * 86400 // 10 days

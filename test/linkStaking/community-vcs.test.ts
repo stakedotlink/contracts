@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,8 @@ import {
   setupToken,
   fromEther,
   deployImplementation,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -16,7 +17,6 @@ import {
   StakingRewardsMock,
   FundFlowControllerMock,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -133,10 +133,16 @@ describe('CommunityVCS', () => {
     const { strategy } = await loadFixture(deployFixture)
 
     await strategy.deposit(toEther(1000), encodeVaults([]))
-    expect(strategy.performUpkeep('0x')).to.be.revertedWith('VaultsAboveThreshold()')
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'VaultsAboveThreshold()'
+    )
 
     await strategy.deposit(toEther(90), encodeVaults([]))
-    expect(strategy.performUpkeep('0x')).to.be.revertedWith('VaultsAboveThreshold()')
+    await expect(strategy.performUpkeep('0x')).to.be.revertedWithCustomError(
+      strategy,
+      'VaultsAboveThreshold()'
+    )
 
     await strategy.deposit(toEther(10), encodeVaults([]))
     await strategy.performUpkeep('0x')
@@ -203,7 +209,7 @@ describe('CommunityVCS', () => {
     await strategy.claimRewards([9, 10, 11], toEther(10))
     assert.equal(fromEther(await token.balanceOf(adrs.strategy)), 70)
 
-    await expect(strategy.claimRewards([100], 0)).to.be.reverted
+    await expect(strategy.claimRewards([100], 0)).to.revert(ethers)
   })
 
   it('deposit should work correctly', async () => {

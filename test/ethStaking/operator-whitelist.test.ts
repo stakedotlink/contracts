@@ -1,7 +1,6 @@
 import { assert, expect } from 'chai'
-import { deploy, getAccounts } from '../utils/helpers'
+import { deploy, getAccounts, loadFixture } from '../utils/helpers'
 import { OperatorWhitelist } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('OperatorWhitelist', () => {
   async function deployFixture() {

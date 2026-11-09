@@ -1,4 +1,3 @@
-import { ethers, upgrades } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,9 +6,11 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  upgrades,
+  loadFixture,
 } from '../utils/helpers'
 import { ERC677, StrategyMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('Strategy', () => {
   async function deployFixture() {
@@ -45,6 +46,7 @@ describe('Strategy', () => {
     let StrategyV2 = await ethers.getContractFactory('StrategyMockV2')
     let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.strategy, StrategyV2, {
       kind: 'uups',
+      unsafeAllow: ['missing-initializer'],
     })) as string
     await strategy.upgradeTo(upgradedImpAddress)
 
@@ -64,6 +66,7 @@ describe('Strategy', () => {
     let StrategyV2 = await ethers.getContractFactory('StrategyMockV2')
     let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.strategy, StrategyV2, {
       kind: 'uups',
+      unsafeAllow: ['missing-initializer'],
     })) as string
 
     await expect(strategy.connect(signers[1]).upgradeTo(upgradedImpAddress)).to.be.revertedWith(

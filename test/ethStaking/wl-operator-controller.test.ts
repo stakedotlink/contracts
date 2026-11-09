@@ -7,6 +7,8 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -14,8 +16,6 @@ import {
   RewardsPool,
   WLOperatorController,
 } from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2

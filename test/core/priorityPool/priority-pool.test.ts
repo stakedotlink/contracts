@@ -6,6 +6,8 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  ethers,
+  loadFixture,
 } from '../../utils/helpers'
 import {
   ERC677,
@@ -15,9 +17,7 @@ import {
   StrategyMock,
   WithdrawalPool,
 } from '../../../typechain-types'
-import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('PriorityPool', () => {
   async function deployFixture() {
@@ -99,7 +99,7 @@ describe('PriorityPool', () => {
         toEther(1000),
         false,
       ])
-    ).to.be.reverted
+    ).to.revert(ethers)
     // queueDepositMin must be <= queueDepositMax
     await expect(
       deployUpgradeable('PriorityPool', [
@@ -110,7 +110,7 @@ describe('PriorityPool', () => {
         toEther(100),
         false,
       ])
-    ).to.be.reverted
+    ).to.revert(ethers)
   })
 
   it('setQueueDepositParams enforces min <= max', async () => {

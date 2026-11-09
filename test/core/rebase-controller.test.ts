@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,6 +6,8 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -16,7 +17,6 @@ import {
   PriorityPool,
   SecurityPool,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 
 describe('RebaseController', () => {
   const decode = (data: any) => ethers.AbiCoder.defaultAbiCoder().decode(['uint256'], data)

@@ -88,6 +88,10 @@ export default defineConfig({
     outDir: 'typechain-types',
   },
   solidity: {
+    npmFilesToBuild: [
+      '@chainlink/contracts/src/v0.8/operatorforwarder/Operator.sol',
+      '@openzeppelin/contracts/token/ERC20/ERC20.sol',
+    ],
     compilers: [
       {
         version: '0.8.22',

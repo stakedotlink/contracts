@@ -1,8 +1,14 @@
-import { ethers } from 'hardhat'
 import { assert } from 'chai'
-import { toEther, deploy, deployUpgradeable, getAccounts, fromEther } from '../utils/helpers'
+import {
+  toEther,
+  deploy,
+  deployUpgradeable,
+  getAccounts,
+  fromEther,
+  ethers,
+  loadFixture,
+} from '../utils/helpers'
 import { ERC677, CommunityVault, StakingMock, StakingRewardsMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('CommunityVault', () => {
   async function deployFixture() {

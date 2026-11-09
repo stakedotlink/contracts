@@ -7,6 +7,9 @@ import {
   deploy,
   toEther,
   fromEther,
+  ethers,
+  upgrades,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -14,8 +17,6 @@ import {
   OperatorControllerMockV2,
   RewardsPool,
 } from '../../typechain-types'
-import { ethers, upgrades } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2
@@ -310,6 +311,7 @@ describe('OperatorController', () => {
     let Controller = await ethers.getContractFactory('OperatorControllerMockV2')
     let upgradedImpAddress = (await upgrades.prepareUpgrade(adrs.controller, Controller, {
       kind: 'uups',
+      unsafeAllow: ['missing-initializer'],
     })) as string
 
     await expect(controller.connect(signers[1]).upgradeTo(upgradedImpAddress)).to.be.revertedWith(

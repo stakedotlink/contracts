@@ -6,10 +6,11 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import { ERC677, SecurityPool, RewardsPoolTimeBased } from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('SecurityPool', () => {
   async function deployFixture() {

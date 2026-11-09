@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,9 +6,10 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import { ERC677, StrategyMock, StakingPool, ERC677ReceiverMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('StakingPool', () => {
   async function deployFixture() {

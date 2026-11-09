@@ -1,7 +1,6 @@
-import { deploy, fromEther, getAccounts, toEther } from '../utils/helpers'
+import { deploy, fromEther, getAccounts, toEther, loadFixture } from '../utils/helpers'
 import { StakingAllowance } from '../../typechain-types'
 import { assert, expect } from 'chai'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('StakingAllowance', () => {
   async function deployFixture() {

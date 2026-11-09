@@ -1,8 +1,6 @@
 import { assert, expect } from 'chai'
-import { deploy, fromEther, getAccounts, toEther } from '../utils/helpers'
+import { deploy, fromEther, getAccounts, toEther, ethers, loadFixture } from '../utils/helpers'
 import { RewardsReceiver } from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('RewardsReceiver', () => {
   async function deployFixture() {

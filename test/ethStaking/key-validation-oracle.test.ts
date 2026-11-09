@@ -1,5 +1,4 @@
 import { assert, expect } from 'chai'
-import { ethers } from 'hardhat'
 import {
   deploy,
   deployUpgradeable,
@@ -8,10 +7,11 @@ import {
   fromEther,
   concatBytes,
   padBytes,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import { ERC677, KeyValidationOracle, OperatorControllerMock } from '../../typechain-types'
 import { Signer } from 'ethers'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const keyPairs = {
   keys: concatBytes([padBytes('0xa1', 48), padBytes('0xa2', 48), padBytes('0xa3', 48)]),

@@ -6,10 +6,10 @@ import {
   getAccounts,
   setupToken,
   toEther,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import { ERC677, LiquidSDIndexPool, LSDIndexAdapterMock } from '../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('LiquidSDIndexPool', () => {
   async function deployFixture() {

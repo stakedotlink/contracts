@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,9 +6,10 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import { ERC677, StakingPool, StrategyMock, TokenForwarder } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('TokenForwarder', () => {
   async function deployFixture() {
@@ -35,8 +35,9 @@ describe('TokenForwarder', () => {
   }
 
   it('should not be deployable with a zero address receiver', async () => {
+    const TokenForwarder = await ethers.getContractFactory('TokenForwarder')
     await expect(deploy('TokenForwarder', [ethers.ZeroAddress])).to.be.revertedWithCustomError(
-      await ethers.getContractFactory('TokenForwarder'),
+      TokenForwarder,
       'InvalidAddress'
     )
   })

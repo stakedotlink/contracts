@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,8 @@ import {
   fromEther,
   padBytes,
   concatBytes,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   StakingPool,
@@ -22,7 +23,6 @@ import {
   RewardsReceiver,
   ERC677ReceiverMock,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const depositAmount = '0x0040597307000000'
 

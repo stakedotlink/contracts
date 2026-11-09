@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,6 +6,8 @@ import {
   getAccounts,
   padBytes,
   concatBytes,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   StakingPool,
@@ -20,7 +21,6 @@ import {
   RewardsPool,
   DepositController,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 

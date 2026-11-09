@@ -6,9 +6,9 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  loadFixture,
 } from '../utils/helpers'
 import { LSTMock, OperatorStakingPool } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('OperatorStakingPool', () => {
   async function deployFixture() {

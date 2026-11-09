@@ -6,6 +6,9 @@ import {
   setupToken,
   fromEther,
   deployUpgradeable,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -15,8 +18,6 @@ import {
   RewardsPoolWSD,
   WrappedSDTokenMock,
 } from '../../typechain-types'
-import { ethers, network } from 'hardhat'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('RewardsPoolController', () => {
   async function deployFixture() {
@@ -609,7 +610,7 @@ describe('RewardsPoolController', () => {
       const fixtureRet = await deployFixture()
       const adrs = fixtureRet.adrs
 
-      await network.provider.send('evm_setIntervalMining', [0])
+      await ethers.provider.send('evm_setIntervalMining', [0])
 
       const token3 = (await deploy('contracts/core/tokens/base/ERC677.sol:ERC677', [
         'Token3',

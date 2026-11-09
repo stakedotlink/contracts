@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   deploy,
@@ -8,6 +7,8 @@ import {
   toEther,
   fromEther,
   deployUpgradeable,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -15,7 +16,6 @@ import {
   NWLOperatorController,
   RewardsPool,
 } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 const pubkeyLength = 48 * 2
 const signatureLength = 96 * 2

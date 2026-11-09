@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -7,6 +6,9 @@ import {
   getAccounts,
   fromEther,
   deployImplementation,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -19,7 +21,6 @@ import {
   FundFlowController,
   CommunityVCS,
 } from '../../typechain-types'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -283,7 +284,10 @@ describe('OperatorVCS', () => {
 
     let vault = (await ethers.getContractAt('OperatorVault', vaults[0])) as OperatorVault
 
-    expect(vault.withdrawRewards()).to.be.revertedWithCustomError(vault, 'OnlyRewardsReceiver')
+    await expect(vault.withdrawRewards()).to.be.revertedWithCustomError(
+      vault,
+      'OnlyRewardsReceiver'
+    )
 
     await rewardsController.setReward(vaults[0], toEther(10))
     await rewardsController.setReward(vaults[1], toEther(10))
@@ -636,14 +640,15 @@ describe('OperatorVCS', () => {
   it('setRewardsReceiver should work correctly', async () => {
     const { accounts, strategy, vaults } = await loadFixture(deployFixture)
 
+    let vault = await ethers.getContractAt('OperatorVault', vaults[0])
     await expect(strategy.setRewardsReceiver(1, accounts[4])).to.be.revertedWithCustomError(
-      await ethers.getContractAt('OperatorVault', vaults[0]),
+      vault,
       'OnlyRewardsReceiver()'
     )
 
     await strategy.addVault(accounts[0], ethers.ZeroAddress, accounts[3])
     await strategy.setRewardsReceiver(15, accounts[4])
-    let vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[15])
+    vault = await ethers.getContractAt('OperatorVault', (await strategy.getVaults())[15])
     assert.equal(await vault.rewardsReceiver(), accounts[4])
   })
 })

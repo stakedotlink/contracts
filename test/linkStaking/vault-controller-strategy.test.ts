@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import {
   toEther,
@@ -8,6 +7,9 @@ import {
   getAccounts,
   setupToken,
   fromEther,
+  ethers,
+  loadFixture,
+  time,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -20,7 +22,6 @@ import {
   FundFlowController,
 } from '../../typechain-types'
 import { Interface } from 'ethers'
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
 const unbondingPeriod = 28 * 86400
 const claimPeriod = 7 * 86400
@@ -107,7 +108,7 @@ describe('VaultControllerStrategy', () => {
     }
 
     for (let i = 0; i < 15; i++) {
-      vaultContracts[i].transferOwnership(adrs.strategy)
+      await vaultContracts[i].transferOwnership(adrs.strategy)
     }
 
     await strategy.addVaults(vaults)
@@ -625,7 +626,9 @@ describe('VaultControllerStrategy', () => {
     let vaultInterface = (await ethers.getContractFactory('CommunityVaultV2Mock'))
       .interface as Interface
 
-    let newVaultImplementation = (await deployImplementation('CommunityVaultV2Mock')) as string
+    let newVaultImplementation = (await deployImplementation('CommunityVaultV2Mock', {
+      unsafeAllow: ['missing-initializer'],
+    })) as string
     await strategy.setVaultImplementation(newVaultImplementation)
 
     await strategy.upgradeVaults([0, 1, 2, 3, 4], ['0x', '0x', '0x', '0x', '0x'])

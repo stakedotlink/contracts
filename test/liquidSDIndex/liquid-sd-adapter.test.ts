@@ -1,7 +1,14 @@
 import { assert, expect } from 'chai'
-import { deploy, deployUpgradeable, fromEther, getAccounts, toEther } from '../utils/helpers'
+import {
+  deploy,
+  deployUpgradeable,
+  fromEther,
+  getAccounts,
+  toEther,
+  loadFixture,
+  ethers,
+} from '../utils/helpers'
 import { ERC677, LSDIndexAdapterMock } from '../../typechain-types'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('LSDIndexAdapter', () => {
   async function deployFixture() {
@@ -64,7 +71,8 @@ describe('LSDIndexAdapter', () => {
     assert.equal(fromEther(await adapter.getTotalDepositsLSD()), 500)
     assert.equal(fromEther(await adapter.getTotalDeposits()), 1000)
 
-    await expect(lsd.connect(signers[1]).transferFrom(adrs.adapter, accounts[1], toEther(500))).to
-      .be.reverted
+    await expect(
+      lsd.connect(signers[1]).transferFrom(adrs.adapter, accounts[1], toEther(500))
+    ).to.revert(ethers)
   })
 })

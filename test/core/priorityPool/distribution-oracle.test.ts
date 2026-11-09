@@ -1,8 +1,15 @@
-import { toEther, deploy, fromEther, getAccounts } from '../../utils/helpers'
+import {
+  toEther,
+  deploy,
+  fromEther,
+  getAccounts,
+  ethers,
+  loadFixture,
+  mineUpTo,
+  time,
+} from '../../utils/helpers'
 import { assert, expect } from 'chai'
 import { ERC677, DistributionOracle, PriorityPoolMock, Operator } from '../../../typechain-types'
-import { ethers } from 'hardhat'
-import { loadFixture, mineUpTo, time } from '@nomicfoundation/hardhat-network-helpers'
 import cbor from 'cbor'
 
 describe('DistributionOracle', () => {

@@ -1,7 +1,6 @@
-import { toEther, deploy, getAccounts, setupToken, fromEther } from '../utils/helpers'
+import { toEther, deploy, getAccounts, setupToken, fromEther, loadFixture } from '../utils/helpers'
 import { ERC677, StakingAllowance, LPLMigration } from '../../typechain-types'
 import { assert, expect } from 'chai'
-import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 
 describe('LPLMigration', () => {
   async function deployFixture() {

@@ -6,6 +6,8 @@ import {
   deployUpgradeable,
   getAccounts,
   setupToken,
+  ethers,
+  loadFixture,
 } from '../utils/helpers'
 import {
   ERC677,
@@ -18,9 +20,7 @@ import {
   RewardsPoolWSD,
   StakingProxy,
 } from '../../typechain-types'
-import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 
 describe('StakingProxy', () => {
   async function deployFixture() {
