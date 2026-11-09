@@ -73,7 +73,7 @@ export default defineConfig({
     polygon: {
       type: 'http',
       url: configVariable('POLYGON_RPC_URL'),
-      accounts,
+      ...ledgerConfig,
     },
   },
   verify: {
