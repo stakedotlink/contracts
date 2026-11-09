@@ -1,11 +1,19 @@
-import { ethers, upgrades } from 'hardhat'
 import { GovernanceTimelock } from '../../../../../typechain-types'
 import { deploy, deployImplementation, getContract } from '../../../../utils/deployment'
-import { fromEther, getAccounts, toEther } from '../../../../utils/helpers'
+import {
+  fromEther,
+  getAccounts,
+  toEther,
+  ethers,
+  upgrades,
+  loadFixture,
+  time,
+} from '../../../../utils/helpers'
 import { assert } from 'chai'
-import { loadFixture, reset, time } from '@nomicfoundation/hardhat-network-helpers'
 
-const blockNumber = 22421455
+// runs against a mainnet fork at block 22421455:
+//   npx hardhat node --fork <rpc url> --fork-block-number 22421455
+//   npx hardhat test mocha <this file> --network localhost
 
 const FundFlowControllerArgs = {
   linkToken: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
@@ -20,8 +28,6 @@ const enable = true
 
 describe('BUILD rewards support', () => {
   async function deployFixture() {
-    await reset(process.env.FORK_RPC_URL, blockNumber)
-
     const { accounts, signers } = await getAccounts()
     const multisig = await ethers.getImpersonatedSigner(multisigAddress)
     const executor = await ethers.getImpersonatedSigner(

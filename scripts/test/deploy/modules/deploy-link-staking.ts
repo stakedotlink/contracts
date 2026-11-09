@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import {
   ERC677,
   OperatorVCS,
@@ -13,7 +12,7 @@ import {
   deployUpgradeable,
   deployImplementation,
 } from '../../../utils/deployment'
-import { getAccounts, toEther } from '../../../utils/helpers'
+import { getAccounts, toEther, ethers } from '../../../utils/helpers'
 
 // Operator Vault Controller Strategy
 const OperatorVCSArgs = {

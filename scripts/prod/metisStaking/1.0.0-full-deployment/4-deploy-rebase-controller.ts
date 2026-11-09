@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat'
+import { ethers } from '../../../utils/helpers'
 import { deploy, getContract, updateDeployments } from '../../../utils/deployment'
 
 const emergencyPauser = ethers.ZeroAddress // address authorized to pause pool in case of emergency

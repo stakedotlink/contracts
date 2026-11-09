@@ -1,11 +1,18 @@
-import { ethers } from 'hardhat'
 import { CurveGaugeDistributor, PriorityPool, StakingPool } from '../../../../../typechain-types'
 import { deploy, getContract } from '../../../../utils/deployment'
-import { fromEther, getAccounts, toEther } from '../../../../utils/helpers'
+import {
+  fromEther,
+  getAccounts,
+  toEther,
+  ethers,
+  loadFixture,
+  time,
+} from '../../../../utils/helpers'
 import { assert } from 'chai'
-import { loadFixture, reset, time } from '@nomicfoundation/hardhat-network-helpers'
 
-const blockNumber = 22131113
+// runs against a mainnet fork at block 22131113:
+//   npx hardhat node --fork <rpc url> --fork-block-number 22131113
+//   npx hardhat test mocha <this file> --network localhost
 
 const curveStableSwapNG = '0x7E13876B92F1a62C599C231f783f682E96B91761'
 const liquidityGaugeV6 = '0x985ca600257BFc1adC2b630B8A7E2110b834A20e'
@@ -13,8 +20,6 @@ const epochDuration = 86400n * 7n
 
 describe('CurveGaugeDistributor stLINK/LINK integration', () => {
   async function deployFixture() {
-    await reset(process.env.FORK_RPC_URL, blockNumber)
-
     const { accounts, signers } = await getAccounts()
     const linkHolder = await ethers.getImpersonatedSigner(
       '0x4a470942dd7A44c6574666F8BDa47ce33c19A601'

@@ -1,6 +1,5 @@
-import { fromEther, toEther } from '../../../../utils/helpers'
+import { fromEther, toEther, ethers, time } from '../../../../utils/helpers'
 import { getContract } from '../../../../utils/deployment'
-import { ethers } from 'hardhat'
 import {
   CommunityVCS,
   FundFlowController,
@@ -11,7 +10,6 @@ import {
   WithdrawalPool,
 } from '../../../../../typechain-types'
 import { assert } from 'chai'
-import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 

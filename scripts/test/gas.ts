@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import {
   ERC677,
   PriorityPool,
@@ -7,7 +6,7 @@ import {
   StakingRewardsMock,
 } from '../../typechain-types'
 import { deploy, deployUpgradeable, deployImplementation } from '../utils/deployment'
-import { getAccounts, toEther } from '../utils/helpers'
+import { getAccounts, toEther, ethers } from '../utils/helpers'
 
 // LINK Staking Pool
 const LINK_StakingPool = {

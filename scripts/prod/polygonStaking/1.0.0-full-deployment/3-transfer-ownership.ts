@@ -1,6 +1,5 @@
-import { ethers } from 'hardhat'
 import { getContract } from '../../../utils/deployment'
-import { getLedgerSigner } from '../../../utils/helpers'
+import { getLedgerSigner, ethers } from '../../../utils/helpers'
 
 async function main() {
   const ledgerSigner = await getLedgerSigner()

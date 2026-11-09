@@ -1,5 +1,5 @@
 import { updateDeployments, deploy } from '../../../utils/deployment'
-import { ethers } from 'hardhat'
+import { ethers } from '../../../utils/helpers'
 
 const multisigAddress = '0xB351EC0FEaF4B99FdFD36b484d9EC90D0422493D'
 

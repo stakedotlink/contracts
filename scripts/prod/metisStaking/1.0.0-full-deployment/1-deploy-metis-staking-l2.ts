@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { ERC20, PriorityPool, StakingPool } from '../../../../typechain-types'
 import {
   updateDeployments,
@@ -6,7 +5,7 @@ import {
   getContract,
   deployUpgradeable,
 } from '../../../utils/deployment'
-import { toEther } from '../../../utils/helpers'
+import { toEther, ethers } from '../../../utils/helpers'
 import { L2Strategy } from '../../../../typechain-types/contracts/metisStaking/L2Strategy'
 
 // Wrapped stMETIS

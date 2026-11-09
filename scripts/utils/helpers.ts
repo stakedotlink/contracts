@@ -1,5 +1,13 @@
-import { ethers } from 'hardhat'
+import hre from 'hardhat'
+import { upgrades as createUpgradesApi } from '@openzeppelin/hardhat-upgrades'
 import axios from 'axios'
+
+// scripts target the local node unless --network or HARDHAT_NETWORK selects another network
+const connection = await hre.network.create(hre.globalOptions.network ?? 'localhost')
+
+export const { ethers, networkName, networkHelpers, provider } = connection
+export const { time, loadFixture } = networkHelpers
+export const upgrades = await createUpgradesApi(hre, connection)
 
 export const toEther = (amount: string | number) => {
   return ethers.parseEther(amount.toString())

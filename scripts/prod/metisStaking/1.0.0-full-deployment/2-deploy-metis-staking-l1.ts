@@ -6,8 +6,7 @@ import {
   deployImplementation,
 } from '../../../utils/deployment'
 import { L1Strategy } from '../../../../typechain-types/contracts/metisStaking/L1Strategy'
-import { toEther } from '../../../utils/helpers'
-import { ethers } from 'hardhat'
+import { toEther, ethers } from '../../../utils/helpers'
 
 const l2Transmitter = '0xc4bAf9Df7Da0dB146D8AeDEe447246ed47b4c2E4'
 

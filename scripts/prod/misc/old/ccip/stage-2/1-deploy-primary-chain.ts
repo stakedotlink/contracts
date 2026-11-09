@@ -1,7 +1,7 @@
 import { toEther } from '../../../../utils/helpers'
 import { updateDeployments, deploy } from '../../../../utils/deployment'
 import { RewardsInitiator, SDLPoolCCIPControllerPrimary } from '../../../../../typechain-types'
-import { ethers, upgrades } from 'hardhat'
+import { ethers, upgrades } from '../../../../../utils/helpers'
 import { getContract } from '../../../../utils/deployment'
 
 // Execute on Ethereum Mainnet

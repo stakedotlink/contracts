@@ -1,8 +1,7 @@
-import { getAccounts, toEther, setupToken } from '../../../utils/helpers'
+import { getAccounts, toEther, setupToken, ethers } from '../../../utils/helpers'
 import { getContract } from '../../../utils/deployment'
 import { StakingPool, ERC677, PriorityPool, StrategyMock } from '../../../../typechain-types'
 import base58 from 'bs58'
-import { ethers } from 'hardhat'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
 
 /*

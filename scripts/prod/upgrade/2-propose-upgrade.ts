@@ -1,10 +1,9 @@
-import hre, { ethers } from 'hardhat'
 import Safe from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
 import { MetaTransactionData } from '@safe-global/types-kit'
 import { GovernanceTimelock } from '../../../typechain-types'
 import { getContract } from '../../utils/deployment'
-import { getAccounts } from '../../utils/helpers'
+import { getAccounts, ethers, provider } from '../../utils/helpers'
 
 // ------------------------------- Configuration -------------------------------
 
@@ -54,7 +53,7 @@ async function main() {
 
   const apiKit = new SafeApiKit({ chainId: 1n, apiKey: safeApiKey })
   const protocolKit = await Safe.init({
-    provider: hre.network.provider,
+    provider: provider,
     signer: accounts[0],
     safeAddress: multisigAddress,
   })

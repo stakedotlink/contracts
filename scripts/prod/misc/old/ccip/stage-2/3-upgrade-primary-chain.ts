@@ -3,7 +3,7 @@ import { SDLPoolCCIPControllerPrimary, SDLPoolPrimary } from '../../../../../typ
 import { getAccounts } from '../../../../utils/helpers'
 import Safe, { EthersAdapter } from '@safe-global/protocol-kit'
 import SafeApiKit from '@safe-global/api-kit'
-import { ethers } from 'hardhat'
+import { ethers } from '../../../../../utils/helpers'
 import { MetaTransactionData } from '@safe-global/safe-core-sdk-types'
 
 // Execute on Ethereum Mainnet

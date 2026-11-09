@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat'
+import { ethers } from '../../../utils/helpers'
 import { updateDeployments, getContract, deploy } from '../../../utils/deployment'
 
 const ccipRouter = '0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D'

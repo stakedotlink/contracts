@@ -1,4 +1,3 @@
-import { ethers } from 'hardhat'
 import { PriorityPool, SDLPool, StakingPool } from '../../../../typechain-types'
 import {
   updateDeployments,
@@ -7,7 +6,7 @@ import {
   deployUpgradeable,
   deployImplementation,
 } from '../../../utils/deployment'
-import { getAccounts, toEther } from '../../../utils/helpers'
+import { getAccounts, toEther, ethers } from '../../../utils/helpers'
 
 // Polygon Strategy
 const PolygonStrategyArgs = {

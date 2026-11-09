@@ -1,6 +1,5 @@
-import { ethers } from 'hardhat'
 import { getContract } from '../../utils/deployment'
-import { fromEther, toEther } from '../../utils/helpers'
+import { fromEther, toEther, ethers } from '../../utils/helpers'
 import type { CommunityVCS, PriorityPool, StakingMock } from '../../../typechain-types'
 
 /** Matches the empty per-strategy data the setup scripts pass. */
