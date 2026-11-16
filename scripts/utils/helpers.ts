@@ -27,6 +27,9 @@ export const getLedgerSigner = async () => {
   return signers[14] || signers[0]
 }
 
+// Sends transfers one at a time: parallel sends from one signer can reuse a nonce on geth
 export const setupToken = async (token: any, accounts: string[]) => {
-  return Promise.all(accounts.map((account) => token.transfer(account, toEther(10000))))
+  for (const account of accounts) {
+    await (await token.transfer(account, toEther(10000))).wait()
+  }
 }
